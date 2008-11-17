@@ -37,6 +37,8 @@
 #include <cfloat>
 #include "terminal.h"
 
+#define BOOL2STR_ED(b) ( b ? "enabled" : "disabled" )
+
 using namespace std;
 
 class ParamVisualizer: public ros::node
@@ -67,6 +69,11 @@ int
     fprintf (stderr, "                   -stoc_tt X = STOC <Texture filter threshold> parameter\n");
     fprintf (stderr, "                   -stoc_nd X = STOC <Number of disparities> parameter\n");
     fprintf (stderr, "                   -stoc_zm X = STOC <Z-max cutoff> parameter\n");
+    fprintf (stderr, "\n");
+    fprintf (stderr, "                   -sr_rd   X = SwissRanger <Rectify Distance Image> parameter\n");
+    fprintf (stderr, "                   -sr_ra   X = SwissRanger <Rectify Amplitude Image> parameter\n");
+    fprintf (stderr, "                   -sr_rc   X = SwissRanger <Rectify Confidence Image> parameter\n");
+    fprintf (stderr, "                   -sr_fpcd X = SwissRanger <Filter PCD> parameter\n");
     return (-1);
   }
   
@@ -157,6 +164,29 @@ int
     p.set_param ("/composite/stoc_zmax", stoc_zm);
   }
   
+  
+  int sr_rd, sr_ra, sr_rc, sr_fpcd;
+  if (parseArgument (argc, argv, "-sr_rd", sr_rd) != -1)
+  {
+    print_info (stderr, "Changing the <Rectify Distance Image> settings on the SwissRanger camera to: "); print_value (stderr, "%s\n", BOOL2STR_ED (sr_rd));
+    p.set_param ("/composite/sr_rectify_distance", sr_rd);
+  }
+  
+  if (parseArgument (argc, argv, "-sr_ra", sr_ra) != -1)
+  {
+    print_info (stderr, "Changing the <Rectify Amplitude Image> settings on the SwissRanger camera to: "); print_value (stderr, "%s\n", BOOL2STR_ED (sr_ra));
+    p.set_param ("/composite/sr_rectify_amplitude", sr_ra);
+  }
+  if (parseArgument (argc, argv, "-sr_ra", sr_rc) != -1)
+  {
+    print_info (stderr, "Changing the <Rectify Confidence Image> settings on the SwissRanger camera to: "); print_value (stderr, "%s\n", BOOL2STR_ED (sr_rc));
+    p.set_param ("/composite/sr_rectify_confidence", sr_rc);
+  }
+  if (parseArgument (argc, argv, "-sr_fpcd", sr_fpcd) != -1)
+  {
+    print_info (stderr, "Changing the <Filter PCD> settings on the SwissRanger camera to: "); print_value (stderr, "%s\n", BOOL2STR_ED (sr_fpcd));
+    p.set_param ("/composite/sr_pcd_filter", sr_fpcd);
+  }
   
   // Shutdown
   p.shutdown ();
