@@ -43,6 +43,10 @@
 // For some reason 1.0.10-541 does not provide this
 #define DWORD unsigned int
 
+#define SR_IMG_DISTANCE   0
+#define SR_IMG_AMPLITUDE  1
+#define SR_IMG_CONFIDENCE 2
+
 #include <libusbSR.h>
 
 // ROS include
@@ -52,7 +56,6 @@
 
 // Older library: #define MODE (AM_COR_FIX_PTRN | AM_COR_LED_NON_LIN | AM_MEDIAN)
 #define MODE (AM_CONF_MAP | AM_COR_FIX_PTRN | AM_SW_ANF | AM_MEDIAN | AM_DENOISE_ANF | AM_MEDIANCROSS | AM_CONV_GRAY)// | AM_SHORT_RANGE)
-using namespace std;
 
 namespace swissranger
 {
@@ -91,8 +94,31 @@ namespace swissranger
 
       // SwissRanger specific values
       unsigned int rows_, cols_, inr_;
-      string device_id_;
-      string lib_version_;
+      std::string device_id_;
+      std::string lib_version_;
+    
+      // Get/Set filtering values
+      bool getPCDFilter () { return this->pcd_filter_; }
+      void setPCDFilter (bool filter) { this->pcd_filter_ = filter; }
+
+      bool getUndistortImage (int img_type)
+      {
+        switch (img_type)
+        {
+          case SR_IMG_DISTANCE:   return (this->undistort_distance_);
+          case SR_IMG_AMPLITUDE:  return (this->undistort_amplitude_);
+          case SR_IMG_CONFIDENCE: return (this->undistort_confidence_);
+        }
+      }
+      void setUndistortImage (int img_type, bool filter)
+      {
+        switch (img_type)
+        {
+          case SR_IMG_DISTANCE:   { this->undistort_distance_   = filter; break; } 
+          case SR_IMG_AMPLITUDE:  { this->undistort_amplitude_  = filter; break; }
+          case SR_IMG_CONFIDENCE: { this->undistort_confidence_ = filter; break; }
+        }
+      }
 
     private:
       // device identifier
@@ -103,8 +129,8 @@ namespace swissranger
 
       int integration_time_, modulation_freq_;
 
-      string getDeviceString ();
-      string getLibraryVersion ();
+      std::string getDeviceString ();
+      std::string getLibraryVersion ();
 
       // Used for rotating images with 180 deg around their centre internally
       void rotateImage180 (uint8_t *img, uint8_t *rot_img, int width, int height);
@@ -114,6 +140,9 @@ namespace swissranger
       void undistort (uint8_t *img, uint8_t *un_img, int width, int height);
       void contours (uint8_t *img, uint8_t *con_img, int width, int height, int threshold);
       double getAngle (float px, float py, float pz, float qx, float qy, float qz);
+
+      bool pcd_filter_;       // in-driver PCD filtering 
+      bool undistort_distance_, undistort_amplitude_, undistort_confidence_;
   };
 };
 

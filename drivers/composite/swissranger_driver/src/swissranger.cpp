@@ -56,10 +56,15 @@ swissranger::SwissRanger::SwissRanger () : srCam_ (NULL)
   cvmSet (intrinsic_, 1, 0, 0.0);      cvmSet (intrinsic_, 1, 1, 252.9221); cvmSet (intrinsic_, 1, 2, 72.6264);
   cvmSet (intrinsic_, 2, 0, 0.0);      cvmSet (intrinsic_, 2, 1, 0.0);      cvmSet (intrinsic_, 2, 2, 1.0);
   cvmSet (distortion_, 0, 0, -0.0612); cvmSet (distortion_, 0, 1, 0.1706);  cvmSet (distortion_, 0, 2, 0); cvmSet (distortion_, 0, 3, 0);
+  
+  pcd_filter_ = false;
+  undistort_distance_ = undistort_amplitude_ = undistort_confidence_ = false;
 }
 
 swissranger::SwissRanger::~SwissRanger ()
 {
+  cvReleaseMat (&intrinsic_);
+  cvReleaseMat (&distortion_);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -242,36 +247,56 @@ void
   
   // Stores a copy of the rotated distance image
   uint8_t *img_tmp = (uint8_t*)malloc (image_size);
-
   memcpy (img_tmp, distance_image, image_size);
-  // Rotate the distance image with 180 on spot
-//  rotateImage180 (img_tmp, distance_image, imgEntryArray_->width, imgEntryArray_->height);
-  rotateImage180 (distance_image, img_tmp, imgEntryArray_->width, imgEntryArray_->height);
-  // Undistort the distance image
-  undistort (img_tmp, distance_image, imgEntryArray_->width, imgEntryArray_->height);
+
+  if (undistort_distance_)
+  {
+    // Rotate the distance image with 180 on spot
+    rotateImage180 (distance_image, img_tmp, imgEntryArray_->width, imgEntryArray_->height);
+    // Undistort the distance image
+    undistort (img_tmp, distance_image, imgEntryArray_->width, imgEntryArray_->height);
+  }
+  else
+    // Rotate the distance image with 180 on spot
+    rotateImage180 (img_tmp, distance_image, imgEntryArray_->width, imgEntryArray_->height);
 
   memcpy (img_tmp, amplitude_image, image_size);
-  // Rotate the amplitude image with 180 on spot
-  //rotateImage180 (amplitude_image, img_tmp, imgEntryArray_->width, imgEntryArray_->height);
-  rotateImage180 (img_tmp, amplitude_image, imgEntryArray_->width, imgEntryArray_->height);
-  // Undistort the amplitude image
-//  undistort (img_tmp, amplitude_image, imgEntryArray_->width, imgEntryArray_->height);
+  
+  if (undistort_amplitude_)
+  {
+    // Rotate the amplitude image with 180 on spot
+    rotateImage180 (amplitude_image, img_tmp, imgEntryArray_->width, imgEntryArray_->height);
+    // Undistort the amplitude image
+    undistort (img_tmp, amplitude_image, imgEntryArray_->width, imgEntryArray_->height);
+  }
+  else
+    // Rotate the amplitude image with 180 on spot
+    rotateImage180 (img_tmp, amplitude_image, imgEntryArray_->width, imgEntryArray_->height);
 
   memcpy (img_tmp, confidence_image, image_size);
-  // Rotate the confidence image with 180 on spot
-//  rotateImage180 (confidence_image, img_tmp, imgEntryArray_->width, imgEntryArray_->height);
-//contours (img_tmp, confidence_image, imgEntryArray_->width, imgEntryArray_->height, 1);
-  rotateImage180 (img_tmp, confidence_image, imgEntryArray_->width, imgEntryArray_->height);
-  // Undistort the confidence image
-//  undistort (img_tmp, confidence_image, imgEntryArray_->width, imgEntryArray_->height);
-
+  
+  if (undistort_confidence_)
+  {
+    // Rotate the confidence image with 180 on spot
+    rotateImage180 (confidence_image, img_tmp, imgEntryArray_->width, imgEntryArray_->height);
+    //contours (img_tmp, confidence_image, imgEntryArray_->width, imgEntryArray_->height, 1);
+    // Undistort the confidence image
+    undistort (img_tmp, confidence_image, imgEntryArray_->width, imgEntryArray_->height);
+  }
+  else
+    // Rotate the confidence image with 180 on spot
+    rotateImage180 (img_tmp, confidence_image, imgEntryArray_->width, imgEntryArray_->height);
+  
   // Points array
   res = SR_CoordTrfFlt (srCam_, xp_, yp_, zp_, sizeof (float), sizeof (float), sizeof (float));
 
   // Filter points
   cloud.set_pts_size (imgEntryArray_->width * imgEntryArray_->height);
   cloud.set_chan_size (2);
-  cloud.chan[0].name = "pid";
+  if (pcd_filter_)                    // if in-driver filtering is enabled, do not send the point confidence anymore, but rather the original point index
+    cloud.chan[0].name = "pid";
+  else
+    cloud.chan[0].name = "con";
   cloud.chan[0].set_vals_size (imgEntryArray_->width * imgEntryArray_->height);
   cloud.chan[1].name = "i";
   cloud.chan[1].set_vals_size (imgEntryArray_->width * imgEntryArray_->height);
@@ -283,22 +308,30 @@ void
     for (int v = 0; v < imgEntryArray_->width; v++)
     {
       int i = nu + v;
-      unsigned short conf_val = (confidence_image[i * 2 + 0] << 0) + (confidence_image[i * 2 + 1] << 8);
-      unsigned short dist_val = (distance_image[i * 2 + 0] << 0) + (distance_image[i * 2 + 1] << 8);
-      if ( (conf_val > 0xffff * 3 / 4) && (dist_val < 0xff00) )
+      
+      if (pcd_filter_)                // is in-driver filtering enabled ?
       {
-//        distance_image[i + 0] = 0;
-//        distance_image[i + 1] = 0;
-	if (getAngle (xp_[i], yp_[i], zp_[i], xp_[i+1], yp_[i+1], zp_[i+1]) > 0.0004)
-	  continue;
-        cloud.pts[nr_pts].x = xp_[i];
-        cloud.pts[nr_pts].y = yp_[i];
-        cloud.pts[nr_pts].z = zp_[i];
-
-        cloud.chan[0].vals[nr_pts] = i;
-        cloud.chan[1].vals[nr_pts] = amplitude_image[i*2 + 1];
-        nr_pts++;
+        unsigned short conf_val = (confidence_image[i * 2 + 0] << 0) + (confidence_image[i * 2 + 1] << 8);
+        unsigned short dist_val = (distance_image[i * 2 + 0] << 0) + (distance_image[i * 2 + 1] << 8);
+        if ( (conf_val > 0xffff * 3 / 4) && (dist_val < 0xff00) )
+        {
+          if (getAngle (xp_[i], yp_[i], zp_[i], xp_[i+1], yp_[i+1], zp_[i+1]) > 0.0004)
+  	    continue;
+        }
       }
+
+      // Save the XYZ coordinates
+      cloud.pts[nr_pts].x = xp_[i];
+      cloud.pts[nr_pts].y = yp_[i];
+      cloud.pts[nr_pts].z = zp_[i];
+
+      if (pcd_filter_)                // is in-driver filtering enabled ?
+        cloud.chan[0].vals[nr_pts] = i;
+      else
+        cloud.chan[0].vals[nr_pts] = (confidence_image[i * 2 + 0] << 0) + (confidence_image[i * 2 + 1] << 8);
+      
+      cloud.chan[1].vals[nr_pts] = (amplitude_image[i * 2 + 0] << 0) + (amplitude_image[i * 2 + 1] << 8); //amplitude_image[i*2 + 1];
+      nr_pts++;
     }
   }
   cloud.pts.resize (nr_pts);
@@ -306,7 +339,7 @@ void
   cloud.chan[1].vals.resize (nr_pts);
   
   // Fill in the ROS PointCloud message
-/*  for (int i = 0; i < imgEntryArray_->width * imgEntryArray_->height; i++)
+  /*for (int i = 0; i < imgEntryArray_->width * imgEntryArray_->height; i++)
   {
     cloud.pts[i].x = xp_[i];
     cloud.pts[i].y = yp_[i];
@@ -326,7 +359,7 @@ void
 
   images.images[1].width  = cols_;
   images.images[1].height = rows_;
-//  if (MODE & AM_CONV_GRAY)
+  //if (MODE & AM_CONV_GRAY)
   images.images[1].colorspace  = "mono16";
   images.images[1].compression = "raw";
   images.images[1].label       = "sr4k-intensity";
@@ -408,7 +441,7 @@ int
 
 ////////////////////////////////////////////////////////////////////////////////
 // Obtain the device product name
-string
+std::string
   swissranger::SwissRanger::getDeviceString ()
 {
   char *buf = new char[256];
@@ -416,13 +449,13 @@ string
   SR_GetDeviceString (srCam_, buf, *buflen);
 
   // VendorID:0x%04x, ProductID:0x%04x, Manufacturer:'%s', Product:'%s'
-  string sensor (buf);
-  string::size_type loc = sensor.find ("Product:", 0);
-  if (loc != string::npos)
+  std::string sensor (buf);
+  std::string::size_type loc = sensor.find ("Product:", 0);
+  if (loc != std::string::npos)
   {
     sensor = sensor.substr (loc + 9, *buflen);
     loc = sensor.find ("'", 0);
-    if (loc != string::npos)
+    if (loc != std::string::npos)
       sensor = sensor.substr (0, loc);
   }
   else
@@ -435,12 +468,12 @@ string
 
 ////////////////////////////////////////////////////////////////////////////////
 // Obtain the libusbSR library version
-string
+std::string
   swissranger::SwissRanger::getLibraryVersion ()
 {
   unsigned short version[4];
   char buf[80];
   SR_GetVersion (version);
   snprintf (buf, sizeof (buf), "%d.%d.%d.%d", version[3], version[2], version[1], version[0]);
-  return (string (buf));
+  return (std::string (buf));
 }
