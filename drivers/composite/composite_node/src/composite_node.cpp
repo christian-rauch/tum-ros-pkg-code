@@ -692,9 +692,9 @@ int
 
   CompositeNode c;
   c.dump_to_disk_ = false;
-  c.sr_enable_    = true;
-  c.flir_enable_  = true;
-  c.stoc_enable_  = true; //c.stoc_just_left_ = true;
+  c.sr_enable_    = false;
+  c.flir_enable_  = false;
+  c.stoc_enable_  = false; //c.stoc_just_left_ = true;
 
   if (c.start () == 0)
     c.spin ();
