@@ -52,16 +52,39 @@ class ExtendedLeaf
     vector<int> indices;
 };
 
-double y[15]={1.4e-1,1.8e-1,2.2e-1,2.5e-1,2.9e-1,3.2e-1,3.5e-1,3.9e-1,
-              3.7e-1,5.8e-1,7.3e-1,9.6e-1,1.34e0,2.1e0,4.39e0};
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////(
+/** \brief Calibration cost function to be minimized
+  * \param p a pointer to our data structure array
+  * \param m the number of functions
+  * \param n the number of variables
+  * \param x a pointer to the variables array
+  * \param fvec a pointer to the resultant functions evaluations
+  * \param iflag set to -1 inside the function to terminate execution
+  */
 int
   functionToOptimize (void *p, int m, int n, const double *x, double *fvec, int iflag)
 {
+  PointCloud *points = (PointCloud*)p;
+
+  // Get the point normal
+  float normal[3];
+  float eig1, eig2;
+
   // Assemble the cost function
-  for (int i = 0; i < m; i++)
-    fvec[i] = y[i] - (x[0] + tmp1 / (x[1]*tmp2 + x[2]*tmp3));
+  for (unsigned int i = 0; i < points->pts.size (); i++)
+  {
+    // Get the point normal
+    normal[0] = points->chan[0].vals[i];
+    normal[1] = points->chan[1].vals[i];
+    normal[2] = points->chan[2].vals[i];
+    eig1 = points->chan[3].vals[i];
+    eig2 = points->chan[4].vals[i];
+
+    // Use the rotation / translation values from X
+
+    // Update the cost function
+    fvec[i] = eig1 - eig2;
+  }
   return (0);
 }
 
@@ -73,7 +96,7 @@ class LaserArmCalib
   public:
 
     // ROS messages
-    PointCloud cloud_, cloud_down_, cloud_plane_, cloud_outliers_;
+    PointCloud cloud_, cloud_down_, cloud_plane_;
 
     Point leaf_width_;
     vector<ExtendedLeaf> leaves_;
@@ -103,7 +126,6 @@ class LaserArmCalib
 
       node_.subscribe (cloud_topic, cloud_, &LaserArmCalib::cloud_cb, this, 1);
       node_.advertise<PointCloud> ("~plane", 1);
-      node_.advertise<PointCloud> ("~outliers", 1);
     }
 
 
@@ -118,11 +140,11 @@ class LaserArmCalib
       * (nx, ny, nz, l1, l2)
       */
     void
-      optimizeCalibrationTransformation (const PointCloud &cloud)
+      optimizeCalibrationTransformation (PointCloud *cloud)
     {
-      if (cloud.chan.size () < 5)
+      if (cloud->chan.size () < 5)
         return;
-      int m = cloud.pts.size ();
+      int m = cloud->pts.size ();
       double fvec[m];
 
       int n = 6;      // 6 unknowns
@@ -144,7 +166,7 @@ class LaserArmCalib
       double tol = sqrt (dpmpar (1));
 
       // Optimize using forward-difference approximation LM
-      int info = lmdif1 (functionToOptimize, 0, m, n, x, fvec, tol, iwa, wa, lwa);
+      int info = lmdif1 (functionToOptimize, cloud, m, n, x, fvec, tol, iwa, wa, lwa);
 
       // Compute the L2 norm of the residuals
       ROS_INFO ("Residuals norm: %15.7f", enorm (m, fvec));
@@ -292,12 +314,11 @@ class LaserArmCalib
 
       ts = ros::Time::now ();
       // ---[ Step 2: formulate the calibration as a non-linear minimization problem
-      optimizeCalibrationTransformation (cloud_down_);
+      optimizeCalibrationTransformation (&cloud_down_);
 
       ROS_INFO ("Non-linear optimization done in %g seconds.\n", (ros::Time::now () - ts).toSec ());
 
       node_.publish ("~plane", cloud_plane_);
-      node_.publish ("~outliers", cloud_outliers_);
     }
 };
 
