@@ -1,0 +1,9 @@
+<launch>
+  <param name="/laser_arm_calib/downsample_leaf_width_x" value="0.03" />
+  <param name="/laser_arm_calib/downsample_leaf_width_y" value="0.03" />
+  <param name="/laser_arm_calib/downsample_leaf_width_z" value="0.03" />
+
+  <node pkg="laser_arm" type="laser_arm_calib_node" name="laser_arm_calib" output="screen" respawn="true">
+    <remap from="tilt_laser_cloud" to="cloud_pcd" />
+  </node>
+</launch>
