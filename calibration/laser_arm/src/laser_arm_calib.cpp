@@ -24,7 +24,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: laser_arm_calib.cpp 13114 2009-03-29 15:43:58Z veedee $
+ * $Id$
  *
  */
 
