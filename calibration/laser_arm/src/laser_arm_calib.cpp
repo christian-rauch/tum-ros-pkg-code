@@ -34,26 +34,16 @@
 #include <ros/node.h>
 // ROS messages
 #include <robot_msgs/PointCloud.h>
-#include <robot_msgs/Polygon3D.h>
-
-// Cloud kd-tree
-#include <point_cloud_mapping/kdtree/kdtree_ann.h>
 
 // Cloud geometry
 #include <point_cloud_mapping/geometry/angles.h>
 #include <point_cloud_mapping/geometry/point.h>
 #include <point_cloud_mapping/geometry/statistics.h>
 
-// Sample Consensus
-#include <point_cloud_mapping/sample_consensus/sac.h>
-#include <point_cloud_mapping/sample_consensus/ransac.h>
-#include <point_cloud_mapping/sample_consensus/sac_model_plane.h>
-
-#include <angles/angles.h>
+#include <cminpack.h>
 
 using namespace std;
 using namespace robot_msgs;
-
 
 class ExtendedLeaf
 {
@@ -61,6 +51,27 @@ class ExtendedLeaf
     float centroid_x, centroid_y, centroid_z;
     vector<int> indices;
 };
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+int
+  functionToOptimize (void *p, int m, int n, const double *x, double *fvec, int iflag)
+{
+  int i;
+  double tmp1,tmp2,tmp3;
+  double y[15]={1.4e-1,1.8e-1,2.2e-1,2.5e-1,2.9e-1,3.2e-1,3.5e-1,3.9e-1,
+                3.7e-1,5.8e-1,7.3e-1,9.6e-1,1.34e0,2.1e0,4.39e0};
+
+  for (i=0; i<15; i++)
+    {
+      tmp1 = i+1;
+      tmp2 = 15 - i;
+      tmp3 = tmp1;
+
+      if (i >= 8) tmp3 = tmp2;
+      fvec[i] = y[i] - (x[0] + tmp1/(x[1]*tmp2 + x[2]*tmp3));
+    }
+  return (0);
+}
 
 class LaserArmCalib
 {
@@ -103,6 +114,38 @@ class LaserArmCalib
       node_.advertise<PointCloud> ("~outliers", 1);
     }
 
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    void
+      optimizeCalibrationTransformation (const PointCloud &cloud)
+    {
+      int lwa, iwa[3];
+      double tol, fnorm, x[6], fvec[15], wa[75];
+
+      int m = 15;
+      int n = 6;      // 6 unknowns
+
+      // Set the initial solution
+      x[0] = 0.0492;
+      x[1] = -0.00125;
+      x[2] = -0.1136;
+      x[3] = 0;
+      x[4] = 0;
+      x[5] = 0;
+
+      // Set tol to the square root of the machine. Unless high solutions are required, these are the recommended settings.
+      tol = sqrt (dpmpar (1));
+
+      lwa = 75;
+
+      int info = lmdif1 (functionToOptimize, 0, m, n, x, fvec, tol, iwa, wa, lwa);
+
+      fnorm = enorm (m, fvec);
+
+      printf("      FINAL L2 NORM OF THE RESIDUALS%15.7f\n\n",fnorm);
+      printf("      EXIT PARAMETER                %10i\n\n", info);
+      printf("      FINAL APPROXIMATE SOLUTION\n\n %15.7f%15.7f%15.7f\n", x[0], x[1], x[2]);
+    }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void
@@ -212,13 +255,6 @@ class LaserArmCalib
         }
       }
       cloud_down.pts.resize (nr_p);
-    }
-
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void
-      optimizeCalibrationTransformation (const PointCloud &cloud)
-    {
-
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
