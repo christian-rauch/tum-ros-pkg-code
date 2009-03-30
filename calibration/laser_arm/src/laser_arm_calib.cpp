@@ -52,24 +52,16 @@ class ExtendedLeaf
     vector<int> indices;
 };
 
+double y[15]={1.4e-1,1.8e-1,2.2e-1,2.5e-1,2.9e-1,3.2e-1,3.5e-1,3.9e-1,
+              3.7e-1,5.8e-1,7.3e-1,9.6e-1,1.34e0,2.1e0,4.39e0};
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 int
   functionToOptimize (void *p, int m, int n, const double *x, double *fvec, int iflag)
 {
-  int i;
-  double tmp1,tmp2,tmp3;
-  double y[15]={1.4e-1,1.8e-1,2.2e-1,2.5e-1,2.9e-1,3.2e-1,3.5e-1,3.9e-1,
-                3.7e-1,5.8e-1,7.3e-1,9.6e-1,1.34e0,2.1e0,4.39e0};
-
-  for (i=0; i<15; i++)
-    {
-      tmp1 = i+1;
-      tmp2 = 15 - i;
-      tmp3 = tmp1;
-
-      if (i >= 8) tmp3 = tmp2;
-      fvec[i] = y[i] - (x[0] + tmp1/(x[1]*tmp2 + x[2]*tmp3));
-    }
+  // Assemble the cost function
+  for (int i = 0; i < m; i++)
+    fvec[i] = y[i] - (x[0] + tmp1 / (x[1]*tmp2 + x[2]*tmp3));
   return (0);
 }
 
@@ -89,9 +81,9 @@ class LaserArmCalib
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     LaserArmCalib (ros::Node& anode) : node_ (anode)
     {
-      node_.param ("~downsample_leaf_width_x", leaf_width_.x, 0.02);      // 2cm radius by default
-      node_.param ("~downsample_leaf_width_y", leaf_width_.y, 0.02);      // 2cm radius by default
-      node_.param ("~downsample_leaf_width_z", leaf_width_.z, 0.02);      // 2cm radius by default
+      node_.param ("~downsample_leaf_width_x", leaf_width_.x, 0.03);      // 3cm radius by default
+      node_.param ("~downsample_leaf_width_y", leaf_width_.y, 0.03);      // 3cm radius by default
+      node_.param ("~downsample_leaf_width_z", leaf_width_.z, 0.03);      // 3cm radius by default
 
       string cloud_topic ("tilt_laser_cloud");
 
@@ -116,16 +108,31 @@ class LaserArmCalib
 
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /** \brief Obtain a solution for a rotation and a translation between the laser sensor and the pan/tilt unit
+      * by non-linear minimizing of a cost function describing the relations between the data and the groundtruth.
+      * \NOTE We aim to obtain 3 rotations and 3 translations between the optical center of the laser and the center of
+      * rotation of the pan/tilt unit (robot arm in our case). To do this, we need a scan of a vertical wall
+      * perpendicular to the Z axis, and minimize a relation betwee the estimated eigenvalues and eigenvectors of each
+      * point with respect to the wall.
+      * \param cloud a downsampled (voxelized) point cloud representation, with at least 5 data channels
+      * (nx, ny, nz, l1, l2)
+      */
     void
       optimizeCalibrationTransformation (const PointCloud &cloud)
     {
-      int lwa, iwa[3];
-      double tol, fnorm, x[6], fvec[15], wa[75];
+      if (cloud.chan.size () < 5)
+        return;
+      int m = cloud.pts.size ();
+      double fvec[m];
 
-      int m = 15;
       int n = 6;      // 6 unknowns
+      int iwa[n];
+
+      int lwa = m * n + 5 * n + m;
+      double wa[lwa];
 
       // Set the initial solution
+      double x[n];
       x[0] = 0.0492;
       x[1] = -0.00125;
       x[2] = -0.1136;
@@ -134,20 +141,25 @@ class LaserArmCalib
       x[5] = 0;
 
       // Set tol to the square root of the machine. Unless high solutions are required, these are the recommended settings.
-      tol = sqrt (dpmpar (1));
+      double tol = sqrt (dpmpar (1));
 
-      lwa = 75;
-
+      // Optimize using forward-difference approximation LM
       int info = lmdif1 (functionToOptimize, 0, m, n, x, fvec, tol, iwa, wa, lwa);
 
-      fnorm = enorm (m, fvec);
-
-      printf("      FINAL L2 NORM OF THE RESIDUALS%15.7f\n\n",fnorm);
-      printf("      EXIT PARAMETER                %10i\n\n", info);
-      printf("      FINAL APPROXIMATE SOLUTION\n\n %15.7f%15.7f%15.7f\n", x[0], x[1], x[2]);
+      // Compute the L2 norm of the residuals
+      ROS_INFO ("Residuals norm: %15.7f", enorm (m, fvec));
+      ROS_INFO ("Exit parameter: %10i", info);
+      ROS_INFO ("Final solution (rotation/translation): %g %g %g / %g % g %g", x[3], x[4], x[5], x[0], x[1], x[2]);
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /** Downsample a point cloud dataset using fixed-size voxels and estimate the eigenvalues and eigenvectors for each
+      * voxel.
+      * \param cloud the input point cloud
+      * \param cloud_down the resultant downsampled point cloud
+      * \param leaf_width the individual width of the voxels along 3 dimensions
+      * \param leaves a resultant vector of voxels
+      */
     void
       downsampleEstimateEigen (const PointCloud &cloud, PointCloud &cloud_down, Point leaf_width, vector<ExtendedLeaf> &leaves)
     {
