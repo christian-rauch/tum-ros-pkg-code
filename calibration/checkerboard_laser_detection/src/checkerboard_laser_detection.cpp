@@ -24,7 +24,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: checkerboard_laser_detection.cpp 13239 2009-04-01 18:05:46Z veedee $
+ * $Id$
  *
  */
 
