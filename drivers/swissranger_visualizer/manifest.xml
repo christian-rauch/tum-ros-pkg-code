@@ -1,0 +1,9 @@
+<package>
+  <description>A simple SwissRanger viewer</description>
+  <author>Radu Bogdan Rusu (rusu@cs.tum.edu)</author>
+  <license>BSD</license>
+  <depend package="roscpp" />
+  <depend package="deprecated_msgs" />
+  <depend package="opencv_latest" />
+  <url></url>
+</package>
