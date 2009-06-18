@@ -9,3 +9,5 @@ target_link_libraries(swissranger mesasr)
 rospack_add_executable (bin/swissranger_test_node src/swissranger_test_node.cpp)
 target_link_libraries (bin/swissranger_test_node swissranger)
 
+rospack_add_executable (bin/swissranger_viewer src/swissranger_viewer.cpp)
+target_link_libraries (bin/swissranger_viewer swissranger)
