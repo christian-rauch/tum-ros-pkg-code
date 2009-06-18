@@ -240,34 +240,40 @@ class SwissRangerTestNode
       
       if (setjmp (png_jmpbuf (png_ptr)))
         return (false);
-
+       
       // Set up the output control
       png_init_io (png_ptr, fp);
       
+      // Set filtering/compression parameters
+      png_set_filter (png_ptr, PNG_FILTER_TYPE_BASE, PNG_FILTER_SUB);
+      png_set_compression_level (png_ptr, Z_BEST_SPEED);
+      png_set_compression_strategy (png_ptr, Z_HUFFMAN_ONLY);
+      
       // Set up the header
-      png_set_IHDR (png_ptr, info_ptr, img.width, img.height, 16, PNG_COLOR_TYPE_GRAY, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+      int depth = 16, bpp = 2;
+      png_set_IHDR (png_ptr, info_ptr, img.width, img.height, depth, 
+                    PNG_COLOR_TYPE_GRAY, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 
       // Write the header
       png_write_info (png_ptr, info_ptr);
 
-      png_set_packing(png_ptr);
+      png_set_swap (png_ptr);
       
       png_bytep *row_pointers = new png_bytep[img.height];
       if (!row_pointers)
         return (false);
 
       for (unsigned int i = 0; i < img.height; i++)
-        row_pointers[i] = (png_bytep)(unsigned char*)&img.data[0] + (i * img.width * 2);
+        row_pointers[i] = (png_bytep)(unsigned char*)&img.data[0] + (i * img.width * bpp);
       
       // Write the actual data
       png_write_image (png_ptr, row_pointers);
       
       // Close, delete, and return      
       png_write_end (png_ptr, info_ptr);
-      fclose (fp);
-      
       delete [] row_pointers;
-      png_destroy_write_struct (&png_ptr, (png_infopp)NULL);
+      png_destroy_write_struct (&png_ptr, &info_ptr);
+      fclose (fp);
               
       return (true);
     }
