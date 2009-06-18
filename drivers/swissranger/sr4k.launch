@@ -1,0 +1,5 @@
+<launch>
+  <node pkg="swissranger" type="swissranger_test_node" name="swissranger_test" output="screen" respawn="true">
+    <param name="~sr_dump_to_disk" value="false" />
+  </node>
+</launch>

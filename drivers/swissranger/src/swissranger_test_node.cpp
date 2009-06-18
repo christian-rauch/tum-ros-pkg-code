@@ -118,6 +118,8 @@ class SwissRangerTestNode
       node_.param ("~sr_integration_time", sr_integration_time_, DEFAULT_INT_VALUE);
       node_.param ("~sr_modulation_freq", sr_modulation_freq_, DEFAULT_INT_VALUE);
       node_.param ("~sr_amp_threshold", sr_amp_threshold_, DEFAULT_INT_VALUE);
+
+      node_.param ("~sr_dump_to_disk", dump_to_disk_, false);
       
       sr_auto_illumination_prev_ = sr_integration_time_prev_ = sr_modulation_freq_prev_ = sr_amp_threshold_prev_ = DEFAULT_INT_VALUE;
       
@@ -182,6 +184,7 @@ class SwissRangerTestNode
       node_.getParam ("~sr_integration_time", sr_integration_time_);
       node_.getParam ("~sr_modulation_freq", sr_modulation_freq_);
       node_.getParam ("~sr_amp_threshold", sr_amp_threshold_);
+      node_.getParam ("~sr_dump_to_disk", dump_to_disk_);
    }
     
     ////////////////////////////////////////////////////////////////////////////////
@@ -269,6 +272,7 @@ class SwissRangerTestNode
         
         if (dump_to_disk_)
         {
+          ROS_INFO ("Saving data to disk, frame number %i", img_count);
           saveSRImages (sr_msg_images_, img_count);
           sprintf (fn, "%04i-sr4k.pcd", img_count);
           cloud_io::savePCDFileBinary (fn, sr_msg_cloud_);
