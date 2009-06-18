@@ -7,5 +7,5 @@ rospack_add_library(swissranger src/swissranger.cpp)
 target_link_libraries(swissranger mesasr)
 
 rospack_add_executable (bin/swissranger_test_node src/swissranger_test_node.cpp)
-target_link_libraries (bin/swissranger_test_node swissranger)
+target_link_libraries (bin/swissranger_test_node swissranger png)
 

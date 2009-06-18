@@ -77,12 +77,9 @@ Reads the following parameters from the parameter server
 #include <robot_msgs/PointCloud.h>
 #include <deprecated_msgs/ImageArray.h>
 
-// OpenCV  + point_cloud_mapping (for dumping data to disk)
-#include <opencv/cv.h>
-#include <opencv/highgui.h>
+// libpng + point_cloud_mapping (for dumping data to disk)
+#include <png.h>
 #include <point_cloud_mapping/cloud_io.h>
-
-#include <fstream>
 
 // Drivers used
 #include "swissranger.h"
@@ -223,27 +220,71 @@ class SwissRangerTestNode
     }
     
     ////////////////////////////////////////////////////////////////////////////////
+    // Assemble a PNG file using libpng
+    bool
+      writePNG (const char* file_name, const Image &img) 
+    {
+      // Create the output file
+      FILE *fp = fopen (file_name, "wb");
+      if (!fp)
+        return (false);
+      //  Create and initialize the png_struct
+      png_structp png_ptr = png_create_write_struct (PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+      if (!png_ptr)
+        return (false);
+        
+      // Allocate/initialize the image information data
+      png_infop info_ptr = png_create_info_struct (png_ptr);
+      if (!info_ptr)
+        return (false);
+      
+      if (setjmp (png_jmpbuf (png_ptr)))
+        return (false);
+
+      // Set up the output control
+      png_init_io (png_ptr, fp);
+      
+      // Set up the header
+      png_set_IHDR (png_ptr, info_ptr, img.width, img.height, 16, PNG_COLOR_TYPE_GRAY, PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+
+      // Write the header
+      png_write_info (png_ptr, info_ptr);
+
+      png_set_packing(png_ptr);
+      
+      png_bytep *row_pointers = new png_bytep[img.height];
+      if (!row_pointers)
+        return (false);
+
+      for (int i = 0; i < img.height; i++)
+        row_pointers[i] = (png_bytep)(unsigned char*)img.data[i] + (i * img.width * 2);
+      
+      // Write the actual data
+      png_write_image (png_ptr, row_pointers);
+      
+      // Close, delete, and return      
+      png_write_end (png_ptr, info_ptr);
+      fclose (fp);
+      
+      delete [] row_pointers;
+      png_destroy_write_struct (&png_ptr, (png_infopp)NULL);
+              
+      return (true);
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////
     // Save Swissranger images to disk
     void
-      saveSRImages (deprecated_msgs::ImageArray sr_msg_images_, int img_count)
+      saveSRImages (const ImageArray &sr_msg_images_, int &img_count)
     {
       char fn[80];
-      CvSize sr_size = cvSize (sr_msg_images_.images[0].width, sr_msg_images_.images[0].height);
-      IplImage *image_sr = cvCreateImage (sr_size, IPL_DEPTH_16U, 1);
-
-      image_sr->imageData = (char*)&(sr_msg_images_.images[0].data[0]);
       sprintf (fn, "%04i-sr4k-distance.png", img_count);
-      cvSaveImage (fn, image_sr);
-
-      image_sr->imageData = (char*)&(sr_msg_images_.images[1].data[0]);
+      writePNG (fn, sr_msg_images_.images[0]);
       sprintf (fn, "%04i-sr4k-intensity.png", img_count);
-      cvSaveImage (fn, image_sr);
-
-      image_sr->imageData = (char*)&(sr_msg_images_.images[2].data[0]);
+      writePNG (fn, sr_msg_images_.images[1]);
       sprintf (fn, "%04i-sr4k-confidence.png", img_count);
-      cvSaveImage (fn, image_sr);
-
-      cvReleaseImage (&image_sr);
+      writePNG (fn, sr_msg_images_.images[2]);
+      img_count++;
     }
 
    ////////////////////////////////////////////////////////////////////////////////
@@ -255,8 +296,6 @@ class SwissRangerTestNode
 
       while (1)
       {
-//        usleep (100000);
-        
         // Change certain parameters in the cameras, based on values from the parameter server
         getParametersFromServer ();
         setInternalParameters ();
@@ -273,24 +312,20 @@ class SwissRangerTestNode
         if (dump_to_disk_)
         {
           ROS_INFO ("Saving data to disk, frame number %i", img_count);
-          saveSRImages (sr_msg_images_, img_count);
           sprintf (fn, "%04i-sr4k.pcd", img_count);
           cloud_io::savePCDFileBinary (fn, sr_msg_cloud_);
+          saveSRImages (sr_msg_images_, img_count);
         } // dump_to_disk
           
         // Publish it
         sr_msg_cloud_.header.frame_id = "base_link";
         node_.publish ("cloud_sr", sr_msg_cloud_);
         node_.publish ("images_sr", sr_msg_images_);
-
-        // Bump the frame count by 1
-        img_count++;
       }
 
       return (true);
     }
 
-  
 };
 
 /* ---[ */
