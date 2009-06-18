@@ -38,8 +38,6 @@
 #include <string>
 #include <string.h>
 
-#include <opencv/cv.h>
-
 // For some reason 1.0.10-541 does not provide this
 #define DWORD unsigned int
 
@@ -50,9 +48,9 @@
 #include <libusbSR.h>
 
 // ROS include
-#include "std_msgs/PointCloud.h"
-#include "std_msgs/ImageArray.h"
-#include "ros/common.h"
+#include <robot_msgs/PointCloud.h>
+#include <deprecated_msgs/ImageArray.h>
+#include <ros/common.h>
 
 // Older library: #define MODE (AM_COR_FIX_PTRN | AM_COR_LED_NON_LIN | AM_MEDIAN)
 #define MODE (AM_CONF_MAP | AM_COR_FIX_PTRN | AM_SW_ANF | AM_MEDIAN | AM_DENOISE_ANF | AM_MEDIANCROSS | AM_CONV_GRAY)// | AM_SHORT_RANGE)
@@ -82,7 +80,7 @@ namespace swissranger
       int open ();
       int close ();
 
-      void readData (std_msgs::PointCloud &cloud, std_msgs::ImageArray &images);
+      void readData (robot_msgs::PointCloud &cloud, deprecated_msgs::ImageArray &images);
 
       int setAutoIllumination (bool on);
       int setIntegrationTime (int time);
@@ -97,29 +95,6 @@ namespace swissranger
       std::string device_id_;
       std::string lib_version_;
     
-      // Get/Set filtering values
-      bool getPCDFilter () { return this->pcd_filter_; }
-      void setPCDFilter (bool filter) { this->pcd_filter_ = filter; }
-
-      bool getUndistortImage (int img_type)
-      {
-        switch (img_type)
-        {
-          case SR_IMG_DISTANCE:   return (this->undistort_distance_);
-          case SR_IMG_AMPLITUDE:  return (this->undistort_amplitude_);
-          case SR_IMG_CONFIDENCE: return (this->undistort_confidence_);
-        }
-      }
-      void setUndistortImage (int img_type, bool filter)
-      {
-        switch (img_type)
-        {
-          case SR_IMG_DISTANCE:   { this->undistort_distance_   = filter; break; } 
-          case SR_IMG_AMPLITUDE:  { this->undistort_amplitude_  = filter; break; }
-          case SR_IMG_CONFIDENCE: { this->undistort_confidence_ = filter; break; }
-        }
-      }
-
     private:
       // device identifier
       CMesaDevice* srCam_;
@@ -131,18 +106,6 @@ namespace swissranger
 
       std::string getDeviceString ();
       std::string getLibraryVersion ();
-
-      // Used for rotating images with 180 deg around their centre internally
-      void rotateImage180 (uint8_t *img, uint8_t *rot_img, int width, int height);
-      
-      // Stores the intrinsic camera matrix and the distortion coefficients after calibration
-      CvMat *intrinsic_, *distortion_;
-      void undistort (uint8_t *img, uint8_t *un_img, int width, int height);
-      void contours (uint8_t *img, uint8_t *con_img, int width, int height, int threshold);
-      double getAngle (float px, float py, float pz, float qx, float qy, float qz);
-
-      bool pcd_filter_;       // in-driver PCD filtering 
-      bool undistort_distance_, undistort_amplitude_, undistort_confidence_;
   };
 };
 

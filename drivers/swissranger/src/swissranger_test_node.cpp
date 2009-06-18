@@ -53,8 +53,8 @@ Subscribes to (name/type):
 - None
 
 Publishes to (name / type):
-- @b "cloud_sr"/<a href="../../std_msgs/html/classstd__msgs_1_1PointCloud.html">PointCloud</a> : Point cloud data from the SwissRanger.
-- @b "images_sr"/<a href="../../std_msgs/html/classstd__msgs_1_1ImageArray.html">ImageArray</a> : Distance and intensity camera images from the SwissRanger
+- @b "cloud_sr"/PointCloud  : Point cloud data from the SwissRanger.
+- @b "images_sr"/ImageArray : Distance, intensity, and confidence camera images from the SwissRanger
 
 <hr>
 
@@ -70,58 +70,60 @@ Reads the following parameters from the parameter server
  **/
 
 // ROS core
-#include "ros/node.h"
-#include "ros/time.h"
-#include "ros/common.h"
+#include <ros/node.h>
+#include <ros/time.h>
+#include <ros/common.h>
 
-#include "std_msgs/PointCloud.h"
-#include "std_msgs/ImageArray.h"
-#include "std_msgs/Image.h"
+#include <robot_msgs/PointCloud.h>
+#include <deprecated_msgs/ImageArray.h>
 
-// OpenCV (for dumping data to disk)
+// OpenCV  + point_cloud_mapping (for dumping data to disk)
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
+#include <point_cloud_mapping/cloud_io.h>
 
 #include <fstream>
 
 // Drivers used
 #include "swissranger.h"
 
-#include "tf/tf.h"
-
 #define DEFAULT_INT_VALUE INT_MIN
 #define DEFAULT_DBL_VALUE DBL_MIN
 
 using namespace std;
+using namespace robot_msgs;
+using namespace deprecated_msgs;
 
-class SwissRangerTestNode: public ros::node
+class SwissRangerTestNode
 {
+  protected:
+    ros::Node& node_;
   public:
 
     int sr_auto_illumination_, sr_integration_time_, sr_modulation_freq_, sr_amp_threshold_;
     int sr_auto_illumination_prev_, sr_integration_time_prev_, sr_modulation_freq_prev_, sr_amp_threshold_prev_;
 
     // ROS messages
-    std_msgs::PointCloud sr_msg_cloud_;
-    std_msgs::ImageArray sr_msg_images_;
-    std_msgs::Image flir_msg_image_;
+    PointCloud sr_msg_cloud_;
+    ImageArray sr_msg_images_;
 
     swissranger::SwissRanger sr_;
+    
+    bool dump_to_disk_;
 
-    SwissRangerTestNode () : ros::node ("swissranger_test_node")                                                
+    SwissRangerTestNode (ros::Node& anode) : node_ (anode), dump_to_disk_ (false)
     {
       // Initialize internal parameters
-      param ("~sr_auto_illumination", sr_auto_illumination_, DEFAULT_INT_VALUE);
-      param ("~sr_integration_time", sr_integration_time_, DEFAULT_INT_VALUE);
-      param ("~sr_modulation_freq", sr_modulation_freq_, DEFAULT_INT_VALUE);
-      param ("~sr_amp_threshold", sr_amp_threshold_, DEFAULT_INT_VALUE);
+      node_.param ("~sr_auto_illumination", sr_auto_illumination_, DEFAULT_INT_VALUE);
+      node_.param ("~sr_integration_time", sr_integration_time_, DEFAULT_INT_VALUE);
+      node_.param ("~sr_modulation_freq", sr_modulation_freq_, DEFAULT_INT_VALUE);
+      node_.param ("~sr_amp_threshold", sr_amp_threshold_, DEFAULT_INT_VALUE);
       
       sr_auto_illumination_prev_ = sr_integration_time_prev_ = sr_modulation_freq_prev_ = sr_amp_threshold_prev_ = DEFAULT_INT_VALUE;
       
-     // Maximum number of outgoing messages to be queued for delivery to subscribers = 1
-      advertise<std_msgs::PointCloud>("cloud_sr", 1);
-
-      advertise<std_msgs::ImageArray>("images_sr", 1);
+      // Maximum number of outgoing messages to be queued for delivery to subscribers = 1
+      node_.advertise<PointCloud>("cloud_sr", 1);
+      node_.advertise<ImageArray>("images_sr", 1);
     }
 
     ~SwissRangerTestNode ()
@@ -144,8 +146,7 @@ class SwissRangerTestNode: public ros::node
         }
       } catch (swissranger::Exception& e) {
         ROS_ERROR("[SwissRangerTestNode::SwissRanger] Exception thrown while connecting to the sensor.\n%s", e.what ());
-        if (sr_enable_)
-          return (-1);
+        return (-1);
       }
 
 //      sr_.setAutoIllumination (1);
@@ -172,48 +173,15 @@ class SwissRangerTestNode: public ros::node
     }
 
     ////////////////////////////////////////////////////////////////////////////////
-    // Dump a point cloud to disk
-    void
-      SaveCloud (char *fn, std_msgs::PointCloud cloud)
-    {
-      std::ofstream fs;
-      fs.precision (5);
-      fs.open (fn);
-
-      int nr_pts = cloud.get_pts_size ();
-      int dim    = cloud.get_chan_size ();
-      fs << "COLUMNS x y z i pid";
-      for (int d = 0; d < dim; d++)
-        fs << " " << cloud.chan[d].name;
-      fs << endl;
-      fs << "POINTS " << nr_pts << endl;
-      fs << "DATA ascii" << endl;
-      
-      for (int i = 0; i < nr_pts; i++)
-      {
-        fs << cloud.pts[i].x << " " << cloud.pts[i].y << " " << cloud.pts[i].z;
-        for (int d = 0; d < dim; d++)
-          fs << " " << cloud.chan[d].vals[i];
-        fs << endl;
-      }
-      fs.close ();
-    }
-
-    ////////////////////////////////////////////////////////////////////////////////
     // Obtain a set of interesting parameters from the parameter server
     void
       getParametersFromServer ()
     {
       // Swissranger related parameters
-      if (has_param ("~sr_auto_illumination"))
-        get_param ("~sr_auto_illumination", sr_auto_illumination_);
-      if (has_param ("~sr_integration_time"))
-        get_param ("~sr_integration_time", sr_integration_time_);
-      if (has_param ("~sr_modulation_freq"))
-        get_param ("~sr_modulation_freq", sr_modulation_freq_);
-      if (has_param ("~sr_amp_threshold"))
-        get_param ("~sr_amp_threshold", sr_amp_threshold_);
-        
+      node_.getParam ("~sr_auto_illumination", sr_auto_illumination_);
+      node_.getParam ("~sr_integration_time", sr_integration_time_);
+      node_.getParam ("~sr_modulation_freq", sr_modulation_freq_);
+      node_.getParam ("~sr_amp_threshold", sr_amp_threshold_);
    }
     
     ////////////////////////////////////////////////////////////////////////////////
@@ -249,69 +217,12 @@ class SwissRangerTestNode: public ros::node
         ROS_INFO ("[SwissRangerTestNode::setInternalParameters::Swissranger] Amplitude threshold changed to %d", sr_amp_threshold_);
         sr_.setAmplitudeThreshold (sr_amp_threshold_);
       }
-      
-      // Stereo related parameters
-      if (stoc_zmax_ != stoc_zmax_prev_) 
-      {
-        stoc_zmax_prev_ = stoc_zmax_;
-        ROS_INFO ("[SwissRangerTestNode::setInternalParameters::STOC] Z-max cutoff value changed to %g", stoc_zmax_);
-        stoc_.z_max_     = stoc_zmax_;
-      }
-
-      if (stoc_ndisp_ != stoc_ndisp_prev_) 
-      {
-        stoc_ndisp_prev_ = stoc_ndisp_;
-        ROS_INFO ("[SwissRangerTestNode::setInternalParameters::STOC] Number of disparities changed to %d", stoc_ndisp_);
-        stoc_.setNDisp (stoc_ndisp_);
-      }
-
-      if (stoc_tex_thresh_ != stoc_tex_thresh_prev_) 
-      {
-        stoc_tex_thresh_prev_ = stoc_tex_thresh_;
-        ROS_INFO ("[SwissRangerTestNode::setInternalParameters::STOC] Texture filter threshold changed to %d", stoc_tex_thresh_);
-        stoc_.setTexThresh (stoc_tex_thresh_);
-      }
-
-      if (stoc_unique_ != stoc_unique_prev_) 
-      {
-        stoc_unique_prev_ = stoc_unique_;
-        ROS_INFO ("[SwissRangerTestNode::setInternalParameters::STOC] Uniqueness filter threshold changed to %d", stoc_unique_);
-        stoc_.setUnique (stoc_unique_);
-      }
-
-      if (stoc_corrsize_ != stoc_corrsize_prev_) 
-      {
-        stoc_corrsize_prev_ = stoc_corrsize_;
-        ROS_INFO ("[SwissRangerTestNode::setInternalParameters::STOC] Correlation window size changed to %d", stoc_corrsize_);
-        stoc_.setCorrSize (stoc_corrsize_);
-      }
-
-      if (stoc_horopter_ != stoc_horopter_prev_) 
-      {
-        stoc_horopter_prev_ = stoc_horopter_;
-        ROS_INFO ("[SwissRangerTestNode::setInternalParameters::STOC] Horopter (X Offset) changed to %d", stoc_horopter_);
-        stoc_.setHoropter (stoc_horopter_);
-      }
-
-      if (stoc_speckle_size_ != stoc_speckle_size_prev_) 
-      {
-        stoc_speckle_size_prev_ = stoc_speckle_size_;
-        ROS_INFO ("[SwissRangerTestNode::setInternalParameters::STOC] Minimum disparity region size changed to %d", stoc_speckle_size_);
-        stoc_.setSpeckleSize (stoc_speckle_size_);
-      }
-
-      if (stoc_speckle_diff_ != stoc_speckle_diff_prev_) 
-      {
-        stoc_speckle_diff_prev_ = stoc_speckle_diff_;
-        ROS_INFO ("[SwissRangerTestNode::setInternalParameters::STOC] Disparity region neighbor difference changed to %d", stoc_speckle_diff_);
-        stoc_.setSpeckleDiff (stoc_speckle_diff_);
-      }
     }
     
     ////////////////////////////////////////////////////////////////////////////////
     // Save Swissranger images to disk
     void
-      saveSRImages (std_msgs::ImageArray sr_msg_images_, int img_count)
+      saveSRImages (deprecated_msgs::ImageArray sr_msg_images_, int img_count)
     {
       char fn[80];
       CvSize sr_size = cvSize (sr_msg_images_.images[0].width, sr_msg_images_.images[0].height);
@@ -339,7 +250,7 @@ class SwissRangerTestNode: public ros::node
       char fn[80];
       int img_count = 1;
 
-      while (ok ())
+      while (1)
       {
 //        usleep (100000);
         
@@ -360,12 +271,12 @@ class SwissRangerTestNode: public ros::node
         {
           saveSRImages (sr_msg_images_, img_count);
           sprintf (fn, "%04i-sr4k.pcd", img_count);
-          SaveCloud (fn, sr_msg_cloud_);
+          cloud_io::savePCDFileBinary (fn, sr_msg_cloud_);
         } // dump_to_disk
           
         // Publish it
-        publish ("cloud_sr", sr_msg_cloud_);
-        publish ("images_sr", sr_msg_images_);
+        node_.publish ("cloud_sr", sr_msg_cloud_);
+        node_.publish ("images_sr", sr_msg_images_);
 
         // Bump the frame count by 1
         img_count++;
@@ -382,14 +293,12 @@ int
   main (int argc, char** argv)
 {
   ros::init (argc, argv);
+  ros::Node ros_node ("swissranger_test_node");
 
-  SwissRangerTestNode c;
-  c.dump_to_disk_ = false;
+  SwissRangerTestNode c (ros_node);
 
   if (c.start () == 0)
     c.spin ();
-
-  ros::fini ();
 
   return (0);
 }
