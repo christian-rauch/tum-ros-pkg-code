@@ -256,8 +256,8 @@ class SwissRangerTestNode
       if (!row_pointers)
         return (false);
 
-      for (int i = 0; i < img.height; i++)
-        row_pointers[i] = (png_bytep)(unsigned char*)img.data[i] + (i * img.width * 2);
+      for (unsigned int i = 0; i < img.height; i++)
+        row_pointers[i] = (png_bytep)(unsigned char*)&img.data[0] + (i * img.width * 2);
       
       // Write the actual data
       png_write_image (png_ptr, row_pointers);
