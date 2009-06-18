@@ -10,6 +10,6 @@
   <export>
     <cpp cflags="-I${prefix}/src" lflags="-L${prefix}/lib -lswissranger"/>
   </export>
-  <sysdepend os="debian" version="sid" package="libusbSR"/>
+  <sysdepend os="debian" version="sid" package="libmesasr"/>
   <url></url>
 </package>
