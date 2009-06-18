@@ -1,0 +1,12 @@
+<package>
+  <description>A library for accessing SwissRanger cameras though the use of libusbSR</description>
+  <author>Radu Bogdan Rusu (rusu@cs.tum.edu)</author>
+  <license>BSD</license>
+  <depend package="roscpp" />
+  <depend package="std_msgs" />
+  <export>
+    <cpp cflags="-I${prefix}/src" lflags="-L${prefix}/lib -lswissranger"/>
+  </export>
+  <sysdepend os="debian" version="sid" package="libusbSR"/>
+  <url></url>
+</package>
