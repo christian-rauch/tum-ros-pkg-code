@@ -279,6 +279,7 @@ class SwissRangerTestNode
         } // dump_to_disk
           
         // Publish it
+        sr_msg_cloud_.header.frame_id = "base_link";
         node_.publish ("cloud_sr", sr_msg_cloud_);
         node_.publish ("images_sr", sr_msg_images_);
 
