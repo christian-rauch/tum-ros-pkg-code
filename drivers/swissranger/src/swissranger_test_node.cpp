@@ -85,6 +85,8 @@ Reads the following parameters from the parameter server
 // Drivers used
 #include "swissranger.h"
 
+#include <boost/thread/mutex.hpp>
+
 #define DEFAULT_INT_VALUE INT_MIN
 #define DEFAULT_DBL_VALUE DBL_MIN
 
@@ -108,6 +110,8 @@ class SwissRangerTestNode
 
     swissranger::SwissRanger sr_;
     
+    boost::mutex m_lock_;
+
     bool dump_to_disk_;
     int img_count_, snap_count_;
 
@@ -297,7 +301,9 @@ class SwissRangerTestNode
         try
         {
           // Read data from the SwissRanger
+          m_lock_.lock ();
           sr_.readData (sr_msg_cloud_, sr_msg_images_);
+          m_unlock_.unlock ();
         } catch (swissranger::Exception& e) {
           ROS_WARN("[SwissRangerTestNode] Exception thrown while trying to read data.\n%s", e.what ());
           continue;
