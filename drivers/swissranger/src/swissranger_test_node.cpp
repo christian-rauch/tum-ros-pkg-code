@@ -128,9 +128,9 @@ class SwissRangerTestNode
       sr_auto_illumination_prev_ = sr_integration_time_prev_ = sr_modulation_freq_prev_ = sr_amp_threshold_prev_ = DEFAULT_INT_VALUE;
       
       // Maximum number of outgoing messages to be queued for delivery to subscribers = 1
-      node_.advertise<PointCloud>("cloud_sr", 1);
-      node_.advertise<ImageArray>("images_sr", 1);
-      node_.advertiseService("acquire_snapshot", &SwissRangerTestNode::snapshot, this);
+      node_.advertise<PointCloud>("~cloud_sr", 1);
+      node_.advertise<ImageArray>("~images_sr", 1);
+      node_.advertiseService("~acquire_snapshot", &SwissRangerTestNode::snapshot, this);
     }
 
     ~SwissRangerTestNode ()
