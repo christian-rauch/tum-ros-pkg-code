@@ -7,7 +7,7 @@
   <depend package="opencv" />
   <depend package="flir_driver" />
   <depend package="stoc_driver" />
-  <depend package="swissranger_driver" />
+  <depend package="composite_swissranger" />
   <depend package="string_utils" />
   <depend package="tf" />
   <url></url>
