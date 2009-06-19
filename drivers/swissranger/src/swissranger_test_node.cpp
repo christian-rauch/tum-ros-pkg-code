@@ -303,7 +303,7 @@ class SwissRangerTestNode
           // Read data from the SwissRanger
           m_lock_.lock ();
           sr_.readData (sr_msg_cloud_, sr_msg_images_);
-          m_unlock_.unlock ();
+          m_lock_.unlock ();
         } catch (swissranger::Exception& e) {
           ROS_WARN("[SwissRangerTestNode] Exception thrown while trying to read data.\n%s", e.what ());
           continue;
