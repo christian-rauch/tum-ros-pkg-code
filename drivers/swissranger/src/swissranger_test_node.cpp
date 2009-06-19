@@ -76,6 +76,7 @@ Reads the following parameters from the parameter server
 
 #include <robot_msgs/PointCloud.h>
 #include <deprecated_msgs/ImageArray.h>
+#include <swissranger/SRDumpToggle.h>
 
 // libpng + point_cloud_mapping (for dumping data to disk)
 #include <png.h>
@@ -90,6 +91,7 @@ Reads the following parameters from the parameter server
 using namespace std;
 using namespace robot_msgs;
 using namespace deprecated_msgs;
+using namespace swissranger;
 
 class SwissRangerTestNode
 {
@@ -107,8 +109,9 @@ class SwissRangerTestNode
     swissranger::SwissRanger sr_;
     
     bool dump_to_disk_;
+    int img_count_;
 
-    SwissRangerTestNode (ros::Node& anode) : node_ (anode), dump_to_disk_ (false)
+    SwissRangerTestNode (ros::Node& anode) : node_ (anode), dump_to_disk_ (false), img_count_ (1)
     {
       // Initialize internal parameters
       node_.param ("~sr_auto_illumination", sr_auto_illumination_, DEFAULT_INT_VALUE);
@@ -123,6 +126,7 @@ class SwissRangerTestNode
       // Maximum number of outgoing messages to be queued for delivery to subscribers = 1
       node_.advertise<PointCloud>("cloud_sr", 1);
       node_.advertise<ImageArray>("images_sr", 1);
+      node_.advertiseService("acquire_snapshot", &SwissRangerTestNode::snapshot, this);
     }
 
     ~SwissRangerTestNode ()
@@ -298,7 +302,6 @@ class SwissRangerTestNode
     bool spin ()
     {
       char fn[80];
-      int img_count = 1;
 
       while (1)
       {
@@ -317,10 +320,10 @@ class SwissRangerTestNode
         
         if (dump_to_disk_)
         {
-          ROS_INFO ("Saving data to disk, frame number %i", img_count);
-          sprintf (fn, "%04i-sr4k.pcd", img_count);
+          ROS_INFO ("Saving data to disk, frame number %i", img_count_);
+          sprintf (fn, "%04i-sr4k.pcd", img_count_);
           cloud_io::savePCDFileBinary (fn, sr_msg_cloud_);
-          saveSRImages (sr_msg_images_, img_count);
+          saveSRImages (sr_msg_images_, img_count_);
         } // dump_to_disk
           
         // Publish it
@@ -329,6 +332,18 @@ class SwissRangerTestNode
         node_.publish ("images_sr", sr_msg_images_);
       }
 
+      return (true);
+    }
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    bool
+      snapshot (SRDumpToggle::Request &req, SRDumpToggle::Response &resp)
+    {
+      char fn[80];
+      sprintf (fn, "%04i-sr4k.pcd", img_count_);
+      ROS_INFO ("Snapshot enabled... saving data to disk: %s", fn);
+      cloud_io::savePCDFileBinary (fn, sr_msg_cloud_);
+      saveSRImages (sr_msg_images_, img_count_);
       return (true);
     }
 

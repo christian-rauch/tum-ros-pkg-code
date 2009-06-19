@@ -7,7 +7,7 @@
   <depend package="robot_msgs" />
   <depend package="point_cloud_mapping" />
   <export>
-    <cpp cflags="-I${prefix}/src" lflags="-L${prefix}/lib -lswissranger"/>
+    <cpp cflags="-I${prefix}/src -I${prefix}/srv/cpp" lflags="-L${prefix}/lib -lswissranger"/>
   </export>
   <sysdepend os="debian" version="sid" package="libmesasr"/>
   <sysdepend os="debian" version="sid" package="libpng12-dev"/>
