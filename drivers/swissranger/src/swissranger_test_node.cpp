@@ -93,7 +93,7 @@ Reads the following parameters from the parameter server
 using namespace std;
 using namespace robot_msgs;
 using namespace deprecated_msgs;
-using namespace swissranger;
+using namespace swissranger_srv;
 
 class SwissRangerTestNode
 {
