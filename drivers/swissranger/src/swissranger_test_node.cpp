@@ -76,7 +76,7 @@ Reads the following parameters from the parameter server
 
 #include <robot_msgs/PointCloud.h>
 #include <deprecated_msgs/ImageArray.h>
-#include <swissranger/SRDumpToggle.h>
+#include <swissranger_srv/SRDumpToggle.h>
 
 // libpng + point_cloud_mapping (for dumping data to disk)
 #include <png.h>
