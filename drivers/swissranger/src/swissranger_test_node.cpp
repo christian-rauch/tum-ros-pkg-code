@@ -313,14 +313,14 @@ class SwissRangerTestNode
         {
           ROS_INFO ("Saving data to disk, frame number %i", img_count_);
           
-          sprintf (fn, "%04i-sr4k.pcd", img_count_);
+          sprintf (fn, "/tmp/%04i-sr4k.pcd", img_count_);
           cloud_io::savePCDFileBinary (fn, sr_msg_cloud_);
 
-          sprintf (fn, "%04i-sr4k-distance.png", img_count_);
+          sprintf (fn, "/tmp/%04i-sr4k-distance.png", img_count_);
           writePNG (fn, sr_msg_images_.images[0]);
-          sprintf (fn, "%04i-sr4k-intensity.png", img_count_);
+          sprintf (fn, "/tmp/%04i-sr4k-intensity.png", img_count_);
           writePNG (fn, sr_msg_images_.images[1]);
-          sprintf (fn, "%04i-sr4k-confidence.png", img_count_);
+          sprintf (fn, "/tmp/%04i-sr4k-confidence.png", img_count_);
           writePNG (fn, sr_msg_images_.images[2]);
           
           img_count_++;
@@ -341,15 +341,15 @@ class SwissRangerTestNode
     {
       char fn[80];
       
-      sprintf (fn, "snapshot-%04i-sr4k.pcd", snap_count_);
+      sprintf (fn, "/tmp/snapshot-%04i-sr4k.pcd", snap_count_);
       ROS_INFO ("Snapshot enabled... saving data to disk: %s", fn);
       cloud_io::savePCDFileBinary (fn, sr_msg_cloud_);
       
-      sprintf (fn, "snapshot-%04i-sr4k-distance.png", snap_count_);
+      sprintf (fn, "/tmp/snapshot-%04i-sr4k-distance.png", snap_count_);
       writePNG (fn, sr_msg_images_.images[0]);
-      sprintf (fn, "snapshot-%04i-sr4k-intensity.png", snap_count_);
+      sprintf (fn, "/tmp/snapshot-%04i-sr4k-intensity.png", snap_count_);
       writePNG (fn, sr_msg_images_.images[1]);
-      sprintf (fn, "snapshot-%04i-sr4k-confidence.png", snap_count_);
+      sprintf (fn, "/tmp/snapshot-%04i-sr4k-confidence.png", snap_count_);
       writePNG (fn, sr_msg_images_.images[2]);
       
       resp.counter = snap_count_;
