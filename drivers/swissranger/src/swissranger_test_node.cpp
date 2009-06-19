@@ -109,9 +109,9 @@ class SwissRangerTestNode
     swissranger::SwissRanger sr_;
     
     bool dump_to_disk_;
-    int img_count_;
+    int img_count_, snap_count_;
 
-    SwissRangerTestNode (ros::Node& anode) : node_ (anode), dump_to_disk_ (false), img_count_ (1)
+    SwissRangerTestNode (ros::Node& anode) : node_ (anode), dump_to_disk_ (false), img_count_ (1), snap_count_ (1)
     {
       // Initialize internal parameters
       node_.param ("~sr_auto_illumination", sr_auto_illumination_, DEFAULT_INT_VALUE);
@@ -282,21 +282,6 @@ class SwissRangerTestNode
       return (true);
     }
 
-    ////////////////////////////////////////////////////////////////////////////////
-    // Save Swissranger images to disk
-    void
-      saveSRImages (const ImageArray &sr_msg_images_, int &img_count)
-    {
-      char fn[80];
-      sprintf (fn, "%04i-sr4k-distance.png", img_count);
-      writePNG (fn, sr_msg_images_.images[0]);
-      sprintf (fn, "%04i-sr4k-intensity.png", img_count);
-      writePNG (fn, sr_msg_images_.images[1]);
-      sprintf (fn, "%04i-sr4k-confidence.png", img_count);
-      writePNG (fn, sr_msg_images_.images[2]);
-      img_count++;
-    }
-
    ////////////////////////////////////////////////////////////////////////////////
     // Spin (!)
     bool spin ()
@@ -321,9 +306,18 @@ class SwissRangerTestNode
         if (dump_to_disk_)
         {
           ROS_INFO ("Saving data to disk, frame number %i", img_count_);
+          
           sprintf (fn, "%04i-sr4k.pcd", img_count_);
           cloud_io::savePCDFileBinary (fn, sr_msg_cloud_);
-          saveSRImages (sr_msg_images_, img_count_);
+
+          sprintf (fn, "%04i-sr4k-distance.png", img_count_);
+          writePNG (fn, sr_msg_images_.images[0]);
+          sprintf (fn, "%04i-sr4k-intensity.png", img_count_);
+          writePNG (fn, sr_msg_images_.images[1]);
+          sprintf (fn, "%04i-sr4k-confidence.png", img_count_);
+          writePNG (fn, sr_msg_images_.images[2]);
+          
+          img_count_++;
         } // dump_to_disk
           
         // Publish it
@@ -340,10 +334,19 @@ class SwissRangerTestNode
       snapshot (SRDumpToggle::Request &req, SRDumpToggle::Response &resp)
     {
       char fn[80];
-      sprintf (fn, "%04i-sr4k.pcd", img_count_);
+      
+      sprintf (fn, "snapshot-%04i-sr4k.pcd", snap_count_);
       ROS_INFO ("Snapshot enabled... saving data to disk: %s", fn);
       cloud_io::savePCDFileBinary (fn, sr_msg_cloud_);
-      saveSRImages (sr_msg_images_, img_count_);
+      
+      sprintf (fn, "snapshot-%04i-sr4k-distance.png", snap_count_);
+      writePNG (fn, sr_msg_images_.images[0]);
+      sprintf (fn, "snapshot-%04i-sr4k-intensity.png", snap_count_);
+      writePNG (fn, sr_msg_images_.images[1]);
+      sprintf (fn, "snapshot-%04i-sr4k-confidence.png", snap_count_);
+      writePNG (fn, sr_msg_images_.images[2]);
+      
+      snap_count_++;
       return (true);
     }
 
