@@ -1,0 +1,10 @@
+<package>
+  <description>Swissranger driver services. Should be moved later together with other services.</description>
+  <author>Radu Bogdan Rusu (rusu@cs.tum.edu)</author>
+  <license>BSD</license>
+  <depend package="roscpp" />
+  <export>
+    <cpp cflags="-I${prefix}/srv/cpp" />
+  </export>
+  <url></url>
+</package>
