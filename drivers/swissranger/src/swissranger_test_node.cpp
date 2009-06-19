@@ -352,6 +352,7 @@ class SwissRangerTestNode
       sprintf (fn, "snapshot-%04i-sr4k-confidence.png", snap_count_);
       writePNG (fn, sr_msg_images_.images[2]);
       
+      resp.counter = snap_count_;
       snap_count_++;
       return (true);
     }
