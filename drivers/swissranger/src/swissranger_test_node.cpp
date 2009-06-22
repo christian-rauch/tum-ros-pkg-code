@@ -98,7 +98,7 @@ using namespace swissranger_srv;
 class SwissRangerTestNode
 {
   protected:
-    ros::Node& node_;
+    ros::NodeHandle nh_;
   public:
 
     int sr_auto_illumination_, sr_integration_time_, sr_modulation_freq_, sr_amp_threshold_;
@@ -115,22 +115,22 @@ class SwissRangerTestNode
     bool dump_to_disk_;
     int img_count_, snap_count_;
 
-    SwissRangerTestNode (ros::Node& anode) : node_ (anode), dump_to_disk_ (false), img_count_ (1), snap_count_ (1)
+    SwissRangerTestNode (ros::Node& anode) : dump_to_disk_ (false), img_count_ (1), snap_count_ (1)
     {
       // Initialize internal parameters
-      node_.param ("~sr_auto_illumination", sr_auto_illumination_, DEFAULT_INT_VALUE);
-      node_.param ("~sr_integration_time", sr_integration_time_, DEFAULT_INT_VALUE);
-      node_.param ("~sr_modulation_freq", sr_modulation_freq_, DEFAULT_INT_VALUE);
-      node_.param ("~sr_amp_threshold", sr_amp_threshold_, DEFAULT_INT_VALUE);
+      nh_.param ("~sr_auto_illumination", sr_auto_illumination_, DEFAULT_INT_VALUE);
+      nh_.param ("~sr_integration_time", sr_integration_time_, DEFAULT_INT_VALUE);
+      nh_.param ("~sr_modulation_freq", sr_modulation_freq_, DEFAULT_INT_VALUE);
+      nh_.param ("~sr_amp_threshold", sr_amp_threshold_, DEFAULT_INT_VALUE);
 
-      node_.param ("~sr_dump_to_disk", dump_to_disk_, false);
+      nh_.param ("~sr_dump_to_disk", dump_to_disk_, false);
       
       sr_auto_illumination_prev_ = sr_integration_time_prev_ = sr_modulation_freq_prev_ = sr_amp_threshold_prev_ = DEFAULT_INT_VALUE;
       
       // Maximum number of outgoing messages to be queued for delivery to subscribers = 1
-      node_.advertise<PointCloud>("cloud_sr", 1);
-      node_.advertise<ImageArray>("images_sr", 1);
-      node_.advertiseService("/acquire_snapshot_sr", &SwissRangerTestNode::snapshot, this);
+      nh_.advertise<PointCloud>("cloud_sr", 1);
+      nh_.advertise<ImageArray>("images_sr", 1);
+      nh_.advertiseService("/acquire_snapshot", &SwissRangerTestNode::snapshot, this);
     }
 
     ~SwissRangerTestNode ()
@@ -185,11 +185,11 @@ class SwissRangerTestNode
       getParametersFromServer ()
     {
       // Swissranger related parameters
-      node_.getParam ("~sr_auto_illumination", sr_auto_illumination_);
-      node_.getParam ("~sr_integration_time", sr_integration_time_);
-      node_.getParam ("~sr_modulation_freq", sr_modulation_freq_);
-      node_.getParam ("~sr_amp_threshold", sr_amp_threshold_);
-      node_.getParam ("~sr_dump_to_disk", dump_to_disk_);
+      nh_.getParam ("~sr_auto_illumination", sr_auto_illumination_);
+      nh_.getParam ("~sr_integration_time", sr_integration_time_);
+      nh_.getParam ("~sr_modulation_freq", sr_modulation_freq_);
+      nh_.getParam ("~sr_amp_threshold", sr_amp_threshold_);
+      nh_.getParam ("~sr_dump_to_disk", dump_to_disk_);
    }
     
     ////////////////////////////////////////////////////////////////////////////////
@@ -292,7 +292,7 @@ class SwissRangerTestNode
     {
       char fn[80];
 
-      while (1)
+      while (nh_.ok ())
       {
         // Change certain parameters in the cameras, based on values from the parameter server
         getParametersFromServer ();
@@ -328,8 +328,10 @@ class SwissRangerTestNode
           
         // Publish it
         sr_msg_cloud_.header.frame_id = "base_link";
-        node_.publish ("cloud_sr", sr_msg_cloud_);
-        node_.publish ("images_sr", sr_msg_images_);
+        nh_.publish ("cloud_sr", sr_msg_cloud_);
+        nh_.publish ("images_sr", sr_msg_images_);
+        
+        ros::spinOnce ();
       }
 
       return (true);
@@ -343,6 +345,8 @@ class SwissRangerTestNode
       
       sprintf (fn, "/tmp/snapshot-%04i-sr4k.pcd", snap_count_);
       ROS_INFO ("Snapshot enabled... saving data to disk: %s", fn);
+
+      m_lock_.lock ();
       cloud_io::savePCDFileBinary (fn, sr_msg_cloud_);
       
       sprintf (fn, "/tmp/snapshot-%04i-sr4k-distance.png", snap_count_);
@@ -351,9 +355,11 @@ class SwissRangerTestNode
       writePNG (fn, sr_msg_images_.images[1]);
       sprintf (fn, "/tmp/snapshot-%04i-sr4k-confidence.png", snap_count_);
       writePNG (fn, sr_msg_images_.images[2]);
+      m_lock_.unlock ();
       
       resp.counter = snap_count_;
       snap_count_++;
+
       return (true);
     }
 
@@ -366,7 +372,7 @@ int
   ros::init (argc, argv);
   ros::Node ros_node ("swissranger_test_node");
 
-  SwissRangerTestNode c (ros_node);
+  SwissRangerTestNode c;
 
   if (c.start () == 0)
     c.spin ();
