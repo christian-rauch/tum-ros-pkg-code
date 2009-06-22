@@ -372,8 +372,7 @@ class SwissRangerTestNode
 int
   main (int argc, char** argv)
 {
-  ros::init (argc, argv);
-  ros::Node ros_node ("swissranger_test_node");
+  ros::init (argc, argv, "swissranger_test_node");
 
   SwissRangerTestNode c;
 
