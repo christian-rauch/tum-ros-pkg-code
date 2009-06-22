@@ -360,8 +360,8 @@ class SwissRangerTestNode
       writePNG (fn, sr_msg_images_.images[2]);
       m_lock_.unlock ();
       
-      resp.counter = snap_count_;
       snap_count_++;
+      resp.counter = snap_count_;
 
       return (true);
     }
