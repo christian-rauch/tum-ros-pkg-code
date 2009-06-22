@@ -71,6 +71,7 @@ Reads the following parameters from the parameter server
 
 // ROS core
 #include <ros/node.h>
+#include <ros/node_handle.h>
 #include <ros/time.h>
 #include <ros/common.h>
 
@@ -110,12 +111,14 @@ class SwissRangerTestNode
 
     swissranger::SwissRanger sr_;
     
+    ros::Publisher cloud_pub_, images_pub_;
+    
     boost::mutex m_lock_;
 
     bool dump_to_disk_;
     int img_count_, snap_count_;
 
-    SwissRangerTestNode (ros::Node& anode) : dump_to_disk_ (false), img_count_ (1), snap_count_ (1)
+    SwissRangerTestNode () : dump_to_disk_ (false), img_count_ (1), snap_count_ (1)
     {
       // Initialize internal parameters
       nh_.param ("~sr_auto_illumination", sr_auto_illumination_, DEFAULT_INT_VALUE);
@@ -128,8 +131,8 @@ class SwissRangerTestNode
       sr_auto_illumination_prev_ = sr_integration_time_prev_ = sr_modulation_freq_prev_ = sr_amp_threshold_prev_ = DEFAULT_INT_VALUE;
       
       // Maximum number of outgoing messages to be queued for delivery to subscribers = 1
-      nh_.advertise<PointCloud>("cloud_sr", 1);
-      nh_.advertise<ImageArray>("images_sr", 1);
+      cloud_pub_  = nh_.advertise<PointCloud>("cloud_sr", 1);
+      images_pub_ = nh_.advertise<ImageArray>("images_sr", 1);
       nh_.advertiseService("/acquire_snapshot", &SwissRangerTestNode::snapshot, this);
     }
 
@@ -328,8 +331,8 @@ class SwissRangerTestNode
           
         // Publish it
         sr_msg_cloud_.header.frame_id = "base_link";
-        nh_.publish ("cloud_sr", sr_msg_cloud_);
-        nh_.publish ("images_sr", sr_msg_images_);
+        cloud_pub_.publish (sr_msg_cloud_);
+        images_pub_.publish (sr_msg_images_);
         
         ros::spinOnce ();
       }
