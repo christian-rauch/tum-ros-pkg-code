@@ -92,6 +92,7 @@ Reads the following parameters from the parameter server
 #define DEFAULT_DBL_VALUE DBL_MIN
 
 using namespace std;
+using namespace ros;
 using namespace robot_msgs;
 using namespace deprecated_msgs;
 using namespace swissranger_srv;
@@ -111,7 +112,8 @@ class SwissRangerTestNode
 
     swissranger::SwissRanger sr_;
     
-    ros::Publisher cloud_pub_, images_pub_;
+    Publisher cloud_pub_, images_pub_;
+    ServiceServer snapshot_service_;
     
     boost::mutex m_lock_;
 
@@ -133,7 +135,7 @@ class SwissRangerTestNode
       // Maximum number of outgoing messages to be queued for delivery to subscribers = 1
       cloud_pub_  = nh_.advertise<PointCloud>("cloud_sr", 1);
       images_pub_ = nh_.advertise<ImageArray>("images_sr", 1);
-      nh_.advertiseService("/acquire_snapshot", &SwissRangerTestNode::snapshot, this);
+      snapshot_service_ = nh_.advertiseService("acquire_snapshot_sr", &SwissRangerTestNode::snapshot, this);
     }
 
     ~SwissRangerTestNode ()
