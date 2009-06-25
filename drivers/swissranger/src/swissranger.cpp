@@ -157,7 +157,8 @@ void
     cloud.pts[i].x = xp_[i];
     cloud.pts[i].y = yp_[i];
     cloud.pts[i].z = zp_[i];
-    cloud.chan[0].vals[i] = amplitude_image[i*2 + 1];
+    cloud.chan[0].vals[i] = (confidence_image[i * 2 + 0] << 0) + (confidence_image[i * 2 + 1] << 8);
+    cloud.chan[1].vals[i] = (amplitude_image[i * 2 + 0] << 0) + (amplitude_image[i * 2 + 1] << 8);
   }
   
   images.set_images_size (3);
