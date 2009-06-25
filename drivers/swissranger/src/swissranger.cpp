@@ -146,9 +146,9 @@ void
   // Filter points
   cloud.set_pts_size (imgEntryArray_->width * imgEntryArray_->height);
   cloud.set_chan_size (2);
-  cloud.chan[0].name = "con";
+  cloud.chan[0].name = "confidence";
   cloud.chan[0].set_vals_size (imgEntryArray_->width * imgEntryArray_->height);
-  cloud.chan[1].name = "i";
+  cloud.chan[1].name = "intensity";
   cloud.chan[1].set_vals_size (imgEntryArray_->width * imgEntryArray_->height);
   
   // Fill in the ROS PointCloud message
