@@ -143,11 +143,11 @@ class ClusterVoxelization
       }
 
       {
-        nh_.param ("~object_table_delta_z", object_delta_z_, 0.03);                       // consider objects starting at 3cm from the table
-        nh_.param ("~object_min_distance_from_table", object_min_dist_from_table_, 0.08); // objects which have their support more 8cm from the table will not be considered
+        nh_.param ("~object_table_delta_z", object_delta_z_, 0.02);                       // consider objects starting at 2cm from the table
+        nh_.param ("~object_min_distance_from_table", object_min_dist_from_table_, 0.10); // objects which have their support more 10cm from the table will not be considered
       }
 
-      nh_.param ("~object_cluster_tolerance", object_cluster_tolerance_, 0.04);   // 4cm between two objects
+      nh_.param ("~object_cluster_tolerance", object_cluster_tolerance_, 0.03);   // 3cm between two objects
       nh_.param ("~object_cluster_min_pts", object_cluster_min_pts_, 30);         // 30 points per object cluster
 
       {
@@ -195,9 +195,11 @@ class ClusterVoxelization
 
       // Then get the object clusters supported by the table
       Point32 min_p, max_p;
-      cloud_geometry::statistics::getMinMax (*cloud_in_, table_inliers, min_p, max_p);
-      vector<int> object_inliers;
-      extractObjectClusters (*cloud_in_, table_plane_coeff, table_polygon, axis_, min_p, max_p, object_inliers);
+      cloud_geometry::statistics::getMinMax (cloud_out, table_inliers, min_p, max_p);
+      vector<vector<int> > object_clusters;
+      extractObjectClusters (*cloud_in_, table_plane_coeff, table_polygon, axis_, min_p, max_p, object_clusters);
+
+      // Build the voxel maps
 
       ROS_INFO ("Service request terminated.");
 
@@ -214,6 +216,37 @@ class ClusterVoxelization
         PointCloud cloud_annotated;
         cloud_geometry::getPointCloud (cloud_out, table_inliers, cloud_annotated);   // downsampled version
         cloud_table_pub_.publish (cloud_annotated);
+
+        // Count the number of points that we need to allocate
+        int total_nr_pts = 0;
+        for (unsigned int i = 0; i < object_clusters.size (); i++)
+          total_nr_pts += object_clusters[i].size ();
+
+        cloud_annotated.pts.resize (total_nr_pts);
+        cloud_annotated.chan.resize (1);
+        cloud_annotated.chan[0].name = "rgb";
+        cloud_annotated.chan[0].vals.resize (total_nr_pts);
+
+        total_nr_pts = 0;
+        for (unsigned int i = 0; i < object_clusters.size (); i++)
+        {
+          if (object_clusters[i].size () == 0)
+            continue;
+
+          // Get a different color
+          float rgb = getRGB (rand () / (RAND_MAX + 1.0), rand () / (RAND_MAX + 1.0), rand () / (RAND_MAX + 1.0));
+
+          // Process this cluster and extract the centroid and the bounds
+          for (unsigned int j = 0; j < object_clusters[i].size (); j++)
+          {
+            cloud_annotated.pts[total_nr_pts] = cloud_in_->pts.at (object_clusters[i].at (j));
+            cloud_annotated.chan[0].vals[total_nr_pts] = rgb;
+            total_nr_pts++;
+          }
+        }
+//        cloud_geometry::statistics::getMinMax (cloud, object_idx, resp.oclusters[i].min_bound, resp.oclusters[i].max_bound);
+//        cloud_geometry::nearest::computeCentroid (cloud, object_idx, resp.oclusters[i].center);
+        cloud_clusters_pub_.publish (cloud_annotated);
       }
 
       return (true);
@@ -322,11 +355,12 @@ class ClusterVoxelization
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void
       extractObjectClusters (const PointCloud &cloud, const vector<double> &coeff, const Polygon3D &table,
-                             const Point32 &axis, const Point32 &min_p, const Point32 &max_p, vector<int> &object_indices)
+                             const Point32 &axis, const Point32 &min_p, const Point32 &max_p,
+                             vector<vector<int> > &object_clusters)
     {
       int nr_p = 0;
       Point32 pt;
-      object_indices.resize (cloud.pts.size ());
+      vector<int> object_indices (cloud.pts.size ());
 
       // Iterate over the entire cloud to extract the object clusters
       for (unsigned int i = 0; i < cloud.pts.size (); i++)
@@ -353,62 +387,26 @@ class ClusterVoxelization
       object_indices.resize (nr_p);
 
       // Find the clusters
-      nr_p = 0;
-      vector<vector<int> > object_clusters;
       cloud_geometry::nearest::extractEuclideanClusters (cloud, object_indices, object_cluster_tolerance_,
                                                          object_clusters, -1, -1, -1, -1, object_cluster_min_pts_);
 
-#ifdef DEBUG
-        int total_nr_pts = 0;
-        for (unsigned int i = 0; i < object_clusters.size (); i++)
-          total_nr_pts += object_clusters[i].size ();
+      Point32 min_p_cluster, max_p_cluster;
 
-        cloud_annotated_.header = cloud.header;
-        cloud_annotated_.pts.resize (total_nr_pts);
-        cloud_annotated_.chan.resize (1);
-        cloud_annotated_.chan[0].name = "rgb";
-        cloud_annotated_.chan[0].vals.resize (total_nr_pts);
-        ROS_INFO ("Number of clusters found: %d", (int)object_clusters.size ());
-#endif
-
-      robot_msgs::Point32 min_p_cluster, max_p_cluster;
-
-//      resp.oclusters.resize (object_clusters.size ());
+      int nr_clusters = 0;
       for (unsigned int i = 0; i < object_clusters.size (); i++)
       {
-#ifdef DEBUG
-        float rgb = getRGB (rand () / (RAND_MAX + 1.0), rand () / (RAND_MAX + 1.0), rand () / (RAND_MAX + 1.0));
-#endif
-        vector<int> object_idx = object_clusters.at (i);
-
         // Check whether this object cluster is supported by the table or just flying through thin air
-        cloud_geometry::statistics::getMinMax (cloud, object_idx, min_p_cluster, max_p_cluster);
-        // Select all the points in the given bounds - check all axes
-        if ( axis.x == 1 && ( min_p_cluster.x > max_p.x + object_min_dist_from_table_ ) )
-          continue;        
-        if ( axis.y == 1 && ( min_p_cluster.y > max_p.y + object_min_dist_from_table_ ) )
-          continue;        
-        if ( axis.z == 1 && ( min_p_cluster.z > max_p.z + object_min_dist_from_table_ ) )
-          continue;        
+        cloud_geometry::statistics::getMinMax (cloud, object_clusters.at (i), min_p_cluster, max_p_cluster);
 
-        // Process this cluster and extract the centroid and the bounds
-        for (unsigned int j = 0; j < object_idx.size (); j++)
+        // If this cluster does not satisfy our constraints, remove it from the list
+        if ( min_p_cluster.z > max_p.z + object_min_dist_from_table_ )
         {
-          object_indices[nr_p] = object_idx.at (j);
-#ifdef DEBUG          
-            cloud_annotated_.pts[nr_p] = cloud.pts.at (object_idx.at (j));
-            cloud_annotated_.chan[0].vals[nr_p] = rgb;
-#endif
-          nr_p++;
+          object_clusters[i].resize (0);
+          continue;
         }
-//        cloud_geometry::statistics::getMinMax (cloud, object_idx, resp.oclusters[i].min_bound, resp.oclusters[i].max_bound);
-//        cloud_geometry::nearest::computeCentroid (cloud, object_idx, resp.oclusters[i].center);
+        nr_clusters++;
       }
-      object_indices.resize (nr_p);
-#ifdef DEBUG
-        cloud_annotated_.pts.resize (nr_p);
-        cloud_annotated_.chan[0].vals.resize (nr_p);
-#endif
+      ROS_INFO ("Number of object clusters found: %d", nr_clusters);
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -451,6 +449,20 @@ class ClusterVoxelization
         model->projectPointsInPlace (inliers, coeff);
       }
       return (true);
+    }
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /** \brief Obtain a 24-bit RGB coded value from 3 independent <r, g, b> channel values
+      * \param r the red channel value
+      * \param g the green channel value
+      * \param b the blue channel value
+      */
+    inline double
+      getRGB (float r, float g, float b)
+    {
+      int res = (int(r * 255) << 16) | (int(g*255) << 8) | int(b*255);
+      double rgb = *(float*)(&res);
+      return (rgb);
     }
 };
 
