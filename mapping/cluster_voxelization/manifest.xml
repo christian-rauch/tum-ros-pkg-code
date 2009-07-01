@@ -1,0 +1,16 @@
+<package>
+  <description>
+    A node which detects .
+  </description>
+
+  <author></author>
+  <license>BSD</license>
+  <url>http://pr.willowgarage.com</url>
+  <review status="experimental" notes="beta"/>
+
+  <depend package="roscpp" />
+  <depend package="std_msgs" />
+  <depend package="angles" />
+  <depend package="point_cloud_mapping" />
+  <depend package="perception_msgs" />
+</package>
