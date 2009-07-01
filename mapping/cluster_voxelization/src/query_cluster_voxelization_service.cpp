@@ -43,6 +43,7 @@ int
   ros::ServiceClient client = n.serviceClient<ClustersVoxels>("clusters_service");
 
   ClustersVoxels srv;
+  srv.request.leaf_width.x = srv.request.leaf_width.y = srv.request.leaf_width.z = 0.02;
   if (client.call (srv))
   {
     ROS_INFO ("Service call successful.");

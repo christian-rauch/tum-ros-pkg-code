@@ -84,6 +84,31 @@ bool
   return (a.size () < b.size ());
 }
 
+// Comparison operator for a vector of vectors
+bool
+  compareVoxels (const Voxel &a, const Voxel &b)
+{
+  if (a.i < b.i)
+    return (true);
+  else if (a.i > b.i)
+    return (false);
+  else if (a.j < b.j)
+    return (true);
+  else if (a.j > b.j)
+    return (false);
+  else if (a.k < b.k)
+    return (true);
+  else
+    return (false);
+}
+
+// Comparison operator for a vector of vectors
+bool
+  equalVoxels (const Voxel &a, const Voxel &b)
+{
+  return (a.i == b.i && a.j == b.j && a.k == b.k);
+}
+
 class ClusterVoxelization
 {
   protected:
@@ -161,7 +186,7 @@ class ClusterVoxelization
       }
 
       {
-        nh_.param ("~max_table_voxels_z", max_table_voxels_z_, 0.5);                // .5 meters from the table: that's all we care about
+        nh_.param ("~max_table_voxels_z", max_table_voxels_z_, 0.3);                // .5 meters from the table: that's all we care about
       }
 
       if (publish_debug_)
@@ -241,7 +266,7 @@ class ClusterVoxelization
       table_object_inliers.resize (j);
 
       // ---[ Then obtain the 3D bounds of the space around the table
-      vector<Voxel> voxels;
+      VoxelList voxels;
       computeOcclusionMap (*cloud_in_, table_object_inliers, min_p, max_p, req.leaf_width, voxels);
 
       ROS_INFO ("Service request terminated.");
@@ -290,24 +315,36 @@ class ClusterVoxelization
 //        cloud_geometry::statistics::getMinMax (cloud, object_idx, resp.oclusters[i].min_bound, resp.oclusters[i].max_bound);
 //        cloud_geometry::nearest::computeCentroid (cloud, object_idx, resp.oclusters[i].center);
         cloud_clusters_pub_.publish (cloud_annotated);
+      }
 
-        // Assemble the collision map from the list of voxels
-        c_map_.header = cloud_in_->header;
-        c_map_.boxes.resize (voxels.size ());
-        for (unsigned int cl = 0; cl < voxels.size (); cl++)
+      // Prepare for service reply
+      resp.vlist = voxels;
+      resp.clusters.resize (object_clusters.size ());
+      int nr_c = 0;
+      for (unsigned int i = 0; i < object_clusters.size (); i++)
+      {
+        // If object cluster is empty, just continue
+        if (object_clusters[i].size () == 0)
+          continue;
+
+        // Copy the data
+        resp.clusters[nr_c].pts.resize (object_clusters[i].size ());
+        resp.clusters[nr_c].chan.resize (cloud_in_->chan.size ());
+        for (unsigned int d = 0; d < cloud_in_->chan.size (); d++)
         {
-          c_map_.boxes[cl].extents.x = leaf_width_.x / 2.0;
-          c_map_.boxes[cl].extents.y = leaf_width_.y / 2.0;
-          c_map_.boxes[cl].extents.z = leaf_width_.z / 2.0;
-          c_map_.boxes[cl].center.x = (voxels[cl].i + 1) * leaf_width_.x - c_map_.boxes[cl].extents.x; // + minB.x;
-          c_map_.boxes[cl].center.y = (voxels[cl].j + 1) * leaf_width_.y - c_map_.boxes[cl].extents.y; // + minB.y;
-          c_map_.boxes[cl].center.z = (voxels[cl].k + 1) * leaf_width_.z - c_map_.boxes[cl].extents.z; // + minB.z;
-          c_map_.boxes[cl].axis.x = c_map_.boxes[cl].axis.y = c_map_.boxes[cl].axis.z = 0.0;
-          c_map_.boxes[cl].angle = 0.0;
+          resp.clusters[nr_c].chan[d].name = cloud_in_->chan[d].name;
+          resp.clusters[nr_c].chan[d].vals.resize (object_clusters[i].size ());
         }
-        ROS_INFO ("Number of voxels in the collision map: %d.", (int)c_map_.boxes.size ());
 
-        cmap_pub_.publish (c_map_);
+        // For every object cluster
+        for (unsigned int j = 0; j < object_clusters[i].size (); j++)
+        {
+          resp.clusters[nr_c].pts[j] = cloud_in_->pts.at (object_clusters[i].at (j));
+
+          for (unsigned int d = 0; d < cloud_in_->chan.size (); d++)
+            resp.clusters[nr_c].chan[d].vals[j] = cloud_in_->chan[d].vals.at (object_clusters[i].at (j));
+        }
+        nr_c++;
       }
 
       return (true);
@@ -316,7 +353,7 @@ class ClusterVoxelization
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void
       computeOcclusionMap (const PointCloud& cloud, const vector<int> &indices, const Point32 &min_p, const Point32 &max_p,
-                           const Point32& leaf_width, vector<Voxel> &voxels)
+                           const Point32& leaf_width, VoxelList &vlist)
     {
       Point32 viewpoint;
       int vx_idx = cloud_geometry::getChannelIndex (cloud, "vx");
@@ -328,27 +365,22 @@ class ClusterVoxelization
 
       Point32 min_b, max_b, div_b;
       // Compute the minimum and maximum bounding box values
-      min_b.x = (int)(floor (min_p.x / leaf_width.x));
-      max_b.x = (int)(floor (max_p.x / leaf_width.x));
+      min_b.x = min_p.x; max_b.x = max_p.x;
+      min_b.y = min_p.y; max_b.y = max_p.y;
 
-      min_b.y = (int)(floor (min_p.y / leaf_width.y));
-      max_b.y = (int)(floor (max_p.y / leaf_width.y));
-
-      min_b.z = (int)(floor (min_p.z / leaf_width.z));
+      min_b.z = min_p.z;
       // We want to go higher on Z
-      max_b.z = (int)(floor ((max_table_voxels_z_ + max_p.z) / leaf_width.z));
+      max_b.z = max_table_voxels_z_ + max_p.z;
 
       // Compute the number of divisions needed along all axis
-      div_b.x = (int)(max_b.x - min_b.x + 1);
-      div_b.y = (int)(max_b.y - min_b.y + 1);
-      div_b.z = (int)(max_b.z - min_b.z + 1);
+      div_b.x = (int)((max_b.x - min_b.x) / leaf_width.x);
+      div_b.y = (int)((max_b.y - min_b.y) / leaf_width.y);
+      div_b.z = (int)((max_b.z - min_b.z) / leaf_width.z);
 
       // Allocate the space needed
       try
       {
-//        if (voxels.capacity () < div_b.x * div_b.y * div_b.z)
-          voxels.reserve (div_b.x * div_b.y * div_b.z);             // fallback to x*y*z from 2*x*y*z due to memory problems
-//        voxels.resize (div_b.x * div_b.y * div_b.z);
+        vlist.voxels.reserve (div_b.x * div_b.y * div_b.z);             // fallback to x*y*z from 2*x*y*z due to memory problems
       }
       catch (std::bad_alloc)
       {
@@ -376,18 +408,26 @@ class ClusterVoxelization
         // Go over the line and select the appropiate i/j/k + idx
         bool seen_point = false;
         double c[3];
-        while (curpoint[0] < max_b.x && curpoint[0] > min_b.x && curpoint[1] < max_b.y && curpoint[1] > min_b.y && curpoint[2] < max_b.z && curpoint[2] > min_b.z)
+        while (seen_point == false || (curpoint[0] < max_b.x && curpoint[0] > min_b.x && curpoint[1] < max_b.y && curpoint[1] > min_b.y && curpoint[2] < max_b.z && curpoint[2] > min_b.z))
         {
-          if (!seen_point)
+          if (seen_point)
+            break;
+          else
           {
             if (idx_cur[0] == idx_goal[0] && idx_cur[1] == idx_goal[1] && idx_cur[2] == idx_goal[2] )
+            {
               seen_point = true;
+              break;
+            }
             else
             {
 //              int idx = ( (idx_cur[2] - min_b.z) * div_b.y * div_b.x ) + ( (idx_cur[1] - min_b.y) * div_b.x ) + (idx_cur[0] - min_b.x);
-              Voxel v;
-              v.i = idx_cur[0]; v.j = idx_cur[1]; v.k = idx_cur[2];
-              voxels.push_back (v);
+              if (idx_cur[0] > 0 && idx_cur[1] > 0 && idx_cur[2] > 0 && idx_cur[0] < div_b.x && idx_cur[1] < div_b.y && idx_cur[2] < div_b.z)
+              {
+                Voxel v;
+                v.i = idx_cur[0]; v.j = idx_cur[1]; v.k = idx_cur[2];
+                vlist.voxels.push_back (v);
+              }
             }
           }
 
@@ -426,6 +466,32 @@ class ClusterVoxelization
             idx_cur[d] += go[d];
           }
         }
+      }
+
+      ROS_INFO ("Total number of checked voxels: %d.", (int)vlist.voxels.size ());
+      sort (vlist.voxels.begin (), vlist.voxels.end (), compareVoxels);
+      vlist.voxels.erase (unique (vlist.voxels.begin (), vlist.voxels.end (), equalVoxels), vlist.voxels.end ());
+      ROS_INFO ("Remaining number of voxels: %d.", (int)vlist.voxels.size ());
+
+      if (publish_debug_)
+      {
+        // Assemble the collision map from the list of voxels
+        c_map_.header = cloud_in_->header;
+        c_map_.boxes.resize (vlist.voxels.size ());
+        for (unsigned int cl = 0; cl < vlist.voxels.size (); cl++)
+        {
+          c_map_.boxes[cl].extents.x = leaf_width.x / 2.0;
+          c_map_.boxes[cl].extents.y = leaf_width.y / 2.0;
+          c_map_.boxes[cl].extents.z = leaf_width.z / 2.0;
+          c_map_.boxes[cl].center.x = (vlist.voxels[cl].i + 1) * leaf_width.x - c_map_.boxes[cl].extents.x + min_b.x;
+          c_map_.boxes[cl].center.y = (vlist.voxels[cl].j + 1) * leaf_width.y - c_map_.boxes[cl].extents.y + min_b.y;
+          c_map_.boxes[cl].center.z = (vlist.voxels[cl].k + 1) * leaf_width.z - c_map_.boxes[cl].extents.z + min_b.z;
+          c_map_.boxes[cl].axis.x = c_map_.boxes[cl].axis.y = c_map_.boxes[cl].axis.z = 0.0;
+          c_map_.boxes[cl].angle = 0.0;
+        }
+        ROS_INFO ("Number of voxels in the collision map: %d.", (int)c_map_.boxes.size ());
+
+        cmap_pub_.publish (c_map_);
       }
     }
 
@@ -670,6 +736,7 @@ int
   ros::init (argc, argv, "cluster_voxelization");
 
   ClusterVoxelization p;
+  p.publish_debug_ = false;
   ros::spin ();
 
   return (0);
