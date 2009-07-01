@@ -6,6 +6,9 @@
   <license>BSD</license>
   <review status="" notes=""/>
   <url></url>
+  <depend package="std_msgs" />
+  <depend package="robot_msgs" />
+  <depend package="perception_msgs" />
   <export>
     <cpp cflags="-I${prefix}/srv/cpp"/>
   </export>
