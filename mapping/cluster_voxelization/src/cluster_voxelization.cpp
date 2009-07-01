@@ -81,27 +81,39 @@ class ClusterVoxelization
     // ROS messages
     PointCloudConstPtr cloud_in_;
 
-    PointCloud cloud_down_;
-    Point leaf_width_;
-    PointCloud cloud_annotated_;
     Point32 axis_;
-
     bool need_cloud_data_;
 
     // Parameters
+    Point leaf_width_;
     string input_cloud_topic_;
     int k_;
     int clusters_min_pts_;
 
+    int object_cluster_min_pts_;
+    double object_cluster_tolerance_;
+    double sac_distance_threshold_, eps_angle_;
+
     Subscriber cloud_sub_;
-//     Publisher cloud_table_pub_, cloud_clusters_pub_, pmap_pub_;
+    int downsample_factor_;
     ServiceServer clusters_service_;
+//     Publisher cloud_table_pub_, cloud_clusters_pub_, pmap_pub_;
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ClusterVoxelization ()
     {
-      nh_.param ("~search_k_closest", k_, 5);                  // 5 k-neighbors by default
+      axis_.x = 0; axis_.y = 0; axis_.z = 1;
+      nh_.param ("~downsample_leaf_width_x", leaf_width_.x, 0.03);          // 3cm radius by default
+      nh_.param ("~downsample_leaf_width_y", leaf_width_.y, 0.03);          // 3cm radius by default
+      nh_.param ("~downsample_leaf_width_z", leaf_width_.z, 0.03);          // 3cm radius by default
+      nh_.param ("~search_k_closest", k_, 10);                 // 10 k-neighbors by default
+      nh_.param ("~normal_eps_angle", eps_angle_, 15.0);       // 15 degrees
+      eps_angle_ = angles::from_degrees (eps_angle_);          // convert to radians
 
+      nh_.param ("~object_cluster_tolerance", object_cluster_tolerance_, 0.04);   // 4cm between two objects
+      nh_.param ("~object_cluster_min_pts", object_cluster_min_pts_, 30);         // 30 points per object cluster
+
+      nh_.param ("~input_cloud_topic", input_cloud_topic_, string ("/cloud_pcd"));
       clusters_service_ = nh_.advertiseService ("clusters_service", &ClusterVoxelization::cluster_voxelization_service, this);
     }
 
