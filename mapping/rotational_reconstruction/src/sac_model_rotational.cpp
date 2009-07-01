@@ -41,6 +41,69 @@
 
 namespace sample_consensus
 {
+  void
+    SACModelRotational::setOccupancyLookup (vector<vector<vector<bool> > > i&table)
+    {
+      occupancy_lookup = table;
+    }
+  
+  PointCloud
+    createRotationalObjectPolyData 
+      (const std::vector<double> modelCoefficients, std::pair<double,double> minmaxK, std::vector<int> inliers)
+  {
+    PointCloud ret;
+    ret.set_pts_size (100*60);
+
+    // create 100 points from min_k to max_k on the outline of the rotational volume
+
+    ANNcoord p21[3];
+    p21[0] = modelCoefficients[3] - modelCoefficients[0];
+    p21[1] = modelCoefficients[4] - modelCoefficients[1];
+    p21[2] = modelCoefficients[5] - modelCoefficients[2];
+    
+    double norm = sqrt(SQR_NORM (p21)); 
+    
+    double rotationaxis[3] = 
+      { p21[1]/norm, -p21[0]/norm, 0.0 };  //cross product with (0,0,1) is cheap.
+    double rotationangle = - RAD2DEG ( acos (p21[2] / norm) );  // dot product of a with (0,0,1) is a[2]
+
+    ANNcoord k0 = (0.0 - DOT_PROD_3D (modelCoefficients, p21)) / DOT_PROD_3D (p21, p21);
+    // resolution around axis = 60...
+    
+    for (int i = 0; i < 100; i++)
+    {
+      double X = (((double)i)*((minmaxK.second - minmaxK.first)/100.0) + minmaxK.first);
+      double Y = 0.0;
+      X = X - k0;
+      
+      // evaluate polynomial at position X
+      for (int w = 0; w < polynomial_order+1; w++)
+        Y += modelCoefficients[6+w] * pow(X,(double)w);
+
+      Point32 p;
+      for (int j = 0; j < 60; j++)
+      {
+        p.x = Y;
+        p.y = 0.0;
+        p.z = ((double)i/100.0)*norm*(minmaxK.second - minmaxK.first);
+        
+        RotateWXYZ (p, rotationangle, rotationaxis);
+        p.x += modelCoefficients[0] + minmaxK.first * p21[0];
+        p.y += modelCoefficients[1] + minmaxK.first * p21[1];
+        p.z += modelCoefficients[2] + minmaxK.first * p21[2];
+        
+        ret.push_back (p);
+      }
+    }
+  }
+
+
+  double SACModelRotational::computeScore ()
+  {
+    samplePointsOnRotational ();
+    
+  }
+
   double 
     SACModelRotational::pointToRotationalDistance (const robot_msgs::Point32 &p, const std::vector<double> &model_coefficients, const int &polynomial_order)
   {

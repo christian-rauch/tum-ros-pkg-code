@@ -46,7 +46,7 @@
 #include <point_cloud_mapping/sample_consensus/sac.h>
 #include <point_cloud_mapping/sample_consensus/msac.h>
 #include <point_cloud_mapping/sample_consensus/ransac.h>
-#include <sac_model_rotational.h>
+// #include <sac_model_rotational.h>
 
 #include <angles/angles.h>
 
@@ -97,6 +97,7 @@ class RotationalReconstructionService
 
     ServiceServer rotational_reconstruction_service_;
     Publisher pmap_pub_;
+    Publisher cloud_pub_;
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     RotationalReconstructionService ()
@@ -105,6 +106,7 @@ class RotationalReconstructionService
       nh_.param ("/global_frame_id", global_frame_, std::string("/base_link"));
       rotational_reconstruction_service_ = nh_.advertiseService ("rotational_reconstruction_service", &RotationalReconstructionService::rotational_reconstruction_service, this);
       pmap_pub_           = nh_.advertise<PolygonalMap>  ("rotational_polygonal_map", 1);
+      cloud_pub_           = nh_.advertise<PointCloud>  ("voxel_list_cloud", 1);
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -122,8 +124,11 @@ class RotationalReconstructionService
       updateParametersFromServer ();
 
       ros::ServiceClient client = nh_.serviceClient<ClustersVoxels>("clusters_service");
-
+      
       ClustersVoxels srv;
+      srv.request.leaf_width.x = 0.05;
+      srv.request.leaf_width.y = 0.05;
+      srv.request.leaf_width.z = 0.05;
       if (client.call (srv))
       {
         ROS_INFO ("Service call successful.");
@@ -135,41 +140,76 @@ class RotationalReconstructionService
       }
       
       perception_msgs::VoxelList vl = srv.response.vlist;
+      std::vector<robot_msgs::PointCloud> clusters = srv.response.clusters;
+      std::vector<perception_msgs::Voxel> voxels = vl.voxels;
 
-      Point32 min = vl.origin;
-      Point32 leafwidth = vl.extents;
-      Point32 size = vl.size;
+      Point32 min = vl.min;
+      Point32 leafwidth = vl.leaf_width;
+      Point32 size = vl.ndivs;
+
+      // create a 3D array for faster lookups
+      std::vector<std::vector<std::vector<bool> > > lookup_v;
+      lookup_v.resize((int)size.x);
+      for (int i = 0; i < (int)lookup_v.size (); i++)
+      {
+        lookup_v [i].resize((int)size.y);
+        for (int j = 0; j < (int)lookup_v [i].size (); j++)
+        {
+          lookup_v [i][j].resize((int)size.z);
+          for (int k = 0; k < (int)lookup_v [i][j].size (); k++)
+            lookup_v [i][j][k] = false;
+        }
+      }
       
-      // make some publishable stuff ;)
+      // fill 3D array with occupancy information from the voxellist
+      Voxel xyz;
+      PointCloud cloud;
+      cloud.set_pts_size (voxels.size());
+      for (int i = 0; i < (int)voxels.size (); i++)
+      {
+        xyz = voxels[i];
+        
+      Point32 min = vl.min;
+      Point32 leafwidth = vl.leaf_width;
+      Point32 size = vl.ndivs;
+        cloud.pts[i].x = ((double)xyz.i + 0.5) * leafwidth.x + min.x;
+        cloud.pts[i].y = ((double)xyz.j + 0.5) * leafwidth.y + min.y;
+        cloud.pts[i].z = ((double)xyz.k + 0.5) * leafwidth.z + min.z;
+
+        lookup_v [xyz.i][xyz.j][xyz.k] = true;
+      }
+      
+      // create something publishable
       PolygonalMap pmap;
 
       // init all ransac related classes
       std::vector<int> inliers;
       std::vector<double> coeff;
       
-      SACModel *model = new SACModelRotational ();
-      MSAC *sac = new MSAC (model, thresh_);
-      
-      sac->setMaxIterations (500);
-      sac->setProbability (0.99);
+//       SACModel *model = new SACModelRotational ();
+//       MSAC *sac = new MSAC (model, thresh_);
+//       
+//       sac->setMaxIterations (500);
+//       sac->setProbability (0.99);
 
-      for (unsigned int i = 0; i < vl.voxels.size(); i++)
+      for (unsigned int i = 0; i < clusters.size(); i++)
       {
-        PointCloud cur_cloud = vl.clouds.at(i);
-        Point32 cur_voxel = vl.voxels.at (i);
-        model->setDataSet (&cur_cloud);
-        if (sac->computeModel (0))
-        {
-          sac->computeCoefficients (coeff);
-          sac->refineCoefficients (coeff);
-          model->selectWithinDistance (coeff, thresh_, inliers);
-          pmap.header.frame_id = global_frame_;
-          pmap.polygons.resize (1);
-          pmap.polygons[0].points.resize(10); 
-        }
+//         PointCloud cur_cloud = clusters.at(i);
+//         model->setOccupancyLookup (lookup_v);
+//         model->setDataSet (&cur_cloud);
+//         if (sac->computeModel (0))
+//         {
+//           sac->computeCoefficients (coeff);
+//           sac->refineCoefficients (coeff);
+//           model->selectWithinDistance (coeff, thresh_, inliers);
+//           pmap.header.frame_id = global_frame_;
+//           pmap.polygons.resize (1);
+//           pmap.polygons[0].points.resize(10); 
+//         }
       }
       
       pmap_pub_.publish (pmap);
+      cloud_pub_.publish (cloud);
 
       ROS_INFO ("Service request terminated.");
       return (true);

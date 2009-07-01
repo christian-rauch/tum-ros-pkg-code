@@ -86,6 +86,7 @@ namespace sample_consensus
       //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
       /** \brief Return an unique id for this model (SACMODEL_CYLINDER). */
       virtual int getModelType () { return (SACMODEL_CYLINDER); }
+      void setOccupancyLookup (vector<vector<vector<bool> > > table);
 
     private:
       /** \brief The order of the polynomial to be fitted */
@@ -94,6 +95,7 @@ namespace sample_consensus
       int nx_idx_, ny_idx_, nz_idx_;
       /** \brief temporary pointer to a list of given indices for refitModel () */
       const std::vector<int> *tmp_inliers_;
+      vector<vector<vector<bool> > > &occupancy_lookup;
   };
 }
 
