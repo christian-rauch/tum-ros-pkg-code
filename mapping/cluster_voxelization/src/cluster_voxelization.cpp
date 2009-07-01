@@ -73,6 +73,7 @@ using namespace std;
 using namespace ros;
 using namespace std_msgs;
 using namespace robot_msgs;
+using namespace mapping_msgs;
 using namespace perception_srvs;
 using namespace perception_msgs;
 
@@ -291,19 +292,20 @@ class ClusterVoxelization
         cloud_clusters_pub_.publish (cloud_annotated);
 
         // Assemble the collision map from the list of voxels
-        int nr_c = 0;
-        cmap.boxes.resize (voxels.size ());
+        c_map_.header = cloud_in_->header;
+        c_map_.boxes.resize (voxels.size ());
         for (unsigned int cl = 0; cl < voxels.size (); cl++)
         {
-          cmap.boxes[cl].extents.x = leaf_width_.x / 2.0;
-          cmap.boxes[cl].extents.y = leaf_width_.y / 2.0;
-          cmap.boxes[cl].extents.z = leaf_width_.z / 2.0;
-          cmap.boxes[cl].center.x = (voxels[cl].i_ + 1) * leaf_width_.x - cmap.boxes[nr_c].extents.x; // + minB.x;
-          cmap.boxes[cl].center.y = (voxels[cl].j_ + 1) * leaf_width_.y - cmap.boxes[nr_c].extents.y; // + minB.y;
-          cmap.boxes[cl].center.z = (voxels[cl].k_ + 1) * leaf_width_.z - cmap.boxes[nr_c].extents.z; // + minB.z;
-          cmap.boxes[cl].axis.x = cmap.boxes[nr_c].axis.y = cmap.boxes[nr_c].axis.z = 0.0;
-          cmap.boxes[cl].angle = 0.0;
+          c_map_.boxes[cl].extents.x = leaf_width_.x / 2.0;
+          c_map_.boxes[cl].extents.y = leaf_width_.y / 2.0;
+          c_map_.boxes[cl].extents.z = leaf_width_.z / 2.0;
+          c_map_.boxes[cl].center.x = (voxels[cl].i + 1) * leaf_width_.x - c_map_.boxes[cl].extents.x; // + minB.x;
+          c_map_.boxes[cl].center.y = (voxels[cl].j + 1) * leaf_width_.y - c_map_.boxes[cl].extents.y; // + minB.y;
+          c_map_.boxes[cl].center.z = (voxels[cl].k + 1) * leaf_width_.z - c_map_.boxes[cl].extents.z; // + minB.z;
+          c_map_.boxes[cl].axis.x = c_map_.boxes[cl].axis.y = c_map_.boxes[cl].axis.z = 0.0;
+          c_map_.boxes[cl].angle = 0.0;
         }
+        ROS_INFO ("Number of voxels in the collision map: %d.", (int)c_map_.boxes.size ());
 
         cmap_pub_.publish (c_map_);
       }
