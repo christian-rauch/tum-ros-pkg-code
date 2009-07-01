@@ -232,7 +232,9 @@ class ClusterVoxelization
       vector<double> table_plane_coeff;
       Polygon3D table_polygon;
       PointCloud cloud_out;
+      ros::WallTime ts = ros::WallTime::now ();
       detectTable (*cloud_in_, cloud_out, table_inliers, table_plane_coeff, table_polygon);
+      ROS_INFO ("Table detected in %g seconds.", (ros::WallTime::now () - ts).toSec ());
 
       // Get the minimum/maximum bounds of the table
       Point32 min_p, max_p;
@@ -240,7 +242,9 @@ class ClusterVoxelization
 
       // ---[ Then get the object clusters supported by the table
       vector<vector<int> > object_clusters;
+      ts = ros::WallTime::now ();
       extractObjectClusters (*cloud_in_, table_plane_coeff, table_polygon, axis_, min_p, max_p, object_clusters);
+      ROS_INFO ("Object clusters extracted in %g seconds.", (ros::WallTime::now () - ts).toSec ());
 
       // Assemble the complete list of inliers for the table and the objects on top of it
       vector<int> table_object_inliers (cloud_in_->pts.size ());
@@ -267,7 +271,9 @@ class ClusterVoxelization
 
       // ---[ Then obtain the 3D bounds of the space around the table
       VoxelList voxels;
+      ts = ros::WallTime::now ();
       computeOcclusionMap (*cloud_in_, table_object_inliers, min_p, max_p, req.leaf_width, voxels);
+      ROS_INFO ("Occlusion map estimated in %g seconds.", (ros::WallTime::now () - ts).toSec ());
 
       ROS_INFO ("Service request terminated.");
 
@@ -473,6 +479,10 @@ class ClusterVoxelization
       vlist.voxels.erase (unique (vlist.voxels.begin (), vlist.voxels.end (), equalVoxels), vlist.voxels.end ());
       ROS_INFO ("Remaining number of voxels: %d.", (int)vlist.voxels.size ());
 
+      // Fill in the remaining dataset
+      vlist.min = min_b;
+      vlist.leaf_width = leaf_width;
+      vlist.ndivs = div_b;
       if (publish_debug_)
       {
         // Assemble the collision map from the list of voxels
