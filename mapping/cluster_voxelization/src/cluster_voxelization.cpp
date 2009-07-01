@@ -475,9 +475,10 @@ class ClusterVoxelization
       }
 
       ROS_INFO ("Total number of checked voxels: %d.", (int)vlist.voxels.size ());
+      ros::WallTime ts = ros::WallTime::now ();
       sort (vlist.voxels.begin (), vlist.voxels.end (), compareVoxels);
       vlist.voxels.erase (unique (vlist.voxels.begin (), vlist.voxels.end (), equalVoxels), vlist.voxels.end ());
-      ROS_INFO ("Remaining number of voxels: %d.", (int)vlist.voxels.size ());
+      ROS_INFO ("Remaining number of voxels (time spent: %f): %d.", (ros::WallTime::now () - ts).toSec (), (int)vlist.voxels.size ());
 
       // Fill in the remaining dataset
       vlist.min = min_b;
