@@ -1,0 +1,13 @@
+<package>
+  <description brief="perception_srvs">
+    Services for perception applications.
+  </description>
+  <author></author>
+  <license>BSD</license>
+  <review status="" notes=""/>
+  <url></url>
+  <export>
+    <cpp cflags="-I${prefix}/srv/cpp"/>
+  </export>
+</package>
+
