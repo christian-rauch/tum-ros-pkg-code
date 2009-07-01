@@ -1,6 +1,6 @@
-robot_msgs/Point32 origin
-robot_msgs/Point32 extents
-robot_msgs/Point32 size
-robot_msgs/Point32[] voxels
-robot_msgs/PointCloud[] clouds
+robot_msgs/Point32 min
+robot_msgs/Point32 leaf_width
+robot_msgs/Point32 ndivs
+# Send all the non-free voxels (occupied, occluded)
+Voxel[] voxels
 

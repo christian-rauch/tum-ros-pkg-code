@@ -1,3 +1,4 @@
+robot_msgs/Point32 leaf_width
 ---
 perception_msgs/VoxelList vlist
-#Int32[] indices
+robot_msgs/PointCloud[] clusters
