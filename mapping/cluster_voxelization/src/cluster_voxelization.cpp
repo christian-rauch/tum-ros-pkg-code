@@ -64,6 +64,9 @@
 
 #include <sys/time.h>
 
+#include <mapping_msgs/CollisionMap.h>
+#include <perception_msgs/Voxel.h>
+#include <perception_msgs/VoxelList.h>
 #include <perception_srvs/ClustersVoxels.h>
 
 using namespace std;
@@ -71,6 +74,7 @@ using namespace ros;
 using namespace std_msgs;
 using namespace robot_msgs;
 using namespace perception_srvs;
+using namespace perception_msgs;
 
 // Comparison operator for a vector of vectors
 bool
@@ -87,6 +91,7 @@ class ClusterVoxelization
 
     // ROS messages
     PointCloudConstPtr cloud_in_;
+    CollisionMap c_map_;
 
     Point32 axis_;
     bool need_cloud_data_;
@@ -107,10 +112,12 @@ class ClusterVoxelization
 
     double object_delta_z_, object_min_dist_from_table_;
 
+    double max_table_voxels_z_;
+
     Subscriber cloud_sub_;
     int downsample_factor_;
     ServiceServer clusters_service_;
-    Publisher cloud_table_pub_, cloud_clusters_pub_, pmap_pub_;
+    Publisher cloud_table_pub_, cloud_clusters_pub_, pmap_pub_, cmap_pub_;
 
     // Spend CPU cycles to publish the results for visualization purposes ?
     bool publish_debug_;
@@ -147,13 +154,21 @@ class ClusterVoxelization
         nh_.param ("~object_min_distance_from_table", object_min_dist_from_table_, 0.10); // objects which have their support more 10cm from the table will not be considered
       }
 
-      nh_.param ("~object_cluster_tolerance", object_cluster_tolerance_, 0.03);   // 3cm between two objects
-      nh_.param ("~object_cluster_min_pts", object_cluster_min_pts_, 30);         // 30 points per object cluster
+      {
+        nh_.param ("~object_cluster_tolerance", object_cluster_tolerance_, 0.03);   // 3cm between two objects
+        nh_.param ("~object_cluster_min_pts", object_cluster_min_pts_, 30);         // 30 points per object cluster
+      }
 
+      {
+        nh_.param ("~max_table_voxels_z", max_table_voxels_z_, 0.5);                // .5 meters from the table: that's all we care about
+      }
+
+      if (publish_debug_)
       {
         cloud_table_pub_    = nh_.advertise<PointCloud> ("table_cloud", 1);
         cloud_clusters_pub_ = nh_.advertise<PointCloud> ("clusters_cloud", 1);
         pmap_pub_           = nh_.advertise<PolygonalMap> ("table_polygon", 1);
+        cmap_pub_           = nh_.advertise<CollisionMap> ("collision_map", 1);
       }
 
       nh_.param ("~input_cloud_topic", input_cloud_topic_, string ("/cloud_pcd"));
@@ -186,20 +201,47 @@ class ClusterVoxelization
         ros::spinOnce ();
       }
 
-      // First detect the table plane
+      // ---[ First detect the table plane
       vector<int> table_inliers;
       vector<double> table_plane_coeff;
       Polygon3D table_polygon;
       PointCloud cloud_out;
       detectTable (*cloud_in_, cloud_out, table_inliers, table_plane_coeff, table_polygon);
 
-      // Then get the object clusters supported by the table
+      // Get the minimum/maximum bounds of the table
       Point32 min_p, max_p;
       cloud_geometry::statistics::getMinMax (cloud_out, table_inliers, min_p, max_p);
+
+      // ---[ Then get the object clusters supported by the table
       vector<vector<int> > object_clusters;
       extractObjectClusters (*cloud_in_, table_plane_coeff, table_polygon, axis_, min_p, max_p, object_clusters);
 
-      // Build the voxel maps
+      // Assemble the complete list of inliers for the table and the objects on top of it
+      vector<int> table_object_inliers (cloud_in_->pts.size ());
+      int j = 0;
+      for (unsigned int i = 0; i < cloud_in_->pts.size (); i++)
+      {
+        // Refine table plane
+        double dist_to_plane = cloud_geometry::distances::pointToPlaneDistance (cloud_in_->pts[i], table_plane_coeff);
+        // Get all points from the original point cloud which could belong to the table plane, even if it's not axis-aligned
+        // (note: if we do need axis aligned, check against their 2D projections in the bounding polygon).
+        if (dist_to_plane < sac_distance_threshold_ &&
+            cloud_in_->pts[i].x >= min_p.x && cloud_in_->pts[i].x <= max_p.x &&
+            cloud_in_->pts[i].y >= min_p.y && cloud_in_->pts[i].y <= max_p.y)
+          table_object_inliers[j++] = i;
+      }
+      for (unsigned int k = 0; k < object_clusters.size (); k++)
+      {
+        if (object_clusters[k].size () == 0)
+          continue;
+        for (unsigned int l = 0; l < object_clusters[k].size (); l++)
+          table_object_inliers[j++] = object_clusters[k][l];
+      }
+      table_object_inliers.resize (j);
+
+      // ---[ Then obtain the 3D bounds of the space around the table
+      vector<Voxel> voxels;
+      computeOcclusionMap (*cloud_in_, table_object_inliers, min_p, max_p, req.leaf_width, voxels);
 
       ROS_INFO ("Service request terminated.");
 
@@ -247,10 +289,163 @@ class ClusterVoxelization
 //        cloud_geometry::statistics::getMinMax (cloud, object_idx, resp.oclusters[i].min_bound, resp.oclusters[i].max_bound);
 //        cloud_geometry::nearest::computeCentroid (cloud, object_idx, resp.oclusters[i].center);
         cloud_clusters_pub_.publish (cloud_annotated);
+
+        // Assemble the collision map from the list of voxels
+        int nr_c = 0;
+        cmap.boxes.resize (voxels.size ());
+        for (unsigned int cl = 0; cl < voxels.size (); cl++)
+        {
+          cmap.boxes[cl].extents.x = leaf_width_.x / 2.0;
+          cmap.boxes[cl].extents.y = leaf_width_.y / 2.0;
+          cmap.boxes[cl].extents.z = leaf_width_.z / 2.0;
+          cmap.boxes[cl].center.x = (voxels[cl].i_ + 1) * leaf_width_.x - cmap.boxes[nr_c].extents.x; // + minB.x;
+          cmap.boxes[cl].center.y = (voxels[cl].j_ + 1) * leaf_width_.y - cmap.boxes[nr_c].extents.y; // + minB.y;
+          cmap.boxes[cl].center.z = (voxels[cl].k_ + 1) * leaf_width_.z - cmap.boxes[nr_c].extents.z; // + minB.z;
+          cmap.boxes[cl].axis.x = cmap.boxes[nr_c].axis.y = cmap.boxes[nr_c].axis.z = 0.0;
+          cmap.boxes[cl].angle = 0.0;
+        }
+
+        cmap_pub_.publish (c_map_);
       }
 
       return (true);
     }
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    void
+      computeOcclusionMap (const PointCloud& cloud, const vector<int> &indices, const Point32 &min_p, const Point32 &max_p,
+                           const Point32& leaf_width, vector<Voxel> &voxels)
+    {
+      Point32 viewpoint;
+      int vx_idx = cloud_geometry::getChannelIndex (cloud, "vx");
+      if (vx_idx == -1)       // If viewpoints are not present in the dataset
+      {
+        viewpoint.x = viewpoint.y = viewpoint.z = 0.0;
+        ROS_WARN ("No viewpoint information present in the input data! Assuming acquisition viewpoint to be <0, 0, 0>!");
+      }
+
+      Point32 min_b, max_b, div_b;
+      // Compute the minimum and maximum bounding box values
+      min_b.x = (int)(floor (min_p.x / leaf_width.x));
+      max_b.x = (int)(floor (max_p.x / leaf_width.x));
+
+      min_b.y = (int)(floor (min_p.y / leaf_width.y));
+      max_b.y = (int)(floor (max_p.y / leaf_width.y));
+
+      min_b.z = (int)(floor (min_p.z / leaf_width.z));
+      // We want to go higher on Z
+      max_b.z = (int)(floor ((max_table_voxels_z_ + max_p.z) / leaf_width.z));
+
+      // Compute the number of divisions needed along all axis
+      div_b.x = (int)(max_b.x - min_b.x + 1);
+      div_b.y = (int)(max_b.y - min_b.y + 1);
+      div_b.z = (int)(max_b.z - min_b.z + 1);
+
+      // Allocate the space needed
+      try
+      {
+//        if (voxels.capacity () < div_b.x * div_b.y * div_b.z)
+          voxels.reserve (div_b.x * div_b.y * div_b.z);             // fallback to x*y*z from 2*x*y*z due to memory problems
+//        voxels.resize (div_b.x * div_b.y * div_b.z);
+      }
+      catch (std::bad_alloc)
+      {
+        ROS_ERROR ("Failed while attempting to allocate a vector of %f (%g x %g x %g) leaf elements (%f bytes total)", div_b.x * div_b.y * div_b.z,
+                  div_b.x, div_b.y, div_b.z, div_b.x * div_b.y * div_b.z * sizeof (Voxel));
+      }
+
+      // Go over all points and insert them into the right leaf
+      double curpoint[3], dir[3];
+      int idx_cur[3], idx_goal[3];
+      for (unsigned int cp = 0; cp < indices.size (); cp++)
+      {
+
+        // Create a line from this point to its viewpoint
+        for (int d = 0; d < 3; d++)
+          curpoint[d] = cloud.chan[vx_idx + d].vals[indices.at (cp)];
+        dir[0] = cloud.pts[indices.at (cp)].x - cloud.chan[vx_idx + 0].vals[indices.at (cp)];
+        dir[1] = cloud.pts[indices.at (cp)].y - cloud.chan[vx_idx + 1].vals[indices.at (cp)];
+        dir[2] = cloud.pts[indices.at (cp)].z - cloud.chan[vx_idx + 2].vals[indices.at (cp)];
+
+        // Get the index for the current point and the viewpoint
+        getVoxelIndex (curpoint, leaf_width, min_b, idx_cur);
+        getVoxelIndex (cloud.pts[indices.at (cp)], leaf_width, min_b, idx_goal);
+
+        // Go over the line and select the appropiate i/j/k + idx
+        bool seen_point = false;
+        double c[3];
+        while (curpoint[0] < max_b.x && curpoint[0] > min_b.x && curpoint[1] < max_b.y && curpoint[1] > min_b.y && curpoint[2] < max_b.z && curpoint[2] > min_b.z)
+        {
+          if (!seen_point)
+          {
+            if (idx_cur[0] == idx_goal[0] && idx_cur[1] == idx_goal[1] && idx_cur[2] == idx_goal[2] )
+              seen_point = true;
+            else
+            {
+//              int idx = ( (idx_cur[2] - min_b.z) * div_b.y * div_b.x ) + ( (idx_cur[1] - min_b.y) * div_b.x ) + (idx_cur[0] - min_b.x);
+              Voxel v;
+              v.i = idx_cur[0]; v.j = idx_cur[1]; v.k = idx_cur[2];
+              voxels.push_back (v);
+            }
+          }
+
+          c[0] = min_b.x + (idx_cur[0] + (dir[0] >= 0 ? 1 : 0)) * leaf_width.x - curpoint[0];
+          c[1] = min_b.y + (idx_cur[1] + (dir[1] >= 0 ? 1 : 0)) * leaf_width.y - curpoint[1];
+          c[2] = min_b.z + (idx_cur[2] + (dir[2] >= 0 ? 1 : 0)) * leaf_width.z - curpoint[2];
+
+          double dir_n[3], r[3];
+          double n_norm = sqrt (c[0] * c[0] + c[1] * c[1] + c[2] * c[2]);
+          for (int d = 0; d < 3; d++)
+          {
+            dir_n[d] = dir[d] / n_norm;
+            r[d] = c[d] / dir_n[d];
+          }
+
+          double dist = 0.0;
+          int go[3] = {0.0, 0.0, 0.0};
+#define SGN(x) (((x)==0.0)?0.0:((x)>0.0?1.0:-1.0))
+          for (int d = 0; d < 3; d++)
+          {
+            if (fabs (r[d]) <= fabs (r[(d + 1) % 3]))
+              if (fabs (r[d]) <= fabs (r[(d + 2) % 3]))
+              {
+                go[d] = SGN (dir[d]);
+                dist = r[d];
+              }
+          }
+          if (dist == 0.0)
+          {
+            cerr << "crap!" << endl;
+            break;
+          }
+          for (int d = 0; d < 3; d++)
+          {
+            curpoint[d] = curpoint[d] + dist * dir_n[d];
+            idx_cur[d] += go[d];
+          }
+        }
+      }
+    }
+
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    inline void
+      getVoxelIndex (double *point, const Point32 &leaf_width, const Point32 &min_b, int *idx)
+    {
+      idx[0] = (int)(floor ((point[0] - min_b.x) / leaf_width.x));
+      idx[1] = (int)(floor ((point[1] - min_b.y) / leaf_width.y));
+      idx[2] = (int)(floor ((point[2] - min_b.z) / leaf_width.z));
+    }
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    inline void
+      getVoxelIndex (const Point32& point, const Point32 &leaf_width, const Point32 &min_b, int *idx)
+    {
+      idx[0] = (int)(floor ((point.x - min_b.x) / leaf_width.x));
+      idx[1] = (int)(floor ((point.y - min_b.y) / leaf_width.y));
+      idx[2] = (int)(floor ((point.z - min_b.z) / leaf_width.z));
+    }
+
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // PointCloud message callback
