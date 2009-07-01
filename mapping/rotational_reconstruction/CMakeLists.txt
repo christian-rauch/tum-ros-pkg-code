@@ -6,5 +6,6 @@ rospack(rotational_reconstruction)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
-rospack_add_executable(rotational_reconstruction_node src/rotational_reconstruction_node)
+rospack_add_executable(rotational_reconstruction_node src/rotational_reconstruction_node src/sac_model_rotational.cpp)
+rospack_add_executable(rotational_reconstructions_query_service src/query_rotational_reconstruction_service.cpp)
 
