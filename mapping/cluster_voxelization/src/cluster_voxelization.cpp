@@ -24,7 +24,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: cluster_voxelization.cpp 17089 2009-06-15 18:52:12Z veedee $
+ * $Id$
  *
  */
 
@@ -318,8 +318,6 @@ class ClusterVoxelization
             total_nr_pts++;
           }
         }
-//        cloud_geometry::statistics::getMinMax (cloud, object_idx, resp.oclusters[i].min_bound, resp.oclusters[i].max_bound);
-//        cloud_geometry::nearest::computeCentroid (cloud, object_idx, resp.oclusters[i].center);
         cloud_clusters_pub_.publish (cloud_annotated);
       }
 
@@ -394,12 +392,11 @@ class ClusterVoxelization
                   div_b.x, div_b.y, div_b.z, div_b.x * div_b.y * div_b.z * sizeof (Voxel));
       }
 
-      // Go over all points and insert them into the right leaf
       double curpoint[3], dir[3];
       int idx_cur[3], idx_goal[3];
+      // Go over all points and insert them into the right leaf
       for (unsigned int cp = 0; cp < indices.size (); cp++)
       {
-
         // Create a line from this point to its viewpoint
         for (int d = 0; d < 3; d++)
           curpoint[d] = cloud.chan[vx_idx + d].vals[indices.at (cp)];
@@ -412,24 +409,26 @@ class ClusterVoxelization
         getVoxelIndex (cloud.pts[indices.at (cp)], leaf_width, min_b, idx_goal);
 
         // Go over the line and select the appropiate i/j/k + idx
-        bool seen_point = false;
+        bool goal_point_reached = false;
         double c[3];
-        while (seen_point == false || (curpoint[0] < max_b.x && curpoint[0] > min_b.x && curpoint[1] < max_b.y && curpoint[1] > min_b.y && curpoint[2] < max_b.z && curpoint[2] > min_b.z))
+        while (!goal_point_reached || (curpoint[0] < max_b.x && curpoint[0] > min_b.x && curpoint[1] < max_b.y && curpoint[1] > min_b.y && curpoint[2] < max_b.z && curpoint[2] > min_b.z))
         {
-          if (seen_point)
+          if (goal_point_reached)
             break;
           else
           {
+            // Have we reached the goal point from the start, along theline ?
             if (idx_cur[0] == idx_goal[0] && idx_cur[1] == idx_goal[1] && idx_cur[2] == idx_goal[2] )
             {
-              seen_point = true;
+              goal_point_reached = true;
               break;
             }
             else
             {
-//              int idx = ( (idx_cur[2] - min_b.z) * div_b.y * div_b.x ) + ( (idx_cur[1] - min_b.y) * div_b.x ) + (idx_cur[0] - min_b.x);
+              // Check if in bounds
               if (idx_cur[0] > 0 && idx_cur[1] > 0 && idx_cur[2] > 0 && idx_cur[0] < div_b.x && idx_cur[1] < div_b.y && idx_cur[2] < div_b.z)
               {
+                // Create a voxel and push it to the list
                 Voxel v;
                 v.i = idx_cur[0]; v.j = idx_cur[1]; v.k = idx_cur[2];
                 vlist.voxels.push_back (v);
@@ -451,24 +450,26 @@ class ClusterVoxelization
 
           double dist = 0.0;
           int go[3] = {0.0, 0.0, 0.0};
-#define SGN(x) (((x)==0.0)?0.0:((x)>0.0?1.0:-1.0))
           for (int d = 0; d < 3; d++)
           {
             if (fabs (r[d]) <= fabs (r[(d + 1) % 3]))
               if (fabs (r[d]) <= fabs (r[(d + 2) % 3]))
               {
-                go[d] = SGN (dir[d]);
+//#define SGN(x) (((x)==0.0) ? 0.0 : ((x) > 0.0 ? 1.0 : -1.0))
+//                go[d] = SGN (dir[d]);
+                go[d] = ( (dir[d] == 0) ? 0.0 : (dir[d] > 0.0 ? 1.0 : -1.0) );
                 dist = r[d];
               }
           }
-          if (dist == 0.0)
-          {
-            cerr << "crap!" << endl;
-            break;
-          }
+//          if (dist == 0.0)
+//          {
+//            cerr << "crap!" << endl;
+//            break;
+//          }
+          // Get the next point index (i-j-k)
           for (int d = 0; d < 3; d++)
           {
-            curpoint[d] = curpoint[d] + dist * dir_n[d];
+            curpoint[d] += dist * dir_n[d];
             idx_cur[d] += go[d];
           }
         }
@@ -480,10 +481,6 @@ class ClusterVoxelization
       vlist.voxels.erase (unique (vlist.voxels.begin (), vlist.voxels.end (), equalVoxels), vlist.voxels.end ());
       ROS_INFO ("Remaining number of voxels (time spent: %f): %d.", (ros::WallTime::now () - ts).toSec (), (int)vlist.voxels.size ());
 
-      // Fill in the remaining dataset
-      vlist.min = min_b;
-      vlist.leaf_width = leaf_width;
-      vlist.ndivs = div_b;
       if (publish_debug_)
       {
         // Assemble the collision map from the list of voxels
@@ -504,6 +501,11 @@ class ClusterVoxelization
 
         cmap_pub_.publish (c_map_);
       }
+
+      // Fill in the response
+      vlist.min = min_b;
+      vlist.leaf_width = leaf_width;
+      vlist.ndivs = div_b;
     }
 
 
