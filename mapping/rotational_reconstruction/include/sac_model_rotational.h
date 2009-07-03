@@ -32,7 +32,10 @@
 
 #ifndef _SAMPLE_CONSENSUS_SACMODELCYLINDER_H_
 #define _SAMPLE_CONSENSUS_SACMODELCYLINDER_H_
+#include <robot_msgs/PointCloud.h>
+#include <mapping_msgs/PolygonalMap.h>
 
+#include <point_cloud_mapping/kdtree/kdtree_ann.h>
 #include <point_cloud_mapping/sample_consensus/sac_model.h>
 #include <point_cloud_mapping/sample_consensus/model_types.h>
 
@@ -41,6 +44,16 @@
 
 namespace sample_consensus
 {
+  /// General datastructure for passing points and samples to the LM optimizer
+  struct LMStrucData
+  {
+    robot_msgs::PointCloud *cloud;
+    std::vector<int> samples;
+    int nx_idx_;
+    int ny_idx_;
+    int nz_idx_;
+  };
+  std::pair<double,double> getMinMaxK (robot_msgs::PointCloud &cloud, std::vector<double> model_coefficients, std::vector<int> inliers);
   /** \brief A Sample Consensus Model class for cylinder segmentation.
     */
   class SACModelRotational : public SACModel
@@ -48,7 +61,13 @@ namespace sample_consensus
     public:
       //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
       /** \brief Constructor for base SACModelRotational. */
-      SACModelRotational () { nx_idx_ = ny_idx_ = nz_idx_ = -1; polynomial_order = 3; }
+      SACModelRotational (std::vector<std::vector<std::vector<bool> > > &free_voxels, robot_msgs::Point32 min, robot_msgs::Point32 ndivs, robot_msgs::Point32 leaf_width, mapping_msgs::PolygonalMap &polymap) 
+        : occupancy_min(min)
+        , occupancy_ndivs(ndivs)
+        , occupancy_leaf_width(leaf_width)
+        , pmap (polymap)
+        , occupancy_lookup (free_voxels)
+        { nx_idx_ = ny_idx_ = nz_idx_ = -1; polynomial_order = 3; }
 
       //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
       /** \brief Destructor for base SACModelRotational. */
@@ -68,11 +87,12 @@ namespace sample_consensus
        *  \param model_coefficients model coefficients of the rot. object
        *  \param polynomial_order order of polynomial of contour
        */ 
-      double pointToRotationalDistance (const robot_msgs::Point32 &p, const std::vector<double> &model_coefficients, const int &polynomial_order);
+      static double pointToRotationalDistance (const robot_msgs::Point32 &p, const std::vector<double> &model_coefficients, const int &polynomial_order);
 
       virtual bool computeModelCoefficients (const std::vector<int> &samples);
 
       virtual void refitModel (const std::vector<int> &inliers, std::vector<double> &refit_coefficients);
+      virtual void refitAxis (const std::vector<int> &inliers, std::vector<double> &refit_coefficients);
       virtual void getDistancesToModel (const std::vector<double> &model_coefficients, std::vector<double> &distances);
       virtual void selectWithinDistance (const std::vector<double> &model_coefficients, double threshold, std::vector<int> &inliers);
 
@@ -82,11 +102,14 @@ namespace sample_consensus
       virtual bool doSamplesVerifyModel (const std::set<int> &indices, double threshold);
 
       static int functionToOptimize (void *p, int m, int n, const double *x, double *fvec, int iflag);
+      static int functionToOptimizeAxis (void *p, int m, int n, const double *x, double *fvec, int iflag);
 
       //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
       /** \brief Return an unique id for this model (SACMODEL_CYLINDER). */
       virtual int getModelType () { return (SACMODEL_CYLINDER); }
-      void setOccupancyLookup (vector<vector<vector<bool> > > table);
+      robot_msgs::PointCloud samplePointsOnRotational (const std::vector<double> modelCoefficients, std::pair<double,double> minmaxK, std::vector<int> inliers);
+      bool freespace (robot_msgs::Point32 p);
+      double computeScore (const std::vector<double> &modelCoefficients, std::pair<double,double> minmaxK, std::vector<int> inliers, robot_msgs::PointCloud &cloud_synth, double threshold);
 
     private:
       /** \brief The order of the polynomial to be fitted */
@@ -95,9 +118,12 @@ namespace sample_consensus
       int nx_idx_, ny_idx_, nz_idx_;
       /** \brief temporary pointer to a list of given indices for refitModel () */
       const std::vector<int> *tmp_inliers_;
-      vector<vector<vector<bool> > > &occupancy_lookup;
+      robot_msgs::Point32 occupancy_min;
+      robot_msgs::Point32 occupancy_ndivs;
+      robot_msgs::Point32 occupancy_leaf_width;
+      mapping_msgs::PolygonalMap &pmap;
+      std::vector<std::vector<std::vector<bool> > > &occupancy_lookup;
   };
 }
-
 #endif
 
