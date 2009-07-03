@@ -8,6 +8,6 @@
   <review status="3rdparty" notes=""/>
   <url>http://www.ics.forth.gr/~lourakis/levmar/</url>
   <export>
-    <cpp cflags="-I${prefix}/build/levmar-2.4" lflags="-Wl,-rpath,${prefix}/build/levmar-2.4 -L${prefix}/build/levmar-2.4 -llevmar" />
+    <cpp cflags="-I${prefix}/build/levmar-2.4" lflags="-Wl,-rpath,${prefix}/build/levmar-2.4/build -L${prefix}/build/levmar-2.4/build -llevmar" />
   </export>
 </package>

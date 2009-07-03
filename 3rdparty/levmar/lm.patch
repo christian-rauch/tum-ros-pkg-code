@@ -1,0 +1,15 @@
+--- lm.h.orig	2009-07-03 12:43:19.000000000 +0200
++++ lm.h	2009-07-03 12:43:23.000000000 +0200
+@@ -34,9 +34,9 @@
+  * non-reentrant and is not safe in a shared memory multiprocessing environment.
+  * Bellow, this option is turned on only when not compiling with OpenMP.
+  */
+-#if !defined(_OPENMP) 
+-#define LINSOLVERS_RETAIN_MEMORY /* comment this if you don't want routines in Axb.c retain working memory between calls */
+-#endif
++//#if !defined(_OPENMP) 
++//#define LINSOLVERS_RETAIN_MEMORY /* comment this if you don't want routines in Axb.c retain working memory between calls */
++//#endif
+ 
+ /* determine the precision variants to be build. Default settings build
+  * both the single and double precision routines
