@@ -8,6 +8,7 @@
   <review status="3rdparty" notes=""/>
   <url>http://www.ics.forth.gr/~lourakis/levmar/</url>
   <export>
-    <cpp cflags="-I${prefix}/build/levmar-2.4" lflags="-Wl,-rpath,${prefix}/build/levmar-2.4/build -L${prefix}/build/levmar-2.4/build -llevmar" />
+    <cpp cflags="-I${prefix}/build/levmar-2.4" lflags="-Wl,-rpath,${prefix}/build/build -L${prefix}/build/build -llevmar -llapack" />
   </export>
+  <sysdepend os="ubuntu" version="9.04-jaunty" package="liblapack-dev" />
 </package>

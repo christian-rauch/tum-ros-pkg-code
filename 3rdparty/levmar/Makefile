@@ -8,8 +8,8 @@ TARBALL_PATCH = makefile.patch cmakelists.patch lm.patch
 
 include $(shell rospack find mk)/download_unpack_build.mk
 
-levmar: $(SOURCE_DIR)/unpacked Makefile
-	cd build/levmar-2.4 && mkdir build && cd build && cmake .. && make
+levmar: $(SOURCE_DIR)/unpacked
+	mkdir -p build/build && cd build/build && cmake ../levmar-2.4 && make
 	touch installed
 
 clean:
