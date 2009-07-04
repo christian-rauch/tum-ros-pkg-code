@@ -40,7 +40,7 @@
 #include <ros/node_handle.h>
 // ROS messages
 #include <robot_msgs/PointCloud.h>
-#include <robot_msgs/PolygonalMap.h>
+#include <mapping_msgs/PolygonalMap.h>
 
 // Sample Consensus
 #include <point_cloud_mapping/sample_consensus/sac.h>
