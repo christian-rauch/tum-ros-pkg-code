@@ -1,0 +1,13 @@
+<package>
+  <author>Radu Bogdan Rusu</author>
+  <license>BSD</license>
+
+  <depend package="roscpp" />
+  <depend package="robot_msgs" />
+  <depend package="sensor_msgs" />
+  <depend package="tf" />
+
+  <export>
+    <cpp cflags="-I${prefix}/msg/cpp"/>
+  </export>
+</package>
