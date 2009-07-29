@@ -6,6 +6,8 @@
   <depend package="robot_msgs" />
   <depend package="sensor_msgs" />
   <depend package="tf" />
+  <depend package="angles" />
+  <depend package="eigen" />
 
   <export>
     <cpp cflags="-I${prefix}/msg/cpp"/>

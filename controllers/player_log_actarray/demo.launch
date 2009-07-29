@@ -1,0 +1,34 @@
+<launch>
+  <node pkg="point_cloud_mapping" type="player_laser_log_to_msg" name="player_laser_log_to_msg" output="screen" args="$(find player_log_actarray)/demo.log 1" />
+  <node pkg="player_log_actarray" type="player_actarray_log_to_msg" name="player_actarray_log_to_msg" output="screen" args="$(find player_log_actarray)/demo.log 1" />
+
+  <node pkg="player_log_actarray" type="actarray_cloud_assembler" name="actarray_cloud_assembler" output="screen">
+    <!-- Translation values for our SICK LMS 400 with respect to the rotation origin -->
+    <param name="translations_x" value="0.097" />
+    <param name="translations_y" value="0.14207" />
+    <param name="translations_z" value="0.0" />
+
+<!--
+      right_arm[0].t =  0;      right_arm[0].d = +0.225;  right_arm[0].l = 0;  right_arm[0].a = +M_PI/2;
+      right_arm[1].t = -M_PI/2; right_arm[1].d = +0.260;  right_arm[1].l = 0;  right_arm[1].a = +M_PI/2;
+      right_arm[2].t = +M_PI;   right_arm[2].d =  0;      right_arm[2].l = 0;  right_arm[2].a = +M_PI/2;
+      right_arm[3].t = +M_PI;   right_arm[3].d = +0.310;  right_arm[3].l = 0;  right_arm[3].a = +M_PI/2;
+      right_arm[4].t = +M_PI;   right_arm[4].d =  0;      right_arm[4].l = 0;  right_arm[4].a = +M_PI/2;
+      right_arm[5].t =  0;      right_arm[5].d = +0.265;  right_arm[5].l = 0;  right_arm[5].a =  0;
+-->
+    <param name="rarm_DH" type="string" 
+           value="0 0.225 0 1.5707963 -1.5707963 0.26 0 1.5707963 3.1415927 0 0 1.5707963 3.1415927 0.31 0 1.5707963 3.1415927 0 0 1.5707963 0 0.265 0 0" />
+
+<!--
+      left_arm[0].t = +M_PI;    left_arm[0].d = -0.225;   left_arm[0].l = 0;   left_arm[0].a = +M_PI/2;
+      left_arm[1].t = -M_PI/2;  left_arm[1].d = -0.260;   left_arm[1].l = 0;   left_arm[1].a = +M_PI/2;
+      left_arm[2].t = +M_PI;    left_arm[2].d =  0;       left_arm[2].l = 0;   left_arm[2].a = +M_PI/2;
+      left_arm[3].t = +M_PI;    left_arm[3].d = -0.310;   left_arm[3].l = 0;   left_arm[3].a = +M_PI/2;
+      left_arm[4].t = +M_PI;    left_arm[4].d =  0;       left_arm[4].l = 0;   left_arm[4].a = +M_PI/2;
+      left_arm[5].t = +M_PI;    left_arm[5].d = -0.265;   left_arm[5].l = 0;   left_arm[5].a = +M_PI;
+-->
+    <param name="larm_DH" type="string" 
+           value="3.1415927 -0.225 0 1.5707963 -1.5707963 0.26 0 1.5707963 3.1415927 0 0 1.5707963 3.1415927 -0.31 0 1.5707963 3.1415927 0 0 1.5707963 3.1415927 -0.265 0 3.1415927" />
+
+  </node>
+</launch>
