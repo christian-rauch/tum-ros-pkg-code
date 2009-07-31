@@ -43,7 +43,6 @@
 #include <ros/ros.h>
 // ROS messages
 #include <player_log_actarray/PlayerActarray.h>
-#include <tf/transform_broadcaster.h>
 
 #include <fstream>
 #include <boost/algorithm/string.hpp>
@@ -57,8 +56,6 @@ class PlayerLogToMsg
   protected:
     string tf_frame_;
     NodeHandle nh_;
-    tf::TransformBroadcaster broadcaster_;
-    tf::Stamped<tf::Transform> transform_;
 
   public:
     // ROS messages
@@ -72,7 +69,6 @@ class PlayerLogToMsg
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     PlayerLogToMsg () : tf_frame_ ("laser_tilt_mount_link"),
-                        transform_ (btTransform (btQuaternion (0, 0, 0), btVector3 (0, 0, 0)), Time::now (), tf_frame_, tf_frame_),
                         is_file_ (true)
     {
       msg_topic_ = "/player_actarray";
@@ -122,6 +118,7 @@ class PlayerLogToMsg
         if (!logfile_stream_.good ())
         {
           usleep (500);
+          logfile_stream_.clear ();
           continue;
         }
         // If the line is empty, continue
@@ -129,7 +126,8 @@ class PlayerLogToMsg
           continue;
 
         // Split a line into tokens
-        boost::split (st, line, boost::is_any_of (" "));
+        boost::trim (line);
+        boost::split (st, line, boost::is_any_of (" "), boost::token_compress_on);
 
         string line_type = st.at (0);
         if (line_type.substr (0, 1) == "#")
@@ -160,16 +158,15 @@ class PlayerLogToMsg
 
         for (unsigned int i = 0; i < msg_act_.joints.size (); i++)
           msg_act_.joints[i] = atof (st.at (8 + 5 * i).c_str ());
-        transform_.stamp_ = Time::now ();
-        broadcaster_.sendTransform (transform_);
         total_nr_poses++;
 
-        ROS_DEBUG ("Publishing data (%d joint positions) on topic %s in frame %s.",
-                   (int)msg_act_.joints.size (), nh_.resolveName (msg_topic_).c_str (), msg_act_.header.frame_id.c_str ());
+        if (is_file_)
+          ROS_DEBUG ("Publishing data (%d joint positions) on topic %s in frame %s.",
+                     (int)msg_act_.joints.size (), nh_.resolveName (msg_topic_).c_str (), msg_act_.header.frame_id.c_str ());
         act_pub_.publish (msg_act_);
 
         // Sleep for a certain number of seconds (tdif)
-        if (tj != 0)
+        if (tj != 0 && is_file_)
         {
           Duration tictoc (tdif);
           tictoc.sleep ();
