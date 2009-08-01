@@ -116,11 +116,10 @@ class ActarrayCloudAssembler
       getDHParameters (armDH, arm_params_);
       printDHParameters (arm_params_);
 
-
       actarray_sub_  = nh_.subscribe ("/player_actarray", 1, &ActarrayCloudAssembler::actarray_cb, this);
       laserscan_sub_ = nh_.subscribe ("/laser_scan", 1, &ActarrayCloudAssembler::scan_cb, this);
 
-      cloud_pub_ = nh_.advertise<PointCloud> ("/cloud_pcd", 1);
+      cloud_pub_ = nh_.advertise<PointCloud> ("/tilt_laser_cloud", 1);
 
       cloud_.header.frame_id = "laser_tilt_mount_link";
       cloud_.chan.resize (7);
@@ -165,13 +164,13 @@ class ActarrayCloudAssembler
       printDHParameters (const vector<DH> &params)
     {
       for (unsigned int i = 0; i < params.size (); i++)
-        fprintf (stderr, "%f %f %f %f\n", params[i].t, params[i].d, params[i].l, params[i].a);
+        fprintf (stderr, "t: %4.4f     d: %4.4f     l: %4.4f     a: %4.4f\n", params[i].t, params[i].d, params[i].l, params[i].a);
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Obtain a transformaion matrix for a joint defined by its DH parameters and joint values
     Eigen::Matrix4f
-      getJointTransformation (DH param, double q)
+      getJointTransformation (const DH& param, const double& q)
     {
       Eigen::Matrix4f T;
       double t = param.t, d = param.d;
@@ -179,17 +178,17 @@ class ActarrayCloudAssembler
       d += (param.type == 0) ? 0 : q;
       double st = sin (t), ct = cos (t);
       double sa = sin (param.a), ca = cos (param.a);
-      T(0, 0) = ct;  T(0, 1) = -st*ca;  T(0, 2) = +st*sa; T(0, 3) = param.l*ct;
-      T(1, 0) = st;  T(1, 1) = +ct*ca;  T(1, 2) = -ct*sa; T(1, 3) = param.l*st;
-      T(2, 0) = 0;   T(2, 1) = sa;      T(2, 2) = ca;     T(2, 3) = d;
-      T(3, 0) = 0;   T(3, 1) = 0;       T(3, 2) = 0;      T(3, 3) = 1;
+      T(0, 0) = ct;  T(0, 1) = -st * ca;  T(0, 2) = +st * sa; T(0, 3) = param.l * ct;
+      T(1, 0) = st;  T(1, 1) = +ct * ca;  T(1, 2) = -ct * sa; T(1, 3) = param.l * st;
+      T(2, 0) = 0;   T(2, 1) = sa;        T(2, 2) = ca;       T(2, 3) = d;
+      T(3, 0) = 0;   T(3, 1) = 0;         T(3, 2) = 0;        T(3, 3) = 1;
       return (T);
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Obtain a global transormation matrix for an array of joints
     Eigen::Matrix4f
-      getGlobalTransformation (vector<DH> params, vector<double> joints)
+      getGlobalTransformation (const vector<DH>& params, const vector<double>& joints)
     {
       // Compute the transformation matrix as a product of relative transformations
       Eigen::Matrix4f global_transformation = getJointTransformation (params[0], joints[0]);
@@ -203,19 +202,29 @@ class ActarrayCloudAssembler
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Obtain a transformation matrix from a set of given DH parameters
+    Eigen::Matrix4f
+      getDHTransformation (const vector<DH>& arm_params, const vector<double>& q_values)
+    {
+      // Obtain the coordinates of the end-effector relative to shoulder
+      Eigen::Matrix4f shoulder_transform = getGlobalTransformation (arm_params, q_values);
+      // Obtain the coordinates of end-effector relative to robot base
+      //shoulder_transform *= base2arm;
+      return (shoulder_transform);
+    }
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // PlayerActarray message callback
     void
       actarray_cb (const PlayerActarrayConstPtr& actarray)
     {
       cur_act_ = actarray;
-      ROS_INFO ("PlayerActarray message received with %d joint poses.", (int)cur_act_->joints.size ());
+      ROS_DEBUG ("PlayerActarray message received with %d joint poses. Number of laser scans in queue = %d.", (int)cur_act_->joints.size (), (int)scans_.size ());
 
       if (prev_act_.joints.size () == 0)
       {
-        prev_act_.header.stamp = cur_act_->header.stamp;
-        prev_act_.joints.resize (cur_act_->joints.size ());
-        for (unsigned int q_idx = 0; q_idx < cur_act_->joints.size (); q_idx++)
-          prev_act_.joints[q_idx] = cur_act_->joints[q_idx];
+        prev_act_.header = cur_act_->header;
+        prev_act_.joints = cur_act_->joints;
         scans_.clear ();                // We lose initial scans, but it's ok, as the unit is not moving yet
         return;
       }
@@ -232,13 +241,13 @@ class ActarrayCloudAssembler
         // Convert to XYZ
         if ((laser_packet->header.stamp < prev_act_.header.stamp) || (laser_packet->header.stamp > cur_act_->header.stamp))
         {
-          ROS_ERROR ("Wrong laser timestamp encountered - ignoring packet %d with time %f", laser_packet_scan_id, laser_packet->header.stamp.toSec ());
+          ROS_ERROR ("Wrong laser timestamp encountered - ignoring packet %d with time %f (%f -> %f)", laser_packet_scan_id, laser_packet->header.stamp.toSec (),
+                     prev_act_.header.stamp.toSec (), cur_act_->header.stamp.toSec ());
           continue;
         }
 
         double t0 = (laser_packet->header.stamp - prev_act_.header.stamp).toSec ();
         double t1 = (cur_act_->header.stamp - prev_act_.header.stamp).toSec ();
-        cerr << t0 <<  " " << t1 << endl;
 
         for (unsigned int q_idx = 0; q_idx < cur_act_->joints.size (); q_idx++)
           q_values[q_idx] = prev_act_.joints[q_idx] + t0 * (cur_act_->joints[q_idx] - prev_act_.joints[q_idx]) / t1;
@@ -246,8 +255,12 @@ class ActarrayCloudAssembler
         Eigen::Matrix4f robot_transform = getDHTransformation (arm_params_, q_values);
         // Calculate the viewpoint for the current interpolated joint angles
         vp_old = vp;
+/*        cerr << "-----" << endl;
+            for (int d = 0; d < q_values.size (); d++)
+              cerr << q_values[d] << " ";
+            cerr << endl;
+        cerr << robot_transform << endl;*/
         ///cANN::transform (robot_transform, translations, vp);
-
         ///if (_ANNpointEqual(vp, vp_old))
           ///continue;
 
@@ -276,6 +289,15 @@ class ActarrayCloudAssembler
 
           // Transform the point
           pt_t = robot_transform * pt;
+          if (isnan (pt_t(0)) || isnan (pt_t(1)) || isnan (pt_t(2)))
+          {
+            cerr << " ---------- " << endl;
+            for (int d = 0; d < q_values.size (); d++)
+              cerr << q_values[d] << " ";
+            cerr << endl;
+            cerr << robot_transform << endl;
+            cerr << pt(0) << " " << pt(1) << " " << pt(2) << " " << pt_t(0) << " " << pt_t(1) << " " << pt_t(2) << endl;
+          }
           cloud_.pts[nr_points].x = pt_t(0);
           cloud_.pts[nr_points].y = pt_t(1);
           cloud_.pts[nr_points].z = pt_t(2);
@@ -293,30 +315,19 @@ class ActarrayCloudAssembler
           angle_x += resolution;
         }
 
+        if (nr_points == 0)
+          continue;
         cloud_.pts.resize (nr_points);
         for (unsigned int d = 0; d < cloud_.chan.size (); d++)
           cloud_.chan[d].vals.resize (nr_points);
 
         cloud_.header.stamp = Time::now ();
+        ROS_INFO ("Publishing a PointCloud message with %d points and %d channels.", (int)cloud_.pts.size (), (int)cloud_.chan.size ());
         cloud_pub_.publish (cloud_);
       }
 
-      for (unsigned int q_idx = 0; q_idx < cur_act_->joints.size (); q_idx++)
-        prev_act_.joints[q_idx] = cur_act_->joints[q_idx];
-
+      prev_act_.joints = cur_act_->joints;
       scans_.clear ();
-    }
-
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // Obtain a transformation matrix from a set of given DH parameters
-    Eigen::Matrix4f
-      getDHTransformation (vector<DH> arm_params, vector<double> q_values)
-    {
-      // Obtain the coordinates of the end-effector relative to shoulder
-      Eigen::Matrix4f shoulder_transform = getGlobalTransformation (arm_params, q_values);
-      // Obtain the coordinates of end-effector relative to robot base
-      //shoulder_transform *= base2arm;
-      return (shoulder_transform);
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -324,7 +335,7 @@ class ActarrayCloudAssembler
     void
       scan_cb (const LaserScanConstPtr& scan)
     {
-      ROS_INFO ("LaserScan message received with %d measurements.", (int)scan->ranges.size ());
+      //ROS_INFO ("LaserScan message received with %d measurements.", (int)scan->ranges.size ());
       scans_.push_back (scan);
     }
 
