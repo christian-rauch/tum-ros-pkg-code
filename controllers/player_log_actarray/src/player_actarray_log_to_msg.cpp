@@ -64,6 +64,7 @@ class PlayerLogToMsg
     string file_name_, msg_topic_;
     Publisher act_pub_;
 
+    int joints_to_publish_;
     ifstream logfile_stream_;
     bool is_file_;
 
@@ -71,6 +72,7 @@ class PlayerLogToMsg
     PlayerLogToMsg () : tf_frame_ ("laser_tilt_mount_link"),
                         is_file_ (true)
     {
+      nh_.param ("~joints_to_publish", joints_to_publish_, -1);     // publish only the first <joints_to_publish_> joints
       msg_topic_ = "/player_actarray";
       act_pub_   = nh_.advertise<PlayerActarray> (msg_topic_.c_str (), 1);
     }
@@ -152,6 +154,9 @@ class PlayerLogToMsg
           continue;
 
         int nr_joints = atoi (st.at (7).c_str ());
+        if (joints_to_publish_ != -1)
+          nr_joints = min (nr_joints, joints_to_publish_);
+
         msg_act_.joints.resize (nr_joints);
         if (msg_act_.joints.size () == 0)         // If no joints found, continue to the next packet
           continue;

@@ -1,6 +1,8 @@
 <launch>
   <node pkg="point_cloud_mapping" type="player_laser_log_to_msg" name="player_laser_log_to_msg" output="screen" args="$(find player_log_actarray)/demo.log 1" />
-  <node pkg="player_log_actarray" type="player_actarray_log_to_msg" name="player_actarray_log_to_msg" output="screen" args="$(find player_log_actarray)/demo.log 1" />
+  <node pkg="player_log_actarray" type="player_actarray_log_to_msg" name="player_actarray_log_to_msg" output="screen" args="$(find player_log_actarray)/demo.log 1">
+    <param name="joints_to_publish" value="6" />
+  </node>
 
   <node pkg="player_log_actarray" type="actarray_cloud_assembler" name="actarray_cloud_assembler" output="screen">
     <!-- Translation values for our SICK LMS 400 with respect to the rotation origin -->
@@ -28,7 +30,8 @@
       left_arm[5].t = +M_PI;    left_arm[5].d = -0.265;   left_arm[5].l = 0;   left_arm[5].a = +M_PI;
 -->
     <param name="larm_DH" type="string" 
-           value="3.1415927 -0.225 0 1.5707963 -1.5707963 0.26 0 1.5707963 3.1415927 0 0 1.5707963 3.1415927 -0.31 0 1.5707963 3.1415927 0 0 1.5707963 3.1415927 -0.265 0 3.1415927" />
+           value="3.1415927 -0.225 0 1.5707963 -1.5707963 -0.26 0 1.5707963 3.1415927 0 0 1.5707963 3.1415927 -0.31 0 1.5707963 3.1415927 0 0 1.5707963 3.1415927 -0.265 0 3.1415927" />
 
+    <param name="left" type="bool" value="true" />
   </node>
 </launch>

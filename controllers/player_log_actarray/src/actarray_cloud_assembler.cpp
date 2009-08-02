@@ -47,11 +47,13 @@
 #include <player_log_actarray/PlayerActarray.h>
 #include <tf/transform_broadcaster.h>
 #include <angles/angles.h>
-
 #include <Eigen/Core>
 
 #include <fstream>
 #include <boost/algorithm/string.hpp>
+#include <boost/thread/mutex.hpp>
+
+#include <list>
 
 using namespace std;
 using namespace ros;
@@ -72,12 +74,15 @@ class ActarrayCloudAssembler
     NodeHandle nh_;
     tf::TransformBroadcaster broadcaster_;
     tf::Stamped<tf::Transform> transform_;
+    boost::mutex s_lock_, a_lock_;
 
   public:
     // ROS messages
-    PlayerActarrayConstPtr cur_act_;
-    PlayerActarray prev_act_;
-    vector<LaserScanConstPtr> scans_;
+//     PlayerActarrayConstPtr cur_act_;
+//     PlayerActarray prev_act_, first_act_;
+    list<LaserScanConstPtr> scans_;
+    vector<PlayerActarrayConstPtr> actarrays_;
+    double first_act_stamp_;
 
     PointCloud cloud_;
 
@@ -87,7 +92,7 @@ class ActarrayCloudAssembler
 
     vector<DH> arm_params_;
     // Parameters
-    Point translation_;
+    Eigen::Vector4d translation_;
     double min_distance_, max_distance_, laser_min_angle_, laser_max_angle_;
     bool left_arm_;
 
@@ -103,10 +108,11 @@ class ActarrayCloudAssembler
       nh_.param ("~laser_max_angle", laser_max_angle_, DBL_MAX);    // maximum range angle to be considered
 
       // To make the code general, no translations with respect to the rotation origin are given here as default
-      nh_.param ("~translations_x", translation_.x, 0.0);
-      nh_.param ("~translations_y", translation_.y, 0.0);
-      nh_.param ("~translations_z", translation_.z, 0.0);
+      nh_.param ("~translations_x", translation_ (0), 0.0);
+      nh_.param ("~translations_y", translation_ (1), 0.0);
+      nh_.param ("~translations_z", translation_ (2), 0.0);
 
+      nh_.param ("~left", left_arm_, true);
       string armDH;
       ROS_INFO ("Using the following DH parameters for the arm: ");
       if (left_arm_)
@@ -116,8 +122,8 @@ class ActarrayCloudAssembler
       getDHParameters (armDH, arm_params_);
       printDHParameters (arm_params_);
 
-      actarray_sub_  = nh_.subscribe ("/player_actarray", 1, &ActarrayCloudAssembler::actarray_cb, this);
-      laserscan_sub_ = nh_.subscribe ("/laser_scan", 1, &ActarrayCloudAssembler::scan_cb, this);
+      actarray_sub_  = nh_.subscribe ("/player_actarray", 1000, &ActarrayCloudAssembler::actarray_cb, this);
+      laserscan_sub_ = nh_.subscribe ("/laser_scan", 1000, &ActarrayCloudAssembler::scan_cb, this);
 
       cloud_pub_ = nh_.advertise<PointCloud> ("/tilt_laser_cloud", 1);
 
@@ -131,7 +137,8 @@ class ActarrayCloudAssembler
       cloud_.chan[5].name = "vy";
       cloud_.chan[6].name = "vz";
 
-      ROS_INFO ("Using the following translation values: %f, %f, %f", translation_.x, translation_.y, translation_.z);
+      ROS_INFO ("Using the following translation values: %f, %f, %f", translation_ (0), translation_ (1), translation_ (2));
+      first_act_stamp_ = -1.0;
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -169,181 +176,321 @@ class ActarrayCloudAssembler
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Obtain a transformaion matrix for a joint defined by its DH parameters and joint values
-    Eigen::Matrix4f
-      getJointTransformation (const DH& param, const double& q)
+    void
+      getJointTransformation (const DH &param, const double &q, Eigen::Matrix4d &T)
     {
-      Eigen::Matrix4f T;
       double t = param.t, d = param.d;
       t += (param.type == 0) ? q : 0;
       d += (param.type == 0) ? 0 : q;
       double st = sin (t), ct = cos (t);
       double sa = sin (param.a), ca = cos (param.a);
-      T(0, 0) = ct;  T(0, 1) = -st * ca;  T(0, 2) = +st * sa; T(0, 3) = param.l * ct;
-      T(1, 0) = st;  T(1, 1) = +ct * ca;  T(1, 2) = -ct * sa; T(1, 3) = param.l * st;
-      T(2, 0) = 0;   T(2, 1) = sa;        T(2, 2) = ca;       T(2, 3) = d;
-      T(3, 0) = 0;   T(3, 1) = 0;         T(3, 2) = 0;        T(3, 3) = 1;
-      return (T);
+      T <<
+            ct, -st * ca, +st * sa, param.l * ct,
+            st, +ct * ca, -ct * sa, param.l * st,
+            0,        sa,       ca,            d,
+            0,         0,        0,            1;
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Obtain a global transormation matrix for an array of joints
-    Eigen::Matrix4f
-      getGlobalTransformation (const vector<DH>& params, const vector<double>& joints)
+    inline void
+      getGlobalTransformation (const vector<DH> &params, const vector<double> &joints, Eigen::Matrix4d &global_transformation)
     {
       // Compute the transformation matrix as a product of relative transformations
-      Eigen::Matrix4f global_transformation = getJointTransformation (params[0], joints[0]);
+      Eigen::Matrix4d local_transformation;
+      getJointTransformation (params.at (0), joints.at (0), global_transformation);
       for (unsigned int i = 1; i < joints.size (); i++)
       {
-        Eigen::Matrix4f local_transformation = getJointTransformation (params[i], joints[i]);
-        Eigen::Matrix4f result = global_transformation * local_transformation;
-        global_transformation = result;
+        getJointTransformation (params[i], joints[i], local_transformation);
+        global_transformation *= local_transformation;
       }
-      return (global_transformation);
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // Obtain a transformation matrix from a set of given DH parameters
-    Eigen::Matrix4f
-      getDHTransformation (const vector<DH>& arm_params, const vector<double>& q_values)
+    bool
+      interpolateActarrayValues (const LaserScanConstPtr &laser_packet, vector<PlayerActarrayConstPtr> &actarrays,
+                                 vector<double> &q_values)
     {
-      // Obtain the coordinates of the end-effector relative to shoulder
-      Eigen::Matrix4f shoulder_transform = getGlobalTransformation (arm_params, q_values);
-      // Obtain the coordinates of end-effector relative to robot base
-      //shoulder_transform *= base2arm;
-      return (shoulder_transform);
+      PlayerActarrayConstPtr prev_act = actarrays.at (0);
+//       if (laser_packet->header.stamp < prev_act->header.stamp)
+//       {
+//         ROS_ERROR ("BAD %f - %f", prev_act->header.stamp.toSec (), laser_packet->header.stamp.toSec ());
+//         return (false);
+//       }
+
+      unsigned int la;
+      bool found = false;
+      for (la = 1; la < actarrays.size (); la++)
+      {
+        PlayerActarrayConstPtr cur_act = actarrays.at (la);
+
+        // Check if the laser entry is between these two actarray entries
+        if ((prev_act->header.stamp.toSec () <= laser_packet->header.stamp.toSec ()) && (laser_packet->header.stamp.toSec () <= cur_act->header.stamp.toSec ()))
+        {
+          double t0 = (laser_packet->header.stamp - prev_act->header.stamp).toSec ();
+          double t1 = (cur_act->header.stamp - prev_act->header.stamp).toSec ();
+
+//           ROS_INFO ("Using %f and %f to interpolate %f", prev_act->header.stamp.toSec (), cur_act->header.stamp.toSec (), laser_packet->header.stamp.toSec ());
+          // Interpolate joint values
+          for (unsigned int q_idx = 0; q_idx < cur_act->joints.size (); q_idx++)
+          {
+            q_values[q_idx] = prev_act->joints[q_idx] + t0 * (cur_act->joints[q_idx] - prev_act->joints[q_idx]) / t1;
+          }
+//           ROS_INFO ("%f %f %f -> %f", prev_act->joints[4], cur_act->joints[4], q_values[4], laser_packet->header.stamp.toSec ());
+
+          found = true;
+          break;
+        }
+
+/*        ROS_ERROR ("Wrong laser timestamp encountered - ignoring packet with time (%f -> %f-> %f)",
+                    prev_act->header.stamp.toSec (), laser_packet->header.stamp.toSec (), cur_act->header.stamp.toSec ());*/
+//           m_lock_.lock (); scans_.clear (); m_lock_.unlock ();
+//           prev_act_.header.stamp = cur_act_->header.stamp;
+//           prev_act_.joints = cur_act_->joints;
+         // m_lock_.lock (); scans_.pop (); m_lock_.unlock ();
+        prev_act = cur_act;
+      }
+
+      try
+      {
+        if (found && la > 2)
+        {
+//           cerr << "erase pre: " << actarrays.size () << endl;
+//           actarrays.erase (actarrays.begin (), actarrays.begin () + la - 1);
+//           cerr << "erase post: " << actarrays.size () << endl;
+        }
+/*        else
+        {
+          if (la > 1)
+          {
+            cerr << "erase2 " << endl;
+            actarrays.erase (actarrays.begin (), actarrays.begin () + la);
+          }
+        }*/
+      }
+      catch (...)
+      {
+        cerr << la << endl;
+      }
+
+      return (found);
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // PlayerActarray message callback
     void
-      actarray_cb (const PlayerActarrayConstPtr& actarray)
+      actarray_cb (const PlayerActarrayConstPtr &actarray)
     {
-      cur_act_ = actarray;
-      ROS_DEBUG ("PlayerActarray message received with %d joint poses. Number of laser scans in queue = %d.", (int)cur_act_->joints.size (), (int)scans_.size ());
-
-      if (prev_act_.joints.size () == 0)
+      if (first_act_stamp_ == -1.0)
+        first_act_stamp_ = actarray->header.stamp.toSec ();
+      // Remove all laserscans with a timestamp smaller than the first actarray packet
+      for (list<LaserScanConstPtr>::iterator it = scans_.begin (); it != scans_.end (); ++it)
       {
-        prev_act_.header = cur_act_->header;
-        prev_act_.joints = cur_act_->joints;
-        scans_.clear ();                // We lose initial scans, but it's ok, as the unit is not moving yet
+        LaserScanConstPtr laser_packet = *it;
+        // Check timestamps
+        if (laser_packet->header.stamp.toSec () < first_act_stamp_)
+        {
+          //ROS_WARN ("Removing LaserScan with timestamp %f (minimum actarray is %f -> %f)", laser_packet->header.stamp.toSec (), first_act_stamp_, laser_packet->header.stamp.toSec () - first_act_stamp_);
+          //s_lock_.lock (); it = scans_.erase (it); s_lock_.unlock ();
+        }
+      }
+      a_lock_.lock (); actarrays_.push_back (actarray); a_lock_.unlock ();
+
+      // Need at least 2 values to interpolate
+      if (actarrays_.size () < 2)
         return;
-      }
 
-      int laser_packet_scan_id = 1;
-      vector<double> q_values (cur_act_->joints.size ());
-      Point vp_old, vp;
-      Eigen::Vector4f pt, pt_t;
-      // For each buffered laser packet
-      for (unsigned int lc = 0; lc < scans_.size (); lc++)
+/**      bool found = false;
+      double good_stamp;
+      a_lock_.lock ();
+      if (scans_.size () > 0)
       {
-        LaserScanConstPtr laser_packet = scans_.at (lc);
-
-        // Convert to XYZ
-        if ((laser_packet->header.stamp < prev_act_.header.stamp) || (laser_packet->header.stamp > cur_act_->header.stamp))
+//         ROS_WARN ("Actarray buffer size (before): %d", (int)actarrays_.size ());
+        for (vector<PlayerActarrayConstPtr>::reverse_iterator rit = actarrays_.rbegin (); rit != actarrays_.rend (); )
         {
-          ROS_ERROR ("Wrong laser timestamp encountered - ignoring packet %d with time %f (%f -> %f)", laser_packet_scan_id, laser_packet->header.stamp.toSec (),
-                     prev_act_.header.stamp.toSec (), cur_act_->header.stamp.toSec ());
-          continue;
-        }
-
-        double t0 = (laser_packet->header.stamp - prev_act_.header.stamp).toSec ();
-        double t1 = (cur_act_->header.stamp - prev_act_.header.stamp).toSec ();
-
-        for (unsigned int q_idx = 0; q_idx < cur_act_->joints.size (); q_idx++)
-          q_values[q_idx] = prev_act_.joints[q_idx] + t0 * (cur_act_->joints[q_idx] - prev_act_.joints[q_idx]) / t1;
-
-        Eigen::Matrix4f robot_transform = getDHTransformation (arm_params_, q_values);
-        // Calculate the viewpoint for the current interpolated joint angles
-        vp_old = vp;
-/*        cerr << "-----" << endl;
-            for (int d = 0; d < q_values.size (); d++)
-              cerr << q_values[d] << " ";
-            cerr << endl;
-        cerr << robot_transform << endl;*/
-        ///cANN::transform (robot_transform, translations, vp);
-        ///if (_ANNpointEqual(vp, vp_old))
-          ///continue;
-
-        // Calculate the horizontal angles and the cartesian coordinates
-        double angle_x    = laser_packet->angle_min;
-        double resolution = laser_packet->angle_increment;
-
-        int nr_points = 0;
-        cloud_.pts.resize (laser_packet->ranges.size ());
-        for (unsigned int d = 0; d < cloud_.chan.size (); d++)
-          cloud_.chan[d].vals.resize (laser_packet->ranges.size ());
-
-        for (unsigned int i = 0; i < laser_packet->ranges.size (); i++)
-        {
-          double distance = laser_packet->ranges[i];
-          if ((distance > max_distance_) || (distance < min_distance_))
-            continue;
-          if ((angle_x < angles::from_degrees (laser_min_angle_)) || (angle_x > angles::from_degrees (laser_max_angle_)))
-            continue;
-
-          // 2D
-          pt(0) = translation_.x + 0.0;
-          pt(1) = translation_.y + distance * cos (M_PI - angle_x);
-          pt(2) = translation_.z + distance * sin (M_PI - angle_x);
-          pt(3) = 1.0;
-
-          // Transform the point
-          pt_t = robot_transform * pt;
-          if (isnan (pt_t(0)) || isnan (pt_t(1)) || isnan (pt_t(2)))
+          PlayerActarrayConstPtr cur_act = *rit;
+          if (cur_act->header.stamp.toSec () < scans_.front ()->header.stamp.toSec ())
           {
-            cerr << " ---------- " << endl;
-            for (int d = 0; d < q_values.size (); d++)
-              cerr << q_values[d] << " ";
-            cerr << endl;
-            cerr << robot_transform << endl;
-            cerr << pt(0) << " " << pt(1) << " " << pt(2) << " " << pt_t(0) << " " << pt_t(1) << " " << pt_t(2) << endl;
+            if (found)
+            {
+              vector<PlayerActarrayConstPtr>::iterator it = (++rit).base ();
+//               ROS_ERROR ("Removing %f because it's way smaller than %f (good stamp is %f)", ((PlayerActarrayConstPtr)*it)->header.stamp.toSec (), scans_.front ()->header.stamp.toSec (), good_stamp);
+              actarrays_.erase (it);
+            }
+            else
+            {
+              ++rit;
+              found = true;
+              good_stamp = cur_act->header.stamp.toSec ();
+            }
           }
-          cloud_.pts[nr_points].x = pt_t(0);
-          cloud_.pts[nr_points].y = pt_t(1);
-          cloud_.pts[nr_points].z = pt_t(2);
-
-          // Save the rest of the values
-          cloud_.chan[0].vals[nr_points] = laser_packet->intensities[i];
-          cloud_.chan[1].vals[nr_points] = distance;
-          cloud_.chan[2].vals[nr_points] = i;
-          cloud_.chan[3].vals[nr_points] = laser_packet_scan_id++;
-          cloud_.chan[4].vals[nr_points] = vp.x;
-          cloud_.chan[5].vals[nr_points] = vp.y;
-          cloud_.chan[6].vals[nr_points] = vp.z;
-          nr_points++;
-
-          angle_x += resolution;
+          else
+          {
+//             ROS_INFO ("%f found to be larger", cur_act->header.stamp.toSec ());
+            ++rit;
+          }
         }
-
-        if (nr_points == 0)
-          continue;
-        cloud_.pts.resize (nr_points);
-        for (unsigned int d = 0; d < cloud_.chan.size (); d++)
-          cloud_.chan[d].vals.resize (nr_points);
-
-        cloud_.header.stamp = Time::now ();
-        ROS_INFO ("Publishing a PointCloud message with %d points and %d channels.", (int)cloud_.pts.size (), (int)cloud_.chan.size ());
-        cloud_pub_.publish (cloud_);
+//         ROS_WARN ("Actarray buffer size (after): %d", (int)actarrays_.size ());
       }
+      a_lock_.unlock ();*/
 
-      prev_act_.joints = cur_act_->joints;
+      //cur_act_ = actarray;
+      ///ROS_INFO ("PlayerActarray (%f) message received with %d joint poses (%d). Number of laser scans in queue = %d.", actarray->header.stamp.toSec (), (int)actarray->joints.size (), (int)actarrays_.size (), (int)scans_.size ());
+
+//       if (prev_act_.joints.size () == 0)
+//       {
+//         ROS_INFO ("First actarray packet received. Number of laser scans already in the queue: %d", (int)scans_.size ());
+//         prev_act_.header = cur_act_->header;
+//         prev_act_.joints = cur_act_->joints;
+//         first_act_.header.stamp = cur_act_->header.stamp;
+// 
+// /*        m_lock_.lock ();
+//         scans_.clear ();                // We lose initial scans, but it's ok, as the unit is not moving yet
+//         m_lock_.unlock ();*/
+//         return;
+//       }
+
+
+      //prev_act_.header.stamp = cur_act_->header.stamp;
+      //prev_act_.joints = cur_act_->joints;
+
+/*      m_lock_.lock ();
       scans_.clear ();
+      m_lock_.unlock ();*/
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // LaserScan message callback
     void
-      scan_cb (const LaserScanConstPtr& scan)
+      scan_cb (const LaserScanConstPtr &scan)
     {
-      //ROS_INFO ("LaserScan message received with %d measurements.", (int)scan->ranges.size ());
+      ///ROS_INFO ("LaserScan (%f) message received with %d measurements. Current queue size is %d.", scan->header.stamp.toSec (), (int)scan->ranges.size (), (int)scans_.size ());
+      s_lock_.lock ();
       scans_.push_back (scan);
+      s_lock_.unlock ();
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // Spin (!)
     bool
       spin ()
     {
+      int laser_packet_scan_id = 1;
+      vector<double> q_values;
+      Eigen::Vector4d pt, pt_t, vp, vp_old;
+      Eigen::Matrix4d robot_transform;
+
+      // Infinite loop
+      while (1)
+      {
+        // We need at least 2 actarray values and 1 laser scan to begin
+        if (actarrays_.size () < 2 || scans_.size () == 0)
+        {
+          usleep (1000);
+          ros::spinOnce ();
+          continue;
+        }
+
+        q_values.resize (actarrays_.at (0)->joints.size ());
+        // For each buffered laser packet
+        for (list<LaserScanConstPtr>::iterator it = scans_.begin (); it != scans_.end ();)
+        {
+          LaserScanConstPtr laser_packet = *it;
+
+          // Interpolate actarray values
+          if (!interpolateActarrayValues (laser_packet, actarrays_, q_values))
+          {
+            //ROS_ERROR ("Could not interpolate LaserScan with timestamp %f (minimum actarray is %f)", laser_packet->header.stamp.toSec (), first_act_stamp_);
+            //for (int d = 0; d < actarrays_.size (); d++)
+            //  ROS_WARN ("%f", actarrays_[d]->header.stamp.toSec ());
+            ++it;
+            continue;
+  //           m_lock_.lock (); scans_.pop_front (); m_lock_.unlock ();
+  //           break;
+          }
+
+          // Obtain the transformation corresponding to the current joint values
+          getGlobalTransformation (arm_params_, q_values, robot_transform);
+          // Calculate the viewpoint for the current interpolated joint angles
+          vp_old = vp;
+          vp = robot_transform * translation_;
+
+//         if (vp (0) == vp_old (0) && vp (1) == vp_old (1) && vp (2) == vp_old (2))
+//         {
+//           ROS_WARN ("same viewpoint");
+//           s_lock_.lock (); it = scans_.erase (it); s_lock_.unlock ();
+// //           m_lock_.lock (); scans_.pop_front (); m_lock_.unlock ();
+// //           ++it;
+//           continue;
+//         }
+
+          // Calculate the horizontal angles and the cartesian coordinates
+          double angle_x    = laser_packet->angle_min;
+          double resolution = laser_packet->angle_increment;
+
+          int nr_points = 0;
+          cloud_.pts.resize (laser_packet->ranges.size ());
+          for (unsigned int d = 0; d < cloud_.chan.size (); d++)
+            cloud_.chan[d].vals.resize (laser_packet->ranges.size ());
+
+          for (unsigned int i = 0; i < laser_packet->ranges.size (); i++)
+          {
+            double distance = laser_packet->ranges[i];
+            double intensity = laser_packet->intensities[i];
+            if ((distance > max_distance_) || (distance < min_distance_))
+            {
+              angle_x += resolution;
+              continue;
+            }
+            if ((angle_x < angles::from_degrees (laser_min_angle_)) || (angle_x > angles::from_degrees (laser_max_angle_)))
+            {
+              angle_x += resolution;
+              continue;
+            }
+
+            // 2D
+            pt(0) = translation_ (0) + 0.0;
+            pt(1) = translation_ (1) + distance * cos (M_PI - angle_x);
+            pt(2) = translation_ (2) + distance * sin (M_PI - angle_x);
+            pt(3) = 1.0;
+
+            // Transform the point
+            pt_t = robot_transform * pt;
+            cloud_.pts[nr_points].x = pt_t(0);
+            cloud_.pts[nr_points].y = pt_t(1);
+            cloud_.pts[nr_points].z = pt_t(2);
+
+            // Save the rest of the values
+            cloud_.chan[0].vals[nr_points] = intensity;
+            cloud_.chan[1].vals[nr_points] = distance;
+            cloud_.chan[2].vals[nr_points] = i;
+            cloud_.chan[3].vals[nr_points] = laser_packet_scan_id++;
+            cloud_.chan[4].vals[nr_points] = vp (0);
+            cloud_.chan[5].vals[nr_points] = vp (1);
+            cloud_.chan[6].vals[nr_points] = vp (2);
+            nr_points++;
+
+            angle_x += resolution;
+          }
+
+          if (nr_points == 0)
+          {
+            cerr << "nr_points" << endl;
+            s_lock_.lock (); it = scans_.erase (it); s_lock_.unlock ();
+            continue;
+          }
+          cloud_.pts.resize (nr_points);
+          for (unsigned int d = 0; d < cloud_.chan.size (); d++)
+            cloud_.chan[d].vals.resize (nr_points);
+
+          cloud_.header.stamp = Time::now ();
+          ROS_INFO ("Publishing a PointCloud message with %d points and %d channels.", (int)cloud_.pts.size (), (int)cloud_.chan.size ());
+          cloud_pub_.publish (cloud_);
+
+//         ROS_ERROR ("Erasing %f", ((LaserScanConstPtr)*it)->header.stamp.toSec ());
+          s_lock_.lock (); it = scans_.erase (it); s_lock_.unlock ();
+        }
+        ros::spinOnce ();
+      }
       return (true);
     }
 };
@@ -355,8 +502,8 @@ int
   init (argc, argv, "actarray_cloud_assembler");
 
   ActarrayCloudAssembler p;
-  ros::spin ();
-//   p.spin ();
+//  ros::spin ();
+  p.spin ();
 
   return (0);
 }
