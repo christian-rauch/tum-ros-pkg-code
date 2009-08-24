@@ -39,7 +39,8 @@
 #include <ros/node.h>
 #include <ros/node_handle.h>
 // ROS messages
-#include <robot_msgs/PointCloud.h>
+#include <geometry_msgs/Point32.h>
+#include <sensor_msgs/PointCloud.h>
 #include <mapping_msgs/PolygonalMap.h>
 
 // Sample Consensus
@@ -71,8 +72,8 @@
 
 using namespace std;
 using namespace ros;
-using namespace std_msgs;
-using namespace robot_msgs;
+using namespace geometry_msgs;
+using namespace sensor_msgs;
 using namespace mapping_msgs;
 using namespace perception_srvs;
 using namespace perception_msgs;
@@ -126,15 +127,15 @@ class ClusterVoxelization
     Point leaf_width_;
     string input_cloud_topic_;
     int k_;
-    int clusters_min_pts_;
+    int clusters_min_points_;
 
-    int object_cluster_min_pts_;
+    int object_cluster_min_points_;
     double object_cluster_tolerance_;
     double sac_distance_threshold_, eps_angle_;
 
     // Min/max bounds for tables
     double table_min_height_, table_max_height_, table_clusters_growing_tolerance_, table_region_angle_threshold_;
-    int table_clusters_min_pts_;
+    int table_clusters_min_points_;
 
     double object_delta_z_, object_min_dist_from_table_;
 
@@ -166,7 +167,7 @@ class ClusterVoxelization
         nh_.param ("~table_min_height", table_min_height_, 0.5);              // minimum height of a table : 0.5m
         nh_.param ("~table_max_height", table_max_height_, 1.5);              // maximum height of a table : 1.5m
         nh_.param ("~table_clusters_growing_tolerance", table_clusters_growing_tolerance_, 0.5);   // 0.5 m
-        nh_.param ("~table_clusters_min_pts", table_clusters_min_pts_, 50);                       // 50 points
+        nh_.param ("~table_clusters_min_points", table_clusters_min_points_, 50);                       // 50 points
         nh_.param ("~table_region_angle_threshold", table_region_angle_threshold_, 30.0);         // Difference between normals in degrees for cluster/region growing
         table_region_angle_threshold_ = angles::from_degrees (table_region_angle_threshold_);     // convert to radians
       }
@@ -182,7 +183,7 @@ class ClusterVoxelization
 
       {
         nh_.param ("~object_cluster_tolerance", object_cluster_tolerance_, 0.03);   // 3cm between two objects
-        nh_.param ("~object_cluster_min_pts", object_cluster_min_pts_, 30);         // 30 points per object cluster
+        nh_.param ("~object_cluster_min_points", object_cluster_min_points_, 30);         // 30 points per object cluster
       }
 
       {
@@ -230,7 +231,7 @@ class ClusterVoxelization
       // ---[ First detect the table plane
       vector<int> table_inliers;
       vector<double> table_plane_coeff;
-      Polygon3D table_polygon;
+      Polygon table_polygon;
       PointCloud cloud_out;
       ros::WallTime ts = ros::WallTime::now ();
       detectTable (*cloud_in_, cloud_out, table_inliers, table_plane_coeff, table_polygon);
@@ -247,17 +248,17 @@ class ClusterVoxelization
       ROS_INFO ("Object clusters extracted in %g seconds.", (ros::WallTime::now () - ts).toSec ());
 
       // Assemble the complete list of inliers for the table and the objects on top of it
-      vector<int> table_object_inliers (cloud_in_->pts.size ());
+      vector<int> table_object_inliers (cloud_in_->points.size ());
       int j = 0;
-      for (unsigned int i = 0; i < cloud_in_->pts.size (); i++)
+      for (unsigned int i = 0; i < cloud_in_->points.size (); i++)
       {
         // Refine table plane
-        double dist_to_plane = cloud_geometry::distances::pointToPlaneDistance (cloud_in_->pts[i], table_plane_coeff);
+        double dist_to_plane = cloud_geometry::distances::pointToPlaneDistance (cloud_in_->points[i], table_plane_coeff);
         // Get all points from the original point cloud which could belong to the table plane, even if it's not axis-aligned
         // (note: if we do need axis aligned, check against their 2D projections in the bounding polygon).
         if (dist_to_plane < sac_distance_threshold_ &&
-            cloud_in_->pts[i].x >= min_p.x && cloud_in_->pts[i].x <= max_p.x &&
-            cloud_in_->pts[i].y >= min_p.y && cloud_in_->pts[i].y <= max_p.y)
+            cloud_in_->points[i].x >= min_p.x && cloud_in_->points[i].x <= max_p.x &&
+            cloud_in_->points[i].y >= min_p.y && cloud_in_->points[i].y <= max_p.y)
           table_object_inliers[j++] = i;
       }
       for (unsigned int k = 0; k < object_clusters.size (); k++)
@@ -292,16 +293,16 @@ class ClusterVoxelization
         cloud_table_pub_.publish (cloud_annotated);
 
         // Count the number of points that we need to allocate
-        int total_nr_pts = 0;
+        int total_nr_points = 0;
         for (unsigned int i = 0; i < object_clusters.size (); i++)
-          total_nr_pts += object_clusters[i].size ();
+          total_nr_points += object_clusters[i].size ();
 
-        cloud_annotated.pts.resize (total_nr_pts);
-        cloud_annotated.chan.resize (1);
-        cloud_annotated.chan[0].name = "rgb";
-        cloud_annotated.chan[0].vals.resize (total_nr_pts);
+        cloud_annotated.points.resize (total_nr_points);
+        cloud_annotated.channels.resize (1);
+        cloud_annotated.channels[0].name = "rgb";
+        cloud_annotated.channels[0].values.resize (total_nr_points);
 
-        total_nr_pts = 0;
+        total_nr_points = 0;
         for (unsigned int i = 0; i < object_clusters.size (); i++)
         {
           if (object_clusters[i].size () == 0)
@@ -313,9 +314,9 @@ class ClusterVoxelization
           // Process this cluster and extract the centroid and the bounds
           for (unsigned int j = 0; j < object_clusters[i].size (); j++)
           {
-            cloud_annotated.pts[total_nr_pts] = cloud_in_->pts.at (object_clusters[i].at (j));
-            cloud_annotated.chan[0].vals[total_nr_pts] = rgb;
-            total_nr_pts++;
+            cloud_annotated.points[total_nr_points] = cloud_in_->points.at (object_clusters[i].at (j));
+            cloud_annotated.channels[0].values[total_nr_points] = rgb;
+            total_nr_points++;
           }
         }
         cloud_clusters_pub_.publish (cloud_annotated);
@@ -332,21 +333,21 @@ class ClusterVoxelization
           continue;
 
         // Copy the data
-        resp.clusters[nr_c].pts.resize (object_clusters[i].size ());
-        resp.clusters[nr_c].chan.resize (cloud_in_->chan.size ());
-        for (unsigned int d = 0; d < cloud_in_->chan.size (); d++)
+        resp.clusters[nr_c].points.resize (object_clusters[i].size ());
+        resp.clusters[nr_c].channels.resize (cloud_in_->channels.size ());
+        for (unsigned int d = 0; d < cloud_in_->channels.size (); d++)
         {
-          resp.clusters[nr_c].chan[d].name = cloud_in_->chan[d].name;
-          resp.clusters[nr_c].chan[d].vals.resize (object_clusters[i].size ());
+          resp.clusters[nr_c].channels[d].name = cloud_in_->channels[d].name;
+          resp.clusters[nr_c].channels[d].values.resize (object_clusters[i].size ());
         }
 
         // For every object cluster
         for (unsigned int j = 0; j < object_clusters[i].size (); j++)
         {
-          resp.clusters[nr_c].pts[j] = cloud_in_->pts.at (object_clusters[i].at (j));
+          resp.clusters[nr_c].points[j] = cloud_in_->points.at (object_clusters[i].at (j));
 
-          for (unsigned int d = 0; d < cloud_in_->chan.size (); d++)
-            resp.clusters[nr_c].chan[d].vals[j] = cloud_in_->chan[d].vals.at (object_clusters[i].at (j));
+          for (unsigned int d = 0; d < cloud_in_->channels.size (); d++)
+            resp.clusters[nr_c].channels[d].values[j] = cloud_in_->channels[d].values.at (object_clusters[i].at (j));
         }
         nr_c++;
       }
@@ -399,14 +400,14 @@ class ClusterVoxelization
       {
         // Create a line from this point to its viewpoint
         for (int d = 0; d < 3; d++)
-          curpoint[d] = cloud.chan[vx_idx + d].vals[indices.at (cp)];
-        dir[0] = cloud.pts[indices.at (cp)].x - cloud.chan[vx_idx + 0].vals[indices.at (cp)];
-        dir[1] = cloud.pts[indices.at (cp)].y - cloud.chan[vx_idx + 1].vals[indices.at (cp)];
-        dir[2] = cloud.pts[indices.at (cp)].z - cloud.chan[vx_idx + 2].vals[indices.at (cp)];
+          curpoint[d] = cloud.channels[vx_idx + d].values[indices.at (cp)];
+        dir[0] = cloud.points[indices.at (cp)].x - cloud.channels[vx_idx + 0].values[indices.at (cp)];
+        dir[1] = cloud.points[indices.at (cp)].y - cloud.channels[vx_idx + 1].values[indices.at (cp)];
+        dir[2] = cloud.points[indices.at (cp)].z - cloud.channels[vx_idx + 2].values[indices.at (cp)];
 
         // Get the index for the current point and the viewpoint
         getVoxelIndex (curpoint, leaf_width, min_b, idx_cur);
-        getVoxelIndex (cloud.pts[indices.at (cp)], leaf_width, min_b, idx_goal);
+        getVoxelIndex (cloud.points[indices.at (cp)], leaf_width, min_b, idx_goal);
 
         // Go over the line and select the appropiate i/j/k + idx
         bool goal_point_reached = false;
@@ -536,7 +537,7 @@ class ClusterVoxelization
       if (!need_cloud_data_)
         return;
 
-      ROS_INFO ("PointCloud message received on %s with %d points.", input_cloud_topic_.c_str (), (int)cloud->pts.size ());
+      ROS_INFO ("PointCloud message received on %s with %d points.", input_cloud_topic_.c_str (), (int)cloud->points.size ());
       cloud_in_ = cloud;
       need_cloud_data_ = false;
     }
@@ -544,23 +545,23 @@ class ClusterVoxelization
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     bool
       detectTable (const PointCloud &cloud,
-                   PointCloud &cloud_out, vector<int> &table_inliers, vector<double> &table_plane_coeff, Polygon3D &table_polygon)
+                   PointCloud &cloud_out, vector<int> &table_inliers, vector<double> &table_plane_coeff, Polygon &table_polygon)
     {
       ros::Time ts = ros::Time::now ();
 
       // We have a pointcloud, get the maximum table bounds - assume Z is point up!
-      vector<int> indices_in_bounds (cloud.pts.size ());
+      vector<int> indices_in_bounds (cloud.points.size ());
       int nr_p = 0;
-      for (unsigned int i = 0; i < cloud.pts.size (); i++)
+      for (unsigned int i = 0; i < cloud.points.size (); i++)
       {
-        if (cloud.pts[i].z >= table_min_height_ && cloud.pts[i].z <= table_max_height_)
+        if (cloud.points[i].z >= table_min_height_ && cloud.points[i].z <= table_max_height_)
         {
           indices_in_bounds[nr_p] = i;
           nr_p++;
         }
       }
       indices_in_bounds.resize (nr_p);
-      ROS_INFO ("%d of %d points are within the table height bounds of [%.2lf,%.2lf]", nr_p, (int)cloud.pts.size (), table_min_height_, table_max_height_);
+      ROS_INFO ("%d of %d points are within the table height bounds of [%.2lf,%.2lf]", nr_p, (int)cloud.points.size (), table_min_height_, table_max_height_);
 
       // Downsample the cloud in the bounding box for faster processing
       // NOTE: <leaves_> gets allocated internally in downsamplePointCloud() and is not deallocated on exit
@@ -574,16 +575,16 @@ class ClusterVoxelization
         // downsamplePointCloud should issue a ROS_ERROR on screen, so we simply exit here
         return (false);
       }
-      ROS_INFO ("Number of points after downsampling with a leaf of size [%f,%f,%f]: %d.", leaf_width_.x, leaf_width_.y, leaf_width_.z, (int)cloud_out.pts.size ());
+      ROS_INFO ("Number of points after downsampling with a leaf of size [%f,%f,%f]: %d.", leaf_width_.x, leaf_width_.y, leaf_width_.z, (int)cloud_out.points.size ());
 
       // Compute point cloud normals
       PointStamped viewpoint;
       int vx_idx = cloud_geometry::getChannelIndex (cloud, "vx");
       if (vx_idx != -1)       // If viewpoints are present in the dataset
       {
-        viewpoint.point.x = cloud.chan[vx_idx + 0].vals[0];
-        viewpoint.point.y = cloud.chan[vx_idx + 1].vals[0];
-        viewpoint.point.z = cloud.chan[vx_idx + 2].vals[0];
+        viewpoint.point.x = cloud.channels[vx_idx + 0].values[0];
+        viewpoint.point.y = cloud.channels[vx_idx + 1].values[0];
+        viewpoint.point.z = cloud.channels[vx_idx + 2].values[0];
       }
       else
         viewpoint.point.x = viewpoint.point.y = viewpoint.point.z = 0.0;
@@ -597,7 +598,7 @@ class ClusterVoxelization
       vector<vector<int> > clusters;
       // Split the Z-parallel points into clusters
       cloud_geometry::nearest::extractEuclideanClusters (cloud_out, indices_z,
-          table_clusters_growing_tolerance_, clusters, 0, 1, 2, table_region_angle_threshold_, table_clusters_min_pts_);
+          table_clusters_growing_tolerance_, clusters, 0, 1, 2, table_region_angle_threshold_, table_clusters_min_points_);
 
       sort (clusters.begin (), clusters.end (), compareRegions);
       ROS_INFO ("Number of clusters found: %d, largest cluster: %d.", (int)clusters.size (), (int)clusters[clusters.size () - 1].size ());
@@ -630,29 +631,29 @@ class ClusterVoxelization
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     void
-      extractObjectClusters (const PointCloud &cloud, const vector<double> &coeff, const Polygon3D &table,
+      extractObjectClusters (const PointCloud &cloud, const vector<double> &coeff, const Polygon &table,
                              const Point32 &axis, const Point32 &min_p, const Point32 &max_p,
                              vector<vector<int> > &object_clusters)
     {
       int nr_p = 0;
       Point32 pt;
-      vector<int> object_indices (cloud.pts.size ());
+      vector<int> object_indices (cloud.points.size ());
 
       // Iterate over the entire cloud to extract the object clusters
-      for (unsigned int i = 0; i < cloud.pts.size (); i++)
+      for (unsigned int i = 0; i < cloud.points.size (); i++)
       {
-        if ( cloud.pts.at (i).x < min_p.x || cloud.pts.at (i).x > max_p.x || cloud.pts.at (i).y < min_p.y || cloud.pts.at (i).y > max_p.y )
+        if ( cloud.points.at (i).x < min_p.x || cloud.points.at (i).x > max_p.x || cloud.points.at (i).y < min_p.y || cloud.points.at (i).y > max_p.y )
           continue;
 
         // Calculate the distance from the point to the plane
-        double dist_to_plane = coeff.at (0) * cloud.pts.at (i).x +
-                               coeff.at (1) * cloud.pts.at (i).y +
-                               coeff.at (2) * cloud.pts.at (i).z +
+        double dist_to_plane = coeff.at (0) * cloud.points.at (i).x +
+                               coeff.at (1) * cloud.points.at (i).y +
+                               coeff.at (2) * cloud.points.at (i).z +
                                coeff.at (3) * 1;
         // Calculate the projection of the point on the plane
-        pt.x = cloud.pts.at (i).x - dist_to_plane * coeff.at (0);
-        pt.y = cloud.pts.at (i).y - dist_to_plane * coeff.at (1);
-        pt.z = cloud.pts.at (i).z - dist_to_plane * coeff.at (2);
+        pt.x = cloud.points.at (i).x - dist_to_plane * coeff.at (0);
+        pt.y = cloud.points.at (i).y - dist_to_plane * coeff.at (1);
+        pt.z = cloud.points.at (i).z - dist_to_plane * coeff.at (2);
 
         if (dist_to_plane > object_delta_z_ && cloud_geometry::areas::isPointIn2DPolygon (pt, table))
         {
@@ -664,7 +665,7 @@ class ClusterVoxelization
 
       // Find the clusters
       cloud_geometry::nearest::extractEuclideanClusters (cloud, object_indices, object_cluster_tolerance_,
-                                                         object_clusters, -1, -1, -1, -1, object_cluster_min_pts_);
+                                                         object_clusters, -1, -1, -1, -1, object_cluster_min_points_);
 
       Point32 min_p_cluster, max_p_cluster;
 
@@ -690,7 +691,7 @@ class ClusterVoxelization
       fitSACPlane (PointCloud *points, vector<int> &indices, vector<int> &inliers, vector<double> &coeff,
                    const PointStamped &viewpoint_cloud, double dist_thresh)
     {
-      if ((int)indices.size () < clusters_min_pts_)
+      if ((int)indices.size () < clusters_min_points_)
       {
         inliers.resize (0);
         coeff.resize (0);
@@ -707,9 +708,9 @@ class ClusterVoxelization
       // Search for the best plane
       if (sac->computeModel ())
       {
-        if ((int)sac->getInliers ().size () < clusters_min_pts_)
+        if ((int)sac->getInliers ().size () < clusters_min_points_)
         {
-          ROS_WARN ("fitSACPlane: Inliers.size (%d) < sac_min_points_per_model (%d)!", (int)sac->getInliers ().size (), clusters_min_pts_);
+          ROS_WARN ("fitSACPlane: Inliers.size (%d) < sac_min_points_per_model (%d)!", (int)sac->getInliers ().size (), clusters_min_points_);
           inliers.resize (0);
           coeff.resize (0);
           return (false);
@@ -719,7 +720,7 @@ class ClusterVoxelization
         sac->refineCoefficients (coeff);      // Refine them using least-squares
         model->selectWithinDistance (coeff, dist_thresh, inliers);
 
-        cloud_geometry::angles::flipNormalTowardsViewpoint (coeff, points->pts.at (inliers[0]), viewpoint_cloud);
+        cloud_geometry::angles::flipNormalTowardsViewpoint (coeff, points->points.at (inliers[0]), viewpoint_cloud);
 
         // Project the inliers onto the model
         model->projectPointsInPlace (inliers, coeff);
