@@ -296,7 +296,7 @@ ROS_WARN ("%f %f", X, Y);
       cloud_synth.channels[0].values.push_back (count);
       cloud_synth.points.push_back (cloud_->points[inliers[i]]);
     }
-    for (unsigned int i = 0; i < synth_points.pts.size (); i++)
+    for (unsigned int i = 0; i < synth_points.points.size (); i++)
     {
       cloud_synth.channels[0].values.push_back (count);
       cloud_synth.points.push_back (synth_points.points[i]);
@@ -477,7 +477,7 @@ ROS_WARN ("%f %f", X, Y);
 
     Point32 p1;
     Point32 p2;
-    geometry_msgs::Polygon3D polygon;
+    geometry_msgs::Polygon polygon;
     for (unsigned int i = 0; i < samples.size(); i++)
     {
     polygon.points.clear();
@@ -487,9 +487,9 @@ ROS_WARN ("%f %f", X, Y);
       p1.z = 0.2*cloud_->channels[nz_idx_].values[samples[i]] + cloud_->points[samples[i]].z;
       polygon.points.push_back ( p1 );
       pmap.polygons.push_back (polygon);
-      pmap.channels[0].values.push_back (0);
-      pmap.channels[1].values.push_back (0);
-      pmap.channels[2].values.push_back (0);
+      pmap.chan[0].values.push_back (0);
+      pmap.chan[1].values.push_back (0);
+      pmap.chan[2].values.push_back (0);
     }
 
 //     p1.x = model_coefficients_[0];
@@ -516,9 +516,9 @@ ROS_WARN ("%f %f", X, Y);
     polygon.points.push_back (p1);
     polygon.points.push_back (p2);
     pmap.polygons.push_back (polygon);
-    pmap.channels[0].values.push_back (1);
-    pmap.channels[1].values.push_back (1);
-    pmap.channels[2].values.push_back (1);
+    pmap.chan[0].values.push_back (1);
+    pmap.chan[1].values.push_back (1);
+    pmap.chan[2].values.push_back (1);
 //    pmap.polygons.resize (pmap.polygons.size()+1);
 //     pmap.polygons[(pmap.polygons.size()-1)].push_back (p1);
 //     pmap.polygons[(pmap.polygons.size()-1)].push_back (p2);

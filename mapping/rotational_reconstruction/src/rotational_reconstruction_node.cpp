@@ -71,7 +71,6 @@
 
 using namespace std;
 using namespace ros;
-using namespace std_msgs;
 using namespace sensor_msgs;
 using namespace mapping_msgs;
 using namespace perception_srvs;
@@ -264,7 +263,7 @@ class RotationalReconstructionService
       cloud.points.resize (voxels.size());
       cloud.channels.resize (1);
       cloud.channels[0].name = "intensities";
-      cloud.channels[0].vals.resize(voxels.size ());
+      cloud.channels[0].values.resize(voxels.size ());
       for (int i = 0; i < (int)voxels.size (); i++)
       {
         xyz = voxels[i];
@@ -286,9 +285,9 @@ class RotationalReconstructionService
       pmap.header.frame_id = global_frame_;
       pmap.header.stamp = ros::Time::now ();
       pmap.set_chan_size (3);
-      pmap.channels[0].name = "r";
-      pmap.channels[1].name = "g";
-      pmap.channels[2].name = "b";
+      pmap.chan[0].name = "r";
+      pmap.chan[1].name = "g";
+      pmap.chan[2].name = "b";
 
       // init all ransac related classes
       std::vector<int> inliers;
