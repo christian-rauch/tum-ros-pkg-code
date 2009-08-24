@@ -33,7 +33,8 @@
 // ROS core
 #include <ros/node.h>
 // ROS messages
-#include <robot_msgs/PointCloud.h>
+#include <sensor_msgs/PointCloud.h>
+#include <geometry_msgs/Point32.h>
 
 // Cloud geometry
 #include <point_cloud_mapping/geometry/angles.h>
@@ -43,7 +44,8 @@
 #include <cminpack.h>
 
 using namespace std;
-using namespace robot_msgs;
+using namespace sensor_msgs;
+using namespace geometry_msgs;
 
 class ExtendedLeaf
 {
@@ -51,42 +53,6 @@ class ExtendedLeaf
     float centroid_x, centroid_y, centroid_z;
     vector<int> indices;
 };
-
-//////////////////////////////////////////////////////////////////////////////////////////////////////////////////(
-/** \brief Calibration cost function to be minimized
-  * \param p a pointer to our data structure array
-  * \param m the number of functions
-  * \param n the number of variables
-  * \param x a pointer to the variables array
-  * \param fvec a pointer to the resultant functions evaluations
-  * \param iflag set to -1 inside the function to terminate execution
-  */
-int
-  functionToOptimize (void *p, int m, int n, const double *x, double *fvec, int iflag)
-{
-  PointCloud *points = (PointCloud*)p;
-
-  // Get the point normal
-  float normal[3];
-  float eig1, eig2;
-
-  // Assemble the cost function
-  for (unsigned int i = 0; i < points->pts.size (); i++)
-  {
-    // Get the point normal
-    normal[0] = points->chan[0].vals[i];
-    normal[1] = points->chan[1].vals[i];
-    normal[2] = points->chan[2].vals[i];
-    eig1 = points->chan[3].vals[i];
-    eig2 = points->chan[4].vals[i];
-
-    // Use the rotation / translation values from X
-
-    // Update the cost function
-    fvec[i] = eig1 - eig2;
-  }
-  return (0);
-}
 
 class LaserArmCalib
 {
@@ -128,6 +94,42 @@ class LaserArmCalib
       node_.advertise<PointCloud> ("~plane", 1);
     }
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////(
+    /** \brief Calibration cost function to be minimized
+      * \param p a pointer to our data structure array
+      * \param m the number of functions
+      * \param n the number of variables
+      * \param x a pointer to the variables array
+      * \param fvec a pointer to the resultant functions evaluations
+      * \param iflag set to -1 inside the function to terminate execution
+      */
+    static int
+      functionToOptimize (void *p, int m, int n, const double *x, double *fvec, int iflag)
+    {
+      PointCloud *points = (PointCloud*)p;
+
+      // Get the point normal
+      float normal[3];
+      float eig1, eig2;
+
+      // Assemble the cost function
+      for (unsigned int i = 0; i < points->points.size (); i++)
+      {
+        // Get the point normal
+        normal[0] = points->channels[0].values[i];
+        normal[1] = points->channels[1].values[i];
+        normal[2] = points->channels[2].values[i];
+        eig1 = points->channels[3].values[i];
+        eig2 = points->channels[4].values[i];
+
+        // Use the rotation / translation values from X
+
+        // Update the cost function
+        fvec[i] = eig1 - eig2;
+      }
+      return (0);
+    }
+
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /** \brief Obtain a solution for a rotation and a translation between the laser sensor and the pan/tilt unit
@@ -142,9 +144,9 @@ class LaserArmCalib
     void
       optimizeCalibrationTransformation (PointCloud *cloud)
     {
-      if (cloud->chan.size () < 5)
+      if (cloud->channels.size () < 5)
         return;
-      int m = cloud->pts.size ();
+      int m = cloud->points.size ();
       double fvec[m];
 
       int n = 6;      // 6 unknowns
@@ -187,18 +189,18 @@ class LaserArmCalib
     {
       // Copy the header (and thus the frame_id) + allocate enough space for points
       cloud_down.header = cloud.header;
-      cloud_down.pts.resize (cloud.pts.size ());
+      cloud_down.points.resize (cloud.points.size ());
       // We need the normal + the 2 largest eigenvalues
-      cloud_down.chan.resize (5);
-      cloud_down.chan[0].name = "nx";
-      cloud_down.chan[1].name = "ny";
-      cloud_down.chan[2].name = "nz";
-      cloud_down.chan[3].name = "l1";
-      cloud_down.chan[4].name = "l2";
-      for (unsigned int d = 0; d < cloud_down.chan.size (); d++)
-        cloud_down.chan[d].vals.resize (cloud_down.pts.size ());
+      cloud_down.channels.resize (5);
+      cloud_down.channels[0].name = "nx";
+      cloud_down.channels[1].name = "ny";
+      cloud_down.channels[2].name = "nz";
+      cloud_down.channels[3].name = "l1";
+      cloud_down.channels[4].name = "l2";
+      for (unsigned int d = 0; d < cloud_down.channels.size (); d++)
+        cloud_down.channels[d].values.resize (cloud_down.points.size ());
 
-      robot_msgs::Point32 min_p, max_p, min_b, max_b, div_b;
+      Point32 min_p, max_p, min_b, max_b, div_b;
       cloud_geometry::statistics::getMinMax (cloud, min_p, max_p);
 
       // Compute the minimum and maximum bounding box values
@@ -240,20 +242,20 @@ class LaserArmCalib
       }
 
       // First pass: go over all points and insert them into the right leaf
-      for (unsigned int cp = 0; cp < cloud.pts.size (); cp++)
+      for (unsigned int cp = 0; cp < cloud.points.size (); cp++)
       {
-        int i = (int)(floor (cloud.pts[cp].x / leaf_width_.x));
-        int j = (int)(floor (cloud.pts[cp].y / leaf_width_.y));
-        int k = (int)(floor (cloud.pts[cp].z / leaf_width_.z));
+        int i = (int)(floor (cloud.points[cp].x / leaf_width_.x));
+        int j = (int)(floor (cloud.points[cp].y / leaf_width_.y));
+        int k = (int)(floor (cloud.points[cp].z / leaf_width_.z));
 
         int idx = ( (k - min_b.z) * div_b.y * div_b.x ) + ( (j - min_b.y) * div_b.x ) + (i - min_b.x);
-        leaves[idx].centroid_x += cloud.pts[cp].x;
-        leaves[idx].centroid_y += cloud.pts[cp].y;
-        leaves[idx].centroid_z += cloud.pts[cp].z;
+        leaves[idx].centroid_x += cloud.points[cp].x;
+        leaves[idx].centroid_y += cloud.points[cp].y;
+        leaves[idx].centroid_z += cloud.points[cp].z;
         leaves[idx].indices.push_back (cp);
       }
 
-      robot_msgs::Point32 centroid;
+      Point32 centroid;
       Eigen::Matrix3d covariance_matrix;
       // Second pass: go over all leaves and compute centroids and the point normals (nx, ny, nz), surface curvature estimates (c)
       int nr_p = 0;
@@ -261,9 +263,9 @@ class LaserArmCalib
       {
         if (leaves[cl].indices.size () > 0)
         {
-          cloud_down_.pts[nr_p].x = leaves[cl].centroid_x / leaves[cl].indices.size ();
-          cloud_down_.pts[nr_p].y = leaves[cl].centroid_y / leaves[cl].indices.size ();
-          cloud_down_.pts[nr_p].z = leaves[cl].centroid_z / leaves[cl].indices.size ();
+          cloud_down_.points[nr_p].x = leaves[cl].centroid_x / leaves[cl].indices.size ();
+          cloud_down_.points[nr_p].y = leaves[cl].centroid_y / leaves[cl].indices.size ();
+          cloud_down_.points[nr_p].z = leaves[cl].centroid_z / leaves[cl].indices.size ();
 
           // Compute the 3x3 covariance matrix
           cloud_geometry::nearest::computeCovarianceMatrix (cloud, leaves[cl].indices, covariance_matrix, centroid);
@@ -279,25 +281,25 @@ class LaserArmCalib
                                eigen_vectors (1, 0) * eigen_vectors (1, 0) +
                                eigen_vectors (2, 0) * eigen_vectors (2, 0));
 
-          cloud_down.chan[0].vals[nr_p] = eigen_vectors (0, 0) / norm;
-          cloud_down.chan[1].vals[nr_p] = eigen_vectors (1, 0) / norm;
-          cloud_down.chan[2].vals[nr_p] = eigen_vectors (2, 0) / norm;
-          cloud_down.chan[3].vals[nr_p] = eigen_values (1);
-          cloud_down.chan[4].vals[nr_p] = eigen_values (2);
+          cloud_down.channels[0].values[nr_p] = eigen_vectors (0, 0) / norm;
+          cloud_down.channels[1].values[nr_p] = eigen_vectors (1, 0) / norm;
+          cloud_down.channels[2].values[nr_p] = eigen_vectors (2, 0) / norm;
+          cloud_down.channels[3].values[nr_p] = eigen_values (1);
+          cloud_down.channels[4].values[nr_p] = eigen_values (2);
 
           nr_p++;
         }
       }
-      cloud_down.pts.resize (nr_p);
+      cloud_down.points.resize (nr_p);
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Callback
     void cloud_cb ()
     {
-      ROS_INFO ("Received %d data points in frame %s with %d channels (%s).", (int)cloud_.pts.size (), cloud_.header.frame_id.c_str (),
-                (int)cloud_.chan.size (), cloud_geometry::getAvailableChannels (cloud_).c_str ());
-      if (cloud_.pts.size () == 0)
+      ROS_INFO ("Received %d data points in frame %s with %d channels (%s).", (int)cloud_.points.size (), cloud_.header.frame_id.c_str (),
+                (int)cloud_.channels.size (), cloud_geometry::getAvailableChannels (cloud_).c_str ());
+      if (cloud_.points.size () == 0)
       {
         ROS_ERROR ("No data points found. Exiting...");
         return;
@@ -307,7 +309,7 @@ class LaserArmCalib
 
       // ---[ Step 1: downsample the point cloud + compute the eigenvalues/eigenvectors of the centroids
       downsampleEstimateEigen (cloud_, cloud_down_, leaf_width_, leaves_);
-      ROS_INFO ("Number of points after downsampling with a leaf of size [%f,%f,%f]: %d.", leaf_width_.x, leaf_width_.y, leaf_width_.z, (int)cloud_down_.pts.size ());
+      ROS_INFO ("Number of points after downsampling with a leaf of size [%f,%f,%f]: %d.", leaf_width_.x, leaf_width_.y, leaf_width_.z, (int)cloud_down_.points.size ());
       leaves_.resize (0);    // dealloc memory used for the downsampling process
 
       ROS_INFO ("Downsampling and eigen analysis done in %g seconds.\n", (ros::Time::now () - ts).toSec ());
