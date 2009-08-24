@@ -32,6 +32,9 @@
 #include "stoc.h"
 #include <SVS/svsclass.h>
 
+using namespace sensor_msgs;
+using namespace deprecated_msgs;
+
 //! Macro for throwing an exception with a message
 #define STOC_EXCEPT(except, msg) \
   { \
@@ -301,7 +304,7 @@ void
 ////////////////////////////////////////////////////////////////////////////////
 // Read data from the device
 void
-  stoc::STOC::readData (std_msgs::PointCloud &cloud, std_msgs::ImageArray &images)
+  stoc::STOC::readData (PointCloud &cloud, ImageArray &images)
 {
   svsStereoImage *si = video_->GetImage (10); // 10 ms timeout
   if (si == NULL && debug_)
@@ -328,21 +331,21 @@ void
   int nr_points = 0;
 
   // Fill in the ROS PointCloud message
-  cloud.set_pts_size (si->ip.height * si->ip.width);            // allocate more than needed, we will resize later
-  cloud.set_chan_size (1);
-  cloud.chan[0].name = "i";
-  cloud.chan[0].set_vals_size (cloud.get_pts_size ());
+  cloud.points.resize (si->ip.height * si->ip.width);            // allocate more than needed, we will resize later
+  cloud.channels.resize (1);
+  cloud.channels[0].name = "i";
+  cloud.channels[0].values.resize (cloud.points.size ());
   
   // RGB or monochrome ?
   if (si->haveColor)
   {
-    cloud.set_chan_size (3);
-    cloud.chan[0].name = "r";
-    cloud.chan[0].set_vals_size (cloud.get_pts_size ());        // re-do chan[0], just in case
-    cloud.chan[1].name = "g";
-    cloud.chan[1].set_vals_size (cloud.get_pts_size ());
-    cloud.chan[2].name = "b";
-    cloud.chan[2].set_vals_size (cloud.get_pts_size ());
+    cloud.channels.resize (3);
+    cloud.channels[0].name = "r";
+    cloud.channels[0].values.resize (cloud.points.size ());        // re-do channels[0], just in case
+    cloud.channels[1].name = "g";
+    cloud.channels[1].values.resize (cloud.points.size ());
+    cloud.channels[2].name = "b";
+    cloud.channels[2].values.resize (cloud.points.size ());
   }
   
   if (si->have3D)
@@ -356,32 +359,32 @@ void
         if (pts->A <= 0)
           continue;
 
-        cloud.pts[nr_points].x = pts->X;
-        cloud.pts[nr_points].y = pts->Y;
-        cloud.pts[nr_points].z = pts->Z;
+        cloud.points[nr_points].x = pts->X;
+        cloud.points[nr_points].y = pts->Y;
+        cloud.points[nr_points].z = pts->Z;
 
         if (si->haveColor)
         {
           svsColorPixel *mpc = (svsColorPixel*)(si->color + (i*si->ip.width + j) * 4);
-          cloud.chan[0].vals[nr_points] = mpc->r;  // red
-          cloud.chan[1].vals[nr_points] = mpc->g;  // green
-          cloud.chan[2].vals[nr_points] = mpc->b;  // blue
+          cloud.channels[0].values[nr_points] = mpc->r;  // red
+          cloud.channels[1].values[nr_points] = mpc->g;  // green
+          cloud.channels[2].values[nr_points] = mpc->b;  // blue
         }
         else
-          cloud.chan[0].vals[nr_points] = (unsigned char)si->Left ()[i*si->ip.width + j];
+          cloud.channels[0].values[nr_points] = (unsigned char)si->Left ()[i*si->ip.width + j];
 
         nr_points++;
       } // width
     } // height
 
   } // have3D
-  cloud.set_pts_size (nr_points);
-  cloud.chan[0].set_vals_size (nr_points);
+  cloud.points.resize (nr_points);
+  cloud.channels[0].values.resize (nr_points);
   // RGB or monochrome ?
   if (si->haveColor)
   {
-    cloud.chan[1].set_vals_size (nr_points);
-    cloud.chan[2].set_vals_size (nr_points);
+    cloud.channels[1].values.resize (nr_points);
+    cloud.channels[2].values.resize (nr_points);
   }
   
   // Do we send the disparity image as well ?  
@@ -470,7 +473,7 @@ void
 ////////////////////////////////////////////////////////////////////////////////
 // Read data from the device
 void
-  stoc::STOC::readDataLeft (std_msgs::PointCloud &cloud, std_msgs::Image &left_image)
+  stoc::STOC::readDataLeft (PointCloud &cloud, Image &left_image)
 {
   svsStereoImage *si = video_->GetImage (10); // 10 ms timeout
   if (si == NULL && debug_)
@@ -497,21 +500,21 @@ void
   int nr_points = 0;
 
   // Fill in the ROS PointCloud message
-  cloud.set_pts_size (si->ip.height * si->ip.width);            // allocate more than needed, we will resize later
-  cloud.set_chan_size (1);
-  cloud.chan[0].name = "i";
-  cloud.chan[0].set_vals_size (cloud.get_pts_size ());
+  cloud.points.resize (si->ip.height * si->ip.width);            // allocate more than needed, we will resize later
+  cloud.channels.resize (1);
+  cloud.channels[0].name = "i";
+  cloud.channels[0].values.resize (cloud.points.size ());
   
   // RGB or monochrome ?
   if (si->haveColor)
   {
-    cloud.set_chan_size (3);
-    cloud.chan[0].name = "r";
-    cloud.chan[0].set_vals_size (cloud.get_pts_size ());        // re-do chan[0], just in case
-    cloud.chan[1].name = "g";
-    cloud.chan[1].set_vals_size (cloud.get_pts_size ());
-    cloud.chan[2].name = "b";
-    cloud.chan[2].set_vals_size (cloud.get_pts_size ());
+    cloud.channels.resize (3);
+    cloud.channels[0].name = "r";
+    cloud.channels[0].values.resize (cloud.points.size ());        // re-do channels[0], just in case
+    cloud.channels[1].name = "g";
+    cloud.channels[1].values.resize (cloud.points.size ());
+    cloud.channels[2].name = "b";
+    cloud.channels[2].values.resize (cloud.points.size ());
   }
   
   if (si->have3D)
@@ -525,32 +528,32 @@ void
         if (pts->A <= 0)
           continue;
 
-        cloud.pts[nr_points].x = pts->X;
-        cloud.pts[nr_points].y = pts->Y;
-        cloud.pts[nr_points].z = pts->Z;
+        cloud.points[nr_points].x = pts->X;
+        cloud.points[nr_points].y = pts->Y;
+        cloud.points[nr_points].z = pts->Z;
 
         if (si->haveColor)
         {
           svsColorPixel *mpc = (svsColorPixel*)(si->color + (i*si->ip.width + j) * 4);
-          cloud.chan[0].vals[nr_points] = mpc->r;  // red
-          cloud.chan[1].vals[nr_points] = mpc->g;  // green
-          cloud.chan[2].vals[nr_points] = mpc->b;  // blue
+          cloud.channels[0].values[nr_points] = mpc->r;  // red
+          cloud.channels[1].values[nr_points] = mpc->g;  // green
+          cloud.channels[2].values[nr_points] = mpc->b;  // blue
         }
         else
-          cloud.chan[0].vals[nr_points] = (unsigned char)si->Left ()[i*si->ip.width + j];
+          cloud.channels[0].values[nr_points] = (unsigned char)si->Left ()[i*si->ip.width + j];
 
         nr_points++;
       } // width
     } // height
 
   } // have3D
-  cloud.set_pts_size (nr_points);
-  cloud.chan[0].set_vals_size (nr_points);
+  cloud.points.resize (nr_points);
+  cloud.channels[0].values.resize (nr_points);
   // RGB or monochrome ?
   if (si->haveColor)
   {
-    cloud.chan[1].set_vals_size (nr_points);
-    cloud.chan[2].set_vals_size (nr_points);
+    cloud.channels[1].values.resize (nr_points);
+    cloud.channels[2].values.resize (nr_points);
   }
   
   // Prepare the left channel

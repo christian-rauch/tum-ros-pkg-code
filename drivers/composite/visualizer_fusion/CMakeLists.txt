@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
-include(rosbuild)
+include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 set(ROS_BUILD_TYPE Debug)
-rospack(visualizer_fusion)
+rosbuild_init ()
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
@@ -14,8 +14,8 @@ include(${VTK_USE_FILE})
 
 set(VTK_LIBS vtkCommon vtkRendering vtkWidgets vtkHybrid vtkGraphics)
 
-rospack_add_executable(visualizer_fusion src/visualizer_fusion.cpp src/vtk_tools.cpp)
+rosbuild_add_executable(visualizer_fusion src/visualizer_fusion.cpp src/vtk_tools.cpp)
 target_link_libraries(visualizer_fusion ${VTK_LIBS})
 
-rospack_add_executable(param_visualizer src/param_visualizer.cpp src/terminal.cpp)
+rosbuild_add_executable(param_visualizer src/param_visualizer.cpp src/terminal.cpp)
 target_link_libraries(param_visualizer)

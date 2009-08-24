@@ -3,8 +3,8 @@
   <author>Radu Bogdan Rusu (rusu@cs.tum.edu)</author>
   <license>BSD</license>
   <depend package="roscpp" />
-  <depend package="std_msgs" />
+  <depend package="deprecated_msgs" />
+  <depend package="sensor_msgs" />
   <depend package="tf" />
-  <depend package="string_utils" />
   <url></url>
 </package>

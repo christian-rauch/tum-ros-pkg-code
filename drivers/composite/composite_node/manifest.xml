@@ -4,11 +4,10 @@
   <license>BSD</license>
   <depend package="roscpp" />
   <depend package="std_msgs" />
-  <depend package="opencv" />
+  <depend package="opencv_latest" />
   <depend package="flir_driver" />
   <depend package="stoc_driver" />
   <depend package="composite_swissranger" />
-  <depend package="string_utils" />
   <depend package="tf" />
   <url></url>
 </package>

@@ -69,10 +69,10 @@ Subscribes to (name/type):
 #include "ros/time.h"
 #include "ros/common.h"
 
-#include "std_msgs/PointCloud.h"
-#include "std_msgs/Point32.h"
-#include "std_msgs/ImageArray.h"
-#include "std_msgs/Image.h"
+#include <sensor_msgs/PointCloud.h>
+#include <geometry_msgs/Point32.h>
+#include <deprecated_msgs/ImageArray.h>
+#include <deprecated_msgs/Image.h>
 
 #include "tf/tf.h"
 #include "tf/transform_listener.h"
@@ -82,6 +82,9 @@ Subscribes to (name/type):
 #include "vtk_tools.h"
 
 using namespace std;
+using namespace sensor_msgs;
+using namespace deprecated_msgs;
+using namespace geometry_msgs;
 
 class VisualizerFusion: public ros::node
 {
@@ -107,9 +110,9 @@ class VisualizerFusion: public ros::node
     vtkCriticalSection *sr_lock_;//, *stoc_lock_;
 
     // ROS messages
-    std_msgs::PointCloud sr_msg_cloud_, stoc_msg_cloud_;
-    std_msgs::ImageArray sr_msg_images_, stoc_msg_images_;
-    std_msgs::Image flir_msg_image_, stoc_msg_left_image_;
+    PointCloud sr_msg_cloud_, stoc_msg_cloud_;
+    ImageArray sr_msg_images_, stoc_msg_images_;
+    Image flir_msg_image_, stoc_msg_left_image_;
 
     // TF transformations
 //    tf::TransformListener sr_stoc_tfl_;
@@ -290,29 +293,29 @@ class VisualizerFusion: public ros::node
     
     ////////////////////////////////////////////////////////////////////////////////
     void
-      rotateCloud (std_msgs::PointCloud &cloud, NEWMAT::Matrix transform)
+      rotateCloud (PointCloud &cloud, NEWMAT::Matrix transform)
     {
       double t1x, t1y, t1z;
-      for (unsigned int i = 0; i < cloud.get_pts_size (); i++)
+      for (unsigned int i = 0; i < cloud.points.size (); i++)
       {
         // Rotate first
-        t1x = cloud.pts[i].x * transform(1, 1) + 
-              cloud.pts[i].y * transform(1, 2) +
-              cloud.pts[i].z * transform(1, 3) +
+        t1x = cloud.points[i].x * transform(1, 1) + 
+              cloud.points[i].y * transform(1, 2) +
+              cloud.points[i].z * transform(1, 3) +
               transform(1, 4);
 
-        t1y = cloud.pts[i].x * transform(2, 1) + 
-              cloud.pts[i].y * transform(2, 2) +
-              cloud.pts[i].z * transform(2, 3) +
+        t1y = cloud.points[i].x * transform(2, 1) + 
+              cloud.points[i].y * transform(2, 2) +
+              cloud.points[i].z * transform(2, 3) +
               transform(2, 4);
 
-        t1z = cloud.pts[i].x * transform(3, 1) + 
-              cloud.pts[i].y * transform(3, 2) +
-              cloud.pts[i].z * transform(3, 3) +
+        t1z = cloud.points[i].x * transform(3, 1) + 
+              cloud.points[i].y * transform(3, 2) +
+              cloud.points[i].z * transform(3, 3) +
               transform(3, 4);
-        cloud.pts[i].x = t1x;
-        cloud.pts[i].y = t1y;
-        cloud.pts[i].z = t1z;
+        cloud.points[i].x = t1x;
+        cloud.points[i].y = t1y;
+        cloud.points[i].z = t1z;
       }
     }
 
@@ -331,7 +334,7 @@ class VisualizerFusion: public ros::node
     ////////////////////////////////////////////////////////////////////////////////
     // Rotate an image with 180 in place
     void
-      rotateImage180 (std_msgs::Image &image)
+      rotateImage180 (Image &image)
     {
       NEWMAT::Matrix rotation180 (3, 3);
       
@@ -363,13 +366,13 @@ class VisualizerFusion: public ros::node
     
     ////////////////////////////////////////////////////////////////////////////////
     void
-      rotateCloud (std_msgs::PointCloud &cloud)
+      rotateCloud (PointCloud &cloud)
     {
       // Construct a matrix for rotating the pointcloud with 180 degrees
-      for (unsigned int i = 0; i < cloud.get_pts_size (); i++)
+      for (unsigned int i = 0; i < cloud.points.size (); i++)
       {
-        cloud.pts[i].x *= - 1.0;
-        cloud.pts[i].y *= - 1.0;
+        cloud.points[i].x *= - 1.0;
+        cloud.points[i].y *= - 1.0;
       }
     
       // Transform the pointcloud from the SwissRanger coordinate system to the STOC coordinate system
@@ -395,9 +398,9 @@ class VisualizerFusion: public ros::node
 
     ////////////////////////////////////////////////////////////////////////////////
     void
-      convertROSPointCloudToVTK (std_msgs::PointCloud msg_cloud, vtkPolyData **pdata)
+      convertROSPointCloudToVTK (PointCloud msg_cloud, vtkPolyData **pdata)
     {
-      int nr_pts = msg_cloud.get_pts_size ();
+      int nr_pts = msg_cloud.points.size ();
       int dim    = msg_cloud.get_chan_size ();
 
       // These are all local
@@ -438,20 +441,20 @@ class VisualizerFusion: public ros::node
       double p[3];
       for (vtkIdType i = 0; i < nr_pts; i++)
       {
-        p[0] = msg_cloud.pts[i].x; p[1] = msg_cloud.pts[i].y; p[2] = msg_cloud.pts[i].z;
+        p[0] = msg_cloud.points[i].x; p[1] = msg_cloud.points[i].y; p[2] = msg_cloud.points[i].z;
         points->SetPoint (i, p);
         verts->InsertCellPoint (i);
 
         
         for (int d = 0; d < dim; d++)
         {
-          colors->SetComponent (i, d, msg_cloud.chan[d].vals[i]);
-//          if (msg_cloud.chan[d].name == "r")
-//            colors->SetComponent (i, 0, msg_cloud.chan[d].vals[i]);
-//          if (msg_cloud.chan[d].name == "g")
-//            colors->SetComponent (i, 1, msg_cloud.chan[d].vals[i]);
-//          if (msg_cloud.chan[d].name == "b")
-//            colors->SetComponent (i, 2, msg_cloud.chan[d].vals[i]);
+          colors->SetComponent (i, d, msg_cloud.channels[d].values[i]);
+//          if (msg_cloud.channels[d].name == "r")
+//            colors->SetComponent (i, 0, msg_cloud.channels[d].values[i]);
+//          if (msg_cloud.channels[d].name == "g")
+//            colors->SetComponent (i, 1, msg_cloud.channels[d].values[i]);
+//          if (msg_cloud.channels[d].name == "b")
+//            colors->SetComponent (i, 2, msg_cloud.channels[d].values[i]);
         }
       }
 
@@ -462,22 +465,22 @@ class VisualizerFusion: public ros::node
 
     ////////////////////////////////////////////////////////////////////////////////
     void
-      getPixelColor (std_msgs::PointCloud &cloud, NEWMAT::Matrix intrinsic_mat, std_msgs::Image image)
+      getPixelColor (PointCloud &cloud, NEWMAT::Matrix intrinsic_mat, Image image)
     {
-      cloud.set_chan_size (3);
-      cloud.chan[0].name = "r";
-      cloud.chan[1].name = "g";
-      cloud.chan[2].name = "b";
-      cloud.chan[0].set_vals_size (cloud.get_pts_size ());
-      cloud.chan[1].set_vals_size (cloud.get_pts_size ());
-      cloud.chan[2].set_vals_size (cloud.get_pts_size ());
+      cloud.channels.resize (3);
+      cloud.channels[0].name = "r";
+      cloud.channels[1].name = "g";
+      cloud.channels[2].name = "b";
+      cloud.channels[0].values.resize (cloud.points.size ());
+      cloud.channels[1].values.resize (cloud.points.size ());
+      cloud.channels[2].values.resize (cloud.points.size ());
       
       double p[3], ptr[3];
-      for (unsigned int i = 0; i < cloud.get_pts_size (); i++)
+      for (unsigned int i = 0; i < cloud.points.size (); i++)
       {
-        p[0] = cloud.pts[i].x;
-        p[1] = cloud.pts[i].y;
-        p[2] = cloud.pts[i].z;
+        p[0] = cloud.points[i].x;
+        p[1] = cloud.points[i].y;
+        p[2] = cloud.points[i].z;
 //        p[0] = (cloud.pts[i].x / cloud.pts[i].z);
 //        p[1] = (cloud.pts[i].y / cloud.pts[i].z);
 //        p[2] = 1.0;
@@ -497,16 +500,16 @@ class VisualizerFusion: public ros::node
           int u =  (ptr[0]);
           int v =  (ptr[1]);
 //          cerr << u << " " << v << " " << u + v * 640 << endl;
-          cloud.chan[0].vals[i] = image.data[ (u + v * 640) * 3 + 0];
-          cloud.chan[1].vals[i] = image.data[ (u + v * 640) * 3 + 1];
-          cloud.chan[2].vals[i] = image.data[ (u + v * 640) * 3 + 2];
+          cloud.channels[0].values[i] = image.data[ (u + v * 640) * 3 + 0];
+          cloud.channels[1].values[i] = image.data[ (u + v * 640) * 3 + 1];
+          cloud.channels[2].values[i] = image.data[ (u + v * 640) * 3 + 2];
         }
       }
     }
     
     ////////////////////////////////////////////////////////////////////////////////
     void
-      getPixelColor (std_msgs::PointCloud &cloud, std_msgs::Image image)
+      getPixelColor (PointCloud &cloud, Image image)
     {
       NEWMAT::Matrix homography (3, 3);
       homography
@@ -515,23 +518,23 @@ class VisualizerFusion: public ros::node
          <<      0.0006  <<      0.0002  <<      1.0000
       ;
 
-      cloud.set_chan_size (4);
-      cloud.chan[0].name = "pid";
-      cloud.chan[1].name = "r";
-      cloud.chan[2].name = "g";
-      cloud.chan[3].name = "b";
+      cloud.channels.resize (4);
+      cloud.channels[0].name = "pid";
+      cloud.channels[1].name = "r";
+      cloud.channels[2].name = "g";
+      cloud.channels[3].name = "b";
 
-      cloud.chan[0].set_vals_size (cloud.get_pts_size ());
-      cloud.chan[1].set_vals_size (cloud.get_pts_size ());
-      cloud.chan[2].set_vals_size (cloud.get_pts_size ());
-      cloud.chan[3].set_vals_size (cloud.get_pts_size ());
+      cloud.channels[0].values.resize (cloud.points.size ());
+      cloud.channels[1].values.resize (cloud.points.size ());
+      cloud.channels[2].values.resize (cloud.points.size ());
+      cloud.channels[3].values.resize (cloud.points.size ());
       
       int img_width = image.width, img_height = image.height, sr_width = 176, sr_height = 144;
       
-      std_msgs::Point32 p, q;
-      for (unsigned int i = 0; i < cloud.get_pts_size (); i++)
+      Point32 p, q;
+      for (unsigned int i = 0; i < cloud.points.size (); i++)
       {
-        int pid = cloud.chan[0].vals[i];
+        int pid = cloud.channels[0].values[i];
         p.y = round (pid / sr_width);
         p.x = round (pid % sr_width);
         p.z = 1;
@@ -543,14 +546,14 @@ class VisualizerFusion: public ros::node
         int nv = round (q.x / q.z);
         int nu = round (q.y / q.z);
         
-        cloud.chan[0].vals[i] = pid;
-        cloud.chan[1].vals[i] = image.data[(nu * img_width + nv) * 3 + 0];
-        cloud.chan[2].vals[i] = image.data[(nu * img_width + nv) * 3 + 1];
-        cloud.chan[3].vals[i] = image.data[(nu * img_width + nv) * 3 + 2];
+        cloud.channels[0].values[i] = pid;
+        cloud.channels[1].values[i] = image.data[(nu * img_width + nv) * 3 + 0];
+        cloud.channels[2].values[i] = image.data[(nu * img_width + nv) * 3 + 1];
+        cloud.channels[3].values[i] = image.data[(nu * img_width + nv) * 3 + 2];
         
-//        cloud.chan[1].vals[i] = image.data[(p.x * img_width + p.y) * 2 + 1];
-//        cloud.chan[2].vals[i] = image.data[(p.x * img_width + p.y) * 2 + 1];
-//        cloud.chan[3].vals[i] = image.data[(p.x * img_width + p.y) * 2 + 1];
+//        cloud.channels[1].values[i] = image.data[(p.x * img_width + p.y) * 2 + 1];
+//        cloud.channels[2].values[i] = image.data[(p.x * img_width + p.y) * 2 + 1];
+//        cloud.channels[3].values[i] = image.data[(p.x * img_width + p.y) * 2 + 1];
       }
     }
     

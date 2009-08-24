@@ -3,8 +3,9 @@
   <author>Radu Bogdan Rusu (rusu@cs.tum.edu)</author>
   <license>BSD</license>
   <depend package="roscpp" />
-  <depend package="std_msgs" />
-  <depend package="opencv"/>
+  <depend package="deprecated_msgs" />
+  <depend package="sensor_msgs" />
+  <depend package="opencv_latest"/>
   <export>
     <cpp cflags="-I${prefix}/src" lflags="-L${prefix}/lib -lstoc"/>
   </export>

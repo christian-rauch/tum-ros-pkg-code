@@ -41,7 +41,6 @@
 #include <algorithm>
 #include <string.h>
 #include <vector>
-#include "string_utils/string_utils.h"
 
 #define RESET           0
 #define BRIGHT          1

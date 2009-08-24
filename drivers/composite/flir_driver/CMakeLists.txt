@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 2.6)
-include(rosbuild)
+include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 set(ROS_BUILD_TYPE Release)
-rospack(flir_driver)
+rosbuild_init ()
 
 include_directories (/usr/local/include/unicap/)
 link_directories (/usr/local/lib/)
 
-rospack_add_library(flir src/flir.cpp)
+rosbuild_add_library(flir src/flir.cpp)
 target_link_libraries(flir unicap)

@@ -33,9 +33,9 @@
 #define STOC_DRIVER_H
 
 // ROS includes
-#include "std_msgs/PointCloud.h"
-#include "std_msgs/ImageArray.h"
-#include "std_msgs/Image.h"
+#include <sensor_msgs/PointCloud.h>
+#include <deprecated_msgs/ImageArray.h>
+#include <deprecated_msgs/Image.h>
 
 #include <stdexcept>
 #include <string>
@@ -64,8 +64,8 @@ namespace stoc
 
       int open ();
       int close ();
-      void readData (std_msgs::PointCloud &cloud, std_msgs::ImageArray &images);
-      void readDataLeft (std_msgs::PointCloud &cloud, std_msgs::Image &left_image);
+      void readData (sensor_msgs::PointCloud &cloud, deprecated_msgs::ImageArray &images);
+      void readDataLeft (sensor_msgs::PointCloud &cloud, deprecated_msgs::Image &left_image);
 
       void sendInternalParameters ();
       void sendStereoParameters ();
