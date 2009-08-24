@@ -42,7 +42,7 @@
 // ROS core
 #include <ros/ros.h>
 // ROS messages
-#include <robot_msgs/PointCloud.h>
+#include <sensor_msgs/PointCloud.h>
 #include <sensor_msgs/LaserScan.h>
 #include <player_log_actarray/PlayerActarray.h>
 #include <tf/transform_broadcaster.h>
@@ -58,7 +58,6 @@
 using namespace std;
 using namespace ros;
 using namespace sensor_msgs;
-using namespace robot_msgs;
 using namespace player_log_actarray;
 
 struct DH
@@ -76,6 +75,7 @@ class ActarrayCloudAssembler
     tf::Stamped<tf::Transform> transform_;
     boost::mutex s_lock_, a_lock_;
 
+    int total_laser_scans_;
   public:
     // ROS messages
     list<LaserScanConstPtr> scans_;
@@ -97,6 +97,7 @@ class ActarrayCloudAssembler
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     ActarrayCloudAssembler () : tf_frame_ ("laser_tilt_mount_link"),
                                 transform_ (btTransform (btQuaternion (0, 0, 0), btVector3 (0, 0, 0)), Time::now (), tf_frame_, tf_frame_),
+                                total_laser_scans_ (0),
                                 left_arm_ (true)
     {
       nh_.param ("~min_distance", min_distance_, .7);     // minimum distance range to be considered
@@ -126,14 +127,14 @@ class ActarrayCloudAssembler
       cloud_pub_ = nh_.advertise<PointCloud> ("/tilt_laser_cloud", 1);
 
       cloud_.header.frame_id = "laser_tilt_mount_link";
-      cloud_.chan.resize (7);
-      cloud_.chan[0].name = "intensity";
-      cloud_.chan[1].name = "distance";
-      cloud_.chan[2].name = "sid";
-      cloud_.chan[3].name = "pid";
-      cloud_.chan[4].name = "vx";
-      cloud_.chan[5].name = "vy";
-      cloud_.chan[6].name = "vz";
+      cloud_.channels.resize (7);
+      cloud_.channels[0].name = "intensity";
+      cloud_.channels[1].name = "distance";
+      cloud_.channels[2].name = "sid";
+      cloud_.channels[3].name = "pid";
+      cloud_.channels[4].name = "vx";
+      cloud_.channels[5].name = "vy";
+      cloud_.channels[6].name = "vz";
 
       ROS_INFO ("Using the following translation values: %f, %f, %f", translation_ (0), translation_ (1), translation_ (2));
       first_act_stamp_ = -1.0;
@@ -307,7 +308,9 @@ class ActarrayCloudAssembler
     void
       scan_cb (const LaserScanConstPtr &scan)
     {
-      ///ROS_INFO ("LaserScan (%f) message received with %d measurements. Current queue size is %d.", scan->header.stamp.toSec (), (int)scan->ranges.size (), (int)scans_.size ());
+      ++total_laser_scans_;
+      ROS_INFO ("LaserScan (%f) message (%d) received with %d measurements. Current queue size is %d.", scan->header.stamp.toSec (),
+                total_laser_scans_, (int)scan->ranges.size (), (int)scans_.size ());
       s_lock_.lock ();
       scans_.push_back (scan);
       s_lock_.unlock ();
@@ -317,7 +320,7 @@ class ActarrayCloudAssembler
     bool
       spin ()
     {
-      int laser_packet_scan_id = 1;
+      int laser_packet_scan_id = 1, point_cloud_total = 0;
       vector<double> q_values;
       Eigen::Vector4d pt, pt_t, vp, vp_old;
       Eigen::Matrix4d robot_transform;
@@ -370,9 +373,9 @@ class ActarrayCloudAssembler
           double resolution = laser_packet->angle_increment;
 
           int nr_points = 0;
-          cloud_.pts.resize (laser_packet->ranges.size ());
-          for (unsigned int d = 0; d < cloud_.chan.size (); d++)
-            cloud_.chan[d].vals.resize (laser_packet->ranges.size ());
+          cloud_.points.resize (laser_packet->ranges.size ());
+          for (unsigned int d = 0; d < cloud_.channels.size (); d++)
+            cloud_.channels[d].values.resize (laser_packet->ranges.size ());
 
           for (unsigned int i = 0; i < laser_packet->ranges.size (); i++)
           {
@@ -397,18 +400,18 @@ class ActarrayCloudAssembler
 
             // Transform the point
             pt_t = robot_transform * pt;
-            cloud_.pts[nr_points].x = pt_t(0);
-            cloud_.pts[nr_points].y = pt_t(1);
-            cloud_.pts[nr_points].z = pt_t(2);
+            cloud_.points[nr_points].x = pt_t(0);
+            cloud_.points[nr_points].y = pt_t(1);
+            cloud_.points[nr_points].z = pt_t(2);
 
             // Save the rest of the values
-            cloud_.chan[0].vals[nr_points] = intensity;
-            cloud_.chan[1].vals[nr_points] = distance;
-            cloud_.chan[2].vals[nr_points] = i;
-            cloud_.chan[3].vals[nr_points] = laser_packet_scan_id++;
-            cloud_.chan[4].vals[nr_points] = vp (0);
-            cloud_.chan[5].vals[nr_points] = vp (1);
-            cloud_.chan[6].vals[nr_points] = vp (2);
+            cloud_.channels[0].values[nr_points] = intensity;
+            cloud_.channels[1].values[nr_points] = distance;
+            cloud_.channels[2].values[nr_points] = i;
+            cloud_.channels[3].values[nr_points] = laser_packet_scan_id++;
+            cloud_.channels[4].values[nr_points] = vp (0);
+            cloud_.channels[5].values[nr_points] = vp (1);
+            cloud_.channels[6].values[nr_points] = vp (2);
             nr_points++;
 
             angle_x += resolution;
@@ -420,12 +423,12 @@ class ActarrayCloudAssembler
             s_lock_.lock (); it = scans_.erase (it); s_lock_.unlock ();
             continue;
           }
-          cloud_.pts.resize (nr_points);
-          for (unsigned int d = 0; d < cloud_.chan.size (); d++)
-            cloud_.chan[d].vals.resize (nr_points);
+          cloud_.points.resize (nr_points);
+          for (unsigned int d = 0; d < cloud_.channels.size (); d++)
+            cloud_.channels[d].values.resize (nr_points);
 
           cloud_.header.stamp = Time::now ();
-          //ROS_INFO ("Publishing a PointCloud message with %d points and %d channels.", (int)cloud_.pts.size (), (int)cloud_.chan.size ());
+          ROS_INFO ("Publishing a PointCloud message (%d) with %d points and %d channels. Queue left: %d.", ++point_cloud_total, (int)cloud_.points.size (), (int)cloud_.channels.size ());
           cloud_pub_.publish (cloud_);
 
 //         ROS_ERROR ("Erasing %f", ((LaserScanConstPtr)*it)->header.stamp.toSec ());
