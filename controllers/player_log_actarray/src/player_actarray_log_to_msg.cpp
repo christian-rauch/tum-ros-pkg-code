@@ -90,10 +90,7 @@ class PlayerLogToMsg
       long int nr_lines = count (istreambuf_iterator<char>(logfile_stream_), istreambuf_iterator<char> (), '\n');
 
       if (nr_lines == 0)
-      {
-        logfile_stream_.close ();
-        return (-1);
-      }
+        ROS_WARN ("No lines found in %s", file_name_.c_str ());
       logfile_stream_.seekg (0, ios::beg);
       ROS_INFO ("Extracting poses from %s ...", file_name_.c_str ());
       msg_act_.header.frame_id = tf_frame_;
