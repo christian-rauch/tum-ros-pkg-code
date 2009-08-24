@@ -31,8 +31,8 @@
 // ROS core
 #include <ros/node.h>
 // ROS messages
-#include <robot_msgs/PointCloud.h>
-#include <robot_msgs/Polygon3D.h>
+#include <sensor_msgs/PointCloud.h>
+#include <geometry_msgs/Polygon.h>
 #include <mapping_msgs/PolygonalMap.h>
 
 // Sample Consensus
@@ -53,7 +53,7 @@
 #include <angles/angles.h>
 
 using namespace std;
-using namespace robot_msgs;
+using namespace sensor_msgs;
 using namespace mapping_msgs;
 
 class CheckerboardLaserDetection 
@@ -148,7 +148,7 @@ class CheckerboardLaserDetection
       // Create a tree for these points
       cloud_kdtree::KdTree* tree = new cloud_kdtree::KdTreeANN (points);
 
-      int nr_points = points.pts.size ();
+      int nr_points = points.points.size ();
       // Create a bool vector of processed point indices, and initialize it to false
       vector<bool> processed;
       processed.resize (nr_points, false);
@@ -181,9 +181,9 @@ class CheckerboardLaserDetection
             if (nx_idx != -1)                                         // Are point normals present ?
             {
               // [-1;1]
-              double dot_p = points.chan[nx_idx].vals[i] * points.chan[nx_idx].vals[nn_indices[j]] +
-                             points.chan[ny_idx].vals[i] * points.chan[ny_idx].vals[nn_indices[j]] +
-                             points.chan[nz_idx].vals[i] * points.chan[nz_idx].vals[nn_indices[j]];
+              double dot_p = points.channels[nx_idx].values[i] * points.channels[nx_idx].values[nn_indices[j]] +
+                             points.channels[ny_idx].values[i] * points.channels[ny_idx].values[nn_indices[j]] +
+                             points.channels[nz_idx].values[i] * points.channels[nz_idx].values[nn_indices[j]];
               if ( fabs (acos (dot_p)) < eps_angle )
               {
                 processed[nn_indices[j]] = true;
@@ -242,14 +242,14 @@ class CheckerboardLaserDetection
     // Callback
     void cloud_cb ()
     {
-      if (cloud_.pts.size () == 0)
+      if (cloud_.points.size () == 0)
         return;
 
       cloud_annotated_.header = cloud_.header;
       pmap_.header = cloud_.header;
-      cloud_annotated_.pts.resize (cloud_.pts.size ());
+      cloud_annotated_.points.resize (cloud_.points.size ());
 
-      ROS_INFO ("Received %d data points.", (int)cloud_.pts.size ());
+      ROS_INFO ("Received %d data points.", (int)cloud_.points.size ());
       
       int nx_idx = cloud_geometry::getChannelIndex (cloud_, "nx");      // get the channel index of the first normal component
       ROS_INFO ("Normal information found at index: %u", nx_idx);
