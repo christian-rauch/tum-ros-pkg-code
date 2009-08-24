@@ -1,9 +1,9 @@
 <package>
   <description>
-    Convert Player actarray messages to ROS.
+    Controls a rotating Directed Perception PTU D47 unit via a serial interface and triggers the acquisition of PointCloud messages.
   </description>
 
-  <author>Radu Bogdan Rusu</author>
+  <author>Radu Bogdan Rusu, Dejan Pangercic</author>
   <license>BSD</license>
 
   <depend package="roscpp" />
