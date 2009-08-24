@@ -36,7 +36,8 @@
 #include <point_cloud_mapping/geometry/distances.h>
 #include <point_cloud_mapping/geometry/nearest.h>
 #include <point_cloud_mapping/geometry/transforms.h>
-#include <robot_msgs/PointCloud.h>
+#include <sensor_msgs/PointCloud.h>
+#include <geometry_msgs/Point32.h>
 #include <mapping_msgs/PolygonalMap.h>
 #include <tf/tf.h>
 #include <Eigen/LU>
@@ -44,7 +45,8 @@
 #include <cminpack.h>
 
 using namespace mapping_msgs;
-using namespace robot_msgs;
+using namespace sensor_msgs;
+using namespace geometry_msgs;
 
 namespace sample_consensus
 {
@@ -52,9 +54,9 @@ std::pair<double,double> getMinMaxK (PointCloud &cloud, std::vector<double> mode
 {
   double minimum = FLT_MAX;
   double maximum = -FLT_MAX;
-    
-  robot_msgs::Point32 axis;   // axis direction vector
-  robot_msgs::Point32 point0; // point on axis
+
+  geometry_msgs::Point32 axis;   // axis direction vector
+  geometry_msgs::Point32 point0; // point on axis
   axis.x = model_coefficients[3] - model_coefficients[0];
   axis.y = model_coefficients[4] - model_coefficients[1];
   axis.z = model_coefficients[5] - model_coefficients[2];
@@ -72,7 +74,7 @@ std::pair<double,double> getMinMaxK (PointCloud &cloud, std::vector<double> mode
   {
     // "k" is the position (x-value?) of the projection of current point on the rot. axis
 #define DOT_PROD_3D(x,y) ((x[0])*(y[0])+(x[1])*(y[1])+(x[2])*(y[2]))
-    double k = (cloud_geometry::dot (cloud.pts[inliers[i]], axis) 
+    double k = (cloud_geometry::dot (cloud.points[inliers[i]], axis) 
         - cloud_geometry::dot (point0, axis)) 
       / cloud_geometry::dot (axis, axis);
     //    k = (k - k0);
@@ -227,7 +229,7 @@ ROS_WARN ("%f %f", X, Y);
         p.y = q_0[1] + modelCoefficients[1] + minmaxK.first * p21[1];
         p.z = q_0[2] + modelCoefficients[2] + minmaxK.first * p21[2];
         
-        ret.pts.push_back (p);
+        ret.points.push_back (p);
       }
     }
     return ret;
@@ -250,8 +252,8 @@ ROS_WARN ("%f %f", X, Y);
     static int count = 0;
     std::cerr << "before sampling" << std::endl;
     PointCloud synth_points = samplePointsOnRotational (modelCoefficients, minmaxK, inliers);
-    std::cerr << "after sampling, kdtree for " << synth_points.pts.size() << std::endl;
-    std::vector <int> marks (synth_points.pts.size());
+    std::cerr << "after sampling, kdtree for " << synth_points.points.size() << std::endl;
+    std::vector <int> marks (synth_points.points.size());
 
     // create kd-tree from synth_points
     
@@ -262,7 +264,7 @@ ROS_WARN ("%f %f", X, Y);
 //     {
 //       std::vector<int> k_indices;
 //       std::vector<float> k_distances;
-//       kd_tree->radiusSearch (cloud_->pts[inliers[i]] , threshold*2, k_indices, k_distances);
+//       kd_tree->radiusSearch (cloud_->points[inliers[i]] , threshold*2, k_indices, k_distances);
 //       for (unsigned int j = 0; j < k_indices.size(); j++)
 //       {
 //         marks[k_indices[j]] = 1;
@@ -281,7 +283,7 @@ ROS_WARN ("%f %f", X, Y);
     for (unsigned int j = 0; j < marks.size(); j++)
     {
       if (marks[j] == 0)
-        if (!freespace (synth_points.pts[j]))
+        if (!freespace (synth_points.points[j]))
           mark_count_2++;
     }
 
@@ -291,25 +293,25 @@ ROS_WARN ("%f %f", X, Y);
     //    pmap.polygons.resize(pmap.polygons.size()+1);
     for (unsigned int i = 0; i < inliers.size (); i++)
     {
-      cloud_synth.chan[0].vals.push_back (count);
-      cloud_synth.pts.push_back (cloud_->pts[inliers[i]]);
+      cloud_synth.channels[0].values.push_back (count);
+      cloud_synth.points.push_back (cloud_->points[inliers[i]]);
     }
     for (unsigned int i = 0; i < synth_points.pts.size (); i++)
     {
-      cloud_synth.chan[0].vals.push_back (count);
-      cloud_synth.pts.push_back (synth_points.pts[i]);
+      cloud_synth.channels[0].values.push_back (count);
+      cloud_synth.points.push_back (synth_points.points[i]);
     }
-//      pmap.polygons[cur].points.push_back (synth_points.pts[i]);
+//      pmap.polygons[cur].points.push_back (synth_points.points[i]);
     count++;
-    ROS_ERROR ("SAMPLED %i POINTS!!!!!", cloud_synth.pts.size());
-    return double(mark_count_1+mark_count_2) / double (synth_points.pts.size ());
+    ROS_ERROR ("SAMPLED %i POINTS!!!!!", cloud_synth.points.size());
+    return double(mark_count_1+mark_count_2) / double (synth_points.points.size ());
   }
 
   double 
-    SACModelRotational::pointToRotationalDistance (const robot_msgs::Point32 &p, const std::vector<double> &model_coefficients, const int &polynomial_order)
+    SACModelRotational::pointToRotationalDistance (const geometry_msgs::Point32 &p, const std::vector<double> &model_coefficients, const int &polynomial_order)
   {
-    robot_msgs::Point32 axis;   // axis direction vector
-    robot_msgs::Point32 point0; // point on axis
+    geometry_msgs::Point32 axis;   // axis direction vector
+    geometry_msgs::Point32 point0; // point on axis
     axis.x = model_coefficients[3] - model_coefficients[0];
     axis.y = model_coefficients[4] - model_coefficients[1];
     axis.z = model_coefficients[5] - model_coefficients[2];
@@ -374,7 +376,7 @@ ROS_WARN ("%f %f", X, Y);
       // perpendicular to the axis of rotation 
       // (not orthogonal to the surface)
       if (fabs (/*cloud_geometry::distances::*/
-                pointToRotationalDistance (cloud_->pts.at (indices_[i]), model_coefficients, polynomial_order)
+                pointToRotationalDistance (cloud_->points.at (indices_[i]), model_coefficients, polynomial_order)
                ) < threshold)
       {
         // Returns the indices of the points whose distances are smaller than the threshold
@@ -402,7 +404,7 @@ ROS_WARN ("%f %f", X, Y);
       //dist(point,cylinder_axis) and cylinder radius
       // NOTE: need to revise this.
       distances[i] = fabs (/*cloud_geometry::distances::*/
-                 pointToRotationalDistance (cloud_->pts.at (indices_[i]), model_coefficients, polynomial_order));
+                 pointToRotationalDistance (cloud_->points.at (indices_[i]), model_coefficients, polynomial_order));
     return;
   }
 
@@ -460,7 +462,7 @@ ROS_WARN ("%f %f", X, Y);
       if (nz_idx_ == -1) return (false);
     }
     
-    robot_msgs::Point32 centroid;
+    geometry_msgs::Point32 centroid;
     cloud_geometry::nearest::computeCentroid (*cloud_, samples, centroid);
 
     // use the centroid as an initial guess for a point on the axis,
@@ -475,19 +477,19 @@ ROS_WARN ("%f %f", X, Y);
 
     Point32 p1;
     Point32 p2;
-    robot_msgs::Polygon3D polygon;
+    geometry_msgs::Polygon3D polygon;
     for (unsigned int i = 0; i < samples.size(); i++)
     {
     polygon.points.clear();
-      polygon.points.push_back ( cloud_->pts[samples[i]] );
-      p1.x = 0.2*cloud_->chan[nx_idx_].vals[samples[i]] + cloud_->pts[samples[i]].x;
-      p1.y = 0.2*cloud_->chan[ny_idx_].vals[samples[i]] + cloud_->pts[samples[i]].y;
-      p1.z = 0.2*cloud_->chan[nz_idx_].vals[samples[i]] + cloud_->pts[samples[i]].z;
+      polygon.points.push_back ( cloud_->points[samples[i]] );
+      p1.x = 0.2*cloud_->channels[nx_idx_].values[samples[i]] + cloud_->points[samples[i]].x;
+      p1.y = 0.2*cloud_->channels[ny_idx_].values[samples[i]] + cloud_->points[samples[i]].y;
+      p1.z = 0.2*cloud_->channels[nz_idx_].values[samples[i]] + cloud_->points[samples[i]].z;
       polygon.points.push_back ( p1 );
       pmap.polygons.push_back (polygon);
-      pmap.chan[0].vals.push_back (0);
-      pmap.chan[1].vals.push_back (0);
-      pmap.chan[2].vals.push_back (0);
+      pmap.channels[0].values.push_back (0);
+      pmap.channels[1].values.push_back (0);
+      pmap.channels[2].values.push_back (0);
     }
 
 //     p1.x = model_coefficients_[0];
@@ -499,9 +501,9 @@ ROS_WARN ("%f %f", X, Y);
 //     polygon.points.push_back (p1);
 //     polygon.points.push_back (p2);
 //     pmap.polygons.push_back (polygon);
-//     pmap.chan[0].vals.push_back (0);
-//     pmap.chan[1].vals.push_back (0);
-//     pmap.chan[2].vals.push_back (0);
+//     pmap.channels[0].vals.push_back (0);
+//     pmap.channels[1].vals.push_back (0);
+//     pmap.channels[2].vals.push_back (0);
 
     refitAxis (samples, model_coefficients_);
     p1.x = model_coefficients_[0];
@@ -514,9 +516,9 @@ ROS_WARN ("%f %f", X, Y);
     polygon.points.push_back (p1);
     polygon.points.push_back (p2);
     pmap.polygons.push_back (polygon);
-    pmap.chan[0].vals.push_back (1);
-    pmap.chan[1].vals.push_back (1);
-    pmap.chan[2].vals.push_back (1);
+    pmap.channels[0].values.push_back (1);
+    pmap.channels[1].values.push_back (1);
+    pmap.channels[2].values.push_back (1);
 //    pmap.polygons.resize (pmap.polygons.size()+1);
 //     pmap.polygons[(pmap.polygons.size()-1)].push_back (p1);
 //     pmap.polygons[(pmap.polygons.size()-1)].push_back (p2);
@@ -525,8 +527,8 @@ ROS_WARN ("%f %f", X, Y);
     Eigen::VectorXf b = Eigen::VectorXf (polynomial_order + 1);
     Eigen::VectorXf x;
 
-    robot_msgs::Point32 axis;   // axis direction vector
-    robot_msgs::Point32 point0; // point on axis
+    geometry_msgs::Point32 axis;   // axis direction vector
+    geometry_msgs::Point32 point0; // point on axis
     axis.x = model_coefficients_[3] - model_coefficients_[0];
     axis.y = model_coefficients_[4] - model_coefficients_[1];
     axis.z = model_coefficients_[5] - model_coefficients_[2];
@@ -540,11 +542,11 @@ ROS_WARN ("%f %f", X, Y);
 
     for (int d1 = 0; d1 < polynomial_order + 1; d1++)
     {
-      double x = (cloud_geometry::dot (cloud_->pts.at (samples.at (d1)), axis) 
+      double x = (cloud_geometry::dot (cloud_->points.at (samples.at (d1)), axis) 
                 - cloud_geometry::dot (point0, axis)) 
                 / cloud_geometry::dot (axis, axis);
       x = x - k0;
-      b[d1] = cloud_geometry::distances::pointToLineDistance (cloud_->pts.at (samples.at (d1)), point0, axis);
+      b[d1] = cloud_geometry::distances::pointToLineDistance (cloud_->points.at (samples.at (d1)), point0, axis);
       for (int d2 = 0; d2 < polynomial_order + 1; d2++)
         A(d2,d1) = pow (x, (double) d2);
     }
@@ -628,13 +630,13 @@ void
 
     for (int i = 0; i < m; i++)
     {
-      point_normal_line[0] = d->cloud->pts[d->samples.at(i)].x;
-      point_normal_line[1] = d->cloud->pts[d->samples.at(i)].y;
-      point_normal_line[2] = d->cloud->pts[d->samples.at(i)].z;
+      point_normal_line[0] = d->cloud->points[d->samples.at(i)].x;
+      point_normal_line[1] = d->cloud->points[d->samples.at(i)].y;
+      point_normal_line[2] = d->cloud->points[d->samples.at(i)].z;
       
-      point_normal_line[3] = d->cloud->chan[d->nx_idx_].vals[d->samples.at(i)];
-      point_normal_line[4] = d->cloud->chan[d->ny_idx_].vals[d->samples.at(i)];
-      point_normal_line[5] = d->cloud->chan[d->nz_idx_].vals[d->samples.at(i)];
+      point_normal_line[3] = d->cloud->channels[d->nx_idx_].values[d->samples.at(i)];
+      point_normal_line[4] = d->cloud->channels[d->ny_idx_].values[d->samples.at(i)];
+      point_normal_line[5] = d->cloud->channels[d->nz_idx_].values[d->samples.at(i)];
       
       double ll = LineToLineDistance (rot_coeff, point_normal_line, 1e-5); 
       X[i] = ll * ll;
@@ -737,7 +739,7 @@ void
 
     for (int i = 0; i < m; i++)
       // dist = f - r
-      fvec[i] = pointToRotationalDistance (model->cloud_->pts[model->tmp_inliers_->at (i)], rot_coeff, model->polynomial_order) - x[6];
+      fvec[i] = pointToRotationalDistance (model->cloud_->points[model->tmp_inliers_->at (i)], rot_coeff, model->polynomial_order) - x[6];
 
     return (0);
   }
@@ -755,18 +757,18 @@ void
 
     for (int i = 0; i < m; i++)
     {
-      point_normal_line[0] = model->cloud_->pts[model->tmp_inliers_->at(i)].x;
-      point_normal_line[1] = model->cloud_->pts[model->tmp_inliers_->at(i)].y;
-      point_normal_line[2] = model->cloud_->pts[model->tmp_inliers_->at(i)].z;
+      point_normal_line[0] = model->cloud_->points[model->tmp_inliers_->at(i)].x;
+      point_normal_line[1] = model->cloud_->points[model->tmp_inliers_->at(i)].y;
+      point_normal_line[2] = model->cloud_->points[model->tmp_inliers_->at(i)].z;
       
-      point_normal_line[3] = model->cloud_->chan[model->nx_idx_].vals[model->tmp_inliers_->at(i)];
-      point_normal_line[4] = model->cloud_->chan[model->ny_idx_].vals[model->tmp_inliers_->at(i)];
-      point_normal_line[5] = model->cloud_->chan[model->nz_idx_].vals[model->tmp_inliers_->at(i)];
+      point_normal_line[3] = model->cloud_->channels[model->nx_idx_].values[model->tmp_inliers_->at(i)];
+      point_normal_line[4] = model->cloud_->channels[model->ny_idx_].values[model->tmp_inliers_->at(i)];
+      point_normal_line[5] = model->cloud_->channels[model->nz_idx_].values[model->tmp_inliers_->at(i)];
       
       double ll = 100.0*LineToLineDistance (rot_coeff, point_normal_line, 1e-5); 
       // dist = f - r
       fvec[i] = ll * ll;
-//       fvec[i] = pointToRotationalDistance (model->cloud_->pts[model->tmp_inliers_->at (i)], rot_coeff, model->polynomial_order) - x[6];
+//       fvec[i] = pointToRotationalDistance (model->cloud_->points[model->tmp_inliers_->at (i)], rot_coeff, model->polynomial_order) - x[6];
     }
 
     return (0);
@@ -785,7 +787,7 @@ void
       //dist(point,cylinder_axis) and cylinder radius
       // NOTE: need to revise this.
       if (fabs (
-                cloud_geometry::distances::pointToLineDistance (cloud_->pts.at (*it), model_coefficients_) - model_coefficients_[6]
+                cloud_geometry::distances::pointToLineDistance (cloud_->points.at (*it), model_coefficients_) - model_coefficients_[6]
                ) > threshold)
         return (false);
 

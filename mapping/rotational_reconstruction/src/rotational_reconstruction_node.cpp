@@ -39,7 +39,8 @@
 #include <ros/node.h>
 #include <ros/node_handle.h>
 // ROS messages
-#include <robot_msgs/PointCloud.h>
+#include <geometry_msgs/Point32.h>
+#include <sensor_msgs/PointCloud.h>
 #include <mapping_msgs/PolygonalMap.h>
 
 // Sample Consensus
@@ -71,12 +72,12 @@
 using namespace std;
 using namespace ros;
 using namespace std_msgs;
-using namespace robot_msgs;
+using namespace sensor_msgs;
 using namespace mapping_msgs;
 using namespace perception_srvs;
 using namespace perception_msgs;
 using namespace sample_consensus;
-
+using namespace geometry_msgs;
 
 void
   findRotationalObjects (PointCloud cloud, std::vector<std::vector<std::vector<bool> > > freevoxels, double threshold_, double probability_, int max_iterations_, PointCloud &cloud_synth, Point32 min, Point32 ndivs, Point32 leaf_width, mapping_msgs::PolygonalMap &pmap)
@@ -227,7 +228,7 @@ class RotationalReconstructionService
       }
       
       perception_msgs::VoxelList vl = srv.response.vlist;
-      std::vector<robot_msgs::PointCloud> clusters = srv.response.clusters;
+      std::vector<PointCloud> clusters = srv.response.clusters;
       std::vector<perception_msgs::Voxel> voxels = vl.voxels;
 
       Point32 min = vl.min;
@@ -255,23 +256,23 @@ class RotationalReconstructionService
       
       cloud_synth.header.frame_id = global_frame_; 
       cloud_synth.header.stamp = ros::Time::now ();
-      cloud_synth.set_chan_size (1);
-      cloud_synth.chan[0].name = "intensities";
+      cloud_synth.channels.resize (1);
+      cloud_synth.channels[0].name = "intensities";
       
       cloud.header.frame_id = global_frame_; 
       cloud.header.stamp = ros::Time::now ();
-      cloud.set_pts_size (voxels.size());
-      cloud.set_chan_size (1);
-      cloud.chan[0].name = "intensities";
-      cloud.chan[0].vals.resize(voxels.size ());
+      cloud.points.resize (voxels.size());
+      cloud.channels.resize (1);
+      cloud.channels[0].name = "intensities";
+      cloud.channels[0].vals.resize(voxels.size ());
       for (int i = 0; i < (int)voxels.size (); i++)
       {
         xyz = voxels[i];
         
-        cloud.pts[i].x = (((double)xyz.i) + 0.5) * leafwidth.x + min.x;
-        cloud.pts[i].y = (((double)xyz.j) + 0.5) * leafwidth.y + min.y;
-        cloud.pts[i].z = (((double)xyz.k) + 0.5) * leafwidth.z + min.z;
-        cloud.chan[0].vals[i] = 1.0;
+        cloud.points[i].x = (((double)xyz.i) + 0.5) * leafwidth.x + min.x;
+        cloud.points[i].y = (((double)xyz.j) + 0.5) * leafwidth.y + min.y;
+        cloud.points[i].z = (((double)xyz.k) + 0.5) * leafwidth.z + min.z;
+        cloud.channels[0].values[i] = 1.0;
 
          
         ROS_INFO ("accessing lookup grid cell <%i, %i, %i>", xyz.i, xyz.j, xyz.k);
@@ -285,9 +286,9 @@ class RotationalReconstructionService
       pmap.header.frame_id = global_frame_;
       pmap.header.stamp = ros::Time::now ();
       pmap.set_chan_size (3);
-      pmap.chan[0].name = "r";
-      pmap.chan[1].name = "g";
-      pmap.chan[2].name = "b";
+      pmap.channels[0].name = "r";
+      pmap.channels[1].name = "g";
+      pmap.channels[2].name = "b";
 
       // init all ransac related classes
       std::vector<int> inliers;
@@ -301,7 +302,7 @@ class RotationalReconstructionService
         ROS_INFO ("finding rot. objects");
         findRotationalObjects (cur_cloud, lookup_v, thresh_, 0.99, 1000, cloud_synth, min, size, leafwidth, pmap);
 //          for (int j = 0; j < cur_cloud.pts.size(); j++)
-//            cloud.pts.push_back (cur_cloud.pts[j]);
+//            cloud.pts.push_back (cur_cloud.points[j]);
 //         model->setOccupancyLookup (lookup_v);
 //         model->setDataSet (&cur_cloud);
 //         if (sac->computeModel (0))
