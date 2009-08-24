@@ -7,7 +7,7 @@
   <review status="" notes=""/>
   <url></url>
   <depend package="std_msgs" />
-  <depend package="robot_msgs" />
+  <depend package="geometry_msgs" />
   <export>
     <cpp cflags="-I${prefix}/msg/cpp"/>
   </export>
