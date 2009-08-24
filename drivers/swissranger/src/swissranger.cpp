@@ -31,6 +31,8 @@
 
 #include "swissranger.h"
 
+using namespace sensor_msgs;
+
 //! Macro for throwing an exception with a message
 #define SR_EXCEPT(except, msg) \
   { \
@@ -123,7 +125,7 @@ int
 ////////////////////////////////////////////////////////////////////////////////
 // Read data from the device
 void
-  swissranger::SwissRanger::readData (robot_msgs::PointCloud &cloud, deprecated_msgs::ImageArray &images)
+  swissranger::SwissRanger::readData (PointCloud &cloud, deprecated_msgs::ImageArray &images)
 {
   if (srCam_ == NULL)
     SR_EXCEPT(swissranger::Exception, "Read attempted on NULL camera port!");
@@ -144,21 +146,21 @@ void
   res = SR_CoordTrfFlt (srCam_, xp_, yp_, zp_, sizeof (float), sizeof (float), sizeof (float));
 
   // Filter points
-  cloud.set_pts_size (imgEntryArray_->width * imgEntryArray_->height);
-  cloud.set_chan_size (2);
-  cloud.chan[0].name = "confidence";
-  cloud.chan[0].set_vals_size (imgEntryArray_->width * imgEntryArray_->height);
-  cloud.chan[1].name = "intensity";
-  cloud.chan[1].set_vals_size (imgEntryArray_->width * imgEntryArray_->height);
+  cloud.points.resize (imgEntryArray_->width * imgEntryArray_->height);
+  cloud.channels.resize (2);
+  cloud.channels[0].name = "confidence";
+  cloud.channels[0].values.resize (imgEntryArray_->width * imgEntryArray_->height);
+  cloud.channels[1].name = "intensity";
+  cloud.channels[1].values.resize (imgEntryArray_->width * imgEntryArray_->height);
   
   // Fill in the ROS PointCloud message
   for (int i = 0; i < imgEntryArray_->width * imgEntryArray_->height; i++)
   {
-    cloud.pts[i].x = xp_[i];
-    cloud.pts[i].y = yp_[i];
-    cloud.pts[i].z = zp_[i];
-    cloud.chan[0].vals[i] = (confidence_image[i * 2 + 0] << 0) + (confidence_image[i * 2 + 1] << 8);
-    cloud.chan[1].vals[i] = (amplitude_image[i * 2 + 0] << 0) + (amplitude_image[i * 2 + 1] << 8);
+    cloud.points[i].x = xp_[i];
+    cloud.points[i].y = yp_[i];
+    cloud.points[i].z = zp_[i];
+    cloud.channels[0].values[i] = (confidence_image[i * 2 + 0] << 0) + (confidence_image[i * 2 + 1] << 8);
+    cloud.channels[1].values[i] = (amplitude_image[i * 2 + 0] << 0) + (amplitude_image[i * 2 + 1] << 8);
   }
   
   images.set_images_size (3);

@@ -48,7 +48,7 @@
 #include <libusbSR.h>
 
 // ROS include
-#include <robot_msgs/PointCloud.h>
+#include <sensor_msgs/PointCloud.h>
 #include <deprecated_msgs/ImageArray.h>
 #include <ros/common.h>
 
@@ -80,7 +80,7 @@ namespace swissranger
       int open ();
       int close ();
 
-      void readData (robot_msgs::PointCloud &cloud, deprecated_msgs::ImageArray &images);
+      void readData (sensor_msgs::PointCloud &cloud, deprecated_msgs::ImageArray &images);
 
       int setAutoIllumination (bool on);
       int setIntegrationTime (int time);
