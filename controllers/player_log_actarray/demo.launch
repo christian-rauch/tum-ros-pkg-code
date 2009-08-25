@@ -1,4 +1,5 @@
 <launch>
+  <node pkg="player_log_actarray" type="start-player.sh" name="start-player.sh" output="screen" args="$(find player_log_actarray)/player-demo.cfg" />
   <node pkg="player_log_actarray" type="actarray_cloud_assembler" name="actarray_cloud_assembler" output="screen">
     <!-- Translation values for our SICK LMS 400 with respect to the rotation origin -->
     <param name="translations_x" value="0.097" />
@@ -30,8 +31,8 @@
     <param name="left" type="bool" value="true" />
   </node>
 
-  <node pkg="point_cloud_mapping" type="player_laser_log_to_msg" name="player_laser_log_to_msg" output="screen" args="$(find player_log_actarray)/demo.log 1" />
-  <node pkg="player_log_actarray" type="player_actarray_log_to_msg" name="player_actarray_log_to_msg" output="screen" args="$(find player_log_actarray)/demo.log 1">
+  <node pkg="point_cloud_mapping" type="player_laser_log_to_msg" name="player_laser_log_to_msg" output="screen" args="$(find player_log_actarray)/demo.log 0" />
+  <node pkg="player_log_actarray" type="player_actarray_log_to_msg" name="player_actarray_log_to_msg" output="screen" args="$(find player_log_actarray)/demo.log 0">
     <param name="joints_to_publish" value="6" />
   </node>
 
