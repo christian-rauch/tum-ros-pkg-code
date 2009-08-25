@@ -1,5 +1,5 @@
 <launch>
-  <node pkg="player_log_actarray" type="start-player.sh" name="start-player.sh" output="screen" args="$(find player_log_actarray)/player-demo.cfg" />
+  <node pkg="player_log_actarray" type="start-player.sh" name="demo/start-player-server.sh" output="screen" args="$(find player_log_actarray)/demo/player-demo.cfg" />
   <node pkg="player_log_actarray" type="actarray_cloud_assembler" name="actarray_cloud_assembler" output="screen">
     <!-- Translation values for our SICK LMS 400 with respect to the rotation origin -->
     <param name="translations_x" value="0.097" />

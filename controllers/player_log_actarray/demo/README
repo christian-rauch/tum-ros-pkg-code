@@ -1,0 +1,17 @@
+##Short instruction on how to get LaserScan message(s)
+##from following player interfaces:
+##	-actarray
+##	-laser
+##Player project: (http://playerstage.sourceforge.net/).
+1)Run script: "./start-all.sh"
+This  -resets player's log file (demo.log), 
+      -starts player server (using player-demo.cfg)
+      -starts ros nodes (defined in demo.launch)
+
+2)Run script "./start-player-client.sh"
+This fires up player client controlling the PowerCube arm and
+a laser scanner of choice. Follow the instruction in an interactive 
+console to proceed with logging, sweeping and scanning.
+
+3)Run "rosrun rviz rviz"
+and subscribe to the topic laser_scan
