@@ -7,7 +7,7 @@
 on robot with PowerCube modular arms. Check that working
 version of player is installed: "which player"
 
-1)Do cd laser_sweep_client && make 
+1)Do cd laser_sweep_client && make && cd ..
 
 2)Run script: "./start-all.sh"
 This  -resets player's log file (demo.log), 
