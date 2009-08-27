@@ -99,7 +99,7 @@ namespace sick_lms400
 
       int EnableRIS (int onoff);
       int SetMeanFilterParameters (int num_scans);
-      int SetRangeFilterParameters (float *ranges);
+      int SetRangeFilterParameters (float range_min, float range_max);
       int EnableFilters (int filter_mask);
 
       // turns a string holding an ip address into long

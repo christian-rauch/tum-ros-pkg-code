@@ -133,16 +133,16 @@ int
 ////////////////////////////////////////////////////////////////////////////////
 // Set the range filter parameters
 int
-  sick_lms400::SickLMS400::SetRangeFilterParameters (float *ranges)
+  sick_lms400::SickLMS400::SetRangeFilterParameters (float range_min, float range_max)
 {
   char cmd[CMD_BUFFER_SIZE];
-  snprintf (cmd, CMD_BUFFER_SIZE, "sWN FLrang %+f %+f", ranges[0], ranges[1]);
+  snprintf (cmd, CMD_BUFFER_SIZE, "sWN FLrang %+f %+f", (float)range_min, (float)range_max);
   SendCommand (cmd);
 
   if (ReadAnswer () != 0)
     return (-1);
-  RangeFilterBottomLimit_ = ranges[0];
-  RangeFilterTopLimit_    = ranges[1];
+  RangeFilterBottomLimit_ = range_min;
+  RangeFilterTopLimit_    = range_max;
   return (0);
 }
 
@@ -305,7 +305,7 @@ int
 // Set the laser angular resolution. Requires userlevel 2. Unused for now.
 int
   sick_lms400::SickLMS400::SetAngularResolution (const char* password, float ang_res,
-                                    float angle_start, float angle_range)
+                                                 float angle_start, float angle_range)
 {
   char cmd[CMD_BUFFER_SIZE];
   snprintf (cmd, CMD_BUFFER_SIZE, "sMN mSCconfigbyang 04 %s %+f 01 %+f %+f",
@@ -350,13 +350,13 @@ int
     long int sf = strtol (strtok (NULL, " "), NULL, 16);
     long int re = strtol (strtok (NULL, " "), NULL, 16);
 
-    if ((ErrorCode != 0) && (verbose_))
+    if ((ErrorCode != 0) && (verbose_ > 0))
       printf (">> Warning: got an error code %d\n", ErrorCode);
 
     scanning_frequency_ = sf;
     resolution_         = re;
 
-    if (verbose_)
+    if (verbose_ > 0)
       printf (">> Measured value quality is: %ld [5-10]\n",
         strtol (strtok (NULL, " "), NULL, 16));
   }
@@ -394,7 +394,7 @@ sensor_msgs::LaserScan
   memset (buffer_, 0, 256);
   if (!MeasurementQueue_->empty ())
   {
-    if (verbose_)
+    if (verbose_ > 0)
       ROS_DEBUG (">>> Reading from queue...\n");
     memcpy (buffer_, (char*) MeasurementQueue_->front ().string, MeasurementQueue_->front ().length + 1);
     free (MeasurementQueue_->front ().string);
@@ -407,13 +407,13 @@ sensor_msgs::LaserScan
     n_ = read (sockfd_, buffer_, 8);
     if (n_ < 0)
     {
-      if (verbose_)
+      if (verbose_ > 0)
         ROS_DEBUG (">>> E: error reading from socket!\n");
       return (scan);
     }
     if (buffer_[0] != 0x02 || buffer_[1] != 0x02 || buffer_[2] != 0x02 || buffer_[3] != 0x02)
     {
-      if (verbose_)
+      if (verbose_ > 0)
         ROS_DEBUG (">>> E: error expected 4 bytes STX's!\n");
       n_ = read (sockfd_, buffer_, 255);
       return (scan);
@@ -440,7 +440,8 @@ sensor_msgs::LaserScan
 
     if (cs_calc != cs_read)
     {
-      if (verbose_) printf (">>> E: checksums do not match!\n");
+      if (verbose_ > 0)
+        ROS_WARN (">>> E: checksums do not match!\n");
       return (scan);
     }
   }
@@ -455,8 +456,8 @@ sensor_msgs::LaserScan
   //float scanning_frequency = meas_header.ScanningFrequency;
 
   if (verbose_ == 2)
-    ROS_DEBUG (">>> Reading %d values from %f to %f\n", meas_header.NumberMeasuredValues, meas_header.StartingAngle / 10000.0,
-    ((float) meas_header.NumberMeasuredValues) * resolution + min_angle);
+    ROS_DEBUG (">>> Reading %d values from %f to %f", meas_header.NumberMeasuredValues, meas_header.StartingAngle / 10000.0,
+               ((float) meas_header.NumberMeasuredValues) * resolution + min_angle);
 
   uint16_t distance;
   uint8_t remission;
@@ -466,7 +467,7 @@ sensor_msgs::LaserScan
   scan.angle_min       = angles::from_degrees (min_angle);
   scan.angle_max       = angles::from_degrees (max_angle);
   scan.angle_increment = angles::from_degrees (resolution);
-  scan.range_max       = 0.7;
+  scan.range_min       = 0.7;
   scan.range_max       = 3.6;
   scan.ranges.resize (meas_header.NumberMeasuredValues);
   scan.intensities.resize (meas_header.NumberMeasuredValues);
@@ -474,7 +475,7 @@ sensor_msgs::LaserScan
   memcpy (&scan.scan_time, &buffer_[sizeof(MeasurementHeader_t) + meas_header.NumberMeasuredValues * 3 + 14], 2);
 
   // Parse the read buffer and copy values into our distance/intensity buffer
-  for (int i = 0; i < meas_header.NumberMeasuredValues ; i++)
+  for (int i = 0; i < meas_header.NumberMeasuredValues; i++)
   {
     if (meas_header.Format == 0x20 || meas_header.Format == 0x21)
     {
@@ -490,8 +491,11 @@ sensor_msgs::LaserScan
     scan.intensities[i] = remission * meas_header.RemissionScaling;
 
     if (verbose_ == 2)
-      ROS_DEBUG (" >>> [%i] dist: %i\t remission: %i\n", i, distance * meas_header.DistanceScaling, remission * meas_header.RemissionScaling);
+      ROS_DEBUG (" >>> [%i] dist: %i\t remission: %i", i, distance * meas_header.DistanceScaling, remission * meas_header.RemissionScaling);
   }
+
+  scan.header.frame_id = "FRAMEID_LASER";
+  scan.header.stamp = ros::Time::now ();
 
   return (scan);
 }
@@ -513,7 +517,7 @@ int
 int
   sick_lms400::SickLMS400::SendCommand (const char* cmd)
 {
-  if (verbose_)
+  if (verbose_ > 0)
     ROS_DEBUG (">> Sent: \"%s\"\n", cmd);
   AssembleCommand ((unsigned char *) cmd, strlen (cmd));
 
@@ -536,7 +540,7 @@ int
 
   if (buffer_[0] != 0x02 || buffer_[1] != 0x02 || buffer_[2] != 0x02 || buffer_[3] != 0x02)
   {
-    if (verbose_)
+    if (verbose_ > 0)
       ROS_WARN ("> E: expected 4 bytes STX's!");
     n_ = read (sockfd_, buffer_, 255);
     return (-1);
@@ -552,7 +556,7 @@ int
   } while (current < length);
 
   bufferlength_ = length;
-  if ((verbose_) && (buffer_[0] != 0x20))
+  if ((verbose_ > 0) && (buffer_[0] != 0x20))
     ROS_DEBUG (">> Received: \"%s\"\n", buffer_);
 
   // Check for error
@@ -577,7 +581,8 @@ int
     return (ReadResult ());
   else if (bufferlength_ > sizeof (MeasurementHeader_t))
   {
-    if (verbose_) ROS_DEBUG (">>>> ReadResult: probably found a data packet!\n>>>>             %s\n", buffer_);
+    if (verbose_ > 0)
+      ROS_DEBUG (">>>> ReadResult: probably found a data packet!\n>>>>             %s\n", buffer_);
     // Don't throw away our precious measurement, queue it for later use :)
     unsigned char* tmp = (unsigned char*) malloc (bufferlength_ + 1);
     memcpy (tmp, buffer_, bufferlength_ + 1);

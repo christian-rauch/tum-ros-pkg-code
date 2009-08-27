@@ -3,6 +3,7 @@
   <author>Radu Bogdan Rusu (rusu@cs.tum.edu)</author>
   <license>BSD</license>
   <depend package="roscpp" />
+  <depend package="geometry_msgs" />
   <depend package="sensor_msgs" />
   <depend package="angles" />
 </package>
