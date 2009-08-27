@@ -63,10 +63,10 @@ namespace sample_consensus
       //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
       /** \brief Constructor for base SACModelRotational. */
       SACModelRotational (std::vector<std::vector<std::vector<bool> > > &free_voxels, geometry_msgs::Point32 min, geometry_msgs::Point32 ndivs, geometry_msgs::Point32 leaf_width, mapping_msgs::PolygonalMap &polymap) 
-        : occupancy_min(min)
+        : pmap (polymap)
+        , occupancy_min(min)
         , occupancy_ndivs(ndivs)
         , occupancy_leaf_width(leaf_width)
-        , pmap (polymap)
         , occupancy_lookup (free_voxels)
         { nx_idx_ = ny_idx_ = nz_idx_ = -1; polynomial_order = 3; }
 
@@ -93,7 +93,9 @@ namespace sample_consensus
       virtual bool computeModelCoefficients (const std::vector<int> &samples);
 
       virtual void refitModel (const std::vector<int> &inliers, std::vector<double> &refit_coefficients);
-      virtual void refitAxis (const std::vector<int> &inliers, std::vector<double> &refit_coefficients);
+      virtual void refitModelNoAxis (const std::vector<int> &inliers, std::vector<double> &refit_coefficients);
+      virtual bool refitAxis (const std::vector<int> &inliers, std::vector<double> &refit_coefficients);
+      virtual void refitAxisGoodLevmar (const std::vector<int> &inliers, std::vector<double> &refit_coefficients);
       virtual void getDistancesToModel (const std::vector<double> &model_coefficients, std::vector<double> &distances);
       virtual void selectWithinDistance (const std::vector<double> &model_coefficients, double threshold, std::vector<int> &inliers);
 
@@ -102,6 +104,7 @@ namespace sample_consensus
       virtual void projectPointsInPlace (const std::vector<int> &inliers, const std::vector<double> &model_coefficients);
       virtual bool doSamplesVerifyModel (const std::set<int> &indices, double threshold);
 
+      static int functionToOptimizeNoAxis (void *p, int m, int n, const double *x, double *fvec, int iflag);
       static int functionToOptimize (void *p, int m, int n, const double *x, double *fvec, int iflag);
       static int functionToOptimizeAxis (void *p, int m, int n, const double *x, double *fvec, int iflag);
 
@@ -112,6 +115,7 @@ namespace sample_consensus
       bool freespace (geometry_msgs::Point32 p);
       double computeScore (const std::vector<double> &modelCoefficients, std::pair<double,double> minmaxK, std::vector<int> inliers, sensor_msgs::PointCloud &cloud_synth, double threshold);
 
+      mapping_msgs::PolygonalMap &pmap;
     private:
       /** \brief The order of the polynomial to be fitted */
       int polynomial_order;
@@ -122,8 +126,17 @@ namespace sample_consensus
       geometry_msgs::Point32 occupancy_min;
       geometry_msgs::Point32 occupancy_ndivs;
       geometry_msgs::Point32 occupancy_leaf_width;
-      mapping_msgs::PolygonalMap &pmap;
       std::vector<std::vector<std::vector<bool> > > &occupancy_lookup;
+  };
+  /// General datastructure for passing points and samples to the LM optimizer
+  struct LMStrucData
+  {
+    SACModelRotational *model;
+    robot_msgs::PointCloud *cloud;
+    std::vector<int> samples;
+    int nx_idx_;
+    int ny_idx_;
+    int nz_idx_;
   };
 }
 #endif
