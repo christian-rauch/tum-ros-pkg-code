@@ -35,7 +35,7 @@
 
 \author Radu Bogdan Rusu
 
-@b rotating_dp_ptu controls a PTU D47 Directed Perception unit.
+@b rotating_dp_ptu controls a PTU D47 Directed Perception unit and a SICK LMS400 to acquire dense 3D point cloud data automatically.
 
  **/
 
@@ -44,15 +44,12 @@
 // ROS messages
 #include <sensor_msgs/PointCloud.h>
 #include <sensor_msgs/LaserScan.h>
-#include <tf/transform_broadcaster.h>
-#include <angles/angles.h>
-#include <Eigen/Core>
 
 #include <fstream>
 #include <boost/algorithm/string.hpp>
 #include <boost/thread/mutex.hpp>
 
-#include <list>
+#include <mapping_srvs/Ptu.h>
 
 using namespace std;
 using namespace ros;
@@ -61,10 +58,7 @@ using namespace sensor_msgs;
 class RotatingDPPTU
 {
   protected:
-    string tf_frame_;
     NodeHandle nh_;
-    tf::TransformBroadcaster broadcaster_;
-    tf::Stamped<tf::Transform> transform_;
     boost::mutex s_lock_, a_lock_;
 
     int total_laser_scans_;
@@ -77,57 +71,63 @@ class RotatingDPPTU
 
     Publisher cloud_pub_;
 
+    ServiceClient ptu_serv_;
+
     // Parameters
-    Eigen::Vector4d translation_;
     double min_distance_, max_distance_, laser_min_angle_, laser_max_angle_;
     bool left_arm_;
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    RotatingDPPTU () : tf_frame_ ("laser_tilt_mount_link"),
-                                transform_ (btTransform (btQuaternion (0, 0, 0), btVector3 (0, 0, 0)), Time::now (), tf_frame_, tf_frame_),
-                                total_laser_scans_ (0),
-                                left_arm_ (true)
+    RotatingDPPTU () : total_laser_scans_ (0),
+                       left_arm_ (true)
     {
       nh_.param ("~min_distance", min_distance_, .7);     // minimum distance range to be considered
       nh_.param ("~max_distance", max_distance_, 3.01);   // maximum distance range to be considered
-
-      nh_.param ("~laser_min_angle", laser_min_angle_, DBL_MIN);    // minimum range angle to be considered
-      nh_.param ("~laser_max_angle", laser_max_angle_, DBL_MAX);    // maximum range angle to be considered
-
-      // To make the code general, no translations with respect to the rotation origin are given here as default
-      nh_.param ("~translations_x", translation_ (0), 0.0);
-      nh_.param ("~translations_y", translation_ (1), 0.0);
-      nh_.param ("~translations_z", translation_ (2), 0.0);
-
-      nh_.param ("~left", left_arm_, true);
-      string armDH;
-      ROS_INFO ("Using the following DH parameters for the arm: ");
-      if (left_arm_)
-        nh_.param ("~larm_DH", armDH, string ());
-      else
-        nh_.param ("~rarm_DH", armDH, string ());
 
       //laserscan_sub_ = nh_.subscribe ("/laser_scan", 1000, &RotatingDPPTU::scan_cb, this);
 
       cloud_pub_ = nh_.advertise<PointCloud> ("/tilt_laser_cloud", 1);
 
-      cloud_.header.frame_id = "laser_tilt_mount_link";
-      cloud_.channels.resize (7);
-      cloud_.channels[0].name = "intensity";
-      cloud_.channels[1].name = "distance";
-      cloud_.channels[2].name = "sid";
-      cloud_.channels[3].name = "pid";
-      cloud_.channels[4].name = "vx";
-      cloud_.channels[5].name = "vy";
-      cloud_.channels[6].name = "vz";
-
-      ROS_INFO ("Using the following translation values: %f, %f, %f", translation_ (0), translation_ (1), translation_ (2));
-      first_act_stamp_ = -1.0;
+      ptu_serv_ = nh_.serviceClient<mapping_srvs::Ptu>("get_angle_service");
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     virtual ~RotatingDPPTU () { }
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    bool
+      spin ()
+    {
+      float angle = -100.0;
+      mapping_srvs::Ptu srv;
+      ros::Duration tictoc (1, 0);
+
+      while (true)
+      {
+        // Send a request to the PTU to move
+        srv.request.angle = angle;
+        ptu_serv_.call (srv);
+
+        ROS_INFO ("Setting angle to %f. Sleeping for %f seconds.", angle, tictoc.toSec ());
+        tictoc.sleep ();
+
+        // Trigger the LMS400 to sweep
+         
+
+        // Rotate the point cloud and publish it
+        
+        
+       
+        // Increase angle and repeat
+        angle += 30.0;
+        if (angle >= 180.0)
+          break;
+        ros::spinOnce ();
+      }
+
+      ROS_INFO ("Scanning complete.");
+      return (true);
+    }
 
 };
 
@@ -138,8 +138,7 @@ int
   init (argc, argv, "rotating_dp_ptu");
 
   RotatingDPPTU p;
-  ros::spin ();
-//  p.spin ();
+  p.spin ();
 
   return (0);
 }
