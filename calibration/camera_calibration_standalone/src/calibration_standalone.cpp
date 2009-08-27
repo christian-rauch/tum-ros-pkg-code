@@ -139,9 +139,8 @@ int
   for (int i = 0; i < nr_pairs; i++)
     nums[i] = checkboard.height * checkboard.width;
 
-
-  getExtrinsicBetween ("left", "right", checkboard, inputData, nr_pairs, nums);
-  getExtrinsicBetween ("right", "left", checkboard, inputData, nr_pairs, nums);
+  getExtrinsicBetween ("stoc-left", "stoc-right", checkboard, inputData, nr_pairs, nums);
+  getExtrinsicBetween ("stoc-right", "stoc-left", checkboard, inputData, nr_pairs, nums);
 
   finishUp (inputData);
   return (0);

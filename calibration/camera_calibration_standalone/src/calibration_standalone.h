@@ -548,11 +548,14 @@ int
   cvStereoCalibrate (pleft->objectPoints, pleft->imagePoints, pright->imagePoints,
                      pleft->pointNumbers,
                      pleft->intrinsic, pleft->distortion, pright->intrinsic, pright->distortion,
-                     cvSize (0, 0),
+                     cvGetSize(inputData.at (0).images.at (0)),
                      &LR_Rot, &LR_T, &LR_E, &LR_F,
 
                      cvTermCriteria (CV_TERMCRIT_ITER + CV_TERMCRIT_EPS, 100, 1e-5),
-                     CV_CALIB_FIX_INTRINSIC);
+		     CV_CALIB_USE_INTRINSIC_GUESS +
+		     CV_CALIB_FIX_ASPECT_RATIO +
+		     CV_CALIB_ZERO_TANGENT_DIST +
+		     CV_CALIB_SAME_FOCAL_LENGTH);
 
   /// ---[ Display results
   fprintf (stderr, " Transformation Matrix "); fprintf (stderr, "%s", left.c_str ()); fprintf (stderr, " -> " ); fprintf (stderr, "%s \n", right.c_str ());
