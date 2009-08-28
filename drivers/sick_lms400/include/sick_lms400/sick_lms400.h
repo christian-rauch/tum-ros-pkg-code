@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2009 Radu Bogdan Rusu <rusu -=- cs.tum.edu>
+ * Code based on the LGPL Player SICK LMS400 driver by Nico Blodow and Radu Bogdan Rusu
  *
  * All rights reserved.
  *
