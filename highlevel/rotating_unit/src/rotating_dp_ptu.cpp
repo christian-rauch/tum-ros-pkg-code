@@ -44,16 +44,19 @@
 // ROS messages
 #include <sensor_msgs/PointCloud.h>
 #include <sensor_msgs/LaserScan.h>
-
-#include <fstream>
+#include <geometry_msgs/Point32.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/thread/mutex.hpp>
 
-#include <mapping_srvs/Ptu.h>
+#include <point_cloud_mapping/geometry/nearest.h>
+
+#include <mapping_srvs/RotatePTU.h>
+#include <mapping_srvs/TriggerSweep.h>
 
 using namespace std;
 using namespace ros;
 using namespace sensor_msgs;
+using namespace geometry_msgs;
 
 class RotatingDPPTU
 {
@@ -71,7 +74,7 @@ class RotatingDPPTU
 
     Publisher cloud_pub_;
 
-    ServiceClient ptu_serv_;
+    ServiceClient ptu_serv_, scan_serv_;
 
     // Parameters
     double min_distance_, max_distance_, laser_min_angle_, laser_max_angle_;
@@ -88,36 +91,64 @@ class RotatingDPPTU
 
       cloud_pub_ = nh_.advertise<PointCloud> ("/tilt_laser_cloud", 1);
 
-      ptu_serv_ = nh_.serviceClient<mapping_srvs::Ptu>("get_angle_service");
+      ptu_serv_  = nh_.serviceClient<mapping_srvs::RotatePTU>("get_angle_service");
+      scan_serv_ = nh_.serviceClient<mapping_srvs::TriggerSweep>("trigger_sweep");
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     virtual ~RotatingDPPTU () { }
 
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    void
+      rotateCloudRelative (int relative_angle, const PointCloud &cloud_in, PointCloud &cloud_out)
+    {
+      cloud_out.header = cloud_in.header;
+
+
+      // Demean the point cloud first
+      Point32 centroid;
+      cloud_geometry::nearest::computeCentroid (cloud_in, centroid); 
+      
+      // Rotate it around Z with the given angle
+      //assembleRotationMatrixZ (relative_angle);
+      
+      // Return
+
+    }
+
+
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     bool
       spin ()
     {
-      float angle = -100.0;
-      mapping_srvs::Ptu srv;
+      float angle = -170.0, s_angle = -170.0;
+      mapping_srvs::RotatePTU p_s;
+      mapping_srvs::TriggerSweep s_s;
       ros::Duration tictoc (1, 0);
+
+      PointCloud cloud_r;
 
       while (nh_.ok ())
       {
         // Send a request to the PTU to move
-        srv.request.angle = angle;
-        ptu_serv_.call (srv);
+        p_s.request.angle = angle;
+        ptu_serv_.call (p_s);
 
         ROS_INFO ("Setting angle to %f. Sleeping for %f seconds.", angle, tictoc.toSec ());
         tictoc.sleep ();
 
         // Trigger the LMS400 to sweep
-         
+        scan_serv_.call (s_s);
 
         // Rotate the point cloud and publish it
-        
-        
+        rotateCloudRelative (angle - s_angle, s_s.response.cloud, cloud_r);
        
+        if (cloud_r.points.size () > 0)
+        {
+          cloud_pub_.publish (cloud_r);
+          ROS_INFO ("Publishing cloud with %d points and %d channels on topic %s.", (int)cloud_r.points.size (), (int)cloud_r.channels.size (), cloud_r.header.frame_id.c_str ());
+        }
         // Increase angle and repeat
         angle += 30.0;
         if (angle >= 180.0)
