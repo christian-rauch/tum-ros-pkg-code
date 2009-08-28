@@ -47,7 +47,7 @@
 #include <geometry_msgs/Point32.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/thread/mutex.hpp>
-
+#include <Eigen/Core>
 #include <point_cloud_mapping/geometry/nearest.h>
 
 #include <mapping_srvs/RotatePTU.h>
@@ -100,21 +100,46 @@ class RotatingDPPTU
 
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void
-      rotateCloudRelative (int relative_angle, const PointCloud &cloud_in, PointCloud &cloud_out)
+    Eigen::Matrix3f
+      assembleRotationMatrixZ (float angle)
     {
-      cloud_out.header = cloud_in.header;
+      double cz = cos (angle), sz = sin (angle);
+      Eigen::Matrix3f rot_mat;
+      rot_mat << 
+        cz, -sz, 0, 
+        sz,  cz, 0,
+        0 ,   0, 1;
+      return (rot_mat);
+    }
 
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Rotate a PointCloud relative to the angle of the turning table
+    void
+      rotateCloudRelative (float relative_angle, const PointCloud &cloud_in, PointCloud &cloud_out)
+    {
+      cloud_out.header   = cloud_in.header;
+      cloud_out.channels = cloud_in.channels;
+      cloud_out.points.resize (cloud_in.points.size ());
 
-      // Demean the point cloud first
+      // Demean the point cloud 
       Point32 centroid;
       cloud_geometry::nearest::computeCentroid (cloud_in, centroid); 
       
       // Rotate it around Z with the given angle
-      //assembleRotationMatrixZ (relative_angle);
+      Eigen::Matrix3f rot_mat = assembleRotationMatrixZ (relative_angle);
       
-      // Return
+      for (unsigned int i = 0; i < cloud_in.points.size (); i++)
+      {
+        double cx = cloud_in.points[i].x - centroid.x; 
+        double cy = cloud_in.points[i].y - centroid.y; 
+        double cz = cloud_in.points[i].z - centroid.z; 
 
+        cloud_out.points[i].x = rot_mat (0, 0) * cx + rot_mat (0, 1) * cy + rot_mat (0, 2) * cz;
+        cloud_out.points[i].y = rot_mat (1, 0) * cx + rot_mat (1, 1) * cy + rot_mat (1, 2) * cz;
+        cloud_out.points[i].x = rot_mat (2, 0) * cx + rot_mat (2, 1) * cy + rot_mat (2, 2) * cz;
+      }
+
+      // Fine alignment using LM
     }
 
 
