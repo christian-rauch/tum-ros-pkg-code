@@ -225,19 +225,15 @@ class ActarrayCloudAssembler
           double t0 = (laser_packet->header.stamp - prev_act->header.stamp).toSec ();
           double t1 = (cur_act->header.stamp - prev_act->header.stamp).toSec ();
 
-//           ROS_INFO ("Using %f and %f to interpolate %f", prev_act->header.stamp.toSec (), cur_act->header.stamp.toSec (), laser_packet->header.stamp.toSec ());
           // Interpolate joint values
           for (unsigned int q_idx = 0; q_idx < cur_act->joints.size (); q_idx++)
             q_values[q_idx] = prev_act->joints[q_idx] + t0 * (cur_act->joints[q_idx] - prev_act->joints[q_idx]) / t1;
-//           ROS_INFO ("%f %f %f -> %f", prev_act->joints[4], cur_act->joints[4], q_values[4], laser_packet->header.stamp.toSec ());
 
           found = true;
           break;
         }
 
-/*        ROS_ERROR ("Wrong laser timestamp encountered - ignoring packet with time (%f -> %f-> %f)",
-                    prev_act->header.stamp.toSec (), laser_packet->header.stamp.toSec (), cur_act->header.stamp.toSec ());*/
-        prev_act = cur_act;
+       prev_act = cur_act;
       }
 
       return (found);
@@ -248,59 +244,9 @@ class ActarrayCloudAssembler
     void
       actarray_cb (const PlayerActarrayConstPtr &actarray)
     {
-      ///ROS_INFO ("PlayerActarray (%f) message received with %d joint poses (%d). Number of laser scans in queue = %d.", actarray->header.stamp.toSec (), (int)actarray->joints.size (), (int)actarrays_.size (), (int)scans_.size ());
-/*      if (first_act_stamp_ == -1.0)
-        first_act_stamp_ = actarray->header.stamp.toSec ();
-      // Remove all laserscans with a timestamp smaller than the first actarray packet
-      for (list<LaserScanConstPtr>::iterator it = scans_.begin (); it != scans_.end (); ++it)
-      {
-        LaserScanConstPtr laser_packet = *it;
-        // Check timestamps
-        if (laser_packet->header.stamp.toSec () < first_act_stamp_)
-        {
-//           ROS_WARN ("Removing LaserScan with timestamp %f (minimum actarray is %f -> %f)", laser_packet->header.stamp.toSec (), first_act_stamp_, laser_packet->header.stamp.toSec () - first_act_stamp_);
-//           s_lock_.lock (); it = scans_.erase (it); s_lock_.unlock ();
-        }
-      }*/
-      a_lock_.lock (); actarrays_.push_back (actarray); a_lock_.unlock ();
-
-//       // Need at least 2 values to interpolate
-//       if (actarrays_.size () < 2)
-//         return;
-
-/*      bool found = false;
-      double good_stamp;
-      a_lock_.lock ();
-      if (scans_.size () > 0)
-      {
-//         ROS_WARN ("Actarray buffer size (before): %d", (int)actarrays_.size ());
-        for (vector<PlayerActarrayConstPtr>::reverse_iterator rit = actarrays_.rbegin (); rit != actarrays_.rend (); )
-        {
-          PlayerActarrayConstPtr cur_act = *rit;
-          if (cur_act->header.stamp.toSec () < scans_.front ()->header.stamp.toSec ())
-          {
-            if (found)
-            {
-              vector<PlayerActarrayConstPtr>::iterator it = (++rit).base ();
-//               ROS_ERROR ("Removing %f because it's way smaller than %f (good stamp is %f)", ((PlayerActarrayConstPtr)*it)->header.stamp.toSec (), scans_.front ()->header.stamp.toSec (), good_stamp);
-              actarrays_.erase (it);
-            }
-            else
-            {
-              ++rit;
-              found = true;
-              good_stamp = cur_act->header.stamp.toSec ();
-            }
-          }
-          else
-          {
-//             ROS_INFO ("%f found to be larger", cur_act->header.stamp.toSec ());
-            ++rit;
-          }
-        }
-//         ROS_WARN ("Actarray buffer size (after): %d", (int)actarrays_.size ());
-      }
-      a_lock_.unlock ();*/
+      a_lock_.lock (); 
+      actarrays_.push_back (actarray); 
+      a_lock_.unlock ();
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -309,8 +255,6 @@ class ActarrayCloudAssembler
       scan_cb (const LaserScanConstPtr &scan)
     {
       ++total_laser_scans_;
-      ROS_INFO ("LaserScan (%f) message (%d) received with %d measurements. Current queue size is %d.", scan->header.stamp.toSec (),
-                total_laser_scans_, (int)scan->ranges.size (), (int)scans_.size ());
       s_lock_.lock ();
       scans_.push_back (scan);
       s_lock_.unlock ();
@@ -326,7 +270,7 @@ class ActarrayCloudAssembler
       Eigen::Matrix4d robot_transform;
 
       // Infinite loop
-      while (1)
+      while (nh_.ok ())
       {
         // We need at least 2 actarray values and 1 laser scan to begin
         if (actarrays_.size () < 2 || scans_.size () == 0)
@@ -345,13 +289,8 @@ class ActarrayCloudAssembler
           // Interpolate actarray values
           if (!interpolateActarrayValues (laser_packet, actarrays_, q_values))
           {
-            //ROS_ERROR ("Could not interpolate LaserScan with timestamp %f (minimum actarray is %f)", laser_packet->header.stamp.toSec (), first_act_stamp_);
-            //for (int d = 0; d < actarrays_.size (); d++)
-            //  ROS_WARN ("%f", actarrays_[d]->header.stamp.toSec ());
             ++it;
             continue;
-  //           m_lock_.lock (); scans_.pop_front (); m_lock_.unlock ();
-  //           break;
           }
 
           // Obtain the transformation corresponding to the current joint values
@@ -362,9 +301,7 @@ class ActarrayCloudAssembler
 
           if (vp (0) == vp_old (0) && vp (1) == vp_old (1) && vp (2) == vp_old (2))
           {
-            ROS_WARN ("same viewpoint");
             s_lock_.lock (); it = scans_.erase (it); s_lock_.unlock ();
-  //           ++it;
             continue;
           }
 
@@ -419,7 +356,6 @@ class ActarrayCloudAssembler
 
           if (nr_points == 0)
           {
-            cerr << "nr_points" << endl;
             s_lock_.lock (); it = scans_.erase (it); s_lock_.unlock ();
             continue;
           }
@@ -428,10 +364,10 @@ class ActarrayCloudAssembler
             cloud_.channels[d].values.resize (nr_points);
 
           cloud_.header.stamp = Time::now ();
-          ROS_INFO ("Publishing a PointCloud message (%d) with %d points and %d channels. Queue left: %d.", ++point_cloud_total, (int)cloud_.points.size (), (int)cloud_.channels.size ());
+          ROS_DEBUG ("Publishing a PointCloud message (%d) with %d points and %d channels on topic /%s.", 
+                     ++point_cloud_total, (int)cloud_.points.size (), (int)cloud_.channels.size (), tf_frame_.c_str ());
           cloud_pub_.publish (cloud_);
 
-//         ROS_ERROR ("Erasing %f", ((LaserScanConstPtr)*it)->header.stamp.toSec ());
           s_lock_.lock (); it = scans_.erase (it); s_lock_.unlock ();
         }
         ros::spinOnce ();
@@ -447,7 +383,6 @@ int
   init (argc, argv, "actarray_cloud_assembler");
 
   ActarrayCloudAssembler p;
-//  ros::spin ();
   p.spin ();
 
   return (0);
