@@ -87,8 +87,6 @@ class RotatingDPPTU
       nh_.param ("~min_distance", min_distance_, .7);     // minimum distance range to be considered
       nh_.param ("~max_distance", max_distance_, 3.01);   // maximum distance range to be considered
 
-      //laserscan_sub_ = nh_.subscribe ("/laser_scan", 1000, &RotatingDPPTU::scan_cb, this);
-
       cloud_pub_ = nh_.advertise<PointCloud> ("/tilt_laser_cloud", 1);
 
       ptu_serv_  = nh_.serviceClient<mapping_srvs::RotatePTU>("get_angle_service");
@@ -138,8 +136,6 @@ class RotatingDPPTU
         cloud_out.points[i].y = rot_mat (1, 0) * cx + rot_mat (1, 1) * cy + rot_mat (1, 2) * cz;
         cloud_out.points[i].x = rot_mat (2, 0) * cx + rot_mat (2, 1) * cy + rot_mat (2, 2) * cz;
       }
-
-      // Fine alignment using LM
     }
 
 
