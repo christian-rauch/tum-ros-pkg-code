@@ -320,7 +320,8 @@ class LMS400Node
 
     ////////////////////////////////////////////////////////////////////////////////
     // Spin (!)
-    bool spin ()
+    bool
+      spin ()
     {
       // Start Continous measurements
       lms_.StartMeasurement (intensity_);
