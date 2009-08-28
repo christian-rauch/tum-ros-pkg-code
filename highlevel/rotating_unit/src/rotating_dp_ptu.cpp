@@ -102,7 +102,7 @@ class RotatingDPPTU
       mapping_srvs::Ptu srv;
       ros::Duration tictoc (1, 0);
 
-      while (true)
+      while (nh_.ok ())
       {
         // Send a request to the PTU to move
         srv.request.angle = angle;
