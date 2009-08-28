@@ -218,7 +218,7 @@ void
       } while (true);
 
       PointCloud temp;
-      temp.set_chan_size (1);
+      temp.channels.resize (1);
       double score = sac_model_->computeScore (coeffs, getMinMaxK (cloud, coeffs, inliers) , inliers, temp, threshold_);
       n_inliers_count = ((double)inliers.size ()) * (1.0+score);
 
@@ -250,7 +250,7 @@ void
   {
     if (best_model_type == 0)
     {
-      Polygon3D p;
+      Polygon p;
       cloud_geometry::areas::convexHull2D (cloud, inliers_planes, best_coeffs, p);
       pmap.polygons.push_back (p); 
     }
