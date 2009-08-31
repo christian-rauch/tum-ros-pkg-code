@@ -170,9 +170,18 @@ public:
 		if (argument.find("stop") != -1)
 			stop();
 		if (argument.find("erase") != -1)
-			erase();
-		if (argument.find("eraseTexture") != -1)
+		{		
+		    if (argument.find("eraseTexture") != -1)
+		    {
 			eraseTexture();
+		    }
+		    else
+		    {
+		    	erase();
+		    }
+		}
+		if (argument.find("grabTexture") != -1)
+			grabTexture();
 		if (argument.find("save") != -1)
 			save(argument);		
 		return true;
