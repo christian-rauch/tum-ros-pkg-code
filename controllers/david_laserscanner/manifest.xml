@@ -1,0 +1,16 @@
+<package>
+  <description brief="david_laserscanner">
+
+     david_laserscanner
+
+  </description>
+  <author>andreas</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://pr.willowgarage.com/wiki/david_laserscanner</url>
+  <depend package="roscpp"/>
+  <depend package="perception_srvs"/>
+
+</package>
+
+
