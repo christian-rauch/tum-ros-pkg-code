@@ -12,6 +12,8 @@
   <depend package="tf" />
   <depend package="angles" />
   <depend package="eigen" />
+  <depend package="player_bender_dummy" />
+  <depend package="mapping_srvs" />
 
   <export>
     <cpp cflags="-I${prefix}/msg/cpp"/>

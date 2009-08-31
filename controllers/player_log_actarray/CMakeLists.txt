@@ -10,4 +10,4 @@ rosbuild_genmsg()
 rosbuild_add_executable (bin/player_actarray_log_to_msg src/player_actarray_log_to_msg.cpp)
 rosbuild_add_executable (bin/actarray_cloud_assembler src/actarray_cloud_assembler.cpp)
 #uncomment this line if you are from CS Department IX, TU Munich
-#rosbuild_add_executable (bin/sweep_laser_scan_cli_client demo/laser_sweep_client/sweep_laser_scan_cli_client.c)
+rosbuild_add_executable (bin/sweep_laser_scan_cli_client demo/laser_sweep_client/sweep_laser_scan_cli_client.cpp)
