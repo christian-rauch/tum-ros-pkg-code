@@ -1,0 +1,6 @@
+<launch>
+  <node pkg="david_laserscanner" type="david" name="david" output="screen" respawn="true">
+	<param name="~ip" type="string" value="131.159.18.44"/>
+        <param name="~port" type="string" value="19919"/>
+ </node>
+</launch>

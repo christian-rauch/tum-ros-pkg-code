@@ -30,6 +30,7 @@ private:
 	unsigned int msglen;
 	std::string david_ip;
 	unsigned int port;
+	std::string port_string;
 	std::string argument;
 
 public:
@@ -42,8 +43,10 @@ public:
 
 	///////////////////////////////////////////////////////////////////////////////////////
 	void init()
-	{		
-		service_ = node_handle_.advertiseService("david", &David_service::david, this);	
+	{	
+	  node_handle_.param("~ip",david_ip,string("127.0.0.1"));
+	  node_handle_.param("~port",port_string,string("19919"));
+        	service_ = node_handle_.advertiseService("david", &David_service::david, this);	
 		ROS_INFO("DAVID service has been initialized");	
 	}		
 	///////////////////////////////////////////////////////////////////////////////////////
@@ -126,7 +129,7 @@ public:
 	void connect2David()
 	{		
 		ROS_INFO("Connecting to DAVID...");		
-		getIpPortFromFile("davidIP.conf");
+		//getIpPortFromFile("davidIP.conf");
 		std::string ipInfo = "David IP ";
 		cout << david_ip << ":" << port;		
 		//david_ip = "127.0.0.1";
@@ -136,7 +139,7 @@ public:
 		memset(&server, 0, sizeof(server));       /* Clear struct */
 		server.sin_family = AF_INET;
 		server.sin_addr.s_addr = inet_addr(david_ip.c_str());
-		server.sin_port = htons(port);
+		server.sin_port = htons(atoi(port_string.c_str()));
 		//server.sin_port = htons(atoi("19919"));
 
 		/* Establish connection */
@@ -211,7 +214,7 @@ public:
 int main(int argc, char **argv)
 {
 	//ROS
-	ros::init(argc, argv, "david_service_server");
+	ros::init(argc, argv, "david");
 	ros::NodeHandle n;
 	
 	David_service david(n);		
