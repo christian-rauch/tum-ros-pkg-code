@@ -63,7 +63,7 @@ class RotatingDPPTU
   protected:
     NodeHandle nh_;
     boost::mutex s_lock_, a_lock_;
-    bool david_scanning;
+  bool david_scanning_,  david_connect_;;
     int total_laser_scans_;
   public:
     // ROS messages
@@ -80,13 +80,14 @@ class RotatingDPPTU
     double min_distance_, max_distance_, laser_min_angle_, laser_max_angle_;
     double angle_step_;
     string object_;
-    bool left_arm_;
+  bool left_arm_;
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     RotatingDPPTU () : total_laser_scans_ (0),
                        left_arm_ (true)
     {
-      david_scanning = true;
+      david_scanning_ = true;
+      david_connect_ = true;
       nh_.param ("~min_distance", min_distance_, .7);     // minimum distance range to be considered
       nh_.param ("~max_distance", max_distance_, 3.01);   // maximum distance range to be considered
       nh_.param ("~angle_step", angle_step_, 30.0);     // ptu rotating angle
@@ -154,7 +155,7 @@ class RotatingDPPTU
       mapping_srvs::TriggerSweep s_s;
       perception_srvs::David d_s;
       ros::Duration tictoc (1, 0);
-      ros::Duration david_wait (1, 0);
+      ros::Duration david_wait (0.1);
       PointCloud cloud_r;
 
       while (nh_.ok ())
@@ -162,22 +163,29 @@ class RotatingDPPTU
         // Send a request to the PTU to move
         p_s.request.angle = angle;
         ptu_serv_.call (p_s);
-        ROS_INFO ("Setting angle to %f. Sleeping for %f seconds.", angle, tictoc.toSec ());
+        ROS_INFO ("Setting ____PTU______ angle to %f. Sleeping for %f seconds.", angle, tictoc.toSec ());
         tictoc.sleep ();
 	
-	if (david_scanning)
+	if (david_scanning_)
 	  {
 	    // Start david scanning system
-	    d_s.request.david_method = "connect";
+	    if(david_connect_){
+	      //connect only once per node cycle
+	      d_s.request.david_method = "connect";
+	      david_connect_ = false;
+	    }
 	    david_scan_.call(d_s);
+	    david_wait.sleep();
 	    d_s.request.david_method = "erase";
 	    david_scan_.call(d_s);
+	    david_wait.sleep();
 	    d_s.request.david_method = "eraseTexture";
 	    david_scan_.call(d_s);
+	    david_wait.sleep();
 	    d_s.request.david_method = "start";
 	    david_scan_.call(d_s);
-	    ROS_INFO ("David started. Sleeping for %f seconds.", david_wait.toSec ());
-	    david_wait.sleep();
+	    ROS_INFO ("David started. Sleeping for %f seconds.", tictoc.toSec ());
+	    tictoc.sleep();
 	  }
         // Trigger the LMS400 to sweep
 	// or
@@ -187,10 +195,9 @@ class RotatingDPPTU
 	    s_s.request.object = object_;
 	    s_s.request.angle_filename = angle;
 	    scan_serv_.call (s_s);
-	    ROS_INFO ("Setting angle to %f, object to %s. Sleeping for %f seconds.", angle, object_.c_str(), tictoc.toSec ());
-	    tictoc.sleep ();
+	    ROS_INFO ("___Sweeping___ %d times. Setting angle to %f, object to %s. ", i, angle, object_.c_str());
 	  }
-
+	  tictoc.sleep ();
         // Rotate the point cloud and publish it
         //rotateCloudRelative (angle - s_angle, s_s.response.cloud, cloud_r);
        
@@ -201,12 +208,14 @@ class RotatingDPPTU
 	//         }
 
 	// Stop David system
-	if (david_scanning)
+	if (david_scanning_)
 	  {
 	    d_s.request.david_method = "stop";
 	    david_scan_.call(d_s);
+	    david_wait.sleep();
 	    d_s.request.david_method = "grabTexture";
 	    david_scan_.call(d_s);
+	    david_wait.sleep();
 	    //david save name
 	    char angle_tmp[100];
 	    int angle_int = round(angle);
@@ -215,8 +224,8 @@ class RotatingDPPTU
 	    ROS_INFO("Saving David scan to %s", david_save.c_str());
 	    d_s.request.david_method = david_save;
 	    david_scan_.call(d_s);
-	    ROS_INFO ("David stopped. Sleeping for %f seconds.", david_wait.toSec ());
-	    david_wait.sleep();
+	    ROS_INFO ("David stopped. Sleeping for %f seconds.", tictoc.toSec ());
+	    tictoc.sleep();
 	  }
         // Increase angle and repeat
         angle += angle_step_;
@@ -225,7 +234,7 @@ class RotatingDPPTU
         ros::spinOnce ();
       }
 
-      ROS_INFO ("Scanning complete.");
+      ROS_INFO ("Scanning completed.");
       return (true);
     }
 
