@@ -71,8 +71,8 @@ public:
   amtec_sweep_main (TriggerSweep::Request &req, TriggerSweep::Response &resp)
   {
     ROS_INFO("in amtec_sweep_main");
-    ROS_INFO("start_angle %d", start_angle_);
-    ROS_INFO("end_angle %d", end_angle_);
+    ROS_INFO("start_angle %lf", start_angle_);
+    ROS_INFO("end_angle %lf", end_angle_);
     angle_filename_ = req.angle_filename;
     object_ = req.object;
     
@@ -155,8 +155,9 @@ public:
     
     //sweeping
     next_pos = go_to_pose(client, device_actarray, rot_joint_, start_angle_, end_angle_);
+    ROS_INFO("Sweeping to next_pos: %f", next_pos);
     sweep (client, device_actarray, rot_joint_, next_pos, rot_speed_);
-    printf ("Sweeping...........\n"); 
+    //printf ("Sweeping...........\n"); 
     //wait until end angle reached
     while (fabs(next_pos  -   RAD2DEG (device_actarray->actuators_data[rot_joint_].position)) > EPS)
       {

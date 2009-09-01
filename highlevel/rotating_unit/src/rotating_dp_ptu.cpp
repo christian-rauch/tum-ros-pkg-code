@@ -86,7 +86,7 @@ class RotatingDPPTU
     RotatingDPPTU () : total_laser_scans_ (0),
                        left_arm_ (true)
     {
-      david_scanning = false;
+      david_scanning = true;
       nh_.param ("~min_distance", min_distance_, .7);     // minimum distance range to be considered
       nh_.param ("~max_distance", max_distance_, 3.01);   // maximum distance range to be considered
       nh_.param ("~angle_step", angle_step_, 30.0);     // ptu rotating angle
@@ -95,7 +95,7 @@ class RotatingDPPTU
       cloud_pub_ = nh_.advertise<PointCloud> ("/tilt_laser_cloud", 1);
 
       ptu_serv_  = nh_.serviceClient<mapping_srvs::RotatePTU>("get_angle_service");
-      scan_serv_ = nh_.serviceClient<mapping_srvs::TriggerSweep>("trigger_sweep");
+      scan_serv_ = nh_.serviceClient<mapping_srvs::TriggerSweep>("amtec_sweep");
       david_scan_ = nh_.serviceClient<perception_srvs::David>("david");
     }
 
@@ -169,8 +169,11 @@ class RotatingDPPTU
 	  {
 	    // Start david scanning system
 	    d_s.request.david_method = "connect";
+	    david_scan_.call(d_s);
 	    d_s.request.david_method = "erase";
+	    david_scan_.call(d_s);
 	    d_s.request.david_method = "eraseTexture";
+	    david_scan_.call(d_s);
 	    d_s.request.david_method = "start";
 	    david_scan_.call(d_s);
 	    ROS_INFO ("David started. Sleeping for %f seconds.", david_wait.toSec ());
@@ -179,11 +182,14 @@ class RotatingDPPTU
         // Trigger the LMS400 to sweep
 	// or
 	// only rotate one joint if scanning with David system
-	s_s.request.object = object_;
-	s_s.request.angle_filename = angle;
-        scan_serv_.call (s_s);
-	ROS_INFO ("Setting angle to %f, object to %s. Sleeping for %f seconds.", angle, object_.c_str(), tictoc.toSec ());
-        tictoc.sleep ();
+	for (int i = 0; i < 2; i++)
+	  {
+	    s_s.request.object = object_;
+	    s_s.request.angle_filename = angle;
+	    scan_serv_.call (s_s);
+	    ROS_INFO ("Setting angle to %f, object to %s. Sleeping for %f seconds.", angle, object_.c_str(), tictoc.toSec ());
+	    tictoc.sleep ();
+	  }
 
         // Rotate the point cloud and publish it
         //rotateCloudRelative (angle - s_angle, s_s.response.cloud, cloud_r);
@@ -198,11 +204,14 @@ class RotatingDPPTU
 	if (david_scanning)
 	  {
 	    d_s.request.david_method = "stop";
+	    david_scan_.call(d_s);
 	    d_s.request.david_method = "grabTexture";
+	    david_scan_.call(d_s);
 	    //david save name
 	    char angle_tmp[100];
-	    sprintf (angle_tmp, "%d",  round(angle));
-	    string david_save = "save" + object_ +  string(angle_tmp) + ".log";
+	    int angle_int = round(angle);
+	    sprintf (angle_tmp, "%d",  angle_int);
+	    string david_save = "save" + object_ +  string(angle_tmp) + ".obj";
 	    ROS_INFO("Saving David scan to %s", david_save.c_str());
 	    d_s.request.david_method = david_save;
 	    david_scan_.call(d_s);
