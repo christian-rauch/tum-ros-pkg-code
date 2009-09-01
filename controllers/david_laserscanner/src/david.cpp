@@ -60,6 +60,7 @@ public:
 		{
 		  ROS_INFO("Mismatch in number of sent bytes");
 		}
+		ROS_INFO("DAVID method: start");
 	}
 	///////////////////////////////////////////////////////////////////////////////////////
 	// stop scanning with DAVID 
@@ -71,6 +72,7 @@ public:
 		if (send(sock, test, msglen, 0) != msglen) {
 		  ROS_INFO("Mismatch in number of sent bytes");
 		}
+		ROS_INFO("DAVID mehtod: stop");
 	}
 	///////////////////////////////////////////////////////////////////////////////////////
 	// grab Image for texture
@@ -82,6 +84,7 @@ public:
 		if (send(sock, test, msglen, 0) != msglen) {
 		  ROS_INFO("Mismatch in number of sent bytes");
 		}
+		ROS_INFO("DAVID method: grabTexture");
 	}
 	///////////////////////////////////////////////////////////////////////////////////////
 	// save Scan
@@ -101,6 +104,7 @@ public:
 		if (send(sock, test, msglen, 0) != msglen) {
 		  ROS_INFO("Mismatch in number of sent bytes");
 		}
+		ROS_INFO("DAVID method: save");
 	}
 	///////////////////////////////////////////////////////////////////////////////////////
 	// erase Scan
@@ -112,6 +116,7 @@ public:
 		if (send(sock, test, msglen, 0) != msglen) {
 		  ROS_INFO("Mismatch in number of sent bytes");
 		}
+		ROS_INFO("DAVID method: erase");
 	}
 	///////////////////////////////////////////////////////////////////////////////////////
 	// erase Texture
@@ -123,12 +128,13 @@ public:
 		if (send(sock, test, msglen, 0) != msglen) {
 		  ROS_INFO("Mismatch in number of sent bytes");
 		}
+		ROS_INFO("DAVID method: eraseTexture");
 	}
 	///////////////////////////////////////////////////////////////////////////////////////
 	// Connect to TCP2COM DAVID Server
 	void connect2David()
 	{		
-		ROS_INFO("Connecting to DAVID...");		
+		ROS_INFO("DAVID: Connecting to DAVID Server...");		
 		//getIpPortFromFile("davidIP.conf");
 		std::string ipInfo = "David IP ";
 		cout << david_ip << ":" << port;		
@@ -148,6 +154,7 @@ public:
 					sizeof(server)) < 0) {
 		  ROS_INFO("Failed to connect with server");
 		}
+		ROS_INFO("DAVID: Connected to DAVID Server");
 	}
 	///////////////////////////////////////////////////////////////////////////////////////
 	void disconnect()
