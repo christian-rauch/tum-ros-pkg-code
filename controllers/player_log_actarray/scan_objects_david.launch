@@ -1,0 +1,31 @@
+<launch>	
+  <node pkg="player_log_actarray" type="start-player-server.sh" name="start-player-server.sh" output="screen" args="$(find player_log_actarray)/demo/player-demo.cfg" />
+  <node pkg="player_log_actarray" type="sweep_laser_scan_cli_client" name="amtec_sweep_service_server" output="screen" respawn="true">
+	<param name="~start_angle" type="double" value="-90.0"/>
+        <param name="~end_angle" type="double" value="-105.0"/>
+	<param name="~interface" type="int" value="1"/>		
+	<param name="~rot_joint" type="int" value="4"/>			
+	<param name="~rot_speed" type="double" value="0.025"/>		
+	<!--Set to one if using either of them-->
+	<param name="~is_david_" type="int" value="0"/>		
+	<param name="~is_lms400_" type="int" value="1"/>		
+ </node>	
+
+<!--ptu-->
+  <node pkg="ptu_serial" type="ptu_serial_node" name="ptu_serial_node" output="screen" respawn="true">
+    <param name="~port" type="string" value="/dev/ttyUSB0" />
+  </node> 
+
+<!--david system-->
+  <node pkg="david_laserscanner" type="david" name="david" output="screen" respawn="true">
+	<param name="~ip" type="string" value="131.159.18.44"/>
+        <param name="~port" type="string" value="19919"/>
+ </node>
+
+<!--executive-->
+  <node pkg="rotating_unit" type="rotating_dp_ptu" name="rotating_dp_ptu" output="screen" respawn="false">
+    <param name="~angle_step" type="double" value="30.0" />
+    <param name="~object" type="string" value="mug" />	
+  </node> 
+</launch>
+
