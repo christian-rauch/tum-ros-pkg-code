@@ -52,7 +52,7 @@
 
 #include <mapping_srvs/RotatePTU.h>
 #include <mapping_srvs/TriggerSweep.h>
-
+#include <perception_srvs/David.h>
 using namespace std;
 using namespace ros;
 using namespace sensor_msgs;
@@ -63,7 +63,7 @@ class RotatingDPPTU
   protected:
     NodeHandle nh_;
     boost::mutex s_lock_, a_lock_;
-
+    bool david_scanning;
     int total_laser_scans_;
   public:
     // ROS messages
@@ -74,23 +74,29 @@ class RotatingDPPTU
 
     Publisher cloud_pub_;
 
-    ServiceClient ptu_serv_, scan_serv_;
+  ServiceClient ptu_serv_, scan_serv_, david_scan_;
 
     // Parameters
     double min_distance_, max_distance_, laser_min_angle_, laser_max_angle_;
+    double angle_step_;
+    string object_;
     bool left_arm_;
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     RotatingDPPTU () : total_laser_scans_ (0),
                        left_arm_ (true)
     {
+      david_scanning = false;
       nh_.param ("~min_distance", min_distance_, .7);     // minimum distance range to be considered
       nh_.param ("~max_distance", max_distance_, 3.01);   // maximum distance range to be considered
+      nh_.param ("~angle_step", angle_step_, 30.0);     // ptu rotating angle
+      nh_.param ("~object", object_, string("mug"));   // name of object to be scanned
 
       cloud_pub_ = nh_.advertise<PointCloud> ("/tilt_laser_cloud", 1);
 
       ptu_serv_  = nh_.serviceClient<mapping_srvs::RotatePTU>("get_angle_service");
       scan_serv_ = nh_.serviceClient<mapping_srvs::TriggerSweep>("trigger_sweep");
+      david_scan_ = nh_.serviceClient<perception_srvs::David>("david");
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -143,11 +149,12 @@ class RotatingDPPTU
     bool
       spin ()
     {
-      float angle = -170.0, s_angle = -170.0;
+      float s_angle = -180.0, angle = -180; //roslaunch takes double only
       mapping_srvs::RotatePTU p_s;
       mapping_srvs::TriggerSweep s_s;
+      perception_srvs::David d_s;
       ros::Duration tictoc (1, 0);
-
+      ros::Duration david_wait (1, 0);
       PointCloud cloud_r;
 
       while (nh_.ok ())
@@ -155,24 +162,56 @@ class RotatingDPPTU
         // Send a request to the PTU to move
         p_s.request.angle = angle;
         ptu_serv_.call (p_s);
-
         ROS_INFO ("Setting angle to %f. Sleeping for %f seconds.", angle, tictoc.toSec ());
         tictoc.sleep ();
-
+	
+	if (david_scanning)
+	  {
+	    // Start david scanning system
+	    d_s.request.david_method = "connect";
+	    d_s.request.david_method = "erase";
+	    d_s.request.david_method = "eraseTexture";
+	    d_s.request.david_method = "start";
+	    david_scan_.call(d_s);
+	    ROS_INFO ("David started. Sleeping for %f seconds.", david_wait.toSec ());
+	    david_wait.sleep();
+	  }
         // Trigger the LMS400 to sweep
+	// or
+	// only rotate one joint if scanning with David system
+	s_s.request.object = object_;
+	s_s.request.angle_filename = angle;
         scan_serv_.call (s_s);
+	ROS_INFO ("Setting angle to %f, object to %s. Sleeping for %f seconds.", angle, object_.c_str(), tictoc.toSec ());
+        tictoc.sleep ();
 
         // Rotate the point cloud and publish it
-        rotateCloudRelative (angle - s_angle, s_s.response.cloud, cloud_r);
+        //rotateCloudRelative (angle - s_angle, s_s.response.cloud, cloud_r);
        
-        if (cloud_r.points.size () > 0)
-        {
-          cloud_pub_.publish (cloud_r);
-          ROS_INFO ("Publishing cloud with %d points and %d channels on topic %s.", (int)cloud_r.points.size (), (int)cloud_r.channels.size (), cloud_r.header.frame_id.c_str ());
-        }
+	//         if (cloud_r.points.size () > 0)
+	//         {
+	//           cloud_pub_.publish (cloud_r);
+	//           ROS_INFO ("Publishing cloud with %d points and %d channels on topic %s.", (int)cloud_r.points.size (), (int)cloud_r.channels.size (), cloud_r.header.frame_id.c_str ());
+	//         }
+
+	// Stop David system
+	if (david_scanning)
+	  {
+	    d_s.request.david_method = "stop";
+	    d_s.request.david_method = "grabTexture";
+	    //david save name
+	    char angle_tmp[100];
+	    sprintf (angle_tmp, "%d",  round(angle));
+	    string david_save = "save" + object_ +  string(angle_tmp) + ".log";
+	    ROS_INFO("Saving David scan to %s", david_save.c_str());
+	    d_s.request.david_method = david_save;
+	    david_scan_.call(d_s);
+	    ROS_INFO ("David stopped. Sleeping for %f seconds.", david_wait.toSec ());
+	    david_wait.sleep();
+	  }
         // Increase angle and repeat
-        angle += 30.0;
-        if (angle >= 180.0)
+        angle += angle_step_;
+        if (angle > 180.0)
           break;
         ros::spinOnce ();
       }
