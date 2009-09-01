@@ -58,12 +58,15 @@ using namespace ros;
 using namespace sensor_msgs;
 using namespace geometry_msgs;
 
+#define ANGLE -180.0
+#define S_ANGLE -180.0
+
 class RotatingDPPTU
 {
   protected:
     NodeHandle nh_;
     boost::mutex s_lock_, a_lock_;
-  bool david_scanning_,  david_connect_;;
+  bool david_scanning_,  david_connect_, spin_;
     int total_laser_scans_;
   public:
     // ROS messages
@@ -86,8 +89,7 @@ class RotatingDPPTU
     RotatingDPPTU () : total_laser_scans_ (0),
                        left_arm_ (true)
     {
-      david_scanning_ = true;
-      david_connect_ = true;
+      david_scanning_ = false, david_connect_ = true, spin_ = true;
       nh_.param ("~min_distance", min_distance_, .7);     // minimum distance range to be considered
       nh_.param ("~max_distance", max_distance_, 3.01);   // maximum distance range to be considered
       nh_.param ("~angle_step", angle_step_, 30.0);     // ptu rotating angle
@@ -150,102 +152,148 @@ class RotatingDPPTU
     bool
       spin ()
     {
-      float s_angle = -180.0, angle = -180; //roslaunch takes double only
+      //update parameters on the fly
+      
+      
+      float s_angle = S_ANGLE, angle = ANGLE; //roslaunch takes double only
       mapping_srvs::RotatePTU p_s;
       mapping_srvs::TriggerSweep s_s;
       perception_srvs::David d_s;
       ros::Duration tictoc (1, 0);
       ros::Duration wait_grab_texture (30, 0);
       ros::Duration david_wait (0.1);
+      ros::Rate loop_rate(5);
       PointCloud cloud_r;
+      bool home;
+      home = true;
 
       while (nh_.ok ())
       {
-	ROS_INFO("New Spin----------------------------------------------");
-	ROS_INFO("------------------------------------------------------");
-	ROS_INFO("------------------------------------------------------");
-        // Send a request to the PTU to move
-        p_s.request.angle = angle;
-        ptu_serv_.call (p_s);
-        ROS_INFO ("Setting ____PTU______ angle to %f. Sleeping for %f seconds.", angle, tictoc.toSec ());
-        tictoc.sleep ();
-	
-	if (david_scanning_)
+	update_parameters_from_server();
+	if(spin_)
 	  {
-	    // Start david scanning system
-	    if(david_connect_){
-	      //connect only once per node cycle
-	      d_s.request.david_method = "connect";
-	      david_connect_ = false;
-	    }
-	    david_scan_.call(d_s);
-	    david_wait.sleep();
-	    d_s.request.david_method = "erase";
-	    david_scan_.call(d_s);
-	    david_wait.sleep();
-	    d_s.request.david_method = "eraseTexture";
-	    david_scan_.call(d_s);
-	    david_wait.sleep();
-	    d_s.request.david_method = "start";
-	    david_scan_.call(d_s);
-	    ROS_INFO ("David started. Sleeping for %f seconds.", tictoc.toSec ());
-	    tictoc.sleep();
+	    ROS_INFO("New Spin----------------------------------------------");
+	    ROS_INFO("------------------------------------------------------");
+	    ROS_INFO("------------------------------------------------------");
+	    //send PTU to 0 position
+// 	    if (home)
+// 	      {
+// 		p_s.request.angle = 30.0;
+// 		ptu_serv_.call (p_s);
+// 		ROS_INFO ("Homing ____PTU______ ");
+// 		tictoc.sleep ();
+// 		home = false;
+// 	      }
+	    // Send a request to the PTU to move
+	    p_s.request.angle = angle;
+	    ptu_serv_.call (p_s);
+	    ROS_INFO ("Setting ____PTU______ angle to %f. Sleeping for %f seconds.", angle, tictoc.toSec ());
+	    tictoc.sleep ();
+	    
+	    if (david_scanning_)
+	      {
+		// Start david scanning system
+		if(david_connect_){
+		  //connect only once per node cycle
+		  d_s.request.david_method = "connect";
+		  david_connect_ = false;
+		}
+		david_scan_.call(d_s);
+		david_wait.sleep();
+		d_s.request.david_method = "erase";
+		david_scan_.call(d_s);
+		david_wait.sleep();
+		d_s.request.david_method = "eraseTexture";
+		david_scan_.call(d_s);
+		david_wait.sleep();
+		d_s.request.david_method = "start";
+		david_scan_.call(d_s);
+		ROS_INFO ("David started. Sleeping for %f seconds.", tictoc.toSec ());
+		tictoc.sleep();
+	      }
+	    // Trigger the LMS400 to sweep
+	    // or
+	    // only rotate one joint if scanning with David system
+	    for (int i = 0; i < 1; i++)
+	      {
+		s_s.request.object = object_;
+		s_s.request.angle_filename = angle;
+		scan_serv_.call (s_s);
+		ROS_INFO ("___Sweeping___ %d times. Setting angle to %f, object to %s. ", i, angle, object_.c_str());
+	      }
+	    tictoc.sleep ();
+	    // Rotate the point cloud and publish it
+	    //rotateCloudRelative (angle - s_angle, s_s.response.cloud, cloud_r);
+	    
+	    //         if (cloud_r.points.size () > 0)
+	    //         {
+	    //           cloud_pub_.publish (cloud_r);
+	    //           ROS_INFO ("Publishing cloud with %d points and %d channels on topic %s.", 
+	    //  (int)cloud_r.points.size (), (int)cloud_r.channels.size (), cloud_r.header.frame_id.c_str ());
+	    //         }
+	    
+	    // Stop David system
+	    if (david_scanning_)
+	      {
+		d_s.request.david_method = "stop";
+		david_scan_.call(d_s);
+		david_wait.sleep();
+		d_s.request.david_method = "grabTexture";
+		david_scan_.call(d_s);
+		david_wait.sleep();
+		//david save name
+		char angle_tmp[100];
+		int angle_int = round(angle);
+		sprintf (angle_tmp, "%d",  angle_int);
+		string david_save = "save" + object_ +  string(angle_tmp) + ".obj";
+		ROS_INFO("Saving David scan to %s", david_save.c_str());
+		d_s.request.david_method = david_save;
+		david_scan_.call(d_s);
+		ROS_INFO("Sleeping for %f seconds.", wait_grab_texture.toSec ());
+		wait_grab_texture.sleep();
+		//added temporarily to avoid save being called twice
+		d_s.request.david_method = "erase";
+		david_scan_.call(d_s);
+		ROS_INFO ("David stopped. Sleeping for %f seconds.", tictoc.toSec ());
+		tictoc.sleep();
+	      }
+	    // Increase angle and repeat
+	    angle += angle_step_;
+	    if (angle > 180.0)
+	      {
+		spin_ = false;
+		s_angle = S_ANGLE, angle = ANGLE;
+		home = true;
+		//break;
+	      }
 	  }
-        // Trigger the LMS400 to sweep
-	// or
-	// only rotate one joint if scanning with David system
-	for (int i = 0; i < 2; i++)
-	  {
-	    s_s.request.object = object_;
-	    s_s.request.angle_filename = angle;
-	    scan_serv_.call (s_s);
-	    ROS_INFO ("___Sweeping___ %d times. Setting angle to %f, object to %s. ", i, angle, object_.c_str());
-	  }
-	  tictoc.sleep ();
-        // Rotate the point cloud and publish it
-        //rotateCloudRelative (angle - s_angle, s_s.response.cloud, cloud_r);
-       
-	//         if (cloud_r.points.size () > 0)
-	//         {
-	//           cloud_pub_.publish (cloud_r);
-	//           ROS_INFO ("Publishing cloud with %d points and %d channels on topic %s.", (int)cloud_r.points.size (), (int)cloud_r.channels.size (), cloud_r.header.frame_id.c_str ());
-	//         }
-
-	// Stop David system
-	if (david_scanning_)
-	  {
-	    d_s.request.david_method = "stop";
-	    david_scan_.call(d_s);
-	    david_wait.sleep();
-	    d_s.request.david_method = "grabTexture";
-	    david_scan_.call(d_s);
-	    david_wait.sleep();
-	    //david save name
-	    char angle_tmp[100];
-	    int angle_int = round(angle);
-	    sprintf (angle_tmp, "%d",  angle_int);
-	    string david_save = "save" + object_ +  string(angle_tmp) + ".obj";
-	    ROS_INFO("Saving David scan to %s", david_save.c_str());
-	    d_s.request.david_method = david_save;
-	    david_scan_.call(d_s);
-	    ROS_INFO("Sleeping for %f seconds.", wait_grab_texture.toSec ());
-	    wait_grab_texture.sleep();
-	    //added temporarily to avoid save being called twice
-	    d_s.request.david_method = "erase";
-	    david_scan_.call(d_s);
-	    ROS_INFO ("David stopped. Sleeping for %f seconds.", tictoc.toSec ());
-	    tictoc.sleep();
-	  }
-        // Increase angle and repeat
-        angle += angle_step_;
-        if (angle > 180.0)
-          break;
+	ROS_WARN("Looping!!!!");
         ros::spinOnce ();
+	if(!spin_)
+	  loop_rate.sleep();  
       }
-
-      ROS_INFO ("Scanning completed.");
-      return (true);
+ 
+       ROS_INFO ("Another Scanning completed.");
+       return (true);
     }
+  
+ //////////////////////////////////////////////////////////////////////////////////
+  // //update parameters on the fly
+  //////////////////////////////////////////////////////////////////////////////////
+  void
+  update_parameters_from_server()
+  {
+    if (nh_.hasParam("~object"))
+      {
+	string object_tmp_ = object_;
+	nh_.getParam("~object", object_);
+	if (object_tmp_ != object_)
+	  {
+	    spin_ = true;
+	  }
+	ROS_INFO("Updating parameters from server");
+      }
+  }
 
 };
 
