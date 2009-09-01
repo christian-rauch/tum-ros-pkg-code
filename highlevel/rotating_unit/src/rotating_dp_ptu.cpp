@@ -155,11 +155,15 @@ class RotatingDPPTU
       mapping_srvs::TriggerSweep s_s;
       perception_srvs::David d_s;
       ros::Duration tictoc (1, 0);
+      ros::Duration wait_grab_texture (30, 0);
       ros::Duration david_wait (0.1);
       PointCloud cloud_r;
 
       while (nh_.ok ())
       {
+	ROS_INFO("New Spin----------------------------------------------");
+	ROS_INFO("------------------------------------------------------");
+	ROS_INFO("------------------------------------------------------");
         // Send a request to the PTU to move
         p_s.request.angle = angle;
         ptu_serv_.call (p_s);
@@ -223,6 +227,11 @@ class RotatingDPPTU
 	    string david_save = "save" + object_ +  string(angle_tmp) + ".obj";
 	    ROS_INFO("Saving David scan to %s", david_save.c_str());
 	    d_s.request.david_method = david_save;
+	    david_scan_.call(d_s);
+	    ROS_INFO("Sleeping for %f seconds.", wait_grab_texture.toSec ());
+	    wait_grab_texture.sleep();
+	    //added temporarily to avoid save being called twice
+	    d_s.request.david_method = "erase";
 	    david_scan_.call(d_s);
 	    ROS_INFO ("David stopped. Sleeping for %f seconds.", tictoc.toSec ());
 	    tictoc.sleep();
