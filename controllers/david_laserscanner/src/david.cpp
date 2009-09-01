@@ -32,6 +32,7 @@ private:
 	unsigned int port;
 	std::string port_string;
 	std::string argument;
+	bool debug_out;
 
 public:
 	David_service(const ros::NodeHandle& node_handle) : node_handle_(node_handle)
@@ -44,6 +45,7 @@ public:
 	///////////////////////////////////////////////////////////////////////////////////////
 	void init()
 	{	
+	  debug_out = true;	
 	  node_handle_.param("~ip",david_ip,string("127.0.0.1"));
 	  node_handle_.param("~port",port_string,string("19919"));
         	service_ = node_handle_.advertiseService("david", &David_service::david, this);	
@@ -60,7 +62,8 @@ public:
 		{
 		  ROS_INFO("Mismatch in number of sent bytes");
 		}
-		ROS_INFO("DAVID method: start");
+		if (debug_out)
+			ROS_INFO("DAVID method: start");
 	}
 	///////////////////////////////////////////////////////////////////////////////////////
 	// stop scanning with DAVID 
@@ -72,7 +75,8 @@ public:
 		if (send(sock, test, msglen, 0) != msglen) {
 		  ROS_INFO("Mismatch in number of sent bytes");
 		}
-		ROS_INFO("DAVID mehtod: stop");
+		if (debug_out)
+			ROS_INFO("DAVID mehtod: stop");
 	}
 	///////////////////////////////////////////////////////////////////////////////////////
 	// grab Image for texture
@@ -84,7 +88,8 @@ public:
 		if (send(sock, test, msglen, 0) != msglen) {
 		  ROS_INFO("Mismatch in number of sent bytes");
 		}
-		ROS_INFO("DAVID method: grabTexture");
+		if (debug_out)
+			ROS_INFO("DAVID method: grabTexture");
 	}
 	///////////////////////////////////////////////////////////////////////////////////////
 	// save Scan
@@ -104,7 +109,8 @@ public:
 		if (send(sock, test, msglen, 0) != msglen) {
 		  ROS_INFO("Mismatch in number of sent bytes");
 		}
-		ROS_INFO("DAVID method: save");
+		if (debug_out)
+			ROS_INFO("DAVID method: save");
 	}
 	///////////////////////////////////////////////////////////////////////////////////////
 	// erase Scan
@@ -116,7 +122,8 @@ public:
 		if (send(sock, test, msglen, 0) != msglen) {
 		  ROS_INFO("Mismatch in number of sent bytes");
 		}
-		ROS_INFO("DAVID method: erase");
+		if (debug_out)
+			ROS_INFO("DAVID method: erase");
 	}
 	///////////////////////////////////////////////////////////////////////////////////////
 	// erase Texture
@@ -128,7 +135,8 @@ public:
 		if (send(sock, test, msglen, 0) != msglen) {
 		  ROS_INFO("Mismatch in number of sent bytes");
 		}
-		ROS_INFO("DAVID method: eraseTexture");
+		if (debug_out)
+			ROS_INFO("DAVID method: eraseTexture");
 	}
 	///////////////////////////////////////////////////////////////////////////////////////
 	// Connect to TCP2COM DAVID Server
