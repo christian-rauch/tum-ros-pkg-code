@@ -84,7 +84,7 @@ public:
   //set options to some impossible values
   string object_;
   double angle_filename_, start_angle_, end_angle_;
-  int interface_, rot_joint_, is_david_, is_lms400_;
+  int interface_, rot_joint_, is_lms400_;
   double rot_speed_;
   bool debug_output_;
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -95,8 +95,6 @@ public:
     nh_.param("~start_angle", start_angle_, 0.0);
     nh_.param("~end_angle", end_angle_, 10.0);
     nh_.param("~interface", interface_, 1);
-    //are we scanning using David system
-    nh_.param("~is_david", is_david_, 0);
     //are we scanning using lms400 and player logging
     nh_.param("~is_lms400_", is_lms400_, 0);
     nh_.param("~rot_joint", rot_joint_, 4);

@@ -6,8 +6,7 @@
 	<param name="~interface" type="int" value="1"/>		
 	<param name="~rot_joint" type="int" value="4"/>			
 	<param name="~rot_speed" type="double" value="0.1"/>		
-	<!--Set to one if using either of them-->
-	<param name="~is_david_" type="int" value="0"/>		
+	<!--Set to one if using lms400-->
 	<param name="~is_lms400_" type="int" value="1"/>		
  </node>	
 
@@ -26,6 +25,8 @@
   <node pkg="rotating_unit" type="rotating_dp_ptu" name="rotating_dp_ptu" output="screen" respawn="false">
     <param name="~angle_step" type="double" value="30.0" />
     <param name="~object" type="string" value="test" />	
+    <!--Set to one if using David system-->
+    <param name="~is_david_" type="int" value="0"/>		
   </node> 
 </launch>
 

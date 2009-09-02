@@ -66,7 +66,7 @@ class RotatingDPPTU
   protected:
     NodeHandle nh_;
     boost::mutex s_lock_, a_lock_;
-  bool david_scanning_,  david_connect_, spin_;
+    bool david_connect_, spin_;
     int total_laser_scans_;
   public:
     // ROS messages
@@ -83,17 +83,20 @@ class RotatingDPPTU
     double min_distance_, max_distance_, laser_min_angle_, laser_max_angle_;
     double angle_step_;
     string object_;
-  bool left_arm_;
+    bool left_arm_;
+    int is_david_;
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     RotatingDPPTU () : total_laser_scans_ (0),
                        left_arm_ (true)
     {
-      david_scanning_ = true, david_connect_ = true, spin_ = true;
+      david_connect_ = true, spin_ = true;
       nh_.param ("~min_distance", min_distance_, .7);     // minimum distance range to be considered
       nh_.param ("~max_distance", max_distance_, 3.01);   // maximum distance range to be considered
       nh_.param ("~angle_step", angle_step_, 30.0);     // ptu rotating angle
       nh_.param ("~object", object_, string("mug"));   // name of object to be scanned
+      //are we scanning using David system
+      nh_.param("~is_david", is_david_, 0);
 
       cloud_pub_ = nh_.advertise<PointCloud> ("/tilt_laser_cloud", 1);
 
@@ -190,7 +193,7 @@ class RotatingDPPTU
 	    ROS_INFO ("Setting ____PTU______ angle to %f. Sleeping for %f seconds.", angle, tictoc.toSec ());
 	    tictoc.sleep ();
 	    
-	    if (david_scanning_)
+	    if (is_david_)
 	      {
 		// Start david scanning system
 		if(david_connect_){
@@ -233,7 +236,7 @@ class RotatingDPPTU
 	    //         }
 	    
 	    // Stop David system
-	    if (david_scanning_)
+	    if (is_david_)
 	      {
 		d_s.request.david_method = "stop";
 		david_scan_.call(d_s);
