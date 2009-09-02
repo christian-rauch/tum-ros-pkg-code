@@ -89,7 +89,7 @@ class RotatingDPPTU
     RotatingDPPTU () : total_laser_scans_ (0),
                        left_arm_ (true)
     {
-      david_scanning_ = false, david_connect_ = true, spin_ = true;
+      david_scanning_ = true, david_connect_ = true, spin_ = true;
       nh_.param ("~min_distance", min_distance_, .7);     // minimum distance range to be considered
       nh_.param ("~max_distance", max_distance_, 3.01);   // maximum distance range to be considered
       nh_.param ("~angle_step", angle_step_, 30.0);     // ptu rotating angle
@@ -160,7 +160,7 @@ class RotatingDPPTU
       mapping_srvs::TriggerSweep s_s;
       perception_srvs::David d_s;
       ros::Duration tictoc (1, 0);
-      ros::Duration wait_grab_texture (30, 0);
+      ros::Duration wait_grab_texture (15, 0);
       ros::Duration david_wait (0.1);
       ros::Rate loop_rate(5);
       PointCloud cloud_r;
