@@ -248,7 +248,7 @@ class RotatingDPPTU
 		char angle_tmp[100];
 		int angle_int = round(angle);
 		sprintf (angle_tmp, "%d",  angle_int);
-		string david_save = "save" + object_ +  string(angle_tmp) + ".obj";
+		string david_save = "save_" + object_ + "_" +  string(angle_tmp) + "_" + ".obj";
 		ROS_INFO("Saving David scan to %s", david_save.c_str());
 		d_s.request.david_method = david_save;
 		david_scan_.call(d_s);
