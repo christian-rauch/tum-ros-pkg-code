@@ -163,7 +163,7 @@ public:
    	 char angle_tmp[100];
 	 int angle_int = round(req.angle_filename);
 	 sprintf (angle_tmp, "%d",  angle_int);
-	 string logFileName = req.object +  string(angle_tmp) + ".log";
+	 string logFileName = req.object + "_" +  string(angle_tmp) + "_" + ".log";
 	 playerc_log_set_filename (device_log, logFileName.c_str());
 	 playerc_log_set_write_state (device_log, 1);
 	 if(debug_output_)
