@@ -21,6 +21,10 @@
         <param name="~port" type="string" value="19919"/>
  </node>
 
+<!--halcone image save-->
+  <node pkg="halcon_image_writer" type="halcon_3d_data_base" name="halcon3D" output="screen" respawn="true">
+ </node>
+
 <!--executive-->
   <node pkg="rotating_unit" type="rotating_dp_ptu" name="rotating_dp_ptu" output="screen" respawn="false">
     <param name="~angle_step" type="double" value="30.0" />

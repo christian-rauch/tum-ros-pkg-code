@@ -77,7 +77,7 @@ class RotatingDPPTU
 
     Publisher cloud_pub_;
 
-  ServiceClient ptu_serv_, scan_serv_, david_scan_;
+  ServiceClient ptu_serv_, scan_serv_, david_scan_, save_images_;
 
     // Parameters
     double min_distance_, max_distance_, laser_min_angle_, laser_max_angle_;
@@ -103,6 +103,7 @@ class RotatingDPPTU
       ptu_serv_  = nh_.serviceClient<mapping_srvs::RotatePTU>("get_angle_service");
       scan_serv_ = nh_.serviceClient<mapping_srvs::TriggerSweep>("amtec_sweep");
       david_scan_ = nh_.serviceClient<perception_srvs::David>("david");
+      save_images_ = nh_.serviceClient<mapping_srvs::TriggerSweep>("save_images_service");
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -161,6 +162,7 @@ class RotatingDPPTU
       float s_angle = S_ANGLE, angle = ANGLE; //roslaunch takes double only
       mapping_srvs::RotatePTU p_s;
       mapping_srvs::TriggerSweep s_s;
+      mapping_srvs::TriggerSweep i_s;
       perception_srvs::David d_s;
       ros::Duration tictoc (1, 0);
       ros::Duration wait_grab_texture (15, 0);
@@ -260,6 +262,13 @@ class RotatingDPPTU
 		ROS_INFO ("David stopped. Sleeping for %f seconds.", tictoc.toSec ());
 		tictoc.sleep();
 	      }
+
+	    i_s.request.object = object_;
+	    i_s.request.angle_filename = angle;
+	    ROS_INFO ("Capturing Images!");
+	    scan_serv_.call (i_s);
+	    tictoc.sleep ();
+
 	    // Increase angle and repeat
 	    angle += angle_step_;
 	    if (angle > 180.0)
