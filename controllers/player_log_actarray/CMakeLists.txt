@@ -5,11 +5,13 @@ cmake_minimum_required(VERSION 2.4.6)
 execute_process(COMMAND hostname
                 OUTPUT_VARIABLE ROS_HOSTNAME)
 message( "Hostname: ${ROS_HOSTNAME}" )
-if("${ROS_HOSTNAME}" STREQUAL "roboradig31")
+if("${ROS_HOSTNAME}" MATCHES "roboradig31")
+message( "OK, I am on ${ROS_HOSTNAME}" )
 #rosbuild_add_executable (bin/sweep_laser_scan_cli_client src/sweep_laser_scan_cli_client.cpp)
-else("${ROS_HOSTNAME}" STREQUAL "roboradig31")
+else("${ROS_HOSTNAME}" MATCHES "roboradig31")
+message( "Not on roboradig31" )
 execute_process(COMMAND python $ENV{PWD}/../src/scripts/search_replace.py $ENV{PWD}/../manifest.xml  $ENV{PWD}/../tmp 0)
-endif("${ROS_HOSTNAME}" STREQUAL "roboradig31")
+endif("${ROS_HOSTNAME}" MATCHES "roboradig31")
 
 ##########################################################
 #ROS stuff
@@ -30,9 +32,9 @@ rosbuild_add_executable (bin/actarray_cloud_assembler src/actarray_cloud_assembl
 execute_process(COMMAND hostname
                 OUTPUT_VARIABLE ROS_HOSTNAME)
 
-if("${ROS_HOSTNAME}" STREQUAL "roboradig31")
+if("${ROS_HOSTNAME}" MATCHES "roboradig31")
 rosbuild_add_executable (bin/sweep_laser_scan_cli_client src/sweep_laser_scan_cli_client.cpp)
 #undo comment from above
-else("${ROS_HOSTNAME}" STREQUAL "roboradig31")
+else("${ROS_HOSTNAME}" MATCHES "roboradig31")
 execute_process(COMMAND python $ENV{PWD}/../src/scripts/search_replace.py $ENV{PWD}/../manifest.xml  $ENV{PWD}/../tmp 1)
-endif("${ROS_HOSTNAME}" STREQUAL "roboradig31")
+endif("${ROS_HOSTNAME}" MATCHES "roboradig31")
