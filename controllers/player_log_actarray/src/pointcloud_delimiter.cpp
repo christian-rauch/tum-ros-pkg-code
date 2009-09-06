@@ -97,7 +97,7 @@ protected:
       nh_.param ("~min_z", del_.min_z, 0.0);     // minimum z to be considered
       nh_.param ("~max_z", del_.max_z, 0.0);   // maximum z to be considered
 
-      cloud_out_.header.frame_id = "base_link";
+      cloud_out_.header.frame_id = "laser_tilt_mount_link";
       cloud_out_.channels.resize (7);
       cloud_out_.channels[0].name = "intensity";
       cloud_out_.channels[1].name = "distance";
@@ -114,9 +114,9 @@ protected:
   virtual ~PointcloudDelimiter () { }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Get a list of log files
+  // Get a list of pcd files
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  void get_log_files ( const path & directory, vector <string> &file_list, string suffix=".log", bool recurse_into_subdirs = false )
+  void get_log_files ( const path & directory, vector <string> &file_list, string suffix=".pcd", bool recurse_into_subdirs = false )
     {
       if( exists( directory ) )
 	{
@@ -146,7 +146,8 @@ protected:
   {
     int nr_points = 0;
     unsigned int progress = 0;
-    ROS_INFO("x, y, z : %f, %f, %f, %f, %f, %f", del_.min_x, del_.max_x, del_.min_y, del_.max_y, del_.max_z, del_.min_z);
+    ROS_INFO("minima/maxima x, y, z : %f, %f, %f, %f, %f, %f", del_.min_x, del_.max_x, del_.min_y, del_.max_y, del_.max_z, del_.min_z);
+    ROS_INFO("file_list_ size %d", file_list_.size());
     while (nh_.ok ())
       {
 	
@@ -160,7 +161,7 @@ protected:
 	    cloud_out_.points.resize(0);
 	    for (unsigned int d = 0; d < cloud_in_.channels.size (); d++)
 	      cloud_out_.channels[d].values.resize (0);
-	    cloud_out_.header.stamp =  cloud_in_.header.stamp;
+	    cloud_out_.header =  cloud_in_.header;
 	    for (unsigned int j = 0; j < cloud_in_.points.size(); j++)
 	      {
 		if ((del_.min_x <= cloud_in_.points[j].x) && (cloud_in_.points[j].x <= del_.max_x) &&
@@ -175,7 +176,7 @@ protected:
 		    //fill with values
 		    cloud_out_.points[nr_points].x =  cloud_in_.points[j].x;
 		    cloud_out_.points[nr_points].y =  cloud_in_.points[j].y;
-		    cloud_out_.points[nr_points].z =  cloud_in_.points[j].x;
+		    cloud_out_.points[nr_points].z =  cloud_in_.points[j].z;
 		    // Save the rest of the values
 		    cloud_out_.channels[0].values[nr_points] =  cloud_in_.channels[0].values[j];
 		    cloud_out_.channels[1].values[nr_points] =  cloud_in_.channels[1].values[j];
