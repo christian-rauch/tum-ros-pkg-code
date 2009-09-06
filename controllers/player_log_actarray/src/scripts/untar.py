@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import sys, os
+import sys, os, time
 
 
 def untar(path=None):
@@ -15,7 +15,28 @@ def untar(path=None):
         print command;
         os.system(command)
         
-    
+def tar(path=None):
+    pcdlist = []
+    if path == None:
+        path = '.'
+    list = os.listdir(path)
+    for file in list:
+        if file.find('pcd') != -1:
+            pcdlist.append(file)
+    objects_list = []
+    for file in pcdlist:
+        if file.split('_')[0] not in objects_list:
+            objects_list.append(file.split('_')[0])
+    print 'objects_list: ', objects_list, '\n'
+    tar_str = ''
+    for obj in objects_list:
+        for file in pcdlist:
+            if file.find(obj) != -1:
+                tar_str += ' ' + file
+        command = 'tar cvvf ' + obj +  '.pcd.tar.bz2' + tar_str
+        os.system(command)
+        tar_str = ''
+        print 'obj: ', obj, 'command: ', command, '\n'
 
 class FileNames:
     def __init__(self, fullname, basename):
@@ -25,4 +46,7 @@ class FileNames:
 
 
 if __name__ == "__main__":
-    untar()
+    if sys.argv[1] == '0':
+        untar()
+    if  sys.argv[1] == '1':
+        tar()
