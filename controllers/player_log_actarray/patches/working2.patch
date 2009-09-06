@@ -2,7 +2,7 @@ Index: src/player_laser_log_to_msg.cpp
 ===================================================================
 --- src/player_laser_log_to_msg.cpp	(revision 23757)
 +++ src/player_laser_log_to_msg.cpp	(working copy)
-@@ -62,16 +62,20 @@
+@@ -62,15 +62,16 @@
      // ROS messages
      LaserScan msg_scan_;
  
@@ -12,23 +12,43 @@ Index: src/player_laser_log_to_msg.cpp
  
      ifstream logfile_stream_;
 -    bool is_file_;
-+  bool is_file_, spin_;
++  bool is_file_, spin_, multifile_;
 +  int save_pcd_laser_;
  
      //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
      PlayerLogToMsg () : tf_frame_ ("laser_tilt_mount_link"),
-                         is_file_ (true)
+-                        is_file_ (true)
++                        is_file_ (true), multifile_(false)
      {
-+      save_pcd_laser_ = 0;
-+      nh_.setParam("/save_pcd_laser", 0);
-+      spin_ = true;
        msg_topic_ = "/laser_scan";
        scan_pub_ = nh_.advertise<LaserScan> (msg_topic_.c_str (), 1);
-     }
-@@ -96,6 +100,21 @@
+@@ -78,7 +79,17 @@
+ 
+     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+     virtual ~PlayerLogToMsg () { }
+-
++  
++  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
++  //initialize args needed for multi log files
++  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
++  void init()
++  {
++    save_pcd_laser_ = 0;
++    nh_.setParam("/save_pcd_laser", 0);
++    spin_ = true;
++  }
++  
+     ////////////////////////////////////////////////////////////////////////////////
+     // Start
+     int
+@@ -95,6 +106,24 @@
+       msg_scan_.header.frame_id = tf_frame_;
        return (0);
      }
- 
++ 
++  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
++  // Start overridden
++  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 +   int
 +      start2 (string file_name)
 +  {
@@ -43,11 +63,10 @@ Index: src/player_laser_log_to_msg.cpp
 +    msg_scan_.header.frame_id = tf_frame_;
 +    return (0);
 +  }
-+
+ 
      ////////////////////////////////////////////////////////////////////////////////
      // Spin (!)
-     bool
-@@ -105,7 +124,7 @@
+@@ -105,7 +134,7 @@
        int total_nr_points = 0, total_laser_scans = 0;
        string line;
        vector<string> st;
@@ -56,7 +75,7 @@ Index: src/player_laser_log_to_msg.cpp
        while (nh_.ok ())
        {
          getline (logfile_stream_, line);
-@@ -197,6 +216,150 @@
+@@ -197,6 +226,151 @@
  
        return (true);
      }
@@ -82,7 +101,7 @@ Index: src/player_laser_log_to_msg.cpp
 +	    // Do we assume that the input is a file? If so, and EOF, break
 +	    if (logfile_stream_.eof () && is_file_ && file_name_ != "nothing")
 +	      {
-+		ROS_WARN("eof laser!!!!!!");
++		ROS_WARN("EOF laser!!!");
 +		logfile_stream_.close();
 +		spin_ = false;
 +		continue;
@@ -189,7 +208,10 @@ Index: src/player_laser_log_to_msg.cpp
 +    
 +    return (true);
 +  }
-+  
++    
++  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
++  // Update parameters from server
++  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 +  void
 +  update_parameters_from_server()
 +  {
@@ -197,17 +219,15 @@ Index: src/player_laser_log_to_msg.cpp
 +    nh_.getParam("/log_filename", file_name_);
 +    if (log_filename_tmp != file_name_ && file_name_ != "nothing")
 +      {
-+	ROS_INFO("laser filename: %s", file_name_.c_str());
++	ROS_INFO("Laser filename set to: %s", file_name_.c_str());
 +	start2(file_name_);
 +	spin_ = true;
-+	//nh_.setParam("/save_pcd", 0);
 +      }
-+    //ROS_INFO("Updating parameters from server");
 +  }
  };
  
  /* ---[ */
-@@ -217,12 +380,21 @@
+@@ -217,12 +391,22 @@
    p.file_name_ = string (argv[1]);
    p.is_file_   = atoi (argv[2]);
  
@@ -229,6 +249,7 @@ Index: src/player_laser_log_to_msg.cpp
 +    }
 +  else
 +    {
++      p.init();
 +      p.file_name_ = "nothing";
 +      p.spin2();
 +    }
