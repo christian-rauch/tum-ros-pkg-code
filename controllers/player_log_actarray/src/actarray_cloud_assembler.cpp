@@ -338,7 +338,7 @@ class ActarrayCloudAssembler
     vector<double> q_values;
     Eigen::Vector4d pt, pt_t, vp, vp_old;
     Eigen::Matrix4d robot_transform;
-    int nr_points;
+    int nr_points = 0;
     if(dir_ != "")
       {
 	cur_file_ = file_list_.back(), file_list_.pop_back();
