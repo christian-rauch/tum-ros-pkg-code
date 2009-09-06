@@ -1,0 +1,605 @@
+Index: manifest.xml
+===================================================================
+--- manifest.xml	(revision 152)
++++ manifest.xml	(working copy)
+@@ -14,6 +14,7 @@
+   <depend package="eigen" />
+   <depend package="player_bender_dummy" />
+   <depend package="mapping_srvs" />
++  <depend package="point_cloud_mapping" />
+ 
+   <export>
+     <cpp cflags="-I${prefix}/msg/cpp"/>
+Index: src/actarray_cloud_assembler.cpp
+===================================================================
+--- src/actarray_cloud_assembler.cpp	(revision 152)
++++ src/actarray_cloud_assembler.cpp	(working copy)
+@@ -49,16 +49,22 @@
+ #include <angles/angles.h>
+ #include <Eigen/Core>
+ 
++#include<iostream>
+ #include <fstream>
+ #include <boost/algorithm/string.hpp>
+ #include <boost/thread/mutex.hpp>
+-
++#include <boost/filesystem/operations.hpp>
++#include <boost/filesystem/fstream.hpp>
++#include "boost/filesystem.hpp"
++#include <point_cloud_mapping/cloud_io.h>
+ #include <list>
+ 
+ using namespace std;
+ using namespace ros;
+ using namespace sensor_msgs;
+ using namespace player_log_actarray;
++using namespace cloud_io;
++using namespace boost::filesystem; 
+ 
+ struct DH
+ {
+@@ -93,6 +99,9 @@
+     Eigen::Vector4d translation_;
+     double min_distance_, max_distance_, laser_min_angle_, laser_max_angle_;
+     bool left_arm_;
++  int save_to_pcd_laser_, save_to_pcd_actarray_;
++  vector<string> file_list_;
++  string cur_file_, dir_;
+ 
+     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+     ActarrayCloudAssembler () : tf_frame_ ("laser_tilt_mount_link"),
+@@ -100,6 +109,10 @@
+                                 total_laser_scans_ (0),
+                                 left_arm_ (true)
+     {
++      nh_.param ("~dir", dir_, string(""));     // minimum distance range to be considered
++      //get the list of .log files
++      get_log_files(dir_, file_list_);
++      save_to_pcd_laser_ = 0, save_to_pcd_actarray_ = 0;
+       nh_.param ("~min_distance", min_distance_, .7);     // minimum distance range to be considered
+       nh_.param ("~max_distance", max_distance_, 3.01);   // maximum distance range to be considered
+ 
+@@ -228,7 +241,6 @@
+           // Interpolate joint values
+           for (unsigned int q_idx = 0; q_idx < cur_act->joints.size (); q_idx++)
+             q_values[q_idx] = prev_act->joints[q_idx] + t0 * (cur_act->joints[q_idx] - prev_act->joints[q_idx]) / t1;
+-
+           found = true;
+           break;
+         }
+@@ -260,120 +272,207 @@
+       s_lock_.unlock ();
+     }
+ 
+-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+-    bool
+-      spin ()
++  void get_log_files ( const path & directory, vector <string> &file_list, string suffix=".log", bool recurse_into_subdirs = false )
+     {
+-      int laser_packet_scan_id = 1, point_cloud_total = 0;
+-      vector<double> q_values;
+-      Eigen::Vector4d pt, pt_t, vp, vp_old;
+-      Eigen::Matrix4d robot_transform;
++      if( exists( directory ) )
++	{
++	  directory_iterator end ;
++	  for( directory_iterator iter(directory) ; iter != end ; ++iter )
++	    if ( is_directory( *iter ) )
++	      {
++		ROS_WARN("Directory %s", iter->string().c_str());
++		//if( recurse_into_subdirs ) get_log_files(*iter) ;
++	      }
++	    else 
++	      {
++		int len = iter->string().length();
++		int npos =  iter->string().rfind(suffix);
++		if((len - npos) == suffix.length())
++		    file_list.push_back(iter->string());
++	      }
++	}
++    }
++  
++  int
++  update_parameters_from_server()
++  {
++    nh_.getParam("/save_pcd_laser", save_to_pcd_laser_);
++    nh_.getParam("/save_pcd_actarray", save_to_pcd_actarray_);
++    //ROS_INFO("save_to_pcd_file_ %d", save_to_pcd_file_);
++    //0 -> 1 step detection
++    // if (save_to_pcd_laser_ == 1 && save_to_pcd_actarray_ == 1)
++     
+ 
+-      // Infinite loop
+-      while (nh_.ok ())
++    if (save_to_pcd_laser_ == 1 && save_to_pcd_actarray_ == 1)
+       {
++	nh_.setParam("/save_pcd_actarray", 2);
++	nh_.setParam("/save_pcd_laser", 2);
++	sleep(1);
++	string pcd_file = cur_file_ + ".pcd";
++	ROS_INFO("Saving to file: %s", pcd_file.c_str());
++	savePCDFile (pcd_file.c_str(), cloud_, false);
++	//for (int ii = 0; ii < file_list_.size(); ii++)
++	// ROS_INFO("File list %s", file_list_[ii].c_str());
++	 if (file_list_.size() == 0)
++	   return -1;
++	cur_file_ = file_list_.back(), file_list_.pop_back();
++	//ROS_INFO("-------------------------------------------");
++	//for (int ii = 0; ii < file_list_.size(); ii++)
++	// ROS_INFO("File list %s", file_list_[ii].c_str());
++	ROS_INFO("Starting player_[laser|actarray]_log_to_msg: %s. Filelist size: %d", cur_file_.c_str(), file_list_.size());
++	nh_.setParam("/log_filename", cur_file_);
++	return 1;
++      }
++    return 0;
++  }
++
++
++    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
++  bool
++  spin ()
++  {
++    int laser_packet_scan_id = 1, point_cloud_total = 0;
++    vector<double> q_values;
++    Eigen::Vector4d pt, pt_t, vp, vp_old;
++    Eigen::Matrix4d robot_transform;
++    int nr_points = 0;
++    cur_file_ = file_list_.back(), file_list_.pop_back();
++    nh_.setParam("/log_filename", cur_file_);
++    ROS_INFO("Starting (first time) player_[laser|actarray]_log_to_msg: %s. Filelist size: %d", cur_file_.c_str(), file_list_.size());
++    while (nh_.ok ())
++      {
++	
++	int update = update_parameters_from_server();
++	if(update == 1)
++	  {
++	    laser_packet_scan_id = 1, point_cloud_total = 0;
++	    q_values.clear();
++	      for (int i = 0; i < 4; i++)
++		pt(i)=0, pt_t(i)=0, vp(i)=0, vp_old(0);
++	      for (int i = 0; i < 4; i++)
++		{
++		  for (int j = 0; j < 4; j++)
++		    robot_transform(i, j)=0;
++		}		 
++	      nr_points = 0;
++	      actarrays_.clear();
++	      scans_.clear();
++	      ROS_INFO("Assembler reseting all values!");
++	  }
++
++	//no more files to convert
++	if (update == -1)
++	  break;
++
+         // We need at least 2 actarray values and 1 laser scan to begin
+         if (actarrays_.size () < 2 || scans_.size () == 0)
+-        {
+-          usleep (500);
+-          ros::spinOnce ();
+-          continue;
+-        }
+-
++	  {
++	    usleep (500);
++	    ros::spinOnce ();
++	    continue;
++	  }
++	
+         q_values.resize (actarrays_.at (0)->joints.size ());
++	
+         // For each buffered laser packet
+         for (list<LaserScanConstPtr>::iterator it = scans_.begin (); it != scans_.end ();)
+-        {
+-          LaserScanConstPtr laser_packet = *it;
+-
+-          // Interpolate actarray values
+-          if (!interpolateActarrayValues (laser_packet, actarrays_, q_values))
+-          {
+-            ++it;
+-            continue;
+-          }
+-
+-          // Obtain the transformation corresponding to the current joint values
+-          getGlobalTransformation (arm_params_, q_values, robot_transform);
+-          // Calculate the viewpoint for the current interpolated joint angles
+-          vp_old = vp;
+-          vp = robot_transform * translation_;
+-
+-          if (vp (0) == vp_old (0) && vp (1) == vp_old (1) && vp (2) == vp_old (2))
+-          {
+-            s_lock_.lock (); it = scans_.erase (it); s_lock_.unlock ();
+-            continue;
+-          }
+-
+-          // Calculate the horizontal angles and the cartesian coordinates
+-          double angle_x    = laser_packet->angle_min;
+-          double resolution = laser_packet->angle_increment;
+-
+-          int nr_points = 0;
+-          cloud_.points.resize (laser_packet->ranges.size ());
+-          for (unsigned int d = 0; d < cloud_.channels.size (); d++)
+-            cloud_.channels[d].values.resize (laser_packet->ranges.size ());
+-
+-          for (unsigned int i = 0; i < laser_packet->ranges.size (); i++)
+-          {
+-            double distance = laser_packet->ranges[i];
+-            double intensity = laser_packet->intensities[i];
+-            if ((distance > max_distance_) || (distance < min_distance_))
+-            {
+-              angle_x += resolution;
+-              continue;
+-            }
+-            if ((angle_x < angles::from_degrees (laser_min_angle_)) || (angle_x > angles::from_degrees (laser_max_angle_)))
+-            {
+-              angle_x += resolution;
+-              continue;
+-            }
+-
+-            // 2D
+-            pt(0) = translation_ (0) + 0.0;
+-            pt(1) = translation_ (1) + distance * cos (M_PI - angle_x);
+-            pt(2) = translation_ (2) + distance * sin (M_PI - angle_x);
+-            pt(3) = 1.0;
+-
+-            // Transform the point
+-            pt_t = robot_transform * pt;
+-            cloud_.points[nr_points].x = pt_t(0);
+-            cloud_.points[nr_points].y = pt_t(1);
+-            cloud_.points[nr_points].z = pt_t(2);
+-
+-            // Save the rest of the values
+-            cloud_.channels[0].values[nr_points] = intensity;
+-            cloud_.channels[1].values[nr_points] = distance;
+-            cloud_.channels[2].values[nr_points] = i;
+-            cloud_.channels[3].values[nr_points] = laser_packet_scan_id++;
+-            cloud_.channels[4].values[nr_points] = vp (0);
+-            cloud_.channels[5].values[nr_points] = vp (1);
+-            cloud_.channels[6].values[nr_points] = vp (2);
+-            nr_points++;
+-
+-            angle_x += resolution;
+-          }
+-
+-          if (nr_points == 0)
+-          {
+-            s_lock_.lock (); it = scans_.erase (it); s_lock_.unlock ();
+-            continue;
+-          }
+-          cloud_.points.resize (nr_points);
+-          for (unsigned int d = 0; d < cloud_.channels.size (); d++)
+-            cloud_.channels[d].values.resize (nr_points);
+-
+-          cloud_.header.stamp = Time::now ();
+-          ROS_DEBUG ("Publishing a PointCloud message (%d) with %d points and %d channels on topic /%s.", 
+-                     ++point_cloud_total, (int)cloud_.points.size (), (int)cloud_.channels.size (), tf_frame_.c_str ());
+-          cloud_pub_.publish (cloud_);
+-
+-          s_lock_.lock (); it = scans_.erase (it); s_lock_.unlock ();
+-        }
++	  {
++	    LaserScanConstPtr laser_packet = *it;
++	    
++	    // Interpolate actarray values
++	    if (!interpolateActarrayValues (laser_packet, actarrays_, q_values))
++	      {
++		++it;
++		//sleep(1);
++		//ROS_INFO("cont  1");
++		continue;
++	      }
++	    
++	    // Obtain the transformation corresponding to the current joint values
++	    getGlobalTransformation (arm_params_, q_values, robot_transform);
++	    // Calculate the viewpoint for the current interpolated joint angles
++	    vp_old = vp;
++	    vp = robot_transform * translation_;
++	    
++	    if (vp (0) == vp_old (0) && vp (1) == vp_old (1) && vp (2) == vp_old (2))
++	      {
++		s_lock_.lock (); it = scans_.erase (it); s_lock_.unlock ();
++		//ROS_INFO("cont  2");
++		continue;
++	      }
++	    
++	    // Calculate the horizontal angles and the cartesian coordinates
++	    double angle_x    = laser_packet->angle_min;
++	    double resolution = laser_packet->angle_increment;
++	    
++	    //int nr_points = 0;
++	    int old_size = cloud_.points.size();
++	    cloud_.points.resize (old_size + laser_packet->ranges.size ());
++	    //cloud_.points.resize (1000000);
++	    for (unsigned int d = 0; d < cloud_.channels.size (); d++)
++	      cloud_.channels[d].values.resize (cloud_.channels[d].values.size() + laser_packet->ranges.size ());
++	    //cloud_.channels[d].values.resize (1000000);
++	    
++	    for (unsigned int i = 0; i < laser_packet->ranges.size (); i++)
++	      {
++		double distance = laser_packet->ranges[i];
++		double intensity = laser_packet->intensities[i];
++		if ((distance > max_distance_) || (distance < min_distance_))
++		  {
++		    angle_x += resolution;
++		    continue;
++		  }
++		if ((angle_x < angles::from_degrees (laser_min_angle_)) || (angle_x > angles::from_degrees (laser_max_angle_)))
++		  {
++		    angle_x += resolution;
++		    continue;
++		  }
++		
++		// 2D
++		pt(0) = translation_ (0) + 0.0;
++		pt(1) = translation_ (1) + distance * cos (M_PI - angle_x);
++		pt(2) = translation_ (2) + distance * sin (M_PI - angle_x);
++		pt(3) = 1.0;
++		
++		// Transform the point
++		pt_t = robot_transform * pt;
++		cloud_.points[nr_points].x = pt_t(0);
++		cloud_.points[nr_points].y = pt_t(1);
++		cloud_.points[nr_points].z = pt_t(2);
++		
++		// Save the rest of the values
++		cloud_.channels[0].values[nr_points] = intensity;
++		cloud_.channels[1].values[nr_points] = distance;
++		cloud_.channels[2].values[nr_points] = i;
++		cloud_.channels[3].values[nr_points] = laser_packet_scan_id++;
++		cloud_.channels[4].values[nr_points] = vp (0);
++		cloud_.channels[5].values[nr_points] = vp (1);
++		cloud_.channels[6].values[nr_points] = vp (2);
++		nr_points++;
++		
++		angle_x += resolution;
++	      }
++	   	    
++	    if (nr_points == 0)
++	      {
++		s_lock_.lock (); it = scans_.erase (it); s_lock_.unlock ();
++		continue;
++	      }
++	    cloud_.points.resize (nr_points);
++	    for (unsigned int d = 0; d < cloud_.channels.size (); d++)
++	      cloud_.channels[d].values.resize (nr_points);
++	    
++	    cloud_.header.stamp = Time::now ();
++	    //	    	    ROS_INFO ("Publishing a PointCloud message (%d) with %d points and %d channels on topic /%s  %d.", 
++	    //    ++point_cloud_total, (int)cloud_.points.size (), (int)cloud_.channels.size (), tf_frame_.c_str (), scans_.size());
++	    //cloud_pub_.publish (cloud_);
++	    s_lock_.lock (); it = scans_.erase (it); s_lock_.unlock ();
++	  }
+         ros::spinOnce ();
+       }
+-      return (true);
+-    }
++    return (true);
++  }
++  
+ };
+ 
+ /* ---[ */
+Index: src/player_actarray_log_to_msg.cpp
+===================================================================
+--- src/player_actarray_log_to_msg.cpp	(revision 152)
++++ src/player_actarray_log_to_msg.cpp	(working copy)
+@@ -66,12 +66,16 @@
+ 
+     int joints_to_publish_;
+     ifstream logfile_stream_;
+-    bool is_file_;
++  bool is_file_, spin_;
++  int save_pcd_actarray_;
+ 
+     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+     PlayerLogToMsg () : tf_frame_ ("laser_tilt_mount_link"),
+                         is_file_ (true)
+     {
++      save_pcd_actarray_ = 0;
++      nh_.setParam("/save_pcd_actarray", 0);
++      spin_ = true;
+       nh_.param ("~joints_to_publish", joints_to_publish_, -1);     // publish only the first <joints_to_publish_> joints
+       msg_topic_ = "/player_actarray";
+       act_pub_   = nh_.advertise<PlayerActarray> (msg_topic_.c_str (), 1);
+@@ -97,6 +101,21 @@
+       return (0);
+     }
+ 
++  int
++      start2 (string file_name)
++  {
++      // Open file
++      logfile_stream_.open (file_name.c_str ());
++      long int nr_lines = count (istreambuf_iterator<char>(logfile_stream_), istreambuf_iterator<char> (), '\n');
++      
++      if (nr_lines == 0)
++        ROS_WARN ("No lines found in %s", file_name.c_str ());
++      logfile_stream_.seekg (0, ios::beg);
++      ROS_INFO ("Extracting poses from %s ...", file_name.c_str ());
++      msg_act_.header.frame_id = tf_frame_;
++      return (0);
++    }
++
+     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+     // Spin (!)
+     bool
+@@ -186,6 +205,138 @@
+ 
+       return (true);
+     }
++
++  ////////////////////////////////////////////////////////////////////////////////
++  // Spin for multiple files (!)
++  ////////////////////////////////////////////////////////////////////////////////
++  bool
++  spin2 ()
++  {
++    double ti, tj = 0, tdif = 0;
++    int total_nr_poses = 0;
++    string line;
++    vector<string> st;
++    ros::Rate loop_rate(0.2);
++    
++    while (nh_.ok ())
++      {
++	update_parameters_from_server();
++	if(spin_)
++	  {
++	    getline (logfile_stream_, line);
++	    // Do we assume that the input is a file? If so, and EOF, break
++	    if (logfile_stream_.eof () && is_file_ && file_name_ != "nothing")
++	      {
++		ROS_INFO("eof actarray");
++		logfile_stream_.close();
++		spin_ = false;
++		continue;
++	      }
++	    //break;
++	    // If any bad/eof/fail flags are set, continue
++	    if (!logfile_stream_.good ())
++	      {
++		usleep (500);
++		logfile_stream_.clear ();
++		continue;
++	      }
++	    // If the line is empty, continue
++	    if (line == "")
++	      continue;
++	    
++	    // Split a line into tokens
++	    boost::trim (line);
++	    boost::split (st, line, boost::is_any_of (" "), boost::token_compress_on);
++	    
++	    string line_type = st.at (0);
++	    if (line_type.substr (0, 1) == "#")
++	      continue;
++	    
++	    // Get the interface name
++	    string interface = st.at (3);
++	    
++	    // ---[ actarray
++	    if (interface.substr (0, 8) != "actarray")
++	      continue;
++	    
++	    ti = atof (line_type.c_str ());
++	    
++	    tdif = fabs (ti - tj);                    // Just in case time decides to go backwards :)
++	    
++	    msg_act_.header.stamp = Time (ti);
++	    
++	    // index = st.at (4)
++	    int type = atoi (st.at (5).c_str ());
++	    if (type != 1)                            // we only process DATA packets
++	      continue;
++	    
++	    int nr_joints = atoi (st.at (7).c_str ());
++	    if (joints_to_publish_ != -1)
++	      nr_joints = min (nr_joints, joints_to_publish_);
++	    
++	    msg_act_.joints.resize (nr_joints);
++	    if (msg_act_.joints.size () == 0)         // If no joints found, continue to the next packet
++	      continue;
++	    
++	    for (unsigned int i = 0; i < msg_act_.joints.size (); i++)
++	      msg_act_.joints[i] = atof (st.at (8 + 5 * i).c_str ());
++	    total_nr_poses++;
++	    
++	    if (is_file_)
++	      ROS_DEBUG ("Publishing data (%d joint positions) on topic %s in frame %s.",
++			 (int)msg_act_.joints.size (), nh_.resolveName (msg_topic_).c_str (), msg_act_.header.frame_id.c_str ());
++	    act_pub_.publish (msg_act_);
++	    
++	    // Sleep for a certain number of seconds (tdif)
++	    if (tj != 0 && is_file_)
++	      {
++		Duration tictoc (tdif);
++		tictoc.sleep ();
++	      }
++	     nh_.getParam("/save_pcd_actarray", save_pcd_actarray_);
++	     if(save_pcd_actarray_ == 1 || save_pcd_actarray_ == 2)
++	       nh_.setParam("/save_pcd_actarray", 0);
++	    spinOnce ();
++	    tj = ti;
++	    
++	    logfile_stream_.clear ();
++	  }
++	
++	if(!spin_)
++	  {
++	    loop_rate.sleep();
++	    tj = 0, tdif = 0;
++	    total_nr_poses = 0;
++	    line = "";
++	    st.clear();
++	    nh_.getParam("/save_pcd_actarray", save_pcd_actarray_);
++	    if(save_pcd_actarray_ == 0)
++	      nh_.setParam("/save_pcd_actarray", 1);
++	    ROS_WARN("player actarray looping!!!!");
++	  }
++	
++      }
++    // Close the file and finish the movie
++    if(logfile_stream_.is_open())
++      logfile_stream_.close ();
++    ROS_INFO ("[done : %d poses extracted]", total_nr_poses);
++    
++    return (true);
++  }
++  
++ void
++  update_parameters_from_server()
++  {
++    string log_filename_tmp = file_name_;
++    nh_.getParam("/log_filename", file_name_);
++    if (log_filename_tmp != file_name_ && file_name_ != "nothing")
++      {
++	ROS_INFO("actarray filename: %s", file_name_.c_str());
++	start2(file_name_);
++	spin_ = true;
++      }
++    //ROS_INFO("Updating parameters from server");
++  }
+ };
+ 
+ /* ---[ */
+@@ -206,12 +357,21 @@
+   p.file_name_ = string (argv[1]);
+   p.is_file_   = atoi (argv[2]);
+ 
+-  if (p.start () == -1)
+-  {
+-    ROS_ERROR ("Error processing %s. Exiting.", argv[1]);
+-    return (-1);
+-  }
+-  p.spin ();
++  //do we pass files in directory?
++  if (atoi(argv[2]) != 2)
++    {
++      if (p.start () == -1)
++	{
++	  ROS_ERROR ("Error processing %s. Exiting.", argv[1]);
++	  return (-1);
++	}
++      p.spin ();
++    }
++  else
++    {
++      p.file_name_ = "nothing";
++      p.spin2();
++    }
+ 
+   return (0);
+ }
+Index: CMakeLists.txt
+===================================================================
+--- CMakeLists.txt	(revision 152)
++++ CMakeLists.txt	(working copy)
+@@ -25,7 +25,7 @@
+ 
+ rosbuild_add_executable (bin/player_actarray_log_to_msg src/player_actarray_log_to_msg.cpp)
+ rosbuild_add_executable (bin/actarray_cloud_assembler src/actarray_cloud_assembler.cpp)
+-
++rosbuild_link_boost(bin/actarray_cloud_assembler filesystem)
+ ##########################################################
+ #Compiles only on blue B21 robot from CS Department IX, TU Munich
+ ##########################################################
