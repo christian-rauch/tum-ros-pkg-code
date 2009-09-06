@@ -13,7 +13,7 @@ def untar(path=None):
     for j in basename_list:
         command = 'mkdir ' + j.bn + '; cd ' + j.bn + '; tar xvvf ../' + j.fn + '; cd ..'
         print command;
-        #os.system()
+        os.system(command)
         
     
 
