@@ -1,0 +1,7 @@
+<launch>
+  <node pkg="point_cloud_mapping" type="player_laser_log_to_msg" name="player_laser_log_to_msg" output="screen" args="$(find player_log_actarray)/test.log 1" />
+  <node pkg="player_log_actarray" type="player_actarray_log_to_msg" name="player_actarray_log_to_msg" output="screen" args="$(find player_log_actarray)/test.log 1">
+    <param name="joints_to_publish" value="6" />
+  </node>
+
+</launch>
