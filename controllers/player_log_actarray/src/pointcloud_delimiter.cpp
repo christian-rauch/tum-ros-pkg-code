@@ -75,7 +75,9 @@ protected:
   PointCloud cloud_in_, cloud_out_;
   delimiter  del_;
   string dir_;
-  vector<string> file_list_; 
+  vector<string> file_list_;
+  int normalize_;
+  double norm_;
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   //Constructor
@@ -96,17 +98,22 @@ protected:
 
       nh_.param ("~min_z", del_.min_z, 0.0);     // minimum z to be considered
       nh_.param ("~max_z", del_.max_z, 0.0);   // maximum z to be considered
+      nh_.param ("~normalize", normalize_, 0);   // shall we normalize data?
+      nh_.param ("~norm", norm_, 1.0);   // normalization coefficient
 
-      cloud_out_.header.frame_id = "laser_tilt_mount_link";
-      cloud_out_.channels.resize (7);
-      cloud_out_.channels[0].name = "intensity";
-      cloud_out_.channels[1].name = "distance";
-      cloud_out_.channels[2].name = "sid";
-      cloud_out_.channels[3].name = "pid";
-      cloud_out_.channels[4].name = "vx";
-      cloud_out_.channels[5].name = "vy";
-      cloud_out_.channels[6].name = "vz";
-    }
+      if(!normalize_)
+	{
+	  cloud_out_.header.frame_id = "base_link";
+	  cloud_out_.channels.resize (7);
+	  cloud_out_.channels[0].name = "intensity";
+	  cloud_out_.channels[1].name = "distance";
+	  cloud_out_.channels[2].name = "sid";
+	  cloud_out_.channels[3].name = "pid";
+	  cloud_out_.channels[4].name = "vx";
+	  cloud_out_.channels[5].name = "vy";
+	  cloud_out_.channels[6].name = "vz";
+	}
+      }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   //Destructor
@@ -158,34 +165,50 @@ protected:
 	    //reset sizes
 	    nr_points = 0, progress = 0;
 	    cloud_out_.points.resize(0);
-	    for (unsigned int d = 0; d < cloud_in_.channels.size (); d++)
-	      cloud_out_.channels[d].values.resize (0);
-	    cloud_out_.header =  cloud_in_.header;
+	    if(!normalize_)
+	      {
+		for (unsigned int d = 0; d < cloud_in_.channels.size (); d++)
+		  cloud_out_.channels[d].values.resize (0);
+		cloud_out_.header =  cloud_in_.header;
+	      }
 	    for (unsigned int j = 0; j < cloud_in_.points.size(); j++)
 	      {
-		if ((del_.min_x <= cloud_in_.points[j].x) && (cloud_in_.points[j].x <= del_.max_x) &&
-		    (del_.min_y <= cloud_in_.points[j].y) && (cloud_in_.points[j].y <= del_.max_y) &&
-		    (del_.min_z <= cloud_in_.points[j].z) && (cloud_in_.points[j].z <= del_.max_z))
+		if(!normalize_)
 		  {
-		    //resize
+		    if ((del_.min_x <= cloud_in_.points[j].x) && (cloud_in_.points[j].x <= del_.max_x) &&
+			(del_.min_y <= cloud_in_.points[j].y) && (cloud_in_.points[j].y <= del_.max_y) &&
+			(del_.min_z <= cloud_in_.points[j].z) && (cloud_in_.points[j].z <= del_.max_z))
+		      {
+			//resize
+			cloud_out_.points.resize(nr_points + 1);
+			for (unsigned int d = 0; d < cloud_in_.channels.size (); d++)
+			  cloud_out_.channels[d].values.resize (nr_points + 1);
+			
+			//fill with values
+			cloud_out_.points[nr_points].x =  cloud_in_.points[j].x;
+			cloud_out_.points[nr_points].y =  cloud_in_.points[j].y;
+			cloud_out_.points[nr_points].z =  cloud_in_.points[j].z;
+			// Save the rest of the values
+			cloud_out_.channels[0].values[nr_points] =  cloud_in_.channels[0].values[j];
+			cloud_out_.channels[1].values[nr_points] =  cloud_in_.channels[1].values[j];
+			cloud_out_.channels[2].values[nr_points] =  cloud_in_.channels[2].values[j];
+			cloud_out_.channels[3].values[nr_points] =  cloud_in_.channels[3].values[j];
+			cloud_out_.channels[4].values[nr_points] =  cloud_in_.channels[4].values[j];
+			cloud_out_.channels[5].values[nr_points] =  cloud_in_.channels[5].values[j];
+			cloud_out_.channels[6].values[nr_points] =  cloud_in_.channels[6].values[j];
+			nr_points++;
+		      }
+		  }
+		//if data need to be normalized (like the ones from david)
+		if(normalize_)
+		  {
 		    cloud_out_.points.resize(nr_points + 1);
-		    for (unsigned int d = 0; d < cloud_in_.channels.size (); d++)
-		      cloud_out_.channels[d].values.resize (nr_points + 1);
-		    
-		    //fill with values
-		    cloud_out_.points[nr_points].x =  cloud_in_.points[j].x;
-		    cloud_out_.points[nr_points].y =  cloud_in_.points[j].y;
-		    cloud_out_.points[nr_points].z =  cloud_in_.points[j].z;
-		    // Save the rest of the values
-		    cloud_out_.channels[0].values[nr_points] =  cloud_in_.channels[0].values[j];
-		    cloud_out_.channels[1].values[nr_points] =  cloud_in_.channels[1].values[j];
-		    cloud_out_.channels[2].values[nr_points] =  cloud_in_.channels[2].values[j];
-		    cloud_out_.channels[3].values[nr_points] =  cloud_in_.channels[3].values[j];
-		    cloud_out_.channels[4].values[nr_points] =  cloud_in_.channels[4].values[j];
-		    cloud_out_.channels[5].values[nr_points] =  cloud_in_.channels[5].values[j];
-		    cloud_out_.channels[6].values[nr_points] =  cloud_in_.channels[6].values[j];
+		    cloud_out_.points[nr_points].x =  cloud_in_.points[j].x/norm_;
+		    cloud_out_.points[nr_points].y =  cloud_in_.points[j].y/norm_;
+		    cloud_out_.points[nr_points].z =  cloud_in_.points[j].z/norm_;
 		    nr_points++;
 		  }
+
 		if (j == int(cloud_in_.points.size() * (float(progress + 1)/10)) )
 		  {
 		    ROS_INFO("%d percent", (progress+1) * 10);
@@ -196,7 +219,10 @@ protected:
 	      {
 		int str_len = file_list_[i].length();
 		string pcd_del = file_list_[i].erase((str_len - 4), 4);
-		pcd_del += ".delimited.pcd";
+		if(!normalize_)
+		  pcd_del += ".delimited.pcd";
+		else 
+		  pcd_del += ".normalized.pcd";
 		ROS_INFO("Saving file %s with nr. of points %d", pcd_del.c_str(), nr_points);
 		savePCDFile (pcd_del.c_str(), cloud_out_, false);
 		pcd_del.clear();
