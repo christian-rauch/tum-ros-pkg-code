@@ -15,13 +15,18 @@ def untar(path=None):
         print command;
         os.system(command)
         
-def tar(path=None):
+def tar(path=None, keys = []):
     pcdlist = []
     if path == None:
         path = '.'
     list = os.listdir(path)
     for file in list:
-        if file.find('pcd') != -1:
+        append = True
+        for k in keys:
+            if file.find(k) == -1:
+                append = False
+                break;
+        if append == True:
             pcdlist.append(file)
     objects_list = []
     for file in pcdlist:
@@ -33,7 +38,10 @@ def tar(path=None):
         for file in pcdlist:
             if file.find(obj) != -1:
                 tar_str += ' ' + file
-        command = 'tar cvvf ' + obj +  '.pcd.tar.bz2' + tar_str
+        if 'delimited' in keys:
+            command = 'tar cvvf ' + obj +  '.delimited.pcd.tar.bz2' + tar_str
+        else:
+            command = 'tar cvvf ' + obj +  '.pcd.tar.bz2' + tar_str
         os.system(command)
         tar_str = ''
         print 'obj: ', obj, 'command: ', command, '\n'
@@ -48,5 +56,6 @@ class FileNames:
 if __name__ == "__main__":
     if sys.argv[1] == '0':
         untar()
-    if  sys.argv[1] == '1':
-        tar()
+    else:
+        keys = sys.argv[1:]
+        tar(None, keys)

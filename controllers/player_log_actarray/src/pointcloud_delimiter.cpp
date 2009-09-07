@@ -150,7 +150,6 @@ protected:
     ROS_INFO("file_list_ size %d", file_list_.size());
     while (nh_.ok ())
       {
-	
 	for (unsigned int i = 0; i < file_list_.size(); i++)
 	  {
 	    ROS_INFO("Loading file %s", file_list_[i].c_str());
@@ -204,6 +203,7 @@ protected:
 	      }
 	  }
         ros::spinOnce ();
+	break;
       }
     return (true);
   }
