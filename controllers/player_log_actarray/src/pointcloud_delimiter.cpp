@@ -209,8 +209,7 @@ protected:
 			if ((del_.min_x <= cloud_in_.points[j].x) && (cloud_in_.points[j].x <= del_.max_x) &&
 			(del_.min_y <= cloud_in_.points[j].y) && (cloud_in_.points[j].y <= del_.max_y) &&
 			(del_.min_z <= cloud_in_.points[j].z) && (cloud_in_.points[j].z <= del_.max_z))
-			{
-				ROS_WARN("DAVID INSIDE WARN");
+			{				
 				cloud_out_.points.resize(nr_points + 1);
 				//fill with values
 				cloud_out_.points[nr_points].x =  cloud_in_.points[j].x;
