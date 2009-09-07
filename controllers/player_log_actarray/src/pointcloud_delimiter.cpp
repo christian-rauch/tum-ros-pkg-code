@@ -78,6 +78,7 @@ protected:
   vector<string> file_list_;
   int normalize_;
   double norm_;
+  int delimit_david_;
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   //Constructor
@@ -100,8 +101,10 @@ protected:
       nh_.param ("~max_z", del_.max_z, 0.0);   // maximum z to be considered
       nh_.param ("~normalize", normalize_, 0);   // shall we normalize data?
       nh_.param ("~norm", norm_, 1.0);   // normalization coefficient
+	  
+	  nh_.param ("~delimit_david", delimit_david_, 0);   // delimiting david?
 
-      if(!normalize_)
+      if(!normalize_ && !delimit_david_)
 	{
 	  cloud_out_.header.frame_id = "base_link";
 	  cloud_out_.channels.resize (7);
@@ -153,7 +156,7 @@ protected:
   {
     int nr_points = 0;
     unsigned int progress = 0;
-    ROS_INFO("minima/maxima x, y, z : %f, %f, %f, %f, %f, %f", del_.min_x, del_.max_x, del_.min_y, del_.max_y, del_.max_z, del_.min_z);
+    ROS_INFO("minima/maxima x, y, z : %f, %f, %f, %f, %f, %f", del_.min_x, del_.max_x, del_.min_y, del_.max_y, del_.min_z, del_.max_z);
     ROS_INFO("file_list_ size %d", file_list_.size());
     while (nh_.ok ())
       {
@@ -165,7 +168,7 @@ protected:
 	    //reset sizes
 	    nr_points = 0, progress = 0;
 	    cloud_out_.points.resize(0);
-	    if(!normalize_)
+	    if(!normalize_ && !delimit_david_)
 	      {
 		for (unsigned int d = 0; d < cloud_in_.channels.size (); d++)
 		  cloud_out_.channels[d].values.resize (0);
@@ -173,7 +176,7 @@ protected:
 	      }
 	    for (unsigned int j = 0; j < cloud_in_.points.size(); j++)
 	      {
-		if(!normalize_)
+		if(!normalize_ && !delimit_david_)
 		  {
 		    if ((del_.min_x <= cloud_in_.points[j].x) && (cloud_in_.points[j].x <= del_.max_x) &&
 			(del_.min_y <= cloud_in_.points[j].y) && (cloud_in_.points[j].y <= del_.max_y) &&
@@ -199,6 +202,24 @@ protected:
 			nr_points++;
 		      }
 		  }
+		  
+		if(delimit_david_)
+		{
+			//ROS_WARN("DAVID WARN");
+			if ((del_.min_x <= cloud_in_.points[j].x) && (cloud_in_.points[j].x <= del_.max_x) &&
+			(del_.min_y <= cloud_in_.points[j].y) && (cloud_in_.points[j].y <= del_.max_y) &&
+			(del_.min_z <= cloud_in_.points[j].z) && (cloud_in_.points[j].z <= del_.max_z))
+			{
+				ROS_WARN("DAVID INSIDE WARN");
+				cloud_out_.points.resize(nr_points + 1);
+				//fill with values
+				cloud_out_.points[nr_points].x =  cloud_in_.points[j].x;
+				cloud_out_.points[nr_points].y =  cloud_in_.points[j].y;
+				cloud_out_.points[nr_points].z =  cloud_in_.points[j].z;				
+				nr_points++;
+			}			
+		}
+		  
 		//if data need to be normalized (like the ones from david)
 		if(normalize_)
 		  {
@@ -219,7 +240,7 @@ protected:
 	      {
 		int str_len = file_list_[i].length();
 		string pcd_del = file_list_[i].erase((str_len - 4), 4);
-		if(!normalize_)
+		if(!normalize_ || delimit_david_)
 		  pcd_del += ".delimited.pcd";
 		else 
 		  pcd_del += ".normalized.pcd";
