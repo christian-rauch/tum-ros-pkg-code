@@ -46,16 +46,30 @@ def tar(path=None, keys = []):
         tar_str = ''
         print 'obj: ', obj, 'command: ', command, '\n'
 
+def rename_to_fixed_prec(path=None):
+    pcdlist = []
+    if path == None:
+        path = '.'
+    list = os.listdir(path)
+    for file in list:
+        nr_old = file.split('_')[1]
+        nr_new = '%04.d' %int(nr_old)
+        file_renamed=file.replace(nr_old, nr_new)
+        command = 'mv ' + file + ' ' + file_renamed
+        print "moving: ", command, "\n"
+        os.system(command)
+
 class FileNames:
     def __init__(self, fullname, basename):
         self.fn = fullname
         self.bn = basename
 
 
-
 if __name__ == "__main__":
     if sys.argv[1] == '0':
         untar()
+    elif  sys.argv[1] == 'r':
+        rename_to_fixed_prec()
     else:
         keys = sys.argv[1:]
         tar(None, keys)
