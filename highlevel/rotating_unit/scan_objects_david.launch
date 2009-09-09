@@ -29,7 +29,7 @@
   <node pkg="rotating_unit" type="rotating_dp_ptu" name="rotating_dp_ptu" output="screen" respawn="false">
     <param name="~angle_step" type="double" value="30.0" />
     <param name="~object" type="string" value="ptu" />	
-    <param name="~sweeps" type="int" values="1" />
+    <param name="~sweeps" type="int" value="1" />
     <!--Set to one if using David system-->
     <param name="~is_david" type="int" value="0"/>		
   </node> 
