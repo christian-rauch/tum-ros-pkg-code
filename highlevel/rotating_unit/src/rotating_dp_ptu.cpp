@@ -85,6 +85,7 @@ class RotatingDPPTU
     string object_;
     bool left_arm_;
     int is_david_;
+    int sweeps_;
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     RotatingDPPTU () : total_laser_scans_ (0),
@@ -95,6 +96,7 @@ class RotatingDPPTU
       nh_.param ("~max_distance", max_distance_, 3.01);   // maximum distance range to be considered
       nh_.param ("~angle_step", angle_step_, 30.0);     // ptu rotating angle
       nh_.param ("~object", object_, string("mug"));   // name of object to be scanned
+      nh_.param ("~sweeps", sweeps_, 1); 		// number of sweeps of the laser arm per scan
       //are we scanning using David system
       nh_.param("~is_david", is_david_, 0);
 
@@ -165,7 +167,7 @@ class RotatingDPPTU
       mapping_srvs::TriggerSweep i_s;
       perception_srvs::David d_s;
       ros::Duration tictoc (1, 0);
-      ros::Duration wait_grab_texture (15, 0);
+      ros::Duration wait_grab_texture (3, 0);
       ros::Duration david_wait (0.1);
       ros::Rate loop_rate(5);
       PointCloud cloud_r;
@@ -197,8 +199,10 @@ class RotatingDPPTU
 	    
 	    if (is_david_)
 	      {
+	        //ROS_WARN("In is_david");
 		// Start david scanning system
 		if(david_connect_){
+		  ROS_WARN("Connecting to DAVID server");
 		  //connect only once per node cycle
 		  d_s.request.david_method = "connect";
 		  david_connect_ = false;
@@ -219,7 +223,7 @@ class RotatingDPPTU
 	    // Trigger the LMS400 to sweep
 	    // or
 	    // only rotate one joint if scanning with David system
-	    for (int i = 0; i < 1; i++)
+	    for (int i = 0; i < sweeps_; i++)
 	      {
 		s_s.request.object = object_;
 		s_s.request.angle_filename = angle;

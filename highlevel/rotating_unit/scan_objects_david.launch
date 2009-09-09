@@ -1,11 +1,11 @@
 <launch>	
   <node pkg="player_log_actarray" type="start-player-server.sh" name="start-player-server.sh" output="screen" args="$(find player_log_actarray)/demo/player-demo.cfg" />
   <node pkg="player_log_actarray" type="sweep_laser_scan_cli_client" name="amtec_sweep_service_server" output="screen" respawn="true">
-	<param name="~start_angle" type="double" value="-90.0"/>
-        <param name="~end_angle" type="double" value="-105.0"/>
+	<param name="~start_angle" type="double" value="-75.0"/>
+        <param name="~end_angle" type="double" value="-95.0"/>
 	<param name="~interface" type="int" value="1"/>		
 	<param name="~rot_joint" type="int" value="4"/>			
-	<param name="~rot_speed" type="double" value="0.1"/>		
+	<param name="~rot_speed" type="double" value="0.5"/>		
 	<!--Set to one if using lms400-->
 	<param name="~is_lms400_" type="int" value="1"/>		
  </node>	
@@ -22,15 +22,16 @@
  </node>
 
 <!--halcone image save-->
-  <node pkg="halcon_image_writer" type="halcon_3d_data_base" name="halcon3D" output="screen" respawn="true">
+  <node pkg="halcon_write_image" type="halcon_3d_data_base" name="halcon3D" output="screen" respawn="true">
  </node>
 
 <!--executive-->
   <node pkg="rotating_unit" type="rotating_dp_ptu" name="rotating_dp_ptu" output="screen" respawn="false">
     <param name="~angle_step" type="double" value="30.0" />
-    <param name="~object" type="string" value="test" />	
+    <param name="~object" type="string" value="ptu" />	
+    <param name="~sweeps" type="int" values="1" />
     <!--Set to one if using David system-->
-    <param name="~is_david_" type="int" value="0"/>		
+    <param name="~is_david" type="int" value="0"/>		
   </node> 
 </launch>
 

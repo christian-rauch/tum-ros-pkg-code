@@ -1,7 +1,7 @@
 <launch>
   <node pkg="rotating_unit" type="rotating_dp_ptu" name="rotating_dp_ptu" output="screen" respawn="false">
     <param name="~angle_step" type="double" value="30.0" />
-    <param name="~object" type="string" value="mug" />	
+    <param name="~object" type="string" value="can" />	
   </node> 
 </launch>
 
