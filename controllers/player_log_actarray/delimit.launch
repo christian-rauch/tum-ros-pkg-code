@@ -1,6 +1,6 @@
 <launch>
   <node pkg="player_log_actarray" type="pointcloud_delimiter" name="pointcloud_delimiter" output="screen">
-    <param name="~dir" type="string"  value="/home/perceptor" />
+    <param name="~dir" type="string"  value="" />
     <param name="~max_x" value="184"/>
     <param name="~min_x" value="88"/>
     <param name="~max_y" value="285"/>
