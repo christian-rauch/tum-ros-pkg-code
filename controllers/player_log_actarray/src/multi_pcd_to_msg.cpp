@@ -24,7 +24,7 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: pcd_to_msg.cpp 21050 2009-08-07 21:24:30Z jfaustwg $
+ * $Id: multi_pcd_to_msg.cpp 21050 2009-08-07 21:24:30Z jfaustwg $
  *
  */
 
@@ -88,6 +88,7 @@ class MultiPCDGenerator
       start ()
     {
       get_log_files(dir_, file_list_);
+      std::sort(file_list_.begin(), file_list_.end());
       // if (file_name_ == "" || cloud_io::loadPCDFile (file_name_.c_str (), msg_cloud_) == -1)
       //  return (-1);
       //msg_cloud_.header.frame_id = tf_frame_;
@@ -133,7 +134,8 @@ class MultiPCDGenerator
 	      broadcaster_.sendTransform (transform_);
 	      cloud_io::loadPCDFile (file_list_[pcd].c_str (), msg_cloud_);
 	      msg_cloud_.header.frame_id = tf_frame_;
-	      ROS_INFO ("Publishing data (%d points) on topic %s in frame %s.", (int)msg_cloud_.points.size (), 
+	      ROS_INFO ("Publishing data from file %s (%d points) on topic %s in frame %s.",
+			file_list_[pcd].c_str (),(int)msg_cloud_.points.size (), 
 			nh_.resolveName (cloud_topic_).c_str (), msg_cloud_.header.frame_id.c_str ());
 	      msg_cloud_.header.stamp = ros::Time::now ();
 	      cloud_pub_.publish (msg_cloud_);
@@ -142,6 +144,8 @@ class MultiPCDGenerator
 	      //  break;
 	      usleep (interval);
 	      ros::spinOnce ();
+	      if (!nh_.ok())
+		break;
 	    }
 	}
       

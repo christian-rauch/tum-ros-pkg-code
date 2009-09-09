@@ -1,6 +1,6 @@
 <launch>
   <node pkg="player_log_actarray" type="pointcloud_delimiter" name="pointcloud_delimiter" output="screen">
-    <param name="~dir" type="string"  value="/home/andreas/Desktop/david_objects/fizzy-tablet/" />
+    <param name="~dir" type="string"  value="/home/perceptor" />
     <param name="~max_x" value="184"/>
     <param name="~min_x" value="88"/>
     <param name="~max_y" value="285"/>
@@ -8,8 +8,8 @@
     <param name="~max_z" value="147"/>
     <param name="~min_z" value="56"/>
     <!--set if you want to normalize points (such as from david system) -->
-    <param name="~normalize" value="0"/>		
+    <param name="~normalize" value="1"/>		
     <param name="~norm" value="1000.0"/>
-    <param name="~delimit_david" value="1"/>
+    <param name="~delimit_david" value="0"/>
   </node>
 </launch>

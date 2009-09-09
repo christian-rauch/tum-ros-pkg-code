@@ -4,7 +4,7 @@
     <param name="translations_x" value="0.097" />
     <param name="translations_y" value="0.14207" />
     <param name="translations_z" value="0.0" />
-    <param name="~dir" type="string" value="" />
+    <param name="~dir" type="string" value="/home/perceptor/data/tmp" />
 
 <!--
       right_arm[0].t =  0;      right_arm[0].d = +0.225;  right_arm[0].l = 0;  right_arm[0].a = +M_PI/2;
