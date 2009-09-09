@@ -26,6 +26,8 @@ rosbuild_genmsg()
 rosbuild_add_executable (bin/player_actarray_log_to_msg src/player_actarray_log_to_msg.cpp)
 rosbuild_add_executable (bin/actarray_cloud_assembler src/actarray_cloud_assembler.cpp)
 rosbuild_link_boost(bin/actarray_cloud_assembler filesystem)
+rosbuild_add_executable (bin/multi_pcd_to_msg src/multi_pcd_to_msg.cpp)
+rosbuild_link_boost(bin/multi_pcd_to_msg filesystem)
 rosbuild_add_executable (bin/pointcloud_delimiter src/pointcloud_delimiter.cpp)
 rosbuild_link_boost(bin/pointcloud_delimiter filesystem)
 ##########################################################
