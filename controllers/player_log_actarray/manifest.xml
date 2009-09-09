@@ -12,6 +12,7 @@
   <depend package="tf" />
   <depend package="angles" />
   <depend package="eigen" />
+  <depend package="kdl" />
   <!--<depend package="player_bender_dummy" />-->
   <depend package="mapping_srvs" />
   <depend package="point_cloud_mapping" />
