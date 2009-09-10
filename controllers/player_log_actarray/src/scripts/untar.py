@@ -38,10 +38,15 @@ def tar(path=None, keys = []):
         for file in pcdlist:
             if file.find(obj) != -1:
                 tar_str += ' ' + file
-        if 'delimited' in keys:
+        if 'delimited'in keys and not 'denoised' in keys and not 'rotated' in keys :
             command = 'tar cvvf ' + obj +  '.delimited.pcd.tar.bz2' + tar_str
+        elif  'delimited' in keys and 'denoised' in keys and not 'rotated' in keys:
+            command = 'tar cvvf ' + obj +  '.delimited.denoised.pcd.tar.bz2' + tar_str
+        elif 'delimited' in keys and 'denoised' in keys and 'rotated' in keys:
+            command = 'tar cvvf ' + obj +  '.delimited.denoised.rotated.pcd.tar.bz2' + tar_str
         else:
-            command = 'tar cvvf ' + obj +  '.pcd.tar.bz2' + tar_str
+            print "Unknown arguments!!"
+            quit(0)
         os.system(command)
         tar_str = ''
         print 'obj: ', obj, 'command: ', command, '\n'

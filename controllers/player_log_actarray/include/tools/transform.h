@@ -47,8 +47,11 @@ namespace player_log_actarray
   
   namespace transform
   {
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // rotate PointCloud
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     bool rotatePointCloud (const PointCloud &cloud_in, PointCloud &cloud_out, double angle, Point32 axis)
-    {
+    { 
       Vector p,p2; 
       Rotation R;
         if(axis.x)
@@ -62,10 +65,19 @@ namespace player_log_actarray
 	      ROS_ERROR("Axis must [1 0 0] format!");
 	      return false;
 	    }
-      cloud_out.points.resize(0);
+	cloud_out.points.resize(0);
+	cloud_out.header.frame_id =  cloud_in.header.frame_id;
+	cloud_out.channels.resize (cloud_in.channels.size());
+      for (int i = 0; i < cloud_in.channels.size(); i++)
+	cloud_out.channels[i].name =  cloud_in.channels[i].name;
+
       ROS_INFO("in rpc %f %f %f %f", angle, axis.x, axis.y, axis.z);
       for (unsigned int point = 0; point < cloud_in.points.size(); point++)
 	{
+	  //resize
+	  for (unsigned int d = 0; d < cloud_in.channels.size (); d++)
+	    cloud_out.channels[d].values.resize (point + 1);
+	  //rotate, fill in
 	  p.x(cloud_in.points[point].x);
 	  p.y(cloud_in.points[point].y);
 	  p.z(cloud_in.points[point].z);
@@ -74,9 +86,43 @@ namespace player_log_actarray
 	  cloud_out.points[point].x = p2.x();
 	  cloud_out.points[point].y = p2.y();
 	  cloud_out.points[point].z = p2.z();
+
+	  // Save the rest of the values
+	  for (int i = 0; i < cloud_in.channels.size(); i++)
+	    {
+	      cloud_out.channels[i].values[point] =  cloud_in.channels[i].values[point];
+	    }
 	}
       return true;
     }
+
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // shift PointCloud
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    bool translatePointCloud (const PointCloud &cloud_in, PointCloud &cloud_out, Point32 trans)
+    {
+      cloud_out.points.resize(0);
+      cloud_out.header.frame_id =  cloud_in.header.frame_id;
+      cloud_out.channels.resize (cloud_in.channels.size());
+      for (int i = 0; i < cloud_in.channels.size(); i++)
+	cloud_out.channels[i].name =  cloud_in.channels[i].name;
+
+       for (unsigned int point = 0; point < cloud_in.points.size(); point++)
+	{
+	  //resize
+	  for (unsigned int d = 0; d < cloud_in.channels.size (); d++)
+	    cloud_out.channels[d].values.resize (point + 1);
+	  //rotate, fill in
+	  cloud_out.points.resize(point + 1);
+	  cloud_out.points[point].x = cloud_in.points[point].x + trans.x;
+	  cloud_out.points[point].y = cloud_in.points[point].y + trans.y;
+	  cloud_out.points[point].z = cloud_in.points[point].z + trans.z;
+	  // Save the rest of the values
+	  for (int i = 0; i < cloud_in.channels.size(); i++)
+	    cloud_out.channels[i].values[point] =  cloud_in.channels[i].values[point];
+	}
+       return true;
+    } 
   }
 }
 #endif

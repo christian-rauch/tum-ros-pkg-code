@@ -71,11 +71,14 @@ protected:
   
   public:
     // ROS messages
-  PointCloud cloud_in_, cloud_out_;
+  PointCloud cloud_in_, cloud_out_, cloud_interim_;
   string dir_;
   vector<string> file_list_;
-  Point32 axis_;
+  Point32 axis_, trans_;
+  //rotation axis
   double x_, y_, z_;
+  //translation
+  double tx_, ty_, tz_;
   
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   //Constructor
@@ -91,9 +94,12 @@ protected:
       nh_.param ("~axis_x", x_, 0.0);     // rotate around x
       nh_.param ("~axis_y", y_, 0.0);     // rotate around y
       nh_.param ("~axis_z", z_, 0.0);     // rotate around z
-      axis_.x = float(x_);
-      axis_.y = float(y_);
-      axis_.z = float(z_); 
+      axis_.x = float(x_), axis_.y = float(y_), axis_.z = float(z_); 
+
+      nh_.param ("~tx", tx_, 0.0);     // translate x
+      nh_.param ("~ty", ty_, 0.0);     // translate y
+      nh_.param ("~tz", tz_, 0.0);     // translate z
+      trans_.x = float(tx_), trans_.y = float(ty_), trans_.z = float(tz_); 
   }
   
 
@@ -136,7 +142,8 @@ protected:
 	    loadPCDFile(file_list_[i].c_str(), cloud_in_);
 	    angle = get_angle(file_list_[i]) + ANGLE_SHIFT;
 	    ROS_INFO("Rotating for %d deg.", angle);
-	    if(transform::rotatePointCloud (cloud_in_, cloud_out_, angles::from_degrees(angle), axis_))
+	    transform::translatePointCloud (cloud_in_, cloud_interim_, trans_);
+	    if(transform::rotatePointCloud (cloud_interim_, cloud_out_, angles::from_degrees(-angle), axis_))
 	    {
 	      if(cloud_out_.points.size() != 0)		
 		{
