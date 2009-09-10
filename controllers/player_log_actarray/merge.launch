@@ -1,0 +1,9 @@
+<launch>
+  <node pkg="player_log_actarray" type="pointcloud_merger" name="pointcloud_merger" output="screen" >
+    <param name="~dir" value="/home/perceptor/data/tmp/tmp" />
+    <param name="~axis_x" value="0.0" />
+    <param name="~axis_y" value="1.0" />
+    <param name="~axis_z" value="0.0" />
+  </node>
+
+</launch>

@@ -98,7 +98,7 @@ class MultiPCDGenerator
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // Get a list of lpcd files
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  void get_log_files ( const path & directory, vector <string> &file_list, string suffix=".delimited.pcd", bool recurse_into_subdirs = false )
+  void get_log_files ( const path & directory, vector <string> &file_list, string suffix=".pcd", bool recurse_into_subdirs = false )
   {
     if( exists( directory ) )
       {

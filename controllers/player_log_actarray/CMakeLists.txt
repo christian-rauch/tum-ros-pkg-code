@@ -30,6 +30,8 @@ rosbuild_add_executable (bin/multi_pcd_to_msg src/multi_pcd_to_msg.cpp)
 rosbuild_link_boost(bin/multi_pcd_to_msg filesystem)
 rosbuild_add_executable (bin/pointcloud_delimiter src/pointcloud_delimiter.cpp)
 rosbuild_link_boost(bin/pointcloud_delimiter filesystem)
+rosbuild_add_executable (bin/pointcloud_merger src/pointcloud_merger.cpp)
+rosbuild_link_boost(bin/pointcloud_merger filesystem)
 ##########################################################
 #Compiles only on blue B21 robot from CS Department IX, TU Munich
 ##########################################################

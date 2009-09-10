@@ -24,58 +24,52 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: transform.h 21045 2009-08-07 20:52:44Z dejanpan $
+ * $Id: file_io.h 21045 2009-08-07 20:52:44Z dejanpan $
  *
  */
 
 /** \author Dejan Pangercic */
 
-#ifndef _PLAYER_LOG_ACTARRAY_TRANSFORM_H_
-#define _PLAYER_LOG_ACTARRAY_TRANSFORM_H_
+#ifndef _PLAYER_LOG_ACTARRAY_FILE_IO_H_
+#define _PLAYER_LOG_ACTARRAY_FILE_IO_H_
 
-// ROS includes
-#include <geometry_msgs/Point32.h>
-#include <sensor_msgs/PointCloud.h>
-#include <kdl/frames.hpp>
 
-using namespace KDL;
-using namespace sensor_msgs;
-using namespace geometry_msgs;
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/fstream.hpp>
+#include "boost/filesystem.hpp"
+
+using namespace std;
+using namespace boost::filesystem; 
 
 namespace player_log_actarray
 {
   
-  namespace transform
+  namespace file_io
   {
-    bool rotatePointCloud (const PointCloud &cloud_in, PointCloud &cloud_out, double angle, Point32 axis)
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Get a list of log files from a directory
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    void get_log_files ( const path & directory, vector <string> &file_list, string suffix=".log", bool recurse_into_subdirs = false )
     {
-      Vector p,p2; 
-      Rotation R;
-        if(axis.x)
-	    R.DoRotX(angle);
-	  else if (axis.y)
-	    R.DoRotY(angle);
-	  else if  (axis.z)
-	    R.DoRotZ(angle);
-	  else
-	    {
-	      ROS_ERROR("Axis must [1 0 0] format!");
-	      return false;
-	    }
-      cloud_out.points.resize(0);
-      ROS_INFO("in rpc %f %f %f %f", angle, axis.x, axis.y, axis.z);
-      for (unsigned int point = 0; point < cloud_in.points.size(); point++)
+      if( exists( directory ) )
 	{
-	  p.x(cloud_in.points[point].x);
-	  p.y(cloud_in.points[point].y);
-	  p.z(cloud_in.points[point].z);
-	  p2 = R*p;
-	  cloud_out.points.resize(point + 1);
-	  cloud_out.points[point].x = p2.x();
-	  cloud_out.points[point].y = p2.y();
-	  cloud_out.points[point].z = p2.z();
+	  directory_iterator end ;
+	  for( directory_iterator iter(directory) ; iter != end ; ++iter )
+	    if ( is_directory( *iter ) )
+	      {
+		ROS_WARN("Directory %s", iter->string().c_str());
+		//if( recurse_into_subdirs ) get_log_files(*iter) ;
+	      }
+	    else 
+	      {
+		int len = iter->string().length();
+		int npos =  iter->string().rfind(suffix);
+		if((len - npos) == suffix.length())
+		  file_list.push_back(iter->string());
+	      }
 	}
-      return true;
+      ROS_INFO("Found nr %d of files", file_list.size());
+      
     }
   }
 }
