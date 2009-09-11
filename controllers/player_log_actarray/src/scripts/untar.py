@@ -64,6 +64,29 @@ def rename_to_fixed_prec(path=None):
         print "moving: ", command, "\n"
         os.system(command)
 
+def find_missing (key, path=None):
+    angles = ['-180', '0180', '-150', '0150', '-120', '0120',  '-090', '0090', '-060', '0060', '-030', '0030', '0000']
+    s_a = set(angles)
+    if path == None:
+        path = '.'
+    dir_list = os.listdir(path)
+    f=open('missing.log', 'a+')
+    print 'dir list', dir_list
+    for dir in dir_list:
+        file_list = os.listdir(dir)
+        angle_list = []
+        for file in file_list:
+            if file.find(key) != -1:
+                #print "file", file
+                angle_list.append (str(file.split('_')[1]))
+                #print 'angle', angle
+        if s_a.difference(set(angle_list)).__len__() != 0:
+           # print s_a, 'del\n', set(angle_list)
+           # print 'diff', s_a.difference(set(angle_list))
+            f.write(file.split('_')[0] + ' ')
+            f.write(str(s_a.difference(set(angle_list))) + '\n')
+    f.close()
+
 class FileNames:
     def __init__(self, fullname, basename):
         self.fn = fullname
@@ -75,6 +98,8 @@ if __name__ == "__main__":
         untar()
     elif  sys.argv[1] == 'r':
         rename_to_fixed_prec()
+    elif  sys.argv[1] == 'f':
+        find_missing(sys.argv[2], None)
     else:
         keys = sys.argv[1:]
         tar(None, keys)
