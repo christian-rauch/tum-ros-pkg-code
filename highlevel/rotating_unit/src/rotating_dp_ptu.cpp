@@ -193,8 +193,8 @@ class RotatingDPPTU
 // 	      }
 	    // Send a request to the PTU to move
 	    p_s.request.angle = angle;
-	    ptu_serv_.call (p_s);
 	    ROS_INFO ("Setting ____PTU______ angle to %f. Sleeping for %f seconds.", angle, tictoc.toSec ());
+	    ptu_serv_.call (p_s);
 	    tictoc.sleep ();
 	    
 	    if (is_david_)
