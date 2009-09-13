@@ -477,8 +477,8 @@ class ActarrayCloudAssembler
 	      cloud_.channels[d].values.resize (nr_points);
 	    
 	    cloud_.header.stamp = Time::now ();
-	    ROS_INFO ("Publishing a PointCloud message (%d) with %d points and %d channels on topic /%s  %d.", 
-		      ++point_cloud_total, (int)cloud_.points.size (), (int)cloud_.channels.size (), tf_frame_.c_str (), scans_.size());
+	    //ROS_INFO ("Publishing a PointCloud message (%d) with %d points and %d channels on topic /%s  %d.", 
+	    //		      ++point_cloud_total, (int)cloud_.points.size (), (int)cloud_.channels.size (), tf_frame_.c_str (), scans_.size());
 	    cloud_pub_.publish (cloud_);
 	    s_lock_.lock (); it = scans_.erase (it); s_lock_.unlock ();
 	  }
