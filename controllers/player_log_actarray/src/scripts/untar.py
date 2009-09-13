@@ -39,11 +39,15 @@ def tar(path=None, keys = []):
             if file.find(obj) != -1:
                 tar_str += ' ' + file
         if 'delimited'in keys and not 'denoised' in keys and not 'rotated' in keys :
-            command = 'tar cvvf ' + obj +  '.delimited.pcd.tar.bz2' + tar_str
+            command = 'tar cjf ' + obj +  '.delimited.pcd.tar.bz2' + tar_str
         elif  'delimited' in keys and 'denoised' in keys and not 'rotated' in keys:
-            command = 'tar cvvf ' + obj +  '.delimited.denoised.pcd.tar.bz2' + tar_str
+            command = 'tar cjf ' + obj +  '.delimited.denoised.pcd.tar.bz2' + tar_str
         elif 'delimited' in keys and 'denoised' in keys and 'rotated' in keys:
-            command = 'tar cvvf ' + obj +  '.delimited.denoised.rotated.pcd.tar.bz2' + tar_str
+            command = 'tar cjf ' + obj +  '.delimited.denoised.rotated.pcd.tar.bz2' + tar_str
+        elif 'pcd' in keys:
+            command = 'tar cjf ' + obj +  '.pcd.tar.bz2' + tar_str
+        elif 'delimited'in keys and 'rotated' in keys :
+            command = 'tar cjf ' + obj +  '.delimited.rotated.pcd.tar.bz2' + tar_str
         else:
             print "Unknown arguments!!"
             quit(0)
