@@ -46,6 +46,8 @@ def tar(path=None, keys = []):
             command = 'tar cjf ' + obj +  '.delimited.denoised.rotated.pcd.tar.bz2' + tar_str
         elif 'pcd' in keys:
             command = 'tar cjf ' + obj +  '.pcd.tar.bz2' + tar_str
+        elif 'png' in keys:
+            command = 'tar cjf ' + obj +  '.png.tar.bz2' + tar_str
         elif 'delimited'in keys and 'rotated' in keys :
             command = 'tar cjf ' + obj +  '.delimited.rotated.pcd.tar.bz2' + tar_str
         else:
@@ -91,6 +93,32 @@ def find_missing (key, path=None):
             f.write(str(s_a.difference(set(angle_list))) + '\n')
     f.close()
 
+header = """<tr> \n <th>Object</th> \n <th>Img</th> \n <th>PCD-Delimited</th>
+<th>PCD-Rotated</th> \n <th>PCD-Full</th> \n <th>Raw</th> \n <th>Img-ROI</th> \n </tr> \n"""
+
+def create_html(prefix, suffix, file, path=None):
+    f = open(file, 'w')
+    if path == None:
+        path = '.'
+    list = os.listdir(path)
+    list.sort()
+    f.write('<table border="1">\n')
+    f.write(header)
+    for file in list:
+        if file[-3:] == suffix:
+            name = file.split('.')[0]
+            f.write('<tr>\n')
+            f.write('\t<td>' + name + '</td>\n')
+            f.write('\t<td><img src=' + prefix + '/thumbs/' + name + '.png/></td>\n')
+            f.write('\t<td><a href="' + prefix + '/pcds-delimited/' + name + '.delimited.pcd.tar.bz2">' + 'download</a></td>\n')
+            f.write('\t<td><a href="' + prefix + '/pcds-rotated/' + name + '.delimited.rotated.pcd.tar.bz2">' + 'download</a></td>\n')
+            f.write('\t<td><a href="' + prefix + '/pcds-full/' + name + '.pcd.tar.bz2">' + 'download</a></td>\n')
+            f.write('\t<td><a href="' + prefix + '/raw/' + name + '.tar.bz2">' + 'download</a></td>\n')
+            f.write('\t<td><a href="' + prefix + '/images-roi/' + name + '.png.tar.bz2">' + 'download</a></td>\n')
+            f.write('</tr>\n')
+    f.write('</table>')
+    f.close
+    
 class FileNames:
     def __init__(self, fullname, basename):
         self.fn = fullname
@@ -104,6 +132,8 @@ if __name__ == "__main__":
         rename_to_fixed_prec()
     elif  sys.argv[1] == 'f':
         find_missing(sys.argv[2], None)
+    elif  sys.argv[1] == 'html':
+        create_html(sys.argv[2], sys.argv[3], sys.argv[4])
     else:
         keys = sys.argv[1:]
         tar(None, keys)
