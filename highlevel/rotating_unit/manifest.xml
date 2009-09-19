@@ -7,7 +7,6 @@
   <license>BSD</license>
 
   <depend package="roscpp" />
-  <depend package="robot_msgs" />
   <depend package="sensor_msgs" />
   <depend package="geometry_msgs" />
   <depend package="mapping_srvs" />
