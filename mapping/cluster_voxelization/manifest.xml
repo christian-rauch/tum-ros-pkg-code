@@ -1,11 +1,10 @@
 <package>
   <description>
-    A node which detects .
+    A package for voxelizing a point cloud, creating an occlusion map, and clustering objects supported by planar surfaces.
   </description>
 
-  <author></author>
+  <author>Radu Bogdan Rusu, Nico Blodow</author>
   <license>BSD</license>
-  <url>http://pr.willowgarage.com</url>
   <review status="experimental" notes="beta"/>
 
   <depend package="roscpp" />

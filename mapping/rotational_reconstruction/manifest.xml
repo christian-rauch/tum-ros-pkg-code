@@ -3,7 +3,7 @@
     A node which detects rotational objects in clusters.
   </description>
 
-  <author></author>
+  <author>Nico Blodow (blodow@cs.tum.edu)</author>
   <license>BSD</license>
   <url>http://pr.willowgarage.com</url>
   <review status="experimental" notes="beta"/>

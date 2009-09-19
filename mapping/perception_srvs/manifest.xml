@@ -1,11 +1,9 @@
 <package>
   <description brief="perception_srvs">
-    Services for perception applications.
+    Services for perception applications at TUM.
   </description>
-  <author></author>
   <license>BSD</license>
-  <review status="" notes=""/>
-  <url></url>
+
   <depend package="std_msgs" />
   <depend package="sensor_msgs" />
   <depend package="geometry_msgs" />

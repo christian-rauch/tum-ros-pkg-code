@@ -1,11 +1,9 @@
 <package>
   <description brief="perception_msgs">
-     Messages for perception applications
+     Messages for perception applications at TUM.
   </description>
-  <author></author>
   <license>BSD</license>
-  <review status="" notes=""/>
-  <url></url>
+
   <depend package="std_msgs" />
   <depend package="geometry_msgs" />
   <export>
