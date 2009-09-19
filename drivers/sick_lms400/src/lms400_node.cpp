@@ -36,7 +36,7 @@
 \author Radu Bogdan Rusu
 
 @b lms400_node is a node providing access to a SICK LMS400 laser sensor via the sick_lms400 library.
-The code is based on the LGPL-ed LMS400 Player driver.
+The code is based on the LGPL-ed LMS400 Player driver by Nico Blodow and Radu Bogdan Rusu.
 **/
 
 #include <ros/ros.h>
