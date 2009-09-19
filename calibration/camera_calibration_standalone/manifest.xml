@@ -3,7 +3,7 @@
     Simple tools for stereo camera calibration (to be deprecated by dcam/ost from ros-pkg).
   </description>
 
-  <author>Radu Bogdan Rusu, etc</author>
+  <author>Radu Bogdan Rusu (rusu@cs.tum.edu)</author>
   <license>BSD</license>
   <review status="experimental" notes="beta"/>
 
