@@ -346,7 +346,7 @@ public:
         ROS_INFO("Starting (first time) player_[laser|actarray]_log_to_msg: %s. Filelist size: %d", cur_file_.c_str(), file_list_.size());
       }
     while (nh_.ok ())
-      {	
+      {  
         if(dir_ != "")
           {
             int update = update_parameters_from_server();
@@ -360,7 +360,7 @@ public:
                   {
                     for (int j = 0; j < 4; j++)
                       robot_transform(i, j)=0;
-                  }		 
+                  }     
                 nr_points = 0;
                 actarrays_.clear();
                 scans_.clear();
@@ -378,45 +378,45 @@ public:
             ros::spinOnce ();
             continue;
           }
-	
+  
         q_values.resize (actarrays_.at (0)->joints.size ());
-	
+  
         // For each buffered laser packet
         for (list<LaserScanConstPtr>::iterator it = scans_.begin (); it != scans_.end ();)
           {
             LaserScanConstPtr laser_packet = *it;
-	    
+      
             // Interpolate actarray values
             if (!interpolateActarrayValues (laser_packet, actarrays_, q_values))
               {
                 ++it;
                 continue;
               }
-	    
+      
             // Obtain the transformation corresponding to the current joint values
             getGlobalTransformation (arm_params_, q_values, robot_transform);
             // Calculate the viewpoint for the current interpolated joint angles
             vp_old = vp;
             vp = robot_transform * translation_;
-	    
+      
             if (vp (0) == vp_old (0) && vp (1) == vp_old (1) && vp (2) == vp_old (2))
               {
                 s_lock_.lock (); it = scans_.erase (it); s_lock_.unlock ();
                 continue;
               }
-	    
+      
             // Calculate the horizontal angles and the cartesian coordinates
             double angle_x    = laser_packet->angle_min;
             double resolution = laser_packet->angle_increment;
-	    
+      
             if(dir_ == "")
               nr_points = 0;
-	   	    
+           
             if(dir_ == "")
               cloud_.points.resize (laser_packet->ranges.size ());
             else
               cloud_.points.resize (cloud_.points.size() + laser_packet->ranges.size ());
-	    
+      
             if(dir_ == "")
               for (unsigned int d = 0; d < cloud_.channels.size (); d++)
                 cloud_.channels[d].values.resize (laser_packet->ranges.size ());
@@ -425,7 +425,7 @@ public:
                 for (unsigned int d = 0; d < cloud_.channels.size (); d++)
                   cloud_.channels[d].values.resize (cloud_.channels[d].values.size() + laser_packet->ranges.size ());
               }
-	    
+      
             for (unsigned int i = 0; i < laser_packet->ranges.size (); i++)
               {
                 double distance = laser_packet->ranges[i];
@@ -440,19 +440,19 @@ public:
                     angle_x += resolution;
                     continue;
                   }
-		
+    
                 // 2D
                 pt(0) = translation_ (0) + 0.0;
                 pt(1) = translation_ (1) + distance * cos (M_PI - angle_x);
                 pt(2) = translation_ (2) + distance * sin (M_PI - angle_x);
                 pt(3) = 1.0;
-		
+    
                 // Transform the point
                 pt_t = robot_transform * pt;
                 cloud_.points[nr_points].x = pt_t(0);
                 cloud_.points[nr_points].y = pt_t(1);
                 cloud_.points[nr_points].z = pt_t(2);
-		
+    
                 // Save the rest of the values
                 cloud_.channels[0].values[nr_points] = intensity;
                 cloud_.channels[1].values[nr_points] = distance;
@@ -462,10 +462,10 @@ public:
                 cloud_.channels[5].values[nr_points] = vp (1);
                 cloud_.channels[6].values[nr_points] = vp (2);
                 nr_points++;
-		
+    
                 angle_x += resolution;
               }
-	   	    
+           
             if (nr_points == 0)
               {
                 s_lock_.lock (); it = scans_.erase (it); s_lock_.unlock ();

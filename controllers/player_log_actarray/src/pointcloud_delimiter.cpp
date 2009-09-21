@@ -90,7 +90,7 @@ public:
       ROS_ERROR("You must specify path to .pcd files");
     //get the list of .log files
     get_log_files(dir_, file_list_, ".pcd");
-	
+  
     nh_.param ("~min_x", del_.min_x, 0.0);     // minimum x to be considered
     nh_.param ("~max_x", del_.max_x, 0.0);   // maximum x to be considered
       
@@ -101,8 +101,8 @@ public:
     nh_.param ("~max_z", del_.max_z, 0.0);   // maximum z to be considered
     nh_.param ("~normalize", normalize_, 0);   // shall we normalize data?
     nh_.param ("~norm", norm_, 1.0);   // normalization coefficient
-	  
-	  nh_.param ("~delimit_david", delimit_david_, 0);   // delimiting david?
+    
+    nh_.param ("~delimit_david", delimit_david_, 0);   // delimiting david?
 
     if(!normalize_ && !delimit_david_)
       {
@@ -186,7 +186,7 @@ public:
                         cloud_out_.points.resize(nr_points + 1);
                         for (unsigned int d = 0; d < cloud_in_.channels.size (); d++)
                           cloud_out_.channels[d].values.resize (nr_points + 1);
-			
+      
                         //fill with values
                         cloud_out_.points[nr_points].x =  cloud_in_.points[j].x;
                         cloud_out_.points[nr_points].y =  cloud_in_.points[j].y;
@@ -202,23 +202,23 @@ public:
                         nr_points++;
                       }
                   }
-		  
+      
                 if(delimit_david_)
                   {
                     //ROS_WARN("DAVID WARN");
                     if ((del_.min_x <= cloud_in_.points[j].x) && (cloud_in_.points[j].x <= del_.max_x) &&
                         (del_.min_y <= cloud_in_.points[j].y) && (cloud_in_.points[j].y <= del_.max_y) &&
                         (del_.min_z <= cloud_in_.points[j].z) && (cloud_in_.points[j].z <= del_.max_z))
-                      {				
+                      {        
                         cloud_out_.points.resize(nr_points + 1);
                         //fill with values
                         cloud_out_.points[nr_points].x =  cloud_in_.points[j].x;
                         cloud_out_.points[nr_points].y =  cloud_in_.points[j].y;
-                        cloud_out_.points[nr_points].z =  cloud_in_.points[j].z;				
+                        cloud_out_.points[nr_points].z =  cloud_in_.points[j].z;        
                         nr_points++;
-                      }			
+                      }      
                   }
-		  
+      
                 //if data need to be normalized (like the ones from david)
                 if(normalize_)
                   {
@@ -235,7 +235,7 @@ public:
                     progress++;
                   }
               }
-            if(cloud_out_.points.size() != 0)		
+            if(cloud_out_.points.size() != 0)    
               {
                 int str_len = file_list_[i].length();
                 string pcd_del = file_list_[i].erase((str_len - 4), 4);

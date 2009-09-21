@@ -123,7 +123,7 @@ public:
   bool spin ()
   {
     double interval = rate_ * 1e+6;
-    while (nh_.ok ())	
+    while (nh_.ok ())  
       {
         for ( int pcd = 0; pcd < file_list_.size(); pcd++)
           {

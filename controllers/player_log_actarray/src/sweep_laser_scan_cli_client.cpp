@@ -99,10 +99,10 @@ public:
     nh_.param("~is_lms400_", is_lms400_, 0);
     nh_.param("~rot_joint", rot_joint_, 4);
     nh_.param("~rot_speed", rot_speed_, 0.1);
-    service_ = nh_.advertiseService("amtec_sweep", &Amtec_Sweep_service::amtec_sweep_main, this);	
+    service_ = nh_.advertiseService("amtec_sweep", &Amtec_Sweep_service::amtec_sweep_main, this);  
     debug_output_ = false;
     if(debug_output_)
-      ROS_INFO("Amtec_Sweep_service has been initialized");	
+      ROS_INFO("Amtec_Sweep_service has been initialized");  
   }
 
   ///////////////////////////////////////////////////////////////////////////////////////
@@ -255,7 +255,7 @@ public:
       playerc_client_read (client);
       //print_data (device);
       current_pos = RAD2DEG (device->actuators_data[actuator].position);
-    }	
+    }  
     while ( (fabs (current_pos - next_pos) > EPS) || (
                                                       (device->actuators_data[actuator].state != PLAYER_ACTARRAY_ACTSTATE_IDLE) &&
                                                       (device->actuators_data[actuator].state != PLAYER_ACTARRAY_ACTSTATE_BRAKED))
@@ -306,10 +306,10 @@ public:
 
 int main(int argc, char **argv)
 {
-	//ROS
-	ros::init(argc, argv, "amtec_sweep_service_server");
-	Amtec_Sweep_service p;		
-	ros::spin();
-	return 0;
+  //ROS
+  ros::init(argc, argv, "amtec_sweep_service_server");
+  Amtec_Sweep_service p;    
+  ros::spin();
+  return 0;
 }
 
