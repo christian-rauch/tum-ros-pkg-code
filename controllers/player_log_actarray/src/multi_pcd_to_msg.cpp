@@ -29,16 +29,16 @@
  */
 
 /**
-@mainpage
+   @mainpage
 
-@htmlinclude manifest.html
+   @htmlinclude manifest.html
 
-\author Radu Bogdan Rusu, Dejan  Pangercic
+   \author Radu Bogdan Rusu, Dejan  Pangercic
 
-@b multi_pcd_generator is a simple node that loads PCD (Point Cloud Data) files from directory 
-on a disk and publishes them as ROS messages in given interval.
+   @b multi_pcd_generator is a simple node that loads PCD (Point Cloud Data) files from directory 
+   on a disk and publishes them as ROS messages in given interval.
 
- **/
+**/
 
 // ROS core
 #include <ros/node.h>
@@ -56,113 +56,105 @@ using namespace boost::filesystem;
 
 class MultiPCDGenerator
 {
-  protected:
-    string tf_frame_;
-    ros::NodeHandle nh_;
-    tf::TransformBroadcaster broadcaster_;
-    tf::Stamped<tf::Transform> transform_;
+protected:
+  string tf_frame_;
+  ros::NodeHandle nh_;
+  tf::TransformBroadcaster broadcaster_;
+  tf::Stamped<tf::Transform> transform_;
 
-  public:
+public:
 
-    // ROS messages
-    sensor_msgs::PointCloud msg_cloud_;
+  // ROS messages
+  sensor_msgs::PointCloud msg_cloud_;
 
   string file_name_, cloud_topic_, dir_;
   double rate_;
   vector<string> file_list_;
 
-    ros::Publisher cloud_pub_;
+  ros::Publisher cloud_pub_;
 
-    MultiPCDGenerator () : tf_frame_ ("base_link"),
-                      transform_ (btTransform (btQuaternion (0, 0, 0), btVector3 (0, 0, 0)), ros::Time::now (), tf_frame_, tf_frame_)
-    {
-      // Maximum number of outgoing messages to be queued for delivery to subscribers = 1
-      cloud_topic_ = "cloud_pcd";
-      cloud_pub_ = nh_.advertise<sensor_msgs::PointCloud> (cloud_topic_.c_str (), 1);
-      ROS_INFO ("Publishing data on topic %s.", nh_.resolveName (cloud_topic_).c_str ());
-    }
+  MultiPCDGenerator () : tf_frame_ ("base_link"),
+                         transform_ (btTransform (btQuaternion (0, 0, 0), btVector3 (0, 0, 0)), ros::Time::now (), tf_frame_, tf_frame_)
+  {
+    // Maximum number of outgoing messages to be queued for delivery to subscribers = 1
+    cloud_topic_ = "cloud_pcd";
+    cloud_pub_ = nh_.advertise<sensor_msgs::PointCloud> (cloud_topic_.c_str (), 1);
+    ROS_INFO ("Publishing data on topic %s.", nh_.resolveName (cloud_topic_).c_str ());
+  }
 
-    ////////////////////////////////////////////////////////////////////////////////
-    // Start
-    int
-      start ()
-    {
-      get_log_files(dir_, file_list_);
-      std::sort(file_list_.begin(), file_list_.end());
-      // if (file_name_ == "" || cloud_io::loadPCDFile (file_name_.c_str (), msg_cloud_) == -1)
-      //  return (-1);
-      //msg_cloud_.header.frame_id = tf_frame_;
-      return (0);
-    }
+  ////////////////////////////////////////////////////////////////////////////////
+  // Start
+  int
+  start ()
+  {
+    get_log_files(dir_, file_list_);
+    // if (file_name_ == "" || cloud_io::loadPCDFile (file_name_.c_str (), msg_cloud_) == -1)
+    //  return (-1);
+    //msg_cloud_.header.frame_id = tf_frame_;
+    return (0);
+  }
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  // Get a list of lpcd files
+  // Get a list of pcd files
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   void get_log_files ( const path & directory, vector <string> &file_list, string suffix=".pcd", bool recurse_into_subdirs = false )
   {
     if( exists( directory ) )
       {
-	directory_iterator end ;
-	for( directory_iterator iter(directory) ; iter != end ; ++iter )
-	  if ( is_directory( *iter ) )
-	    {
-	      ROS_WARN("Directory %s", iter->string().c_str());
-	      //if( recurse_into_subdirs ) get_log_files(*iter) ;
-	    }
-	  else 
-	    {
-	      int len = iter->string().length();
-	      int npos =  iter->string().rfind(suffix);
-	      if((len - npos) == suffix.length())
-		file_list.push_back(iter->string());
-	    }
+        directory_iterator end ;
+        for( directory_iterator iter(directory) ; iter != end ; ++iter )
+          if ( is_directory( *iter ) )
+            {
+              ROS_WARN("Directory %s", iter->string().c_str());
+              //if( recurse_into_subdirs ) get_log_files(*iter) ;
+            }
+          else 
+            {
+              int len = iter->string().length();
+              int npos =  iter->string().rfind(suffix);
+              if((len - npos) == suffix.length())
+                file_list.push_back(iter->string());
+            }
       }
   }
   
   ////////////////////////////////////////////////////////////////////////////////
-    // Spin (!)
-    bool spin ()
-    {
-      double interval = rate_ * 1e+6;
-      while (nh_.ok ())
-	
-	{
-	  for ( int pcd = 0; pcd < file_list_.size(); pcd++)
-	    {
-	      msg_cloud_.points.resize(0);
-	      transform_.stamp_ = ros::Time::now ();
-	      broadcaster_.sendTransform (transform_);
-	      cloud_io::loadPCDFile (file_list_[pcd].c_str (), msg_cloud_);
-	      msg_cloud_.header.frame_id = tf_frame_;
-	      ROS_INFO ("Publishing data from file %s (%d points) on topic %s in frame %s.",
-			file_list_[pcd].c_str (),(int)msg_cloud_.points.size (), 
-			nh_.resolveName (cloud_topic_).c_str (), msg_cloud_.header.frame_id.c_str ());
-	      msg_cloud_.header.stamp = ros::Time::now ();
-	      cloud_pub_.publish (msg_cloud_);
-	      
-	      //if (interval == 0)                      // We only publish once if a 0 seconds interval is given
-	      //  break;
-	      usleep (interval);
-	      ros::spinOnce ();
-	      if (!nh_.ok())
-		break;
-	    }
-	  break;
-	}
-      
-      return (true);
-    }
+  // Spin (!)
+  bool spin ()
+  {
+    double interval = rate_ * 1e+6;
+    while (nh_.ok ())	
+      {
+        for ( int pcd = 0; pcd < file_list_.size(); pcd++)
+          {
+            msg_cloud_.points.resize(0);
+            transform_.stamp_ = ros::Time::now ();
+            broadcaster_.sendTransform (transform_);
+            cloud_io::loadPCDFile (file_list_[pcd].c_str (), msg_cloud_);
+            msg_cloud_.header.frame_id = tf_frame_;
+            ROS_INFO ("Publishing data (%d points) on topic %s in frame %s.", (int)msg_cloud_.points.size (), 
+                      nh_.resolveName (cloud_topic_).c_str (), msg_cloud_.header.frame_id.c_str ());
+            msg_cloud_.header.stamp = ros::Time::now ();
+            cloud_pub_.publish (msg_cloud_);
+            //if (interval == 0)                      // We only publish once if a 0 seconds interval is given
+            //  break;
+            usleep (interval);
+            ros::spinOnce ();
+          }
+      }
+    return (true);
+  }
 };
 
 /* ---[ */
 int
-  main (int argc, char** argv)
+main (int argc, char** argv)
 {
   if (argc < 3)
-  {
-    ROS_ERROR ("Syntax is: %s <dir> [publishing_interval between respective pcd(in seconds)]", argv[0]);
-    return (-1);
-  }
+    {
+      ROS_ERROR ("Syntax is: %s <dir> [publishing_interval between respective pcd(in seconds)]", argv[0]);
+      return (-1);
+    }
 
   ros::init (argc, argv, "multi_pcd_generator");
 
@@ -172,10 +164,10 @@ int
   //ROS_INFO ("Loading file %s...", c.file_name_.c_str ());
 
   if (c.start () == -1)
-  {
-    ROS_ERROR ("Could not load file. Exiting.");
-    return (-1);
-  }
+    {
+      ROS_ERROR ("Could not load file. Exiting.");
+      return (-1);
+    }
   c.spin ();
 
   return (0);

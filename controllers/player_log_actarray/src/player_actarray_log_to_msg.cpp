@@ -232,100 +232,100 @@ class PlayerLogToMsg
     
     while (nh_.ok ())
       {
-	update_parameters_from_server();
-	if(spin_)
-	  {
-	    getline (logfile_stream_, line);
-	    // Do we assume that the input is a file? If so, and EOF, signal and wait for next file
-	    if (logfile_stream_.eof () && is_file_ && file_name_ != "nothing")
-	      {
-		ROS_INFO("EOF actarray!!!");
-		logfile_stream_.close();
-		spin_ = false;
-		continue;
-	      }
-	    //break;
-	    // If any bad/eof/fail flags are set, continue
-	    if (!logfile_stream_.good ())
-	      {
-		usleep (500);
-		logfile_stream_.clear ();
-		continue;
-	      }
-	    // If the line is empty, continue
-	    if (line == "")
-	      continue;
+        update_parameters_from_server();
+        if(spin_)
+          {
+            getline (logfile_stream_, line);
+            // Do we assume that the input is a file? If so, and EOF, signal and wait for next file
+            if (logfile_stream_.eof () && is_file_ && file_name_ != "nothing")
+              {
+                ROS_INFO("EOF actarray!!!");
+                logfile_stream_.close();
+                spin_ = false;
+                continue;
+              }
+            //break;
+            // If any bad/eof/fail flags are set, continue
+            if (!logfile_stream_.good ())
+              {
+                usleep (500);
+                logfile_stream_.clear ();
+                continue;
+              }
+            // If the line is empty, continue
+            if (line == "")
+              continue;
 	    
-	    // Split a line into tokens
-	    boost::trim (line);
-	    boost::split (st, line, boost::is_any_of (" "), boost::token_compress_on);
+            // Split a line into tokens
+            boost::trim (line);
+            boost::split (st, line, boost::is_any_of (" "), boost::token_compress_on);
 	    
-	    string line_type = st.at (0);
-	    if (line_type.substr (0, 1) == "#")
-	      continue;
+            string line_type = st.at (0);
+            if (line_type.substr (0, 1) == "#")
+              continue;
 	    
-	    // Get the interface name
-	    string interface = st.at (3);
+            // Get the interface name
+            string interface = st.at (3);
 	    
-	    // ---[ actarray
-	    if (interface.substr (0, 8) != "actarray")
-	      continue;
+            // ---[ actarray
+            if (interface.substr (0, 8) != "actarray")
+              continue;
 	    
-	    ti = atof (line_type.c_str ());
+            ti = atof (line_type.c_str ());
 	    
-	    tdif = fabs (ti - tj);                    // Just in case time decides to go backwards :)
+            tdif = fabs (ti - tj);                    // Just in case time decides to go backwards :)
 	    
-	    msg_act_.header.stamp = Time (ti);
+            msg_act_.header.stamp = Time (ti);
 	    
-	    // index = st.at (4)
-	    int type = atoi (st.at (5).c_str ());
-	    if (type != 1)                            // we only process DATA packets
-	      continue;
+            // index = st.at (4)
+            int type = atoi (st.at (5).c_str ());
+            if (type != 1)                            // we only process DATA packets
+              continue;
 	    
-	    int nr_joints = atoi (st.at (7).c_str ());
-	    if (joints_to_publish_ != -1)
-	      nr_joints = min (nr_joints, joints_to_publish_);
+            int nr_joints = atoi (st.at (7).c_str ());
+            if (joints_to_publish_ != -1)
+              nr_joints = min (nr_joints, joints_to_publish_);
 	    
-	    msg_act_.joints.resize (nr_joints);
-	    if (msg_act_.joints.size () == 0)         // If no joints found, continue to the next packet
-	      continue;
+            msg_act_.joints.resize (nr_joints);
+            if (msg_act_.joints.size () == 0)         // If no joints found, continue to the next packet
+              continue;
 	    
-	    for (unsigned int i = 0; i < msg_act_.joints.size (); i++)
-	      msg_act_.joints[i] = atof (st.at (8 + 5 * i).c_str ());
-	    total_nr_poses++;
+            for (unsigned int i = 0; i < msg_act_.joints.size (); i++)
+              msg_act_.joints[i] = atof (st.at (8 + 5 * i).c_str ());
+            total_nr_poses++;
 	    
-	    if (is_file_)
-	      ROS_DEBUG ("Publishing data (%d joint positions) on topic %s in frame %s.",
-			 (int)msg_act_.joints.size (), nh_.resolveName (msg_topic_).c_str (), msg_act_.header.frame_id.c_str ());
-	    act_pub_.publish (msg_act_);
+            if (is_file_)
+              ROS_DEBUG ("Publishing data (%d joint positions) on topic %s in frame %s.",
+                         (int)msg_act_.joints.size (), nh_.resolveName (msg_topic_).c_str (), msg_act_.header.frame_id.c_str ());
+            act_pub_.publish (msg_act_);
 	    
-	    // Sleep for a certain number of seconds (tdif)
-	    if (tj != 0 && is_file_)
-	      {
-		Duration tictoc (tdif);
-		tictoc.sleep ();
-	      }
-	     nh_.getParam("/save_pcd_actarray", save_pcd_actarray_);
-	     if(save_pcd_actarray_ == 1 || save_pcd_actarray_ == 2)
-	       nh_.setParam("/save_pcd_actarray", 0);
-	    spinOnce ();
-	    tj = ti;
+            // Sleep for a certain number of seconds (tdif)
+            if (tj != 0 && is_file_)
+              {
+                Duration tictoc (tdif);
+                tictoc.sleep ();
+              }
+            nh_.getParam("/save_pcd_actarray", save_pcd_actarray_);
+            if(save_pcd_actarray_ == 1 || save_pcd_actarray_ == 2)
+              nh_.setParam("/save_pcd_actarray", 0);
+            spinOnce ();
+            tj = ti;
 	    
-	    logfile_stream_.clear ();
-	  }
+            logfile_stream_.clear ();
+          }
 	
-	if(!spin_)
-	  {
-	    loop_rate.sleep();
-	    tj = 0, tdif = 0;
-	    total_nr_poses = 0;
-	    line = "";
-	    st.clear();
-	    nh_.getParam("/save_pcd_actarray", save_pcd_actarray_);
-	    if(save_pcd_actarray_ == 0)
-	      nh_.setParam("/save_pcd_actarray", 1);
-	    ROS_WARN("player actarray looping!!!!");
-	  }
+        if(!spin_)
+          {
+            loop_rate.sleep();
+            tj = 0, tdif = 0;
+            total_nr_poses = 0;
+            line = "";
+            st.clear();
+            nh_.getParam("/save_pcd_actarray", save_pcd_actarray_);
+            if(save_pcd_actarray_ == 0)
+              nh_.setParam("/save_pcd_actarray", 1);
+            ROS_WARN("player actarray looping!!!!");
+          }
 	
       }
     // Close the file and finish the movie

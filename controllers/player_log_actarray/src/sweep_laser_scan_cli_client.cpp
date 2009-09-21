@@ -29,18 +29,18 @@
  */
 
 /**
-@mainpage
+   @mainpage
 
-@htmlinclude manifest.html
+   @htmlinclude manifest.html
 
-\author Dejan Pangercic
+   \author Dejan Pangercic
 
-@b This Player client encapsulated into a ROS node controls (rotates)
-PowerCube modules and thus helps acquiring laser point cloud data. It 
-has been used with David system (http://www.david-laserscanner.com/)
-and Sick LMS400 laser range scanner. In latter case it also enables 
-logging of data.
- **/
+   @b This Player client encapsulated into a ROS node controls (rotates)
+   PowerCube modules and thus helps acquiring laser point cloud data. It 
+   has been used with David system (http://www.david-laserscanner.com/)
+   and Sick LMS400 laser range scanner. In latter case it also enables 
+   logging of data.
+**/
 
 
 ///////////////////////////////////////////////////////////////////////////////////////
@@ -158,17 +158,17 @@ public:
     //print_data (device_actarray);
     
     //enable logging
-     if(is_lms400_)
-       {
-   	 char angle_tmp[100];
-	 int angle_int = round(req.angle_filename);
-	 sprintf (angle_tmp, "%d",  angle_int);
-	 string logFileName = req.object + "_" +  string(angle_tmp) + "_" + ".log";
-	 playerc_log_set_filename (device_log, logFileName.c_str());
-	 playerc_log_set_write_state (device_log, 1);
-	 if(debug_output_)
-	   ROS_INFO("Logging : enabled"); 
-       }
+    if(is_lms400_)
+      {
+        char angle_tmp[100];
+        int angle_int = round(req.angle_filename);
+        sprintf (angle_tmp, "%d",  angle_int);
+        string logFileName = req.object + "_" +  string(angle_tmp) + "_" + ".log";
+        playerc_log_set_filename (device_log, logFileName.c_str());
+        playerc_log_set_write_state (device_log, 1);
+        if(debug_output_)
+          ROS_INFO("Logging : enabled"); 
+      }
     //sweeping
     next_pos = go_to_pose(client, device_actarray, rot_joint_, start_angle_, end_angle_);
     if(debug_output_)
@@ -178,16 +178,16 @@ public:
     //wait until end angle reached
     while (fabs(next_pos  -   RAD2DEG (device_actarray->actuators_data[rot_joint_].position)) > EPS)
       {
-	playerc_client_read (client);
-	//printf ("Angle  %f\n", fabs(next_pos  -   RAD2DEG (device_actarray->actuators_data[rot_joint_].position)));
+        playerc_client_read (client);
+        //printf ("Angle  %f\n", fabs(next_pos  -   RAD2DEG (device_actarray->actuators_data[rot_joint_].position)));
       }
     
     //logging disabled
     if(is_lms400_)
       {
-	playerc_log_set_write_state (device_log, 0);
-	if(debug_output_)
-	  ROS_INFO ("Logging : disabled"); 
+        playerc_log_set_write_state (device_log, 0);
+        if(debug_output_)
+          ROS_INFO ("Logging : disabled"); 
       }
     //clean up player
     if(debug_output_)
@@ -197,8 +197,8 @@ public:
     
     if(is_lms400_)
       {
-	playerc_log_unsubscribe (device_log);
-	playerc_log_destroy (device_log);
+        playerc_log_unsubscribe (device_log);
+        playerc_log_destroy (device_log);
       }
 
     playerc_laser_unsubscribe (device_laser);
@@ -212,7 +212,7 @@ public:
   //////////////////////////////////////////////////////////////////////////////////
   void
   sweep (playerc_client_t *client, playerc_actarray_t *device, 
-	 int actuator, float next_pos, float speed)
+         int actuator, float next_pos, float speed)
   {
     // Set the speed to move with
     playerc_actarray_speed_config (device, actuator, speed);
@@ -227,7 +227,7 @@ public:
   //////////////////////////////////////////////////////////////////////////////////
   float
   go_to_pose (playerc_client_t *client, playerc_actarray_t *device, 
-	      int actuator, float min_angle, float max_angle)
+              int actuator, float min_angle, float max_angle)
   {
     float next_pos;
     
@@ -247,7 +247,7 @@ public:
       next_pos = min_angle;
     if(debug_output_)
       ROS_INFO ("Init sweeping to: %f (dist to min: %f, dist to max:  %f) \n", 
-		next_pos, fabs (current_pos - min_angle), fabs (current_pos - max_angle));
+                next_pos, fabs (current_pos - min_angle), fabs (current_pos - max_angle));
     
     playerc_actarray_position_cmd (device, actuator, DEG2RAD (next_pos));
     // Loop until the actuator is idle-ing or break-ed.
@@ -257,9 +257,9 @@ public:
       current_pos = RAD2DEG (device->actuators_data[actuator].position);
     }	
     while ( (fabs (current_pos - next_pos) > EPS) || (
-						      (device->actuators_data[actuator].state != PLAYER_ACTARRAY_ACTSTATE_IDLE) &&
-						      (device->actuators_data[actuator].state != PLAYER_ACTARRAY_ACTSTATE_BRAKED))
-	    );
+                                                      (device->actuators_data[actuator].state != PLAYER_ACTARRAY_ACTSTATE_IDLE) &&
+                                                      (device->actuators_data[actuator].state != PLAYER_ACTARRAY_ACTSTATE_BRAKED))
+            );
     
     if (next_pos == max_angle)
       next_pos = min_angle;
@@ -278,12 +278,12 @@ public:
     int i;
     for (i = 0; i < device->actuators_count; i++)
       {
-	printf ("X%d> pos, speed, accel, cur, state  : [%f, %f, %f, %f, %d]\n", (i+1), 
-		RAD2DEG (device->actuators_data[i].position), 
-		device->actuators_data[i].speed, 
-		device->actuators_data[i].acceleration, 
-		device->actuators_data[i].current, 
-		device->actuators_data[i].state);
+        printf ("X%d> pos, speed, accel, cur, state  : [%f, %f, %f, %f, %d]\n", (i+1), 
+                RAD2DEG (device->actuators_data[i].position), 
+                device->actuators_data[i].speed, 
+                device->actuators_data[i].acceleration, 
+                device->actuators_data[i].current, 
+                device->actuators_data[i].state);
       }
   }
 
