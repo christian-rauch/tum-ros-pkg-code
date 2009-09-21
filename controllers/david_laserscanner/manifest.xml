@@ -1,6 +1,6 @@
 <package>
   <description brief="david_laserscanner">
-    A Client to connect to a David server which controlls the 
+    A Client to connect to a David server which controls the 
     David laser light triangulation software (www.david-laserscanner.com) 
     running on a windows machine.
   </description>
