@@ -1,17 +1,15 @@
 <package>
-
   <description brief="david_laserscanner">
     A Client to connect to the david Server which controlls the 
     David laser light triangulation software running on a windows machine.
   </description>
 
-  <author>andreas</author>
+  <author>Andreas Holzbach</author>
   <license>BSD</license>
-  <review status="unreviewed" notes=""/>
-  <url>http://pr.willowgarage.com/</url>
 
   <depend package="roscpp"/>
   <depend package="perception_srvs"/>
+
 </package>
 
 
