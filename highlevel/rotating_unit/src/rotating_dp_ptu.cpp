@@ -77,14 +77,22 @@ class RotatingDPPTU
 
     Publisher cloud_pub_;
 
-  ServiceClient ptu_serv_, scan_serv_, david_scan_, save_images_serv_;
+    ServiceClient ptu_serv_, scan_serv_, david_scan_, save_images_serv_;
 
     // Parameters
     double min_distance_, max_distance_, laser_min_angle_, laser_max_angle_;
     double angle_step_;
     string object_;
     bool left_arm_;
+    //do we use david
     int is_david_;
+    //do we want to rotate with PTU
+    int is_ptu_;
+    //do we want to take snapshots
+    int is_image_;
+    //do we sweep with laser (e.g. LMS400)
+    int is_laser_;
+    //how many times do we sweep the laser
     int sweeps_;
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -97,7 +105,9 @@ class RotatingDPPTU
       nh_.param ("~angle_step", angle_step_, 30.0);     // ptu rotating angle
       nh_.param ("~object", object_, string("mug"));   // name of object to be scanned
       nh_.param ("~sweeps", sweeps_, 1); 		// number of sweeps of the laser arm per scan
-      //are we scanning using David system
+      nh_.param ("~is_ptu", is_ptu_, 0);
+      nh_.param ("~is_image", is_image_, 0);
+      nh_.param ("~is_laser", is_laser_, 0);
       nh_.param("~is_david", is_david_, 0);
 
       cloud_pub_ = nh_.advertise<PointCloud> ("/tilt_laser_cloud", 1);
@@ -177,6 +187,8 @@ class RotatingDPPTU
       while (nh_.ok ())
       {
 	update_parameters_from_server();
+	ROS_INFO("is_image %d", is_image_);
+	ROS_INFO("is_laser %d", is_laser_);
 	if(spin_)
 	  {
 	    ROS_INFO("New Spin----------------------------------------------");
@@ -192,10 +204,13 @@ class RotatingDPPTU
 // 		home = false;
 // 	      }
 	    // Send a request to the PTU to move
-	    p_s.request.angle = angle;
-	    ROS_INFO ("Setting ____PTU______ angle to %f. Sleeping for %f seconds.", angle, tictoc.toSec ());
-	    ptu_serv_.call (p_s);
-	    tictoc.sleep ();
+	    if (is_ptu_)
+	      {
+		p_s.request.angle = angle;
+		ROS_INFO ("Setting ____PTU______ angle to %f. Sleeping for %f seconds.", angle, tictoc.toSec ());
+		ptu_serv_.call (p_s);
+		tictoc.sleep ();
+	      }
 	    
 	    if (is_david_)
 	      {
@@ -223,14 +238,17 @@ class RotatingDPPTU
 	    // Trigger the LMS400 to sweep
 	    // or
 	    // only rotate one joint if scanning with David system
-	    for (int i = 0; i < sweeps_; i++)
+	    if (is_laser_)
 	      {
-		s_s.request.object = object_;
-		s_s.request.angle_filename = angle;
-		scan_serv_.call (s_s);
-		ROS_INFO ("___Sweeping___ %d times. Setting angle to %f, object to %s. ", i, angle, object_.c_str());
+		tictoc.sleep ();
+		for (int i = 0; i < sweeps_; i++)
+		  {
+		    s_s.request.object = object_;
+		    s_s.request.angle_filename = angle;
+		    scan_serv_.call (s_s);
+		    ROS_INFO ("___Sweeping___ %d times. Setting angle to %f, object to %s. ", i, angle, object_.c_str());
+		  }
 	      }
-	    tictoc.sleep ();
 	    // Rotate the point cloud and publish it
 	    //rotateCloudRelative (angle - s_angle, s_s.response.cloud, cloud_r);
 	    
@@ -267,12 +285,14 @@ class RotatingDPPTU
 		tictoc.sleep();
 	      }
 
-	    i_s.request.object = object_;
-	    i_s.request.angle_filename = angle;
-	    ROS_INFO ("Capturing Images!");
-	    save_images_serv_.call (i_s);
-	    tictoc.sleep ();
-
+	    if (is_image_)
+	      {
+		i_s.request.object = object_;
+		i_s.request.angle_filename = angle;
+		ROS_INFO ("Capturing Images!");
+		save_images_serv_.call (i_s);
+		tictoc.sleep ();
+	      }
 	    // Increase angle and repeat
 	    angle += angle_step_;
 	    if (angle > 180.0)
