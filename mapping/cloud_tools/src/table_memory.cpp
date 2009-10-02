@@ -24,13 +24,13 @@ public:
 class Table
 {
 public:
-  geometry_msgs::Point32 centroid;
-  geometry_msgs::Polygon polygon;
+  bool new_flag;
+  geometry_msgs::Point32 center;
+  geometry_msgs::PolygonStamped polygon;
 
   std::vector<TableStateInstance> inst;
   void getInstance ();
 };
-
 
 class TableMemory
 {
@@ -67,11 +67,28 @@ class TableMemory
         to.point_cluster = new_table->point_clusters[i];
         inst.objects.push_back (to);
       }
+      old_table.new_flag = true;
     }
     
     bool
       clusters_service (ias_table_srvs::ias_table_clusters_service::Request &req, ias_table_srvs::ias_table_clusters_service::Response &resp)
     {
+      for (unsigned int i = 0; i < tables.size(); i++)
+      {
+        if (tables[i].new_flag)
+        {
+          //tables[i].polygon.header.stamp
+          //msg.id = i;
+          tables[i].new_flag = false;
+          for (unsigned int j = 0; j < tables[i].inst.back ().objects.size(); j++)
+          {
+            TableObject to = tables[i].inst.back ().objects[j];
+            //msg.objectid = j;
+          }
+
+        }
+      }
+
       return true;
     }
 
@@ -93,9 +110,10 @@ class TableMemory
       if (! found)
       {
         Table t;
-        t.centroid = table->table_center;
+        t.center = table->table_center;
         t.polygon  = table->table_polygon;
-        
+        t.new_flag = true;
+
         tables.push_back (t);
       }
     }
