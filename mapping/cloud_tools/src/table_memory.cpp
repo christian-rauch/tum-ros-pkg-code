@@ -19,6 +19,7 @@ public:
 class TableStateInstance
 {
 public:
+  ros::Time time_instance;
   std::vector<TableObject> objects;
 };
 
@@ -67,6 +68,7 @@ class TableMemory
       {
         TableObject to;
         to.point_cluster = new_table->objects[i].points;
+        inst.time_instance = new_table->header.stamp;
         inst.objects.push_back (to);
       }
       old_table.new_flag = true;
