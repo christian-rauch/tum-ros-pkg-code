@@ -49,12 +49,13 @@ class FindClusters
     ros::Publisher cloud_pub_;
     
     // ROS parameters:
-    double table_max_height_;
-    double table_min_height_;
+    double object_cluster_tolerance_;
+    int object_cluster_min_pts_;
     int k_;
     double sac_distance_threshold_, eps_angle_, region_angle_threshold_;
     double clusters_growing_tolerance_;
     int clusters_min_pts_;
+    double table_min_height_, table_max_height_, delta_z_, object_min_distance_from_table_;
 
 
     // other vars
@@ -69,11 +70,15 @@ class FindClusters
       nh_.param ("table_max_height_", table_max_height_, 1.5);   // 0.5 m
       nh_.param ("clusters_growing_tolerance", clusters_growing_tolerance_, 0.5);   // 0.5 m
       nh_.param ("clusters_min_pts", clusters_min_pts_, 10);                        // 10 points
+      nh_.param ("table_delta_z", delta_z_, 0.03);                         // consider objects starting at 3cm from the table
+      nh_.param ("object_min_distance_from_table", object_min_distance_from_table_, 0.10); // objects which have their support more 10cm from the table will not be considered
 
+        nh_.param ("object_cluster_dist_tolerance", object_cluster_tolerance_, 0.05);   // 5cm between two objects
+        nh_.param ("~object_cluster_min_pts", object_cluster_min_pts_, 30);              // minimum 30 points per object cluster
       nh_.param ("normal_eps_angle", eps_angle_, 15.0);                   // 15 degrees
       eps_angle_ = angles::from_degrees (eps_angle_);                        // convert to radians
  
-      nh_.param ("~region_angle_threshold", region_angle_threshold_, 30.0);   // Difference between normals in degrees for cluster/region growing
+      nh_.param ("region_angle_threshold", region_angle_threshold_, 30.0);   // Difference between normals in degrees for cluster/region growing
       region_angle_threshold_ = angles::from_degrees (region_angle_threshold_); // convert to radians
       
       k_ = 20;
@@ -191,6 +196,71 @@ class FindClusters
       ROS_INFO ("- downsampleCloud");
       return cloud_down_;
     }
+
+    void
+      findObjectClusters (sensor_msgs::PointCloud &points, const std::vector<double> &coeff, const geometry_msgs::Polygon &poly,
+                          const geometry_msgs::Point32 &minP, const geometry_msgs::Point32 &maxP,
+                          std::vector<int> &object_indices)
+    {
+      int nr_p = 0;
+      geometry_msgs::Point32 pt;
+      object_indices.resize (points.points.size ());
+      for (unsigned int i = 0; i < points.points.size (); i++)
+      {
+        // Select all the points in the given bounds
+        if ( points.points.at (i).x > minP.x &&
+             points.points.at (i).x < maxP.x &&
+             points.points.at (i).y > minP.y &&
+             points.points.at (i).y < maxP.y &&
+             points.points.at (i).z > (maxP.z + delta_z_)
+           )
+        {
+          // Calculate the distance from the point to the plane
+          double distance_to_plane = coeff.at (0) * points.points.at (i).x +
+                                     coeff.at (1) * points.points.at (i).y +
+                                     coeff.at (2) * points.points.at (i).z +
+                                     coeff.at (3) * 1;
+          // Calculate the projection of the point on the plane
+          pt.x = points.points.at (i).x - distance_to_plane * coeff.at (0);
+          pt.y = points.points.at (i).y - distance_to_plane * coeff.at (1);
+          pt.z = points.points.at (i).z - distance_to_plane * coeff.at (2);
+
+          if (cloud_geometry::areas::isPointIn2DPolygon (pt, poly))
+          {
+            object_indices[nr_p] = i;
+            nr_p++;
+          }
+        }
+      }
+      object_indices.resize (nr_p);
+
+      // Find the clusters
+      nr_p = 0;
+      std::vector<std::vector<int> > object_clusters;
+      cloud_geometry::nearest::extractEuclideanClusters (points, object_indices, object_cluster_tolerance_, object_clusters, -1, -1, -1, -1, object_cluster_min_pts_);
+
+      geometry_msgs::Point32 minPCluster, maxPCluster;
+      table.point_clusters.resize (object_clusters.size ());
+      for (unsigned int i = 0; i < object_clusters.size (); i++)
+      {
+        std::vector<int> object_idx = object_clusters.at (i);
+
+        // Check whether this object cluster is supported by the table or just flying through thin air
+        cloud_geometry::statistics::getMinMax (points, object_idx, minPCluster, maxPCluster);
+        if (minPCluster.z > (maxP.z + object_min_distance_from_table_) )
+            continue;
+
+        // Process this cluster and extract the centroid and the bounds
+        for (unsigned int j = 0; j < object_idx.size (); j++)
+        {
+          object_indices[nr_p] = object_idx.at (j);
+          nr_p++;
+        }
+        cloud_geometry::statistics::getMinMax (points, object_idx, table.objects[i].min_bound, table.objects[i].max_bound);
+        cloud_geometry::nearest::computeCentroid (points, object_idx, table.objects[i].center);
+      }
+      object_indices.resize (nr_p);
+    }
     
     bool detectPlanes (const sensor_msgs::PointCloudConstPtr& cloud_in_)
     {
@@ -252,8 +322,8 @@ class FindClusters
 //       resp.table.header.stamp = cloud_in_.header.stamp;
 //
 //      // Get the table bounds
-//      geometry_msgs::Point32 minP, maxP;
-//      cloud_geometry::statistics::getMinMax (cloud_down_, inliers, minP, maxP);
+      geometry_msgs::Point32 minP, maxP;
+      cloud_geometry::statistics::getMinMax (cloud_down_, inliers, minP, maxP);
 //      // Transform to the global frame
 //      geometry_msgs::PointStamped minPstamped_local, maxPstamped_local;
 //      minPstamped_local.point.x = minP.x;
@@ -285,13 +355,14 @@ class FindClusters
        pmap_.polygons.resize (1);
        cloud_geometry::areas::convexHull2D (cloud_down_, inliers, coeff, pmap_.polygons[0]);
        cloud_geometry::nearest::computeCentroid (cloud_down_, inliers, table.table_center);
-       table.table_polygon = pmap_.polygons[0];
+       table.table_polygon.header.frame_id = pmap_.header.frame_id;
+       table.table_polygon.polygon.points = pmap_.polygons[0].points;
        table_pub_.publish (table);
 
 /// ----------------------------------------------------------------------- TRANSFORM CONVEX HULL
       // Find the object clusters supported by the table
-//       inliers.clear ();
-//       findObjectClusters (*cloud_in_, coeff, pmap_.polygons[0], minP, maxP, inliers, resp.table);
+       inliers.clear ();
+       findObjectClusters (*cloud_in_, coeff, pmap_.polygons[0], minP, maxP, inliers);
 
       // Transform into the global frame
 //       try

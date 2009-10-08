@@ -7,6 +7,7 @@
 #include <ias_table_srvs/ias_table_clusters_service.h>
 #include <point_cloud_mapping/cloud_io.h>
 #include <geometry_msgs/Polygon.h>
+#include <tabletop_msgs/Table.h>
 
 class TableObject
 {
@@ -26,7 +27,7 @@ class Table
 public:
   bool new_flag;
   geometry_msgs::Point32 center;
-  geometry_msgs::PolygonStamped polygon;
+  geometry_msgs::Polygon polygon;
 
   std::vector<TableStateInstance> inst;
   void getInstance ();
@@ -47,24 +48,25 @@ class TableMemory
   public:
     TableMemory () : counter_(0)
     {
-      nh_.param ("input_table_topic", input_table_topic_, std::string("table_objects"));       // 15 degrees
+      nh_.param ("input_table_topic", input_table_topic_, std::string("table_with_objects"));       // 15 degrees
       table_sub_ = nh_.subscribe (input_table_topic_, 1, &TableMemory::table_cb, this);
       table_memory_clusters_service_ = nh_.advertiseService ("table_memory_clusters_service", &TableMemory::clusters_service, this);
     }
     
-    bool compare_table (Table& old_table, const ias_table_msgs::TableWithObjects::ConstPtr& new_table)
+    bool compare_table (Table& old_table, const tabletop_msgs::Table::ConstPtr& new_table)
     {
       return true;
     }
 
     void
-      update_table (Table& old_table, const ias_table_msgs::TableWithObjects::ConstPtr& new_table)
+      update_table (Table& old_table, const tabletop_msgs::Table::ConstPtr& new_table)
     {
+      ROS_INFO ("Table found. Updating table with new TableInstance.");
       TableStateInstance inst;
-      for (unsigned int i = 0; i < new_table->point_clusters.size(); i++)
+      for (unsigned int i = 0; i < new_table->objects.size(); i++)
       {
         TableObject to;
-        to.point_cluster = new_table->point_clusters[i];
+        to.point_cluster = new_table->objects[i].points;
         inst.objects.push_back (to);
       }
       old_table.new_flag = true;
@@ -94,10 +96,10 @@ class TableMemory
 
     // incoming data...
     void
-      table_cb (const ias_table_msgs::TableWithObjects::ConstPtr& table)
+      table_cb (const tabletop_msgs::Table::ConstPtr& table)
     {
       bool found = false;
-
+      ROS_INFO ("Looking for table in list of known tables.");
       for (std::vector<Table>::iterator it = tables.begin (); it != tables.end (); it++)
       {
         if (compare_table (*it, table))
@@ -109,9 +111,12 @@ class TableMemory
       }
       if (! found)
       {
+        ROS_INFO ("Not found. Creating new table.");
         Table t;
-        t.center = table->table_center;
-        t.polygon  = table->table_polygon;
+        t.center.x = table->table_max.x - table->table_min.x / 2.0;
+        t.center.y = table->table_max.y - table->table_min.y / 2.0;
+        t.center.z = table->table_max.z - table->table_min.z / 2.0;
+        t.polygon  = table->table;
         t.new_flag = true;
 
         tables.push_back (t);
@@ -133,7 +138,7 @@ class TableMemory
 
 int main (int argc, char* argv[])
 {
-  ros::init (argc, argv, "msg_to_pcd");
+  ros::init (argc, argv, "table_memory");
 
   TableMemory n;
   n.spin ();

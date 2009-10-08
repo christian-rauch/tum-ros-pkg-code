@@ -19,4 +19,5 @@
   <depend package="ias_table_srvs" />
   <depend package="perception_msgs" />
   <depend package="perception_srvs" />
+  <depend package="tabletop_msgs" />
 </package>
