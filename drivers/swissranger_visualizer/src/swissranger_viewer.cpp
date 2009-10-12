@@ -33,7 +33,7 @@
 #include <vector>
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
-#include <ros/node.h>
+#include <ros/node_handle.h>
 #include <deprecated_msgs/ImageArray.h>
 
 using namespace std;

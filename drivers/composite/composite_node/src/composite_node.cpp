@@ -88,7 +88,7 @@ Reads the following parameters from the parameter server
  **/
 
 // ROS core
-#include "ros/node.h"
+#include "ros/node_handle.h"
 #include "ros/time.h"
 #include "ros/common.h"
 

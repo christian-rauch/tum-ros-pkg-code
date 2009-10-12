@@ -1,7 +1,6 @@
 // #include <unistd.h>
 
 #include <ctime>
-#include <ros/node.h>
 #include <ros/node_handle.h>
 #include <sensor_msgs/PointCloud.h>
 #include <point_cloud_mapping/cloud_io.h>
@@ -45,7 +44,7 @@ class TableMsgSplit
       {
         sensor_msgs::PointCloud pc;
         pc.header = table->header;
-        pc.points = table->objects[i].points.points;
+	//        pc.points = table->objects[i].points.points;
         clusters_pub_.publish (pc);
       }
     }

@@ -41,7 +41,7 @@
 **/
 
 // ROS core
-#include <ros/node.h>
+#include <ros/node_handle.h>
 #include <sensor_msgs/PointCloud.h>
 #include <point_cloud_mapping/cloud_io.h>
 #include <tf/transform_broadcaster.h>

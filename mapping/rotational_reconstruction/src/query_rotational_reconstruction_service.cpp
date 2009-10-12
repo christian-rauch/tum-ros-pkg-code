@@ -28,7 +28,7 @@
  *
  */
 #include "ros/ros.h"
-#include "ros/node.h"
+#include "ros/node_handle.h"
 #include <perception_srvs/RotationalReconstruction.h>
 
 using namespace perception_srvs;

@@ -1,7 +1,6 @@
 // #include <unistd.h>
 
 #include <ctime>
-#include <ros/node.h>
 #include <joy/Joy.h>
 #include <ros/node_handle.h>
 #include <sensor_msgs/PointCloud.h>

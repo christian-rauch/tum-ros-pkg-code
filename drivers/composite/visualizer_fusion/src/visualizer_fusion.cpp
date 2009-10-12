@@ -65,7 +65,7 @@ Subscribes to (name/type):
  **/
 
 // ROS core
-#include "ros/node.h"
+#include "ros/node_handle.h"
 #include "ros/time.h"
 #include "ros/common.h"
 

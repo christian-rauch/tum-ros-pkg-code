@@ -1,7 +1,6 @@
 // #include <unistd.h>
 
 #include <ctime>
-#include <ros/node.h>
 #include <ros/node_handle.h>
 #include <ias_table_msgs/TableWithObjects.h>
 #include <ias_table_srvs/ias_table_clusters_service.h>
@@ -67,7 +66,7 @@ class TableMemory
       for (unsigned int i = 0; i < new_table->objects.size(); i++)
       {
         TableObject to;
-        to.point_cluster = new_table->objects[i].points;
+	//        to.point_cluster = new_table->objects[i].points;
         inst.time_instance = new_table->header.stamp;
         inst.objects.push_back (to);
       }

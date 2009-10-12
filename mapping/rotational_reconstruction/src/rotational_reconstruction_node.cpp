@@ -36,7 +36,6 @@
  **/
 
 // ROS core
-#include <ros/node.h>
 #include <ros/node_handle.h>
 // ROS messages
 #include <geometry_msgs/Point32.h>

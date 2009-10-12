@@ -2,7 +2,6 @@
 
 #include <ctime>
 
-#include <ros/node.h>
 #include <ros/node_handle.h>
 
 
