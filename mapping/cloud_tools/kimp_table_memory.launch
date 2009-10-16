@@ -1,0 +1,13 @@
+<launch>
+
+  <param name="/use_sim_time" value="true" />
+  <param name="robot_description" command="$(find xacro)/xacro.py '$(find inf9_robot_defs)/robots/kimp.urdf.xml'"/>  
+
+  <!-- Robot state publisher -->
+  <node pkg="robot_state_chain_publisher" type="state_chain_publisher" name="robot_state_chain_publisher" output="screen">
+    <param name="publish_frequency" type="double" value="50.0" />
+    <param name="tf_prefix" type="string" value="" />
+    <param name="robot_desc_param" type="string" value="robot_description"/>
+  </node>
+
+</launch>
