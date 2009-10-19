@@ -2,8 +2,6 @@
 #include <iterator>
 #include <vector>
 
-#include <point_cloud_mapping/geometry/point.h>
-
 #include "Shape.h"
 // #include "LMmodels.h"
 // #include "lm.h"
@@ -209,35 +207,20 @@ void Shape::RefitToInliers ()
 
 bool Shape::CheckShape()
 {
-  // check if this shape is plausible. If so, also count inliers
-  if (type == SHAPE_TYPE_CYLINDER)
-  {
-//     if (CheckShapeCylinder() == false)
-       return false;
+#define CheckAndGetInliers(TYPE_CONSTANT,SHAPE_TYPE) \
+  if ((unsigned int)type == ias_table_msgs::TableObject::TYPE_CONSTANT)\
+  { \
+    if (!SHAPE_TYPE::CheckShape (points, samples, idx_normal, coeffs)) \
+      return false; \
+    inliers = SHAPE_TYPE::GetInliers (points, coeffs, epsilon, idx_normal); \
   }
-  else if (type == SHAPE_TYPE_SPHERE)
-  {
-//     if (CheckShapeSphere() == false)
-       return false;
-//    cerr << "found sphere candidate, getting octree cubes" << endl;
-  }
-  else if (type == SHAPE_TYPE_PLANE)
-  {
-    if (CheckShapePlane() == false)
-      return false;
-  }
-  else if (type == SHAPE_TYPE_CONE)
-  {
-//     if (CheckShapeCone() == false)
-       return false;
-  }
-  else if (type == SHAPE_TYPE_TORUS)
-  {
-//     if (CheckShapeTorus() == false)
-       return false;
-  }
-
-  inliers = GetPlaneInliers (coeffs, epsilon, idx_normal);
+  
+  CheckAndGetInliers (PLANE,ShapeTypePlane);
+  CheckAndGetInliers (SPHERE,ShapeTypePlane);
+  CheckAndGetInliers (CYLINDER,ShapeTypePlane);
+  CheckAndGetInliers (ROTATIONAL,ShapeTypePlane);
+  CheckAndGetInliers (BOX,ShapeTypePlane);
+  
   score = inliers.size ();  
   //OctreeListType v;
 //   OctreeIntersectionTest *test;
@@ -750,12 +733,11 @@ void Shape::PrintCoeffs()
   int n = 0;
   switch (type)
   {
-    case SHAPE_TYPE_SPHERE:
-    case SHAPE_TYPE_PLANE:
+    case ias_table_msgs::TableObject::SPHERE:
+    case ias_table_msgs::TableObject::PLANE:
       n = 4;
       break;
-    case SHAPE_TYPE_CONE:
-    case SHAPE_TYPE_CYLINDER:
+    case ias_table_msgs::TableObject::CYLINDER:
       n = 7;
       break;
     default:

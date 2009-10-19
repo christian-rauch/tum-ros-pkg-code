@@ -34,7 +34,7 @@ class ObjectReconstruction
       nh_.param ("input_table_topic", input_cloud_topic_, std::string("table_pcds"));
       cloud_sub_ = nh_.subscribe (input_cloud_topic_, 1, &ObjectReconstruction::cloud_cb, this);
       sherlock = new Sherlock ();
-      reconstruct_object_srv_ = nh_.advertiseService ("reconstruct_object", &ObjectReconstruction::reconstruct_object, this);
+      reconstruct_object_srv_ = nh_.advertiseService ("ias_reconstruct_object", &ObjectReconstruction::reconstruct_object, this);
     }
     
     void

@@ -34,7 +34,7 @@ public:
     std::set<int> points_used;
     std::vector<Shape*> shapes;
     std::vector<Shape*> suspects;
-    std::vector<ShapeType> shapetypes;
+    std::vector<int> shapetypes;
 };
 
 #endif	/* _SHERLOCK_H */

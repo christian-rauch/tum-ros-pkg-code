@@ -1,40 +1,8 @@
 #ifndef _SHAPE_H
 #define	_SHAPE_H
 
-#include <set>
-#include <vector>
-#include <sensor_msgs/PointCloud.h>
-
+#include "ShapeTypes.h"
 #include "param.h"
-
-class ShapeType
-{
-  public:
-    virtual bool CheckShape (
-        sensor_msgs::PointCloudConstPtr points,
-        std::vector<double> coeffs,
-        int idx_normal,
-        std::vector<int> samples,
-        std::set<int> inliers,
-        int type,
-        unsigned int score) = 0;
-
-//    std::RefitToInliers ();
-    virtual std::set<int> GetInliers () = 0;
-
-  
-};
-
-
-enum {
-  SHAPE_TYPE_FIRST = 0,
-  SHAPE_TYPE_PLANE = 0,
-  SHAPE_TYPE_SPHERE,
-  SHAPE_TYPE_CYLINDER,
-  SHAPE_TYPE_CONE,
-  SHAPE_TYPE_TORUS,
-  SHAPE_TYPE_LAST = 2 // TODO: Increase when implementing more shape types
-};
 
 class Shape 
 {

@@ -4,33 +4,54 @@
 #include <ros/node_handle.h>
 #include <ias_table_msgs/TableWithObjects.h>
 #include <ias_table_srvs/ias_table_clusters_service.h>
+#include <ias_table_srvs/ias_reconstruct_object.h>
 #include <point_cloud_mapping/cloud_io.h>
 #include <geometry_msgs/Polygon.h>
 #include <tabletop_msgs/Table.h>
 
-class TableObject
+struct TableObject
 {
-public:
+  TableObject (): type (-1) { }
+  geometry_msgs::Point32 center;
   sensor_msgs::PointCloud point_cluster;
-  // some other things like shape model etc.
+  int type;
+  std::vector <double> coeffs;
+  double score;
+  std::vector<int> triangles;
+  std::string semantic_type;
 };
 
-class TableStateInstance
+struct TableStateInstance
 {
-public:
   ros::Time time_instance;
-  std::vector<TableObject> objects;
+  std::vector<TableObject*> objects;
 };
 
-class Table
+struct Table
 {
-public:
   bool new_flag;
   geometry_msgs::Point32 center;
   geometry_msgs::Polygon polygon;
 
-  std::vector<TableStateInstance> inst;
-  void getInstance ();
+  std::vector<TableStateInstance*> inst;
+  
+  TableStateInstance *getCurrentInstance ()
+  {
+    return inst.back ();
+  }
+
+  TableStateInstance *getInstanceAtTime (ros::Time t)
+  {
+    TableStateInstance* ret = inst.back ();
+    for (std::vector<TableStateInstance*>::reverse_iterator it = inst.rbegin (); it != inst.rend (); it++)
+      if ((*it)->time_instance <= ret->time_instance)
+        ret = *it;
+      else
+        break;
+    return ret;
+//    return inst.back ();
+    // should do a reverse_iterator
+  }
 };
 
 class TableMemory
@@ -40,6 +61,7 @@ class TableMemory
     std::string input_table_topic_;
     ros::Subscriber table_sub_;
     ros::ServiceServer table_memory_clusters_service_;
+    ros::ServiceClient table_reconstruct_clusters_client_;
     int counter_;
 
     // THE structure... :D
@@ -62,17 +84,19 @@ class TableMemory
       update_table (Table& old_table, const tabletop_msgs::Table::ConstPtr& new_table)
     {
       ROS_INFO ("Table found. Updating table with new TableInstance.");
-      TableStateInstance inst;
+      TableStateInstance *inst = new TableStateInstance ();
       for (unsigned int i = 0; i < new_table->objects.size(); i++)
       {
-        TableObject to;
-	//        to.point_cluster = new_table->objects[i].points;
-        inst.time_instance = new_table->header.stamp;
-        inst.objects.push_back (to);
+        TableObject *to = new TableObject ();
+	      to->point_cluster = new_table->objects[i].points;
+        inst->time_instance = new_table->header.stamp;
+        inst->objects.push_back (to);
       }
+      old_table.inst.push_back (inst);
       old_table.new_flag = true;
     }
-    
+   
+    // service call from PROLOG 
     bool
       clusters_service (ias_table_srvs::ias_table_clusters_service::Request &req, ias_table_srvs::ias_table_clusters_service::Response &resp)
     {
@@ -83,9 +107,10 @@ class TableMemory
           //tables[i].polygon.header.stamp
           //msg.id = i;
           tables[i].new_flag = false;
-          for (unsigned int j = 0; j < tables[i].inst.back ().objects.size(); j++)
+          for (unsigned int j = 0; j < tables[i].getCurrentInstance ()->objects.size(); j++)
           {
-            TableObject to = tables[i].inst.back ().objects[j];
+            TableObject *to = tables[i].getCurrentInstance ()->objects[j];
+            std::cerr << to->semantic_type << std::endl;
             //msg.objectid = j;
           }
 
@@ -95,22 +120,61 @@ class TableMemory
       return true;
     }
 
+    void
+      reconstruct_table_objects (int table_num)
+    {
+      return;
+      Table &t = tables[table_num];
+      table_reconstruct_clusters_client_ = nh_.serviceClient<ias_table_srvs::ias_reconstruct_object> ("ias_reconstruct_object", true);
+      //if (table_reconstruct_clusters_client_.exists ())
+      {
+        for (int i = 0; i < (signed int) t.getCurrentInstance ()->objects.size (); i++)
+        {
+          TableObject* to = t.getCurrentInstance ()->objects.at (i); 
+          // formulate a request
+          ias_table_srvs::ias_reconstruct_object::Request req;
+          req.cloud_in = to->point_cluster;
+          req.prob_thresh = 0.99;
+          req.ransac_thresh = 0.05;
+          req.angle_thresh = 10;
+          req.interesting_types = ias_table_msgs::TableObject::PLANE;
+          
+          //call service
+          ias_table_srvs::ias_reconstruct_object::Response resp;
+          table_reconstruct_clusters_client_.call (req, resp); 
+          
+          // update our table object with detected shapes
+          if (resp.objects.size () > 0)
+          {
+            ias_table_msgs::TableObject rto = resp.objects.at(0);
+            to->type = rto.type;
+            to->coeffs = rto.coefficients;
+            to->score = rto.score;
+            //to->center;
+            //to->triangles;
+            //TODO: what if we saw multiple things in one cluster??
+          }
+        }
+      }
+    }
+
     // incoming data...
     void
       table_cb (const tabletop_msgs::Table::ConstPtr& table)
     {
-      bool found = false;
+      int table_found = -1;
       ROS_INFO ("Looking for table in list of known tables.");
-      for (std::vector<Table>::iterator it = tables.begin (); it != tables.end (); it++)
+      for (int i = 0; i < (signed int) tables.size (); i++)
       {
-        if (compare_table (*it, table))
-        {
-          update_table (*it, table);
-          found = true;
+        if (compare_table (tables[i], table))
+        { 
+          // found same table earlier.. so we append a new table instance measurement
+          update_table (tables[i], table);
+          table_found = i;
           break;
         }
       }
-      if (! found)
+      if (! table_found == -1)
       {
         ROS_INFO ("Not found. Creating new table.");
         Table t;
@@ -118,10 +182,15 @@ class TableMemory
         t.center.y = table->table_max.y - table->table_min.y / 2.0;
         t.center.z = table->table_max.z - table->table_min.z / 2.0;
         t.polygon  = table->table;
-        t.new_flag = true;
 
         tables.push_back (t);
+        table_found = tables.size () - 1;
+        // also append the new (first) table instance measurement.
+        update_table (tables[table_found], table);
       }
+      
+
+      reconstruct_table_objects (table_found);
     }
 
     bool 

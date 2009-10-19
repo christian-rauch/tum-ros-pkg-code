@@ -20,16 +20,16 @@ void Sherlock::SetData (const sensor_msgs::PointCloudConstPtr pts)
 
 void Sherlock::SetShapeTypes (unsigned int types)
 {
-//   if (types & ias_table_msgs::TableObject::PLANE)
-//     shapetypes.push_back (ShapeTypePlane);
-//   if (types & ias_table_msgs::TableObject::SPHERE)
-//     shapetypes.push_back (ShapeTypeSphere);
-//   if (types & ias_table_msgs::TableObject::CYLINDER)
-//     shapetypes.push_back (ShapeTypeCylinder);
-//   if (types & ias_table_msgs::TableObject::ROTATIONAL)
-//     shapetypes.push_back (ShapeTypeRotational);
-//   if (types & ias_table_msgs::TableObject::BOX)
-//     shapetypes.push_back (ShapeTypeBox);
+  if (types & ias_table_msgs::TableObject::PLANE)
+    shapetypes.push_back (ias_table_msgs::TableObject::PLANE);
+  if (types & ias_table_msgs::TableObject::SPHERE)
+    shapetypes.push_back (ias_table_msgs::TableObject::SPHERE);
+  if (types & ias_table_msgs::TableObject::CYLINDER)
+    shapetypes.push_back (ias_table_msgs::TableObject::CYLINDER);
+  if (types & ias_table_msgs::TableObject::ROTATIONAL)
+    shapetypes.push_back (ias_table_msgs::TableObject::ROTATIONAL);
+  if (types & ias_table_msgs::TableObject::BOX)
+    shapetypes.push_back (ias_table_msgs::TableObject::BOX);
 }
 
 Sherlock::~Sherlock()
@@ -83,10 +83,10 @@ void Sherlock::FindSuspects()
   }
 
   // If the samples can be explained by one of the shape models, it's a Suspect
-  for (int shape_type = SHAPE_TYPE_FIRST; shape_type < SHAPE_TYPE_LAST; shape_type++)
+  for (unsigned int shape_type = 0; shape_type < shapetypes.size (); shape_type++)
   {
     nr_trials ++;
-    Shape *S = new Shape(points, sample, shape_type, idx_normal);
+    Shape *S = new Shape(points, sample, shapetypes[shape_type], idx_normal);
     if (S->CheckShape())
       AddSuspect(S);
     else
@@ -205,7 +205,7 @@ int Sherlock::DetectShapes()
       shapes.push_back(m);
     }
   } while (pFindNoBetterFalse (min_nr_points_in_shape)
-       &&  (nr_points_left >= min_nr_points_in_shape));
+       &&  (nr_points_left >= (signed int)min_nr_points_in_shape));
 //   if (suspects.size()!=0)
 //   {
 //     std::cerr << "\nExtracting remaining shapes..." << std::endl;
