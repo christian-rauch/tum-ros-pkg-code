@@ -197,7 +197,7 @@ class FindClusters
     }
 
     void
-      findObjectClusters (sensor_msgs::PointCloud &points, const std::vector<double> &coeff, const geometry_msgs::Polygon &poly,
+      findObjectClusters (const sensor_msgs::PointCloud &points, const std::vector<double> &coeff, const geometry_msgs::Polygon &poly,
                           const geometry_msgs::Point32 &minP, const geometry_msgs::Point32 &maxP,
                           std::vector<int> &object_indices)
     {
@@ -255,8 +255,8 @@ class FindClusters
           object_indices[nr_p] = object_idx.at (j);
           nr_p++;
         }
-        cloud_geometry::statistics::getMinMax (points, object_idx, table.objects[i].min_bound, table.objects[i].max_bound);
-        cloud_geometry::nearest::computeCentroid (points, object_idx, table.objects[i].center);
+//        cloud_geometry::statistics::getMinMax (points, object_idx, table.objects[i].min_bound, table.objects[i].max_bound);
+//        cloud_geometry::nearest::computeCentroid (points, object_idx, table.objects[i].center);
       }
       object_indices.resize (nr_p);
     }
