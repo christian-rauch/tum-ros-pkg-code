@@ -2,6 +2,8 @@
 #include <iterator>
 #include <vector>
 
+#include <angles/angles.h>
+
 #include "Shape.h"
 // #include "LMmodels.h"
 // #include "lm.h"
@@ -207,21 +209,24 @@ void Shape::RefitToInliers ()
 
 bool Shape::CheckShape()
 {
-#define CheckAndGetInliers(TYPE_CONSTANT,SHAPE_TYPE) \
-  if ((unsigned int)type == ias_table_msgs::TableObject::TYPE_CONSTANT)\
-  { \
-    if (!SHAPE_TYPE::CheckShape (points, samples, idx_normal, coeffs)) \
-      return false; \
-    inliers = SHAPE_TYPE::GetInliers (points, coeffs, epsilon, idx_normal); \
-  }
+  #define CheckAndGetInliers(TYPE_CONSTANT,SHAPE_TYPE) \
+    if ((unsigned int)type == ias_table_msgs::TableObject::TYPE_CONSTANT)\
+    { \
+      if (!SHAPE_TYPE::CheckShape (points, samples, idx_normal, angle_thresh, coeffs)) \
+        return false; \
+      inliers = SHAPE_TYPE::GetInliers (points, indices, coeffs, epsilon, idx_normal); \
+      score = inliers.size (); \
+    }
   
-  CheckAndGetInliers (PLANE,ShapeTypePlane);
-  CheckAndGetInliers (SPHERE,ShapeTypePlane);
-  CheckAndGetInliers (CYLINDER,ShapeTypePlane);
-  CheckAndGetInliers (ROTATIONAL,ShapeTypePlane);
-  CheckAndGetInliers (BOX,ShapeTypePlane);
+  double angle_thresh = angles::from_degrees (15);
+  std::vector<int> indices;
+
+  CheckAndGetInliers (PLANE,      ShapeTypePlane);
+  CheckAndGetInliers (SPHERE,     ShapeTypePlane);
+  CheckAndGetInliers (CYLINDER,   ShapeTypePlane);
+  CheckAndGetInliers (ROTATIONAL, ShapeTypePlane);
+  CheckAndGetInliers (BOX,        ShapeTypePlane);
   
-  score = inliers.size ();  
   //OctreeListType v;
 //   OctreeIntersectionTest *test;
 //   if (type == SHAPE_TYPE_CYLINDER)
@@ -741,6 +746,7 @@ void Shape::PrintCoeffs()
       n = 7;
       break;
     default:
+      std::cerr << "not implemented: type = " << std::endl;
       break;
   }
   std::cerr << "  type = " << type;
