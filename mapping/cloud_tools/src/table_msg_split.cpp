@@ -44,7 +44,7 @@ class TableMsgSplit
       {
         sensor_msgs::PointCloud pc;
         pc.header = table->header;
-	//        pc.points = table->objects[i].points.points;
+	      pc.points = table->objects[i].points.points;
         clusters_pub_.publish (pc);
       }
     }
