@@ -29,6 +29,7 @@ struct TableObject
   double score;
   std::vector<int> triangles;
   std::string semantic_type;
+  std::string color;
 };
 
 struct TableStateInstance
@@ -39,7 +40,7 @@ struct TableStateInstance
 
 struct Table
 {
-  bool new_flag;
+  unsigned new_flag;
   geometry_msgs::Point32 center;
   geometry_msgs::Polygon polygon;
 
@@ -55,6 +56,22 @@ struct Table
     }
 
     return inst.back ();
+  }
+
+  std::vector<TableStateInstance*> getLastInstances (unsigned int n)
+  {
+    std::vector<TableStateInstance*> ret;
+    for (std::vector<TableStateInstance*>::reverse_iterator it = inst.rbegin (); it != inst.rend (); it++)
+      {
+	if (n != 0)
+	  {
+	    ret.push_back(*it);
+	    n--;
+	  }
+	else
+	  break;
+      }
+    return ret;
   }
 
   TableStateInstance *getInstanceAtTime (ros::Time t)
@@ -127,33 +144,34 @@ class TableMemory
         inst->objects.push_back (to);
       }
       old_table.inst.push_back (inst);
-      old_table.new_flag = true;
+      old_table.new_flag++;
     }
    
     // service call from PROLOG 
-    bool
-      clusters_service (ias_table_srvs::ias_table_clusters_service::Request &req, 
+  bool
+  clusters_service (ias_table_srvs::ias_table_clusters_service::Request &req, 
                         ias_table_srvs::ias_table_clusters_service::Response &resp)
-    {
-      for (unsigned int i = 0; i < tables.size(); i++)
+  {
+    for (unsigned int i = 0; i < tables.size(); i++)
       {
-        if (tables[i].new_flag)
-        {
-          //tables[i].polygon.header.stamp
-          //msg.id = i;
-          tables[i].new_flag = false;
-          for (unsigned int j = 0; j < tables[i].getCurrentInstance ()->objects.size(); j++)
-          {
-            TableObject *to = tables[i].getCurrentInstance ()->objects[j];
-            std::cerr << to->semantic_type << std::endl;
-            //msg.objectid = j;
-          }
-
-        }
+       	if (tables[i].new_flag != 0)
+	  {
+	    std::vector<TableStateInstance*> instances = getLastInstances(tables[i].new_flag);
+	    tables[i].new_flag = 0;
+	  }
+	      resp.tableId = i;
+	    for (std::vector<TableStateInstance*>::reverse_iterator it = inst.rbegin (); it != inst.rend (); it++)
+	      {
+		for (unsigned int j = 0; j < (*it)->objects.size(); j++)
+		  {
+		    resp.object_centers.push_back((*it)->objects[j].center);
+		    resp.object_colors.push_back((*it)->objects[j].color);
+		  }
+		resp.stamp = (*it)->time_instance;
+	      }
       }
-
-      return true;
-    }
+	return true;
+  }
 
     void cop_cb (const boost::shared_ptr<const vision_msgs::cop_answer> &msg)
     {
