@@ -6,6 +6,7 @@
 #include <ias_table_srvs/ias_table_clusters_service.h>
 #include <ias_table_srvs/ias_reconstruct_object.h>
 #include <point_cloud_mapping/cloud_io.h>
+#include <point_cloud_mapping/geometry/areas.h>
 #include <point_cloud_mapping/geometry/statistics.h>
 #include <geometry_msgs/Polygon.h>
 #include <tabletop_msgs/Table.h>
@@ -46,6 +47,13 @@ struct Table
   
   TableStateInstance *getCurrentInstance ()
   {
+
+    if (inst.size() == 0)
+    {
+      ROS_ERROR ("TableStateInstance requested in empty list.");
+      return new TableStateInstance ();
+    }
+
     return inst.back ();
   }
 
@@ -88,7 +96,15 @@ class TableMemory
     
     bool compare_table (Table& old_table, const tabletop_msgs::Table::ConstPtr& new_table)
     {
-      return true;
+      // if center of new (invcomplete) table is within old 
+      // table bounds, it's the same
+      geometry_msgs::Point32 center;
+      center.x = new_table->table_max.x - new_table->table_min.x / 2.0;
+      center.y = new_table->table_max.y - new_table->table_min.y / 2.0;
+      center.z = new_table->table_max.z - new_table->table_min.z / 2.0;
+      if (cloud_geometry::areas::isPointIn2DPolygon (center, old_table.polygon))
+        return true;
+      return false;
     }
 
     void
@@ -142,15 +158,15 @@ class TableMemory
     void cop_cb (const boost::shared_ptr<const vision_msgs::cop_answer> &msg)
     {
       
-      ROS_DEBUG ("got answer from cop! (Errors: %s)\n", msg->error.c_str());
+      ROS_INFO ("got answer from cop! (Errors: %s)\n", msg->error.c_str());
 
       for(unsigned int i = 0; i < msg->found_poses.size(); i++)
       {
         const vision_msgs::aposteriori_position &pos =  msg->found_poses [i];
-        ROS_DEBUG ("Found Obj nr %d with prob %f at pos %d\n", (int)pos.objectId, pos.probability, (int)pos.position);
+        ROS_INFO ("Found Obj nr %d with prob %f at pos %d\n", (int)pos.objectId, pos.probability, (int)pos.position);
       }
 
-      ROS_DEBUG ("End!\n");
+      ROS_INFO ("End!\n");
     }
 
 
@@ -158,7 +174,8 @@ class TableMemory
     {
       ros::ServiceClient jlo_client_ = nh_.serviceClient<vision_srvs::srvjlo> ("/located_object", true);
 
-      // TODO: if (!jlo_client_.exists ()) return false;
+      // TODO: 
+      if (!jlo_client_.exists ()) return false;
 
       for (unsigned int o_idx = 0; o_idx < tables[table_num].getCurrentInstance ()->objects.size (); o_idx++)
       {
@@ -220,7 +237,7 @@ class TableMemory
           return false;
         } 
         
-        ROS_INFO ("New Id: %ld (parent %ld)\n", (long int)call.response.answer.id, (long int)call.response.answer.parent_id);
+        ROS_INFO ("New Id: %ld (parent %ld)\n", (long long int)call.response.answer.id, (long long int)call.response.answer.parent_id);
         width = 4;
         for(int r = 0; r < width; r++)
         {
@@ -334,7 +351,7 @@ class TableMemory
           break;
         }
       }
-      if (! table_found == -1)
+      if (table_found == -1)
       {
         ROS_INFO ("Not found. Creating new table.");
         Table t;
