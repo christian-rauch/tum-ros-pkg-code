@@ -36,6 +36,7 @@ struct TableStateInstance
 {
   ros::Time time_instance;
   std::vector<TableObject*> objects;
+  unsigned int cop_call_identifier;
 };
 
 struct Table
@@ -63,13 +64,13 @@ struct Table
     std::vector<TableStateInstance*> ret;
     for (std::vector<TableStateInstance*>::reverse_iterator it = inst.rbegin (); it != inst.rend (); it++)
       {
-  if (n != 0)
-    {
-      ret.push_back(*it);
-      n--;
-    }
-  else
-    break;
+        if (n != 0)
+          {
+            ret.push_back(*it);
+            n--;
+          }
+        else
+          break;
       }
     return ret;
   }
@@ -78,10 +79,19 @@ struct Table
   {
     TableStateInstance* ret = inst.back ();
     for (std::vector<TableStateInstance*>::reverse_iterator it = inst.rbegin (); it != inst.rend (); it++)
-      if ((*it)->time_instance <= ret->time_instance)
+      if ((*it)->time_instance <= t)
         ret = *it;
       else
         break;
+    return ret;
+  }
+
+  TableStateInstance *getInstanceAtCopCallIdentifier (unsigned int id)
+  {
+    TableStateInstance* ret = NULL;
+    for (std::vector<TableStateInstance*>::reverse_iterator it = inst.rbegin (); it != inst.rend (); it++)
+      if ((*it)->cop_call_identifier == id)
+        ret = *it;
     return ret;
   }
 };
@@ -97,12 +107,14 @@ class TableMemory
     ros::ServiceServer table_memory_clusters_service_;
     ros::ServiceClient table_reconstruct_clusters_client_;
     int counter_;
+    unsigned int cop_call_identifier_;
+    float color_probability_;
 
     // THE structure... :D
     std::vector<Table> tables;
 
   public:
-    TableMemory () : counter_(0)
+    TableMemory () : counter_(0), cop_call_identifier_(0), color_probability_(0.2)
     {
       nh_.param ("input_table_topic", input_table_topic_, std::string("table_with_objects"));       // 15 degrees
       nh_.param ("input_cop_topic", input_cop_topic_, std::string("/tracking/out"));       // 15 degrees
@@ -140,9 +152,10 @@ class TableMemory
         to->center.y = to->minP.y + (to->maxP.y - to->minP.y) * 0.5;
         to->center.z = to->minP.z + (to->maxP.z - to->minP.z) * 0.5;
 
-        inst->time_instance = new_table->header.stamp;
         inst->objects.push_back (to);
       }
+      inst->time_instance = new_table->header.stamp;
+      inst->cop_call_identifier = cop_call_identifier_++;
       old_table.inst.push_back (inst);
       old_table.new_flag++;
     }
@@ -154,46 +167,60 @@ class TableMemory
   {
     for (unsigned int i = 0; i < tables.size(); i++)
       {
-         if (tables[i].new_flag != 0)
-    {
-      std::vector<TableStateInstance*> instances = getLastInstances(tables[i].new_flag);
-      tables[i].new_flag = 0;
-    }
-        resp.tableId = i;
-      for (std::vector<TableStateInstance*>::reverse_iterator it = inst.rbegin (); it != inst.rend (); it++)
-        {
-    for (unsigned int j = 0; j < (*it)->objects.size(); j++)
-      {
-        resp.object_centers.push_back((*it)->objects[j].center);
-        resp.object_colors.push_back((*it)->objects[j].color);
+        if (tables[i].new_flag != 0)
+          {
+            std::vector<TableStateInstance*> instances = tables[i].getLastInstances(tables[i].new_flag);
+            tables[i].new_flag = 0;
+            resp.tableId = i;
+            for (std::vector<TableStateInstance*>::reverse_iterator it = instances.rbegin (); it != instances.rend (); it++)
+              {
+                for (unsigned int j = 0; j < (*it)->objects.size(); j++)
+                  {
+                    resp.object_centers.push_back((*it)->objects[j]->center);
+                    resp.object_colors.push_back((*it)->objects[j]->color);
+                  }
+                resp.stamp = (*it)->time_instance;
+              }
+          }
       }
-    resp.stamp = (*it)->time_instance;
-        }
-      }
-  return true;
+    return true;
   }
 
-    void cop_cb (const boost::shared_ptr<const vision_msgs::cop_answer> &msg)
-    {
-      
-      ROS_INFO ("got answer from cop! (Errors: %s)\n", msg->error.c_str());
-
-      for(unsigned int i = 0; i < msg->found_poses.size(); i++)
+  void cop_cb (const boost::shared_ptr<const vision_msgs::cop_answer> &msg)
+  {
+    ROS_INFO ("got answer from cop! (Errors: %s)\n", msg->error.c_str());
+    for(unsigned int i = 0; i < msg->found_poses.size(); i++)
       {
         const vision_msgs::aposteriori_position &pos =  msg->found_poses [i];
         ROS_INFO ("Found Obj nr %d with prob %f at pos %d\n", (int)pos.objectId, pos.probability, (int)pos.position);
+        //this here asumes that color classes are returned in FIFO fashion wrt to cop query (see cop_call function)!!!
+        if(pos.probability >= color_probability_)
+          {
+            TableStateInstance * instance = NULL;
+            for (unsigned int j = 0; j < tables.size(); j++)
+              {
+                instance = tables[j].getInstanceAtCopCallIdentifier (msg->callId);
+                if (instance != NULL)
+                  {
+                    ROS_INFO("Object color is %s", pos.classes[0].c_str());
+                    instance->objects[i]->color = pos.classes[0];
+                    break;
+                  }
+              }
+            if (instance == NULL)
+              ROS_ERROR("cop_call_identifier not found!");  
+          }
       }
-
-      ROS_INFO ("End!\n");
-    }
-
+    ROS_INFO ("End!\n");
+  }
+  
 
     bool update_jlo (int table_num)
     {
       ros::ServiceClient jlo_client_ = nh_.serviceClient<vision_srvs::srvjlo> ("/located_object", true);
 
       // TODO: 
-      if (!jlo_client_.exists ()) return false;
+      //if (!jlo_client_.exists ()) return false;
 
       for (unsigned int o_idx = 0; o_idx < tables[table_num].getCurrentInstance ()->objects.size (); o_idx++)
       {
@@ -255,7 +282,7 @@ class TableMemory
           return false;
         } 
         
-        ROS_INFO ("New Id: %ld (parent %ld)\n", (long long int)call.response.answer.id, (long long int)call.response.answer.parent_id);
+        ROS_INFO ("New Id: %lld (parent %lld)\n", (long long int)call.response.answer.id, (long long int)call.response.answer.parent_id);
         width = 4;
         for(int r = 0; r < width; r++)
         {
@@ -286,6 +313,7 @@ class TableMemory
       {
         /** Create the cop_call msg*/
         vision_srvs::cop_call call;
+        call.request.callId =  tables[table_num].getCurrentInstance ()->cop_call_identifier;
         call.request.outputtopic = input_cop_topic_;
         call.request.object_classes.push_back (colors[col]);
         call.request.action_type = 0;
