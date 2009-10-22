@@ -3,7 +3,7 @@
 #include <point_cloud_mapping/geometry/statistics.h>
 #include <point_cloud_mapping/geometry/nearest.h>
 #include <point_cloud_mapping/geometry/angles.h>
-#include <ias_table_msgs/TableObject.h>
+#include <ias_table_msgs/TableObjectReconstructed.h>
 #include "Sherlock.h"
 
 Sherlock::Sherlock()
@@ -20,16 +20,16 @@ void Sherlock::SetData (const sensor_msgs::PointCloudConstPtr pts)
 
 void Sherlock::SetShapeTypes (unsigned int types)
 {
-  if (types & ias_table_msgs::TableObject::PLANE)
-    shapetypes.push_back (ias_table_msgs::TableObject::PLANE);
-  if (types & ias_table_msgs::TableObject::SPHERE)
-    shapetypes.push_back (ias_table_msgs::TableObject::SPHERE);
-  if (types & ias_table_msgs::TableObject::CYLINDER)
-    shapetypes.push_back (ias_table_msgs::TableObject::CYLINDER);
-  if (types & ias_table_msgs::TableObject::ROTATIONAL)
-    shapetypes.push_back (ias_table_msgs::TableObject::ROTATIONAL);
-  if (types & ias_table_msgs::TableObject::BOX)
-    shapetypes.push_back (ias_table_msgs::TableObject::BOX);
+  if (types & ias_table_msgs::TableObjectReconstructed::PLANE)
+    shapetypes.push_back (ias_table_msgs::TableObjectReconstructed::PLANE);
+  if (types & ias_table_msgs::TableObjectReconstructed::SPHERE)
+    shapetypes.push_back (ias_table_msgs::TableObjectReconstructed::SPHERE);
+  if (types & ias_table_msgs::TableObjectReconstructed::CYLINDER)
+    shapetypes.push_back (ias_table_msgs::TableObjectReconstructed::CYLINDER);
+  if (types & ias_table_msgs::TableObjectReconstructed::ROTATIONAL)
+    shapetypes.push_back (ias_table_msgs::TableObjectReconstructed::ROTATIONAL);
+  if (types & ias_table_msgs::TableObjectReconstructed::BOX)
+    shapetypes.push_back (ias_table_msgs::TableObjectReconstructed::BOX);
 }
 
 Sherlock::~Sherlock()

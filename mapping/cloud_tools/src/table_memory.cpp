@@ -9,7 +9,7 @@
 #include <point_cloud_mapping/geometry/areas.h>
 #include <point_cloud_mapping/geometry/statistics.h>
 #include <geometry_msgs/Polygon.h>
-#include <tabletop_msgs/Table.h>
+
 // COP/JLO stuff
 #include <vision_srvs/srvjlo.h>
 #include <vision_srvs/cop_call.h>
@@ -111,7 +111,7 @@ class TableMemory
       table_memory_clusters_service_ = nh_.advertiseService ("table_memory_clusters_service", &TableMemory::clusters_service, this);
     }
     
-    bool compare_table (Table& old_table, const tabletop_msgs::Table::ConstPtr& new_table)
+    bool compare_table (Table& old_table, const ias_table_msgs::TableWithObjects::ConstPtr& new_table)
     {
       // if center of new (invcomplete) table is within old 
       // table bounds, it's the same
@@ -125,7 +125,7 @@ class TableMemory
     }
 
     void
-      update_table (Table& old_table, const tabletop_msgs::Table::ConstPtr& new_table)
+      update_table (Table& old_table, const ias_table_msgs::TableWithObjects::ConstPtr& new_table)
     {
       ROS_INFO ("Table found. Updating table with new TableInstance.");
       TableStateInstance *inst = new TableStateInstance ();
@@ -332,7 +332,7 @@ class TableMemory
           req.prob_thresh = 0.99;
           req.ransac_thresh = 0.05;
           req.angle_thresh = 10;
-          req.interesting_types = ias_table_msgs::TableObject::PLANE;
+          req.interesting_types = ias_table_msgs::TableObjectReconstructed::PLANE;
           
           //call service
           ias_table_srvs::ias_reconstruct_object::Response resp;
@@ -341,7 +341,7 @@ class TableMemory
           // update our table object with detected shapes
           if (resp.objects.size () > 0)
           {
-            ias_table_msgs::TableObject rto = resp.objects.at(0);
+            ias_table_msgs::TableObjectReconstructed rto = resp.objects.at(0);
             to->type = rto.type;
             to->coeffs = rto.coefficients;
             to->score = rto.score;
@@ -355,7 +355,7 @@ class TableMemory
 
     // incoming data...
     void
-      table_cb (const tabletop_msgs::Table::ConstPtr& table)
+      table_cb (const ias_table_msgs::TableWithObjects::ConstPtr& table)
     {
       int table_found = -1;
       ROS_INFO ("Looking for table in list of known tables.");
@@ -408,7 +408,7 @@ int main (int argc, char* argv[])
   ros::init (argc, argv, "table_memory");
 
   TableMemory n;
-  n.spin ();
+  ros::spin ();
 
   return (0);
 }

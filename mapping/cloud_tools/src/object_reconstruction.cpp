@@ -5,7 +5,6 @@
 #include <ros/node_handle.h>
 #include <sensor_msgs/PointCloud.h>
 #include <point_cloud_mapping/cloud_io.h>
-#include <tabletop_msgs/Table.h>
 #include <ias_table_msgs/TableWithObjects.h>
 #include <ias_table_srvs/ias_reconstruct_object.h>
 #include <geometry_msgs/PolygonStamped.h>

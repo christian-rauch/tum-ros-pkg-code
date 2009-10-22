@@ -3,7 +3,7 @@
 
 #include <set>
 #include <vector>
-#include <ias_table_msgs/TableObject.h>
+#include <ias_table_msgs/TableObjectReconstructed.h>
 #include <point_cloud_mapping/geometry/point.h>
 #include <point_cloud_mapping/geometry/angles.h>
 #include <sensor_msgs/PointCloud.h>
@@ -243,24 +243,13 @@ struct ShapeTypeRotational : ShapeType
       double x[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
       for (int d = 0; d < n; d++)
         x[d] = refit_coefficients.at (d);
+      double tol = sqrt (dpmpar (2));
+      int info = lmdif1 (&sample_consensus::SACModelRotational::functionToOptimizeAxis, 
+                         this, m, n, x, fvec, tol, iwa, wa, lwa);
+      info=info;
+      for (int d = 0; d < n; d++)
+        refit_coefficients[d] = x[d];
 
-       // Set tol to the square root of the machine. Unless high solutions are required, these are the recommended settings.
-       double tol = sqrt (dpmpar (2));
-
-       // Optimize using forward-difference approximation LM
-       int info = lmdif1 (&sample_consensus::SACModelRotational::functionToOptimizeAxis, this, m, n, x, fvec, tol, iwa, wa, lwa);
-        info=info;
-       // Compute the L2 norm of the residuals
-        ROS_INFO ("LM solver finished with exit code %i, having a residual norm of %g. \nInitial solution: %g %g %g %g %g %g \nFinal solution: %g %g %g %g %g %g ",
-                   info, enorm (m, fvec), 
-                   refit_coefficients.at (0), refit_coefficients.at (1), refit_coefficients.at (2), refit_coefficients.at (3),
-                   refit_coefficients.at (4), refit_coefficients.at (5), x[0], x[1], x[2], x[3], x[4], x[5]);
-
-       //refit_coefficients.resize (n);
-       for (int d = 0; d < n; d++)
-         refit_coefficients[d] = x[d];
-
-      // renormalize coeffs
       std::pair<double,double> minmax = getMinMaxK (*cloud_ , refit_coefficients, inliers);
       
       geometry_msgs::Point32 axis;   // axis direction vector
@@ -302,7 +291,8 @@ struct ShapeTypeRotational : ShapeType
                   - cloud_geometry::dot (p1, axis)) 
                   / cloud_geometry::dot (axis, axis);
         x = x - k0;
-        b[d1] = cloud_geometry::distances::pointToLineDistance (cloud_->points.at (inliers.at (d1)), p1, axis);
+        b[d1] = cloud_geometry::distances::pointToLineDistance 
+                   (cloud_->points.at (inliers.at (d1)), p1, axis);
         for (int d2 = 0; d2 < polynomial_order + 1; d2++)
           A(d1,d2) = pow (x, (double) d2);
       }
@@ -319,27 +309,6 @@ struct ShapeTypeRotational : ShapeType
           isnanorinf = true;
         }
 
-//      if (isnanorinf)
-//      {
-// write affected points to file
-//       static int filecounter = 0;
-//       std::ofstream myfile;
-//       std::stringstream filename;
-//       filename << "nan" << filecounter++ << ".pcd";
-//       myfile.open (filename.str().c_str());
-//       myfile << "COLUMNS x y z i\nPOINTS " << inliers.size()+2 << "\nDATA ascii\n";
-//       myfile << p1.x 
-//              << " "<< p1.y
-//              << " "<< p1.z << " " << filecounter << std::endl;
-//       myfile << p2.x 
-//              << " "<< p2.y
-//              << " "<< p2.z << " " << filecounter << std::endl;
-
-//       for (unsigned int d1 = 0; d1 < inliers.size(); d1++)
-//         myfile << cloud_->points.at (inliers.at (d1)).x
-//                << " "<< cloud_->points.at (inliers.at (d1)).y
-//                << " "<< cloud_->points.at (inliers.at (d1)).z << " " << filecounter << std::endl;
-//       myfile.close();
       return false;
     }
     

@@ -1,0 +1,28 @@
+<launch>
+
+  <!-- Wall Filter -->
+  <node pkg="cloud_tools" type="wall_filter" name="wall_filter" output="screen">
+    <param name="input_cloud_topic" value="/shoulder_cloud" />
+    <param name="output_cloud_topic" value="/shoulder_cloud_no_walls" />
+  </node>
+  
+  <!-- Table Object Detector (passive version) -->
+  <node pkg="cloud_tools" type="table_object_detector_passive_node" name="table_object_detector_passive" output="screen">
+    <param name="input_cloud_topic" value="/shoulder_cloud_no_walls" />
+    <param name="output_table_topic" value="/table_with_objects" />
+  </node>
+  
+  <!-- Table Memory -->
+  <node pkg="cloud_tools" type="table_memory" name="table_memory" output="screen">
+    <param name="input_table_topic" value="/table_with_objects" />
+  </node>
+  
+  <!-- Table Message Splitter -->
+  <node pkg="cloud_tools" type="table_msg_split" name="table_msg_split" output="screen">
+    <param name="input_table_topic" value="/table_with_objects" />
+    <param name="output_pcds_topic" value="/table_objects" />
+    <param name="output_polygon_topic" value="/table_polygon" />
+  </node>
+
+</launch>
+

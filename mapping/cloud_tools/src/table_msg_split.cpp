@@ -4,7 +4,6 @@
 #include <ros/node_handle.h>
 #include <sensor_msgs/PointCloud.h>
 #include <point_cloud_mapping/cloud_io.h>
-#include <tabletop_msgs/Table.h>
 #include <ias_table_msgs/TableWithObjects.h>
 #include <geometry_msgs/PolygonStamped.h>
 
@@ -33,7 +32,7 @@ class TableMsgSplit
     }
     
     void
-      table_cb (const tabletop_msgs::Table::ConstPtr& table)
+      table_cb (const ias_table_msgs::TableWithObjects::ConstPtr& table)
     {
       geometry_msgs::PolygonStamped p;
       p.header = table->header;
