@@ -113,7 +113,7 @@ class TableMemory
     }
 
   public:
-    TableMemory (NodeHandle &anode) : nh_(anode), counter_(0), cop_call_identifier_(0), color_probability_(0.2)
+    TableMemory (ros::NodeHandle &anode) : nh_(anode), counter_(0), cop_call_identifier_(0), color_probability_(0.2)
     {
       nh_.param ("input_table_topic", input_table_topic_, std::string("table_with_objects"));       // 15 degrees
       nh_.param ("input_cop_topic", input_cop_topic_, std::string("/tracking/out"));       // 15 degrees
