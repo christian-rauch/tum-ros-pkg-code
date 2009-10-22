@@ -4,6 +4,7 @@
 #include <ctime>
 #include <ros/node_handle.h>
 #include <ias_table_msgs/TableWithObjects.h>
+#include <ias_table_msgs/PrologReturn.h>
 #include <ias_table_srvs/ias_table_clusters_service.h>
 #include <ias_table_srvs/ias_reconstruct_object.h>
 #include <point_cloud_mapping/cloud_io.h>
@@ -25,12 +26,12 @@ struct TableObject
   geometry_msgs::Point32 minP;
   geometry_msgs::Point32 maxP;
   int type;
-  unsigned long lo_id;
+  unsigned long long lo_id;
   std::vector <double> coeffs;
   double score;
   std::vector<int> triangles;
   std::string semantic_type;
-  std::string color;
+  std::vector<std::string> color;
 };
 
 struct TableStateInstance
@@ -99,12 +100,14 @@ class TableMemory
     ros::ServiceServer table_memory_clusters_service_;
     ros::ServiceClient table_reconstruct_clusters_client_;
     int counter_;
-    unsigned int cop_call_identifier_;
     float color_probability_;
+    //insert lo_ids waiting for prolog update
+    std::vector<unsigned long long> update_prolog_;
 
+    
     // THE structure... :D
     std::vector<Table> tables;
-    
+   //map<LO Id, vector[tableId, instId, objectId]>
     std::map <unsigned long long, std::vector<long> > lo_ids;
     TableObject *getObjectFromLOId (unsigned int id)
     {
@@ -112,8 +115,19 @@ class TableMemory
       return tables[idxs[0]].inst[idxs[1]]->objects[idxs[2]];
     }
 
+    ias_table_msgs::PrologReturn getPrologReturn(unsigned int id)
+   {
+     ias_table_msgs::PrologReturn ret;
+     std::vector<long> idxs = lo_ids[id];
+     ret.table_id = idxs[1];
+     ret.stamp =  tables[idxs[0]].inst[idxs[1]]->time_instance;
+     ret.cluster_center =  tables[idxs[0]].inst[idxs[1]]->objects[idxs[2]]->center;
+     ret.cluster_colors =  tables[idxs[0]].inst[idxs[1]]->objects[idxs[2]]->color;
+     return ret;
+   }
+
   public:
-    TableMemory (ros::NodeHandle &anode) : nh_(anode), counter_(0), cop_call_identifier_(0), color_probability_(0.2)
+    TableMemory (ros::NodeHandle &anode) : nh_(anode), counter_(0), color_probability_(0.2)
     {
       nh_.param ("input_table_topic", input_table_topic_, std::string("table_with_objects"));       // 15 degrees
       nh_.param ("input_cop_topic", input_cop_topic_, std::string("/tracking/out"));       // 15 degrees
@@ -156,7 +170,7 @@ class TableMemory
       }
       inst->time_instance = new_table->header.stamp;
       old_table.inst.push_back (inst);
-      old_table.new_flag++;
+      
     }
    
     // service call from PROLOG 
@@ -164,24 +178,13 @@ class TableMemory
       clusters_service (ias_table_srvs::ias_table_clusters_service::Request &req, 
                           ias_table_srvs::ias_table_clusters_service::Response &resp)
     {
-      for (unsigned int i = 0; i < tables.size(); i++)
-      {
-        if (tables[i].new_flag != 0)
+      for (unsigned int up = 0; update_prolog_.size(); up++)
         {
-          std::vector<TableStateInstance*> instances = tables[i].getLastInstances(tables[i].new_flag);
-          tables[i].new_flag = 0;
-          resp.tableId = i;
-          for (std::vector<TableStateInstance*>::reverse_iterator it = instances.rbegin (); it != instances.rend (); it++)
-          {
-            for (unsigned int j = 0; j < (*it)->objects.size(); j++)
-            {
-              resp.object_centers.push_back((*it)->objects[j]->center);
-              resp.object_colors.push_back((*it)->objects[j]->color);
-            }
-            resp.stamp = (*it)->time_instance;
-          }
+          ias_table_msgs::PrologReturn pr =  getPrologReturn (update_prolog_[up]);
+          resp.prolog_return.push_back(pr);
         }
-      }
+      //TODO lock
+      update_prolog_.clear();
       return true;
     }
 
@@ -199,7 +202,9 @@ class TableMemory
           for (unsigned int cls = 0; cls < pos.classes.size (); cls++)
           {
             ROS_INFO("Object color is %s", pos.classes[cls].c_str());
-            to->color = pos.classes[cls];
+            //possible returns: [red (or any other color), object type (Jug)]
+            //color is a vector of strings in case object contains multiple color hypotheses
+            to->color.push_back(pos.classes[cls]);
           }
         }
       }
@@ -321,7 +326,9 @@ class TableMemory
           idxs[1] = tables[table_num].inst.size()-1;
           idxs[2] = o_idx;
           lo_ids [o->lo_id] = idxs;
-          
+
+          update_prolog_.push_back(o->lo_id);
+
           vision_msgs::apriori_position pos;
           pos.probability = 1.0;
           pos.positionId = o->lo_id;
