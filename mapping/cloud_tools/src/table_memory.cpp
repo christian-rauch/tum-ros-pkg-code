@@ -63,13 +63,13 @@ struct Table
     std::vector<TableStateInstance*> ret;
     for (std::vector<TableStateInstance*>::reverse_iterator it = inst.rbegin (); it != inst.rend (); it++)
       {
-	if (n != 0)
-	  {
-	    ret.push_back(*it);
-	    n--;
-	  }
-	else
-	  break;
+  if (n != 0)
+    {
+      ret.push_back(*it);
+      n--;
+    }
+  else
+    break;
       }
     return ret;
   }
@@ -133,7 +133,7 @@ class TableMemory
       {
         TableObject *to = new TableObject ();
 
-	      to->point_cluster = new_table->objects[i].points;
+        to->point_cluster = new_table->objects[i].points;
         cloud_geometry::statistics::getMinMax (to->point_cluster, to->minP, to->maxP);
 
         to->center.x = to->minP.x + (to->maxP.x - to->minP.x) * 0.5;
@@ -154,23 +154,23 @@ class TableMemory
   {
     for (unsigned int i = 0; i < tables.size(); i++)
       {
-       	if (tables[i].new_flag != 0)
-	  {
-	    std::vector<TableStateInstance*> instances = getLastInstances(tables[i].new_flag);
-	    tables[i].new_flag = 0;
-	  }
-	      resp.tableId = i;
-	    for (std::vector<TableStateInstance*>::reverse_iterator it = inst.rbegin (); it != inst.rend (); it++)
-	      {
-		for (unsigned int j = 0; j < (*it)->objects.size(); j++)
-		  {
-		    resp.object_centers.push_back((*it)->objects[j].center);
-		    resp.object_colors.push_back((*it)->objects[j].color);
-		  }
-		resp.stamp = (*it)->time_instance;
-	      }
+         if (tables[i].new_flag != 0)
+    {
+      std::vector<TableStateInstance*> instances = getLastInstances(tables[i].new_flag);
+      tables[i].new_flag = 0;
+    }
+        resp.tableId = i;
+      for (std::vector<TableStateInstance*>::reverse_iterator it = inst.rbegin (); it != inst.rend (); it++)
+        {
+    for (unsigned int j = 0; j < (*it)->objects.size(); j++)
+      {
+        resp.object_centers.push_back((*it)->objects[j].center);
+        resp.object_colors.push_back((*it)->objects[j].color);
       }
-	return true;
+    resp.stamp = (*it)->time_instance;
+        }
+      }
+  return true;
   }
 
     void cop_cb (const boost::shared_ptr<const vision_msgs::cop_answer> &msg)
