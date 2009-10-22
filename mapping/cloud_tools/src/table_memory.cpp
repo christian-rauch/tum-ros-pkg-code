@@ -1,5 +1,6 @@
 // #include <unistd.h>
 
+#include <map>
 #include <ctime>
 #include <ros/node_handle.h>
 #include <ias_table_msgs/TableWithObjects.h>
@@ -36,7 +37,6 @@ struct TableStateInstance
 {
   ros::Time time_instance;
   std::vector<TableObject*> objects;
-  unsigned int cop_call_identifier;
 };
 
 struct Table
@@ -86,20 +86,12 @@ struct Table
     return ret;
   }
 
-  TableStateInstance *getInstanceAtCopCallIdentifier (unsigned int id)
-  {
-    TableStateInstance* ret = NULL;
-    for (std::vector<TableStateInstance*>::reverse_iterator it = inst.rbegin (); it != inst.rend (); it++)
-      if ((*it)->cop_call_identifier == id)
-        ret = *it;
-    return ret;
-  }
 };
 
 class TableMemory
 {
   protected:
-    ros::NodeHandle nh_;
+    ros::NodeHandle &nh_;
     std::string input_table_topic_;
     std::string input_cop_topic_;
     ros::Subscriber table_sub_;
@@ -112,9 +104,16 @@ class TableMemory
 
     // THE structure... :D
     std::vector<Table> tables;
+    
+    std::map <unsigned long long, std::vector<long> > lo_ids;
+    TableObject *getObjectFromLOId (unsigned int id)
+    {
+      std::vector<long> idxs = lo_ids[id];
+      return tables[idxs[0]].inst[idxs[1]]->objects[idxs[2]];
+    }
 
   public:
-    TableMemory () : counter_(0), cop_call_identifier_(0), color_probability_(0.2)
+    TableMemory (NodeHandle &anode) : nh_(anode), counter_(0), cop_call_identifier_(0), color_probability_(0.2)
     {
       nh_.param ("input_table_topic", input_table_topic_, std::string("table_with_objects"));       // 15 degrees
       nh_.param ("input_cop_topic", input_cop_topic_, std::string("/tracking/out"));       // 15 degrees
@@ -137,8 +136,9 @@ class TableMemory
     }
 
     void
-      update_table (Table& old_table, const ias_table_msgs::TableWithObjects::ConstPtr& new_table)
+      update_table (int table_num, const ias_table_msgs::TableWithObjects::ConstPtr& new_table)
     {
+      Table &old_table = tables[table_num];
       ROS_INFO ("Table found. Updating table with new TableInstance.");
       TableStateInstance *inst = new TableStateInstance ();
       for (unsigned int i = 0; i < new_table->objects.size(); i++)
@@ -155,64 +155,56 @@ class TableMemory
         inst->objects.push_back (to);
       }
       inst->time_instance = new_table->header.stamp;
-      inst->cop_call_identifier = cop_call_identifier_++;
       old_table.inst.push_back (inst);
       old_table.new_flag++;
     }
    
     // service call from PROLOG 
-  bool
-  clusters_service (ias_table_srvs::ias_table_clusters_service::Request &req, 
-                        ias_table_srvs::ias_table_clusters_service::Response &resp)
-  {
-    for (unsigned int i = 0; i < tables.size(); i++)
+    bool
+      clusters_service (ias_table_srvs::ias_table_clusters_service::Request &req, 
+                          ias_table_srvs::ias_table_clusters_service::Response &resp)
+    {
+      for (unsigned int i = 0; i < tables.size(); i++)
       {
         if (tables[i].new_flag != 0)
+        {
+          std::vector<TableStateInstance*> instances = tables[i].getLastInstances(tables[i].new_flag);
+          tables[i].new_flag = 0;
+          resp.tableId = i;
+          for (std::vector<TableStateInstance*>::reverse_iterator it = instances.rbegin (); it != instances.rend (); it++)
           {
-            std::vector<TableStateInstance*> instances = tables[i].getLastInstances(tables[i].new_flag);
-            tables[i].new_flag = 0;
-            resp.tableId = i;
-            for (std::vector<TableStateInstance*>::reverse_iterator it = instances.rbegin (); it != instances.rend (); it++)
-              {
-                for (unsigned int j = 0; j < (*it)->objects.size(); j++)
-                  {
-                    resp.object_centers.push_back((*it)->objects[j]->center);
-                    resp.object_colors.push_back((*it)->objects[j]->color);
-                  }
-                resp.stamp = (*it)->time_instance;
-              }
+            for (unsigned int j = 0; j < (*it)->objects.size(); j++)
+            {
+              resp.object_centers.push_back((*it)->objects[j]->center);
+              resp.object_colors.push_back((*it)->objects[j]->color);
+            }
+            resp.stamp = (*it)->time_instance;
           }
+        }
       }
-    return true;
-  }
+      return true;
+    }
 
-  void cop_cb (const boost::shared_ptr<const vision_msgs::cop_answer> &msg)
-  {
-    ROS_INFO ("got answer from cop! (Errors: %s)\n", msg->error.c_str());
-    for(unsigned int i = 0; i < msg->found_poses.size(); i++)
+    void cop_cb (const boost::shared_ptr<const vision_msgs::cop_answer> &msg)
+    {
+      ROS_INFO ("got answer from cop! (Errors: %s)\n", msg->error.c_str());
+      for(unsigned int i = 0; i < msg->found_poses.size(); i++)
       {
         const vision_msgs::aposteriori_position &pos =  msg->found_poses [i];
         ROS_INFO ("Found Obj nr %d with prob %f at pos %d\n", (int)pos.objectId, pos.probability, (int)pos.position);
         //this here asumes that color classes are returned in FIFO fashion wrt to cop query (see cop_call function)!!!
         if(pos.probability >= color_probability_)
+        {
+          TableObject * to = getObjectFromLOId (pos.position);
+          for (unsigned int cls = 0; cls < pos.classes.size (); cls++)
           {
-            TableStateInstance * instance = NULL;
-            for (unsigned int j = 0; j < tables.size(); j++)
-              {
-                instance = tables[j].getInstanceAtCopCallIdentifier (msg->callId);
-                if (instance != NULL)
-                  {
-                    ROS_INFO("Object color is %s", pos.classes[0].c_str());
-                    instance->objects[i]->color = pos.classes[0];
-                    break;
-                  }
-              }
-            if (instance == NULL)
-              ROS_ERROR("cop_call_identifier not found!");  
+            ROS_INFO("Object color is %s", pos.classes[cls].c_str());
+            to->color = pos.classes[cls];
           }
+        }
       }
-    ROS_INFO ("End!\n");
-  }
+      ROS_INFO ("End!\n");
+    }
   
 
     bool update_jlo (int table_num)
@@ -313,7 +305,6 @@ class TableMemory
       {
         /** Create the cop_call msg*/
         vision_srvs::cop_call call;
-        call.request.callId =  tables[table_num].getCurrentInstance ()->cop_call_identifier;
         call.request.outputtopic = input_cop_topic_;
         call.request.object_classes.push_back (colors[col]);
         call.request.action_type = 0;
@@ -322,6 +313,14 @@ class TableMemory
         for (unsigned int o_idx = 0; o_idx < tables[table_num].getCurrentInstance ()->objects.size (); o_idx++)
         {
           TableObject *o = tables[table_num].getCurrentInstance ()->objects [o_idx];
+          
+          // save the indices in our vector of vector of vector so we can find a object
+          // in our storage from the positionID (lo_id)
+          std::vector<long> idxs (3);
+          idxs[0] = table_num;
+          idxs[1] = tables[table_num].inst.size()-1;
+          idxs[2] = o_idx;
+          lo_ids [o->lo_id] = idxs;
           
           vision_msgs::apriori_position pos;
           pos.probability = 1.0;
@@ -392,7 +391,7 @@ class TableMemory
         if (compare_table (tables[i], table))
         { 
           // found same table earlier.. so we append a new table instance measurement
-          update_table (tables[i], table);
+          update_table (i, table);
           table_found = i;
           break;
         }
@@ -409,10 +408,9 @@ class TableMemory
         tables.push_back (t);
         table_found = tables.size () - 1;
         // also append the new (first) table instance measurement.
-        update_table (tables[table_found], table);
+        update_table (table_found, table);
       }
       
-
       reconstruct_table_objects (table_found);
       update_jlo (table_found);
       call_cop (table_found);
@@ -435,7 +433,8 @@ int main (int argc, char* argv[])
 {
   ros::init (argc, argv, "table_memory");
 
-  TableMemory n;
+  ros::NodeHandle nh("~");
+  TableMemory n(nh);
   ros::spin ();
 
   return (0);

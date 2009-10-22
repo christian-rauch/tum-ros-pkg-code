@@ -590,7 +590,7 @@ int
   main (int argc, char** argv)
 {
   ros::init (argc, argv, "table_object_detector_passive");
-  ros::NodeHandle ros_node("/");
+  ros::NodeHandle ros_node("~");
   TableObjectDetector p (ros_node);
   ros::spin();
 

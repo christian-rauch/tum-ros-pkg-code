@@ -63,7 +63,7 @@ int main (int argc, char* argv[])
 {
   ros::init (argc, argv, "table_msg_split");
 
-  ros::NodeHandle nh("/");
+  ros::NodeHandle nh("~");
   TableMsgSplit n (nh);
   ros::spin ();
 

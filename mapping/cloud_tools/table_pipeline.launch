@@ -10,6 +10,7 @@
   <node pkg="cloud_tools" type="table_object_detector_passive_node" name="table_object_detector_passive" output="screen">
     <param name="input_cloud_topic" value="/shoulder_cloud_no_walls" />
     <param name="output_table_topic" value="/table_with_objects" />
+    <param name="sac_distance_threshold" value="0.015" />
   </node>
   
   <!-- Table Memory -->
