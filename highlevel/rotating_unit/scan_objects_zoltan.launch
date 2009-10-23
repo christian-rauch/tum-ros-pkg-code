@@ -1,0 +1,13 @@
+<launch>	
+  <node pkg="player_log_actarray" type="start-player-server.sh" name="start-player-server.sh" output="screen" args="$(find player_log_actarray)/demo/player-demo.cfg" />
+  <node pkg="player_log_actarray" type="sweep_laser_scan_cli_client" name="amtec_sweep_service_server" output="screen" respawn="true">
+	<param name="~start_angle" type="double" value="0.0"/>
+        <param name="~end_angle" type="double" value="-92.0"/>
+	<param name="~interface" type="int" value="1"/>		
+	<param name="~rot_joint" type="int" value="4"/>			
+	<param name="~rot_speed" type="double" value="0.1"/>		
+	<!--Set to one if using lms400-->
+	<param name="~is_lms400_" type="int" value="1"/>	
+ </node>	
+</launch>
+
