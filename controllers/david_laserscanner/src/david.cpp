@@ -79,6 +79,7 @@ private:
   std::string port_string; //Port number of server (string)
   std::string argument; //Argument to be executed by server
 
+
   bool debug_out;
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -87,7 +88,7 @@ private:
     {
       if ((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) 
       {
-        ROS_INFO("Failed to create socket");
+        ROS_WARN("Failed to create socket");
       }
     }
 
