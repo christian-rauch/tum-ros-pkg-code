@@ -36,56 +36,78 @@
 #include <ros/node_handle.h>
 #include <deprecated_msgs/ImageArray.h>
 
+
+
+extern "C" {
+/**
+ * four components are given, that's all.
+  * the last component is alpha
+   */
+  typedef struct AVPicture {
+    uint8_t *data[4];
+    int linesize[4];       ///< number of bytes per line
+  } AVPicture;
+  
+  
+  
+           // Uncomment this macro for using a video input file
+  int img_convert(AVPicture *dst, int dst_pix_fmt,
+		  const AVPicture *src, int src_pix_fmt,
+		  int src_width, int src_height){
+    return(0);
+    
+  }
+}
+
+
 using namespace std;
 using namespace deprecated_msgs;
 
 class SwissRangerViewer
 {
   protected:
-    ros::Node& node_;
+    ros::NodeHandle& node_;
   public:
-    ImageArray images_sr;
+  //    ImageArray images_sr;
     char key;
     int imgnum;
-
     IplImage *sr_img1, *sr_img2, *sr_img3;
   
-    SwissRangerViewer (ros::Node& anode) : node_ (anode)
+    SwissRangerViewer (ros::NodeHandle& anode) : node_ (anode)
     {
       cvNamedWindow ("sr4k - distance", CV_WINDOW_AUTOSIZE);
       cvNamedWindow ("sr4k - amplitude", CV_WINDOW_AUTOSIZE);
       cvNamedWindow ("sr4k - confidence", CV_WINDOW_AUTOSIZE);
-      node_.subscribe ("images_sr", images_sr, &SwissRangerViewer::image_sr_cb, this, 1);
+      ros::Subscriber sr_sub_ = node_.subscribe("images_sr", 10, &SwissRangerViewer::image_sr_cb, this);
       sr_img1 = cvCreateImage (cvSize (1, 1), IPL_DEPTH_16U, 1);
       sr_img2 = cvCreateImage (cvSize (1, 1), IPL_DEPTH_16U, 1);
       sr_img3 = cvCreateImage (cvSize (1, 1), IPL_DEPTH_16U, 1);
       imgnum = 0;
     }
 
-    void
-      image_sr_cb ()
+  void image_sr_cb(const deprecated_msgs::ImageArray::ConstPtr &images_sr)
     {
       cvReleaseImage (&sr_img1);
       cvReleaseImage (&sr_img2);
       cvReleaseImage (&sr_img3);
 
-      fprintf (stderr, "Received %d images of size:", images_sr.get_images_size ());
-      for (unsigned int j = 0; j < images_sr.get_images_size (); j++)
+      fprintf (stderr, "Received %d images of size:", images_sr->get_images_size ());
+      for (unsigned int j = 0; j < images_sr->get_images_size (); j++)
       {
-        fprintf (stderr, " %dx%d and type %s,", images_sr.images[j].width, images_sr.images[j].height, images_sr.images[j].colorspace.c_str ());
-        if (images_sr.images[j].width == 0 || images_sr.images[j].height == 0)
+        fprintf (stderr, " %dx%d and type %s,", images_sr->images[j].width, images_sr->images[j].height, images_sr->images[j].colorspace.c_str ());
+        if (images_sr->images[j].width == 0 || images_sr->images[j].height == 0)
          return;
       }
       fprintf (stderr, "\n");
 
-      sr_img1 = cvCreateImage (cvSize (images_sr.images[0].width, images_sr.images[0].height), IPL_DEPTH_16U, 1);
-      sr_img2 = cvCreateImage (cvSize (images_sr.images[1].width, images_sr.images[1].height), IPL_DEPTH_16U, 1);
+      sr_img1 = cvCreateImage (cvSize (images_sr->images[0].width, images_sr->images[0].height), IPL_DEPTH_16U, 1);
+      sr_img2 = cvCreateImage (cvSize (images_sr->images[1].width, images_sr->images[1].height), IPL_DEPTH_16U, 1);
       /// 3rd image
-      sr_img3 = cvCreateImage (cvSize (images_sr.images[2].width, images_sr.images[2].height), IPL_DEPTH_16U, 1);
+      sr_img3 = cvCreateImage (cvSize (images_sr->images[2].width, images_sr->images[2].height), IPL_DEPTH_16U, 1);
 
-      memcpy (sr_img1->imageData, &(images_sr.images[0].data[0]), sr_img1->imageSize);
-      memcpy (sr_img2->imageData, &(images_sr.images[1].data[0]), sr_img2->imageSize);
-      memcpy (sr_img3->imageData, &(images_sr.images[2].data[0]), sr_img3->imageSize);
+      memcpy (sr_img1->imageData, &(images_sr->images[0].data[0]), sr_img1->imageSize);
+      memcpy (sr_img2->imageData, &(images_sr->images[1].data[0]), sr_img2->imageSize);
+      memcpy (sr_img3->imageData, &(images_sr->images[2].data[0]), sr_img3->imageSize);
 
       cvShowImage ("sr4k - distance", sr_img1);
 
@@ -118,12 +140,10 @@ class SwissRangerViewer
 int
   main (int argc, char **argv)
 {
-  ros::init (argc, argv);
-  ros::Node ros_node ("swissranger_viewer");
-
-  SwissRangerViewer c (ros_node);
-
-  ros_node.spin ();
+  ros::init (argc, argv, "swissranger_viewer");
+  ros::NodeHandle nh("~");
+  SwissRangerViewer n(nh);
+  ros::spin ();
 
   return (0);
 }
