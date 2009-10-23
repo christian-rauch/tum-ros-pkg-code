@@ -65,20 +65,23 @@ using namespace deprecated_msgs;
 
 class SwissRangerViewer
 {
-  protected:
-    ros::NodeHandle& node_;
   public:
+  ros::NodeHandle node_;
+  ros::Subscriber sr_sub_ ;
+  //public:
   //    ImageArray images_sr;
     char key;
     int imgnum;
     IplImage *sr_img1, *sr_img2, *sr_img3;
   
-    SwissRangerViewer (ros::NodeHandle& anode) : node_ (anode)
+  //SwissRangerViewer (ros::NodeHandle& anode) : node_ (anode)
+  SwissRangerViewer ()
     {
       cvNamedWindow ("sr4k - distance", CV_WINDOW_AUTOSIZE);
       cvNamedWindow ("sr4k - amplitude", CV_WINDOW_AUTOSIZE);
       cvNamedWindow ("sr4k - confidence", CV_WINDOW_AUTOSIZE);
-      ros::Subscriber sr_sub_ = node_.subscribe("images_sr", 10, &SwissRangerViewer::image_sr_cb, this);
+      sr_sub_ = node_.subscribe<deprecated_msgs::ImageArray>
+      ("/swissranger_test/images_sr", 10, &SwissRangerViewer::image_sr_cb, this);
       sr_img1 = cvCreateImage (cvSize (1, 1), IPL_DEPTH_16U, 1);
       sr_img2 = cvCreateImage (cvSize (1, 1), IPL_DEPTH_16U, 1);
       sr_img3 = cvCreateImage (cvSize (1, 1), IPL_DEPTH_16U, 1);
@@ -141,8 +144,8 @@ int
   main (int argc, char **argv)
 {
   ros::init (argc, argv, "swissranger_viewer");
-  ros::NodeHandle nh("~");
-  SwissRangerViewer n(nh);
+  //ros::NodeHandle nh("~");
+  SwissRangerViewer n;
   ros::spin ();
 
   return (0);
