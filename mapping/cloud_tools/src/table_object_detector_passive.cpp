@@ -101,7 +101,7 @@ class TableObjectDetector
     geometry_msgs::Point32 z_axis_;
     PolygonalMap pmap_;
 
-//     tf::TransformListener tf_;
+    tf::TransformListener tf_;
 
     // Parameters
     string global_frame_;
@@ -127,7 +127,7 @@ class TableObjectDetector
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     TableObjectDetector (ros::NodeHandle& anode) : node_ (anode)
     {
-      node_.param ("/global_frame_id", global_frame_, std::string("/base_link"));
+      node_.param ("/global_frame_id", global_frame_, std::string("/map"));
 
       node_.param ("min_z_bounds", min_z_bounds_, 0.0);                      // restrict the Z dimension between 0
       node_.param ("max_z_bounds", max_z_bounds_, 3.0);                      // and 3.0 m
@@ -289,7 +289,7 @@ class TableObjectDetector
     void cloud_cb (const sensor_msgs::PointCloudConstPtr& pc)
     {
       cloud_in_ = *pc;
-      //tf_.transformPointCloud(global_frame_, *pc, cloud_in_);
+      tf_.transformPointCloud(global_frame_, *pc, cloud_in_);
       
       ros::Time ts = ros::Time::now ();
       // We have a pointcloud, estimate the true point bounds
@@ -381,19 +381,23 @@ class TableObjectDetector
       geometry_msgs::PointStamped minPstamped_local, maxPstamped_local;
       minPstamped_local.point.x = minP.x;
       minPstamped_local.point.y = minP.y;
+      minPstamped_local.point.z = minP.z;
       minPstamped_local.header = cloud_in_.header;
       maxPstamped_local.point.x = maxP.x;
       maxPstamped_local.point.y = maxP.y;
+      maxPstamped_local.point.z = maxP.z;
       maxPstamped_local.header = cloud_in_.header;
       geometry_msgs::PointStamped minPstamped_global, maxPstamped_global;
       try
       {
-//         tf_.transformPoint (global_frame_, minPstamped_local, minPstamped_global);
-//         tf_.transformPoint (global_frame_, maxPstamped_local, maxPstamped_global);
-        table.table_min.x = minPstamped_local.point.x;
-        table.table_min.y = minPstamped_local.point.y;
-        table.table_max.x = maxPstamped_local.point.x;
-        table.table_max.y = maxPstamped_local.point.y;
+        tf_.transformPoint (global_frame_, minPstamped_local, minPstamped_global);
+        tf_.transformPoint (global_frame_, maxPstamped_local, maxPstamped_global);
+        table.table_min.x = minPstamped_global.point.x;
+        table.table_min.y = minPstamped_global.point.y;
+        table.table_min.z = minPstamped_global.point.z;
+        table.table_max.x = maxPstamped_global.point.x;
+        table.table_max.y = maxPstamped_global.point.y;
+        table.table_max.z = maxPstamped_global.point.z;
       }
       catch (tf::TransformException)
       {
@@ -422,9 +426,9 @@ class TableObjectDetector
           {
             local.point.x = pmap_.polygons[i].points[j].x;
             local.point.y = pmap_.polygons[i].points[j].y;
-//             tf_.transformPoint (global_frame_, local, global);
-            pmap_.polygons[i].points[j].x = local.point.x;
-            pmap_.polygons[i].points[j].y = local.point.y;
+            tf_.transformPoint (global_frame_, local, global);
+            pmap_.polygons[i].points[j].x = global.point.x;
+            pmap_.polygons[i].points[j].y = global.point.y;
           }
         }
       }
@@ -437,10 +441,10 @@ class TableObjectDetector
       table.table = pmap_.polygons[0];
 
 
-      ROS_INFO ("Table found. Bounds: [%f, %f] -> [%f, %f]. Number of objects: %d. Total time: %f.",
-                minP.x, minP.y, maxP.x, maxP.y, (int)table.objects.size (), (ros::Time::now () - ts).toSec ());
-      ROS_INFO ("Table found. Bounds: [%f, %f] -> [%f, %f]. Number of objects: %d. Total time: %f.",
-                table.table_min.x, table.table_min.y, table.table_max.x, table.table_max.y, (int)table.objects.size (), (ros::Time::now () - ts).toSec ());
+      ROS_INFO ("Table found. Bounds: [%f, %f, %f] -> [%f, %f, %f]. Number of objects: %d. Total time: %f.",
+                minP.x, minP.y, minP.z, maxP.x, maxP.y, maxP.z, (int)table.objects.size (), (ros::Time::now () - ts).toSec ());
+      ROS_INFO ("Table found. Bounds: [%f, %f, %f] -> [%f, %f, %f]. Number of objects: %d. Total time: %f.",
+                table.table_min.x, table.table_min.y, table.table_min.z, table.table_max.x, table.table_max.y, table.table_max.z, (int)table.objects.size (), (ros::Time::now () - ts).toSec ());
 
       table_pub_.publish (table);
       // Should only used for debugging purposes (on screen visualization)

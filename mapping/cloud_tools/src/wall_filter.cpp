@@ -195,7 +195,8 @@ class WallFilter
         return;
       }
 
-      ROS_DEBUG ("Number of points after downsampling with a leaf of size [%f,%f,%f]: %d.", leaf_width_.x, leaf_width_.y, leaf_width_.z, (int)cloud_down_.points.size ());
+      ROS_DEBUG ("Number of points after downsampling with a leaf of size [%f,%f,%f]: %d.", 
+                 leaf_width_.x, leaf_width_.y, leaf_width_.z, (int)cloud_down_.points.size ());
 
       // Reserve space for 3 channels: nx, ny, nz
       cloud_down_.channels.resize (3);
@@ -228,30 +229,43 @@ class WallFilter
       double eps_angle_deg = angles::to_degrees (eps_angle_);
       for (int i = clusters.size () - 1; i >= 0; i--)
       {
-        // Find the best plane in this cluster
-        if (fitSACPlane (&cloud_down_, &clusters[i], inliers, coeff) == -1)
-          continue;
-        if (coeff.size() < 4)
-          continue;
-        if ((signed int)inliers.size() < clusters_min_pts_)
-          continue;
-        double angle = angles::to_degrees (cloud_geometry::angles::getAngleBetweenPlanes (coeff, z_coeff));
-        Polygon wall_polygon;
-        cloud_geometry::areas::convexHull2D (cloud_down_, inliers, coeff, wall_polygon);
-        double area = cloud_geometry::areas::compute2DPolygonalArea (wall_polygon, coeff);
-          if ( fabs (angle - 90.0) < eps_angle_deg)
-          //|| fabs (180.0 - angle) < eps_angle_deg )
-        {
-          if (area > 0.8)
+        std::vector<int> cur_clust = (clusters[i]);
+        int old_nr_indices;
+//         do 
+//         {
+          old_nr_indices = cur_clust.size();
+          // Find the best plane in this cluster
+          if (fitSACPlane (&cloud_down_, &cur_clust, inliers, coeff) == -1)
+            continue;
+          if (coeff.size() < 4)
+            continue;
+          if ((signed int)inliers.size() < clusters_min_pts_)
+            continue;
+          double angle = angles::to_degrees (cloud_geometry::angles::getAngleBetweenPlanes (coeff, z_coeff));
+          Polygon wall_polygon;
+          cloud_geometry::areas::convexHull2D (cloud_down_, inliers, coeff, wall_polygon);
+          double area = cloud_geometry::areas::compute2DPolygonalArea (wall_polygon, coeff);
+            if ( fabs (angle - 90.0) < eps_angle_deg)
+            //|| fabs (180.0 - angle) < eps_angle_deg )
           {
-            for (unsigned int j = 0; j < cloud_in_.points.size(); j++)
-              if (cloud_geometry::distances::pointToPlaneDistance (cloud_in_.points.at(j), coeff) < sac_distance_threshold_)
-                indices_wall_points.push_back (j);
-            good_walls.push_back (i);
+            if (area > 0.8)
+            {
+              for (unsigned int j = 0; j < cloud_in_.points.size(); j++)
+                if (cloud_geometry::distances::pointToPlaneDistance (cloud_in_.points.at(j), coeff) < sac_distance_threshold_)
+                  indices_wall_points.push_back (j);
+              good_walls.push_back (i);
+            }
+  //           else
+  //             break;
+
           }
-//           else
-//             break;
-        }
+//           std::vector <int> rest;
+//           
+//           std::sort (cur_clust.begin (), cur_clust.end ());
+//           std::sort (inliers.begin (), inliers.end ());
+//           set_difference (cur_clust.begin (), cur_clust.end (), inliers.begin (), inliers.end (), rest.begin ());
+//           cur_clust = std::vector<int> (rest.begin(), rest.end());
+//         } while (old_nr_indices > (signed int) cur_clust.size());
       }
 
       if (good_walls.size() == 0)

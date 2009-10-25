@@ -141,11 +141,22 @@ class TableMemory
       // if center of new (invcomplete) table is within old 
       // table bounds, it's the same
       geometry_msgs::Point32 center;
-      center.x = new_table->table_max.x - new_table->table_min.x / 2.0;
-      center.y = new_table->table_max.y - new_table->table_min.y / 2.0;
-      center.z = new_table->table_max.z - new_table->table_min.z / 2.0;
+      center.x = new_table->table_min.x + (new_table->table_max.x - new_table->table_min.x) / 2.0;
+      center.y = new_table->table_min.y + (new_table->table_max.y - new_table->table_min.y) / 2.0;
+      center.z = new_table->table_min.z + (new_table->table_max.z - new_table->table_min.z) / 2.0;
       if (cloud_geometry::areas::isPointIn2DPolygon (center, old_table.polygon))
         return true;
+        
+      double x = center.x;
+      double y = center.y;
+      double z = center.z;
+
+      std::cerr << "Table compare returns false. Center = <" << x << "," << y << "," << z << ">." << std::endl; 
+      for (unsigned int i = 0; i < old_table.polygon.points.size() ; i ++)
+        std::cerr << "\t Polygon points " << i << " = <" << old_table.polygon.points[i].x
+                  << "," << old_table.polygon.points[i].y
+                  << "," << old_table.polygon.points[i].z
+                  << ">." << std::endl; 
       return false;
     }
 
@@ -153,7 +164,7 @@ class TableMemory
       update_table (int table_num, const ias_table_msgs::TableWithObjects::ConstPtr& new_table)
     {
       Table &old_table = tables[table_num];
-      ROS_INFO ("Table found. Updating table with new TableInstance.");
+      ROS_INFO ("Updating table with new TableInstance.");
       TableStateInstance *inst = new TableStateInstance ();
       for (unsigned int i = 0; i < new_table->objects.size(); i++)
       {
@@ -398,6 +409,7 @@ class TableMemory
         if (compare_table (tables[i], table))
         { 
           // found same table earlier.. so we append a new table instance measurement
+          ROS_INFO ("Table found.");
           update_table (i, table);
           table_found = i;
           break;
@@ -407,9 +419,9 @@ class TableMemory
       {
         ROS_INFO ("Not found. Creating new table.");
         Table t;
-        t.center.x = table->table_max.x - table->table_min.x / 2.0;
-        t.center.y = table->table_max.y - table->table_min.y / 2.0;
-        t.center.z = table->table_max.z - table->table_min.z / 2.0;
+        t.center.x = table->table_min.x + ((table->table_max.x - table->table_min.x) / 2.0);
+        t.center.y = table->table_min.y + ((table->table_max.y - table->table_min.y) / 2.0);
+        t.center.z = table->table_min.z + ((table->table_max.z - table->table_min.z) / 2.0);
         t.polygon  = table->table;
 
         tables.push_back (t);
@@ -419,8 +431,24 @@ class TableMemory
       }
       
       reconstruct_table_objects (table_found);
-      update_jlo (table_found);
-      call_cop (table_found);
+//       update_jlo (table_found);
+//       call_cop (table_found);
+      print_mem_stats (table_found);
+    }
+
+    void 
+      print_mem_stats (int table_num)
+    {
+      std::cerr << "Tables : " << tables.size () << std::endl;
+      for (unsigned int t = 0; t < tables.size(); t++)
+      {
+        double x = tables[t].center.x;
+        double y = tables[t].center.y;
+        double z = tables[t].center.z;
+        std::cerr << "\tTable " << t << " : " << tables[t].inst.size () << " instances. Center = <" << x << "," << y << "," << z << ">." << std::endl;
+
+      }
+      std::cerr << "\tCurrent Table : " << table_num << " (" << tables[table_num].getCurrentInstance ()->objects.size () << " objects)" << std::endl;
     }
 
     bool 
