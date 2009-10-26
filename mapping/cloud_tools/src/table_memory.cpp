@@ -103,6 +103,7 @@ class TableMemory
     float color_probability_;
     //insert lo_ids waiting for prolog update
     std::vector<unsigned long long> update_prolog_;
+    unsigned long long lo_id_tmp_;
 
     
     // THE structure... :D
@@ -115,19 +116,27 @@ class TableMemory
       return tables[idxs[0]].inst[idxs[1]]->objects[idxs[2]];
     }
 
-    ias_table_msgs::PrologReturn getPrologReturn(unsigned int id)
+    ias_table_msgs::PrologReturn getPrologReturn(unsigned long long id)
    {
      ias_table_msgs::PrologReturn ret;
-     std::vector<long> idxs = lo_ids[id];
-     ret.table_id = idxs[1];
-     ret.stamp =  tables[idxs[0]].inst[idxs[1]]->time_instance;
-     ret.cluster_center =  tables[idxs[0]].inst[idxs[1]]->objects[idxs[2]]->center;
-     ret.cluster_colors =  tables[idxs[0]].inst[idxs[1]]->objects[idxs[2]]->color;
+     std::map <unsigned long long, std::vector<long> >::iterator lo_ids_it;
+     lo_ids_it = lo_ids.find(id);
+     if (lo_ids_it != lo_ids.end())
+       {
+	 std::vector<long>idxs=lo_ids_it->second;
+	 ret.table_id = idxs[0];
+	 ret.stamp =  tables[idxs[0]].inst[idxs[1]]->time_instance;
+	 ret.cluster_center =  tables[idxs[0]].inst[idxs[1]]->objects[idxs[2]]->center;
+       }
+     else
+       {
+	 ROS_ERROR("Id %lld not found!!!", id);
+       }
      return ret;
    }
 
   public:
-    TableMemory (ros::NodeHandle &anode) : nh_(anode), counter_(0), color_probability_(0.2)
+  TableMemory (ros::NodeHandle &anode) : nh_(anode), counter_(0), color_probability_(0.2), lo_id_tmp_(0)
     {
       nh_.param ("input_table_topic", input_table_topic_, std::string("table_with_objects"));       // 15 degrees
       nh_.param ("input_cop_topic", input_cop_topic_, std::string("/tracking/out"));       // 15 degrees
@@ -189,9 +198,10 @@ class TableMemory
       clusters_service (ias_table_srvs::ias_table_clusters_service::Request &req, 
                           ias_table_srvs::ias_table_clusters_service::Response &resp)
     {
-      for (unsigned int up = 0; update_prolog_.size(); up++)
+      ROS_INFO("Tables to update: %ld", update_prolog_.size());
+      for (unsigned int up = 0; up < update_prolog_.size(); up++)
         {
-          ias_table_msgs::PrologReturn pr =  getPrologReturn (update_prolog_[up]);
+	  ias_table_msgs::PrologReturn pr =  getPrologReturn (update_prolog_[up]);
           resp.prolog_return.push_back(pr);
         }
       //TODO lock
@@ -360,6 +370,25 @@ class TableMemory
       return true;
     }
 
+  bool update_table_instance_objects (int table_num)
+  {
+    for (unsigned int o_idx = 0; o_idx < tables[table_num].getCurrentInstance ()->objects.size (); o_idx++)
+      {
+	TableObject *o = tables[table_num].getCurrentInstance ()->objects [o_idx];
+	// save the indices in our vector of vector of vector so we can find a object
+	// in our storage from the positionID (lo_id)
+	std::vector<long> idxs (3);
+	idxs[0] = table_num;
+	idxs[1] = tables[table_num].inst.size()-1;
+	idxs[2] = o_idx;
+	//lo_ids [o->lo_id] = idxs;
+	ROS_INFO("Pushing --------- lo_id: %lld, table_num: %ld, inst num: %ld, o_idx: %ld", lo_id_tmp_, idxs[0], idxs[1], idxs[2]);
+	lo_ids [lo_id_tmp_] = idxs;
+	update_prolog_.push_back(lo_id_tmp_);
+	lo_id_tmp_++;
+      } 
+    return true;
+  }
     void
       reconstruct_table_objects (int table_num)
     {
@@ -431,8 +460,9 @@ class TableMemory
       }
       
       reconstruct_table_objects (table_found);
-//       update_jlo (table_found);
-//       call_cop (table_found);
+      update_table_instance_objects(table_found);
+      //update_jlo (table_found);
+      //call_cop (table_found);
       print_mem_stats (table_found);
     }
 
