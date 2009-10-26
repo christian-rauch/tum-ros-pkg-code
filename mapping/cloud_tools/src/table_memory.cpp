@@ -125,6 +125,7 @@ class TableMemory
        {
 	 std::vector<long>idxs=lo_ids_it->second;
 	 ret.table_id = idxs[0];
+	 ret.table_center =  tables[idxs[0]].center;
 	 ret.stamp =  tables[idxs[0]].inst[idxs[1]]->time_instance;
 	 ret.cluster_center =  tables[idxs[0]].inst[idxs[1]]->objects[idxs[2]]->center;
        }
