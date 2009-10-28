@@ -1,16 +1,24 @@
 <launch>
 
-  <!-- Wall Filter -->
-  <node pkg="cloud_tools" type="wall_filter" name="wall_filter" output="screen">
+  <!-- Box Filter -->
+  <node pkg="cloud_tools" type="box_filter" name="box_filter" output="screen">
     <param name="input_cloud_topic" value="/shoulder_cloud" />
-    <param name="output_cloud_topic" value="/shoulder_cloud_no_walls" />
+    <param name="output_cloud_topic" value="/shoulder_cloud_clipped" />
+    <param name="box_min_y" value="-4.0" />
   </node>
   
+  <!-- Wall Filter 
+  <node pkg="cloud_tools" type="wall_filter" name="wall_filter" output="screen">
+    <param name="input_cloud_topic" value="/shoulder_cloud_clipped" />
+    <param name="output_cloud_topic" value="/shoulder_cloud_no_walls" />
+  </node>
+ --> 
   <!-- Table Object Detector (passive version) -->
   <node pkg="cloud_tools" type="table_object_detector_passive_node" name="table_object_detector_passive" output="screen">
-    <param name="input_cloud_topic" value="/shoulder_cloud_no_walls" />
+    <param name="input_cloud_topic" value="/shoulder_cloud_clipped" />
     <param name="output_table_topic" value="/table_with_objects" />
     <param name="sac_distance_threshold" value="0.015" />
+    <param name="normal_eps_angle" value="5" />
   </node>
   
   <!-- Table Memory -->

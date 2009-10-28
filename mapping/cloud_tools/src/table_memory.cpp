@@ -10,6 +10,7 @@
 #include <point_cloud_mapping/cloud_io.h>
 #include <point_cloud_mapping/geometry/areas.h>
 #include <point_cloud_mapping/geometry/statistics.h>
+#include <mapping_msgs/PolygonalMap.h>
 #include <geometry_msgs/Polygon.h>
 
 // COP/JLO stuff
@@ -17,6 +18,7 @@
 #include <vision_srvs/cop_call.h>
 #include <vision_msgs/partial_lo.h>
 #include <vision_msgs/cop_answer.h>
+#include <vision_srvs/clip_polygon.h>
 
 struct TableObject
 {
@@ -45,6 +47,7 @@ struct Table
   unsigned new_flag;
   geometry_msgs::Point32 center;
   geometry_msgs::Polygon polygon;
+  int color;
 
   std::vector<TableStateInstance*> inst;
   
@@ -95,6 +98,8 @@ class TableMemory
     ros::NodeHandle &nh_;
     std::string input_table_topic_;
     std::string input_cop_topic_;
+    std::string output_table_state_topic_;
+    ros::Publisher mem_state_pub_;
     ros::Subscriber table_sub_;
     ros::Subscriber cop_sub_;
     ros::ServiceServer table_memory_clusters_service_;
@@ -141,13 +146,41 @@ class TableMemory
     {
       nh_.param ("input_table_topic", input_table_topic_, std::string("table_with_objects"));       // 15 degrees
       nh_.param ("input_cop_topic", input_cop_topic_, std::string("/tracking/out"));       // 15 degrees
+      nh_.param ("output_table_state_topic", output_table_state_topic_, std::string("table_mem_state"));       // 15 degrees
+
       table_sub_ = nh_.subscribe (input_table_topic_, 1, &TableMemory::table_cb, this);
-      cop_sub_ = nh_.subscribe (input_cop_topic_, 1, &TableMemory::cop_cb, this);
+//       cop_sub_ = nh_.subscribe (input_cop_topic_, 1, &TableMemory::cop_cb, this);
+      mem_state_pub_ = nh_.advertise<mapping_msgs::PolygonalMap> (output_table_state_topic_, 1);
       table_memory_clusters_service_ = nh_.advertiseService ("table_memory_clusters_service", &TableMemory::clusters_service, this);
     }
     
     bool compare_table (Table& old_table, const ias_table_msgs::TableWithObjects::ConstPtr& new_table)
     {
+      ros::ServiceClient polygon_clipper = nh_.serviceClient<vision_srvs::clip_polygon> ("/intersect_poly", true);
+      if (polygon_clipper.exists())
+      {
+        ROS_WARN ("blablabla");
+        vision_srvs::clip_polygon::Request req;
+        req.operation = req.INTERSECTION;
+        req.poly1 = old_table.polygon;
+        req.poly2 = new_table->table; 
+        vision_srvs::clip_polygon::Response resp;
+        ROS_WARN ("blablabla");
+        
+        polygon_clipper.call (req, resp);
+        ROS_WARN ("blablabla");
+        std::vector<double> normal_z(3);
+        normal_z[0] = 0.0;
+        normal_z[1] = 0.0;
+        normal_z[2] = 1.0;
+        double area_old = cloud_geometry::areas::compute2DPolygonalArea (old_table.polygon, normal_z);
+        double area_new = cloud_geometry::areas::compute2DPolygonalArea (new_table->table, normal_z);
+        double area_clip = cloud_geometry::areas::compute2DPolygonalArea (resp.poly_clip, normal_z);
+        ROS_WARN ("The 3 areas are: %f, %f, %f: [%f percent, %f percent]", area_old, area_new, area_clip, area_clip/area_old, area_clip/area_new);
+        if (area_clip/area_old > 0.5 || area_clip/area_new > 0.5)
+          return true;
+      }
+
       // if center of new (invcomplete) table is within old 
       // table bounds, it's the same
       geometry_msgs::Point32 center;
@@ -192,6 +225,29 @@ class TableMemory
       inst->time_instance = new_table->header.stamp;
       old_table.inst.push_back (inst);
       
+      ros::ServiceClient polygon_clipper = nh_.serviceClient<vision_srvs::clip_polygon> ("/intersect_poly", true);
+      if (polygon_clipper.exists())
+      {
+        ROS_WARN ("blablabla");
+        vision_srvs::clip_polygon::Request req;
+        req.operation = req.UNION;
+        req.poly1 = old_table.polygon;
+        req.poly2 = new_table->table; 
+        vision_srvs::clip_polygon::Response resp;
+        ROS_WARN ("blablabla");
+        
+        polygon_clipper.call (req, resp);
+        ROS_WARN ("blablabla");
+        std::vector<double> normal_z(3);
+        normal_z[0] = 0.0;
+        normal_z[1] = 0.0;
+        normal_z[2] = 1.0;
+        double area_old = cloud_geometry::areas::compute2DPolygonalArea (old_table.polygon, normal_z);
+        double area_new = cloud_geometry::areas::compute2DPolygonalArea (new_table->table, normal_z);
+        double area_clip = cloud_geometry::areas::compute2DPolygonalArea (resp.poly_clip, normal_z);
+        ROS_WARN ("The 3 areas are: %f, %f, %f: [%f percent, %f percent]", area_old, area_new, area_clip, area_clip/area_old, area_clip/area_new);
+        old_table.polygon = resp.poly_clip;
+      }
     }
    
     // service call from PROLOG 
@@ -447,13 +503,26 @@ class TableMemory
       }
       if (table_found == -1)
       {
+        std::vector<double> normal_z(3);
+        normal_z[0] = 0.0;
+        normal_z[1] = 0.0;
+        normal_z[2] = 1.0;
+        double area = cloud_geometry::areas::compute2DPolygonalArea (table->table, normal_z);
+        if (area < 0.15)
+        {
+          ROS_INFO ("Table area too small.");
+          return;
+        }
+
         ROS_INFO ("Not found. Creating new table.");
         Table t;
         t.center.x = table->table_min.x + ((table->table_max.x - table->table_min.x) / 2.0);
         t.center.y = table->table_min.y + ((table->table_max.y - table->table_min.y) / 2.0);
         t.center.z = table->table_min.z + ((table->table_max.z - table->table_min.z) / 2.0);
         t.polygon  = table->table;
-
+        t.color = ((int)(rand()/(RAND_MAX + 1.0)) << 16) +
+                  ((int)(rand()/(RAND_MAX + 1.0)) << 8) +
+                  ((int)(rand()/(RAND_MAX + 1.0)));
         tables.push_back (t);
         table_found = tables.size () - 1;
         // also append the new (first) table instance measurement.
@@ -465,6 +534,24 @@ class TableMemory
       //update_jlo (table_found);
       //call_cop (table_found);
       print_mem_stats (table_found);
+      publish_mem_state (table_found);
+    }
+
+    void
+      publish_mem_state (int table_num)
+    {
+      mapping_msgs::PolygonalMap pmap;
+      pmap.header.frame_id = "/map";
+
+      pmap.chan.resize(1);
+      pmap.chan[0].name = "rgb";
+      for (unsigned int i = 0; i < tables.size(); i++)
+      {
+        geometry_msgs::Polygon p = tables[i].polygon;
+        pmap.polygons.push_back (p);
+        pmap.chan[0].values.push_back (tables[i].color);
+      }
+      mem_state_pub_.publish (pmap);
     }
 
     void 

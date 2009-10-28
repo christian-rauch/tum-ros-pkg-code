@@ -348,7 +348,9 @@ class TableObjectDetector
       vector<int> inliers;
       vector<double> coeff, z_coeff (3);
       z_coeff[0] = z_axis_.x; z_coeff[1] = z_axis_.y; z_coeff[2] = z_axis_.z;
-      int c_good = -1;
+      std::vector<int> c_good;
+      std::vector<std::vector<int> > good_inliers;
+      std::vector<std::vector<double> > good_coeffs;
       double eps_angle_deg = angles::to_degrees (eps_angle_);
       for (int i = clusters.size () - 1; i >= 0; i--)
       {
@@ -357,138 +359,192 @@ class TableObjectDetector
         double angle = angles::to_degrees (cloud_geometry::angles::getAngleBetweenPlanes (coeff, z_coeff));
         if ( fabs (angle) < eps_angle_deg || fabs (180.0 - angle) < eps_angle_deg )
         {
-          c_good = i;
-          break;
+          good_coeffs.push_back (coeff);
+          good_inliers.push_back (inliers);
+          c_good.push_back (i);
+//           break;
         }
       }
 
-      if (c_good == -1)
+      if (c_good.size() == 0)
       {
         ROS_WARN ("No table found");
         return;
       }
-      ROS_INFO ("Number of clusters found: %d, largest cluster: %d.", (int)clusters.size (), (int)clusters[c_good].size ());
-
-      // Fill in the header
-      ias_table_msgs::TableWithObjects table;
-      table.header.frame_id = cloud_in_.header.frame_id;
-      table.header.stamp = cloud_in_.header.stamp;
-
-      // Get the table bounds
-      geometry_msgs::Point32 minP, maxP;
-      cloud_geometry::statistics::getMinMax (cloud_down_, inliers, minP, maxP);
-      // Transform to the global frame
-      geometry_msgs::PointStamped minPstamped_local, maxPstamped_local;
-      minPstamped_local.point.x = minP.x;
-      minPstamped_local.point.y = minP.y;
-      minPstamped_local.point.z = minP.z;
-      minPstamped_local.header = cloud_in_.header;
-      maxPstamped_local.point.x = maxP.x;
-      maxPstamped_local.point.y = maxP.y;
-      maxPstamped_local.point.z = maxP.z;
-      maxPstamped_local.header = cloud_in_.header;
-      geometry_msgs::PointStamped minPstamped_global, maxPstamped_global;
-      try
+      for (unsigned int cluster_num = 0; cluster_num < c_good.size(); cluster_num++)
       {
-        tf_.transformPoint (global_frame_, minPstamped_local, minPstamped_global);
-        tf_.transformPoint (global_frame_, maxPstamped_local, maxPstamped_global);
-        table.table_min.x = minPstamped_global.point.x;
-        table.table_min.y = minPstamped_global.point.y;
-        table.table_min.z = minPstamped_global.point.z;
-        table.table_max.x = maxPstamped_global.point.x;
-        table.table_max.y = maxPstamped_global.point.y;
-        table.table_max.z = maxPstamped_global.point.z;
-      }
-      catch (tf::TransformException)
-      {
-        ROS_ERROR ("Failed to transform table bounds from frame %s to frame %s", cloud_in_.header.frame_id.c_str (), global_frame_.c_str ());
-        return;
-      }
+        ROS_INFO ("Number of clusters found: %d, largest cluster: %d.", (int)clusters.size (), (int)clusters[c_good[cluster_num]].size ());
+        if (clusters[c_good[cluster_num]].size () < clusters_min_pts_)
+          continue;
+        if (good_inliers [cluster_num].size () < 100)
+          continue;
 
-      // Compute the convex hull
-      pmap_.header.stamp = cloud_down_.header.stamp;
-      pmap_.header.frame_id = cloud_down_.header.frame_id;
-      pmap_.polygons.resize (1);
-      cloud_geometry::areas::convexHull2D (cloud_down_, inliers, coeff, pmap_.polygons[0]);
+        // Fill in the header
+        ias_table_msgs::TableWithObjects table;
+        table.header.frame_id = cloud_in_.header.frame_id;
+        table.header.stamp = cloud_in_.header.stamp;
 
-      // Find the object clusters supported by the table
-      inliers.clear ();
-      findObjectClusters (cloud_in_, coeff, pmap_.polygons[0], minP, maxP, inliers, table);
-
-      // Transform into the global frame
-      try
-      {
-        geometry_msgs::PointStamped local, global;
-        local.header = cloud_down_.header;
-        for (unsigned int i = 0; i < pmap_.polygons.size (); i++)
+        // Get the table bounds
+        geometry_msgs::Point32 minP, maxP;
+        cloud_geometry::statistics::getMinMax (cloud_down_, good_inliers[cluster_num], minP, maxP);
+        // Transform to the global frame
+        geometry_msgs::PointStamped minPstamped_local, maxPstamped_local;
+        minPstamped_local.point.x = minP.x;
+        minPstamped_local.point.y = minP.y;
+        minPstamped_local.point.z = minP.z;
+        minPstamped_local.header = cloud_in_.header;
+        maxPstamped_local.point.x = maxP.x;
+        maxPstamped_local.point.y = maxP.y;
+        maxPstamped_local.point.z = maxP.z;
+        maxPstamped_local.header = cloud_in_.header;
+        geometry_msgs::PointStamped minPstamped_global, maxPstamped_global;
+        try
         {
-          for (unsigned int j = 0; j < pmap_.polygons[i].points.size (); j++)
+          tf_.transformPoint (global_frame_, minPstamped_local, minPstamped_global);
+          tf_.transformPoint (global_frame_, maxPstamped_local, maxPstamped_global);
+          table.table_min.x = minPstamped_global.point.x;
+          table.table_min.y = minPstamped_global.point.y;
+          table.table_min.z = minPstamped_global.point.z;
+          table.table_max.x = maxPstamped_global.point.x;
+          table.table_max.y = maxPstamped_global.point.y;
+          table.table_max.z = maxPstamped_global.point.z;
+        }
+        catch (tf::TransformException)
+        {
+          ROS_ERROR ("Failed to transform table bounds from frame %s to frame %s", cloud_in_.header.frame_id.c_str (), global_frame_.c_str ());
+          return;
+        }
+      
+      vector<vector<int> > clusters_within_table;
+      // Split the Z-parallel points into clusters
+      cloud_geometry::nearest::extractEuclideanClusters (cloud_down_, good_inliers[cluster_num], clusters_growing_tolerance_, clusters_within_table, 0, 1, 2, region_angle_threshold_, clusters_min_pts_);
+
+      sort (clusters_within_table.begin (), clusters_within_table.end (), compareRegions);
+
+        // Compute the convex hull
+        pmap_.header.stamp = cloud_down_.header.stamp;
+        pmap_.header.frame_id = cloud_down_.header.frame_id;
+        pmap_.polygons.resize (1);
+        cloud_geometry::areas::convexHull2D (cloud_down_, clusters_within_table[0], good_coeffs[cluster_num], pmap_.polygons[0]);
+  //{      
+//         bool contracted = true;
+//         geometry_msgs::Polygon p = pmap_.polygons[0];
+//         
+//         std::vector<int> new_inliers = clusters_within_table[0];
+//         
+//         while (contracted)
+//         {
+
+//           contracted = false;
+
+//           for (std::vector<geometry_msgs::Point32>::iterator it = p.points.begin (); it != p.points.end (); it++)
+//           {
+//           std::vector<int> maybe_new_inliers;
+//             ROS_WARN ("trying..");
+//             geometry_msgs::Point32 cur_p = *it; 
+//             std::vector<geometry_msgs::Point32>::iterator pos = p.points.erase (it);
+//            
+//             for (unsigned int i =  0; i < new_inliers.size (); i++)
+//             {
+//               if (cloud_geometry::areas::isPointIn2DPolygon (cloud_down_.points[new_inliers[i]], p))
+//                 maybe_new_inliers.push_back (i);
+//             }
+
+//             ROS_WARN ("dist: %f --- old, new = %i, %i", sac_distance_threshold_ , maybe_new_inliers.size(), new_inliers.size());
+//             if (maybe_new_inliers.size() > 0.9*new_inliers.size() && maybe_new_inliers.size() > 0.8*inliers.size())
+//             {
+//               ROS_WARN ("yup..");
+//               new_inliers = maybe_new_inliers;
+//               contracted = true;
+//               break;
+//             }
+//             else
+//             {
+//               ROS_WARN ("nope..");
+//               p.points.insert (pos, cur_p);
+//             }
+//           }  
+//         }
+  //}
+        // Find the object clusters supported by the table
+        inliers.clear ();
+        findObjectClusters (cloud_in_, good_coeffs[cluster_num], pmap_.polygons[0], minP, maxP, inliers, table);
+
+        // Transform into the global frame
+        try
+        {
+          geometry_msgs::PointStamped local, global;
+          local.header = cloud_down_.header;
+          for (unsigned int i = 0; i < pmap_.polygons.size (); i++)
           {
-            local.point.x = pmap_.polygons[i].points[j].x;
-            local.point.y = pmap_.polygons[i].points[j].y;
-            tf_.transformPoint (global_frame_, local, global);
-            pmap_.polygons[i].points[j].x = global.point.x;
-            pmap_.polygons[i].points[j].y = global.point.y;
+            for (unsigned int j = 0; j < pmap_.polygons[i].points.size (); j++)
+            {
+              local.point.x = pmap_.polygons[i].points[j].x;
+              local.point.y = pmap_.polygons[i].points[j].y;
+              tf_.transformPoint (global_frame_, local, global);
+              pmap_.polygons[i].points[j].x = global.point.x;
+              pmap_.polygons[i].points[j].y = global.point.y;
+            }
           }
         }
-      }
-      catch (tf::TransformException)
-      {
-        ROS_ERROR ("Failed to PolygonalMap from frame %s to frame %s", cloud_down_.header.frame_id.c_str(), global_frame_.c_str());
-        return;
-      }
-
-      table.table = pmap_.polygons[0];
-
-
-      ROS_INFO ("Table found. Bounds: [%f, %f, %f] -> [%f, %f, %f]. Number of objects: %d. Total time: %f.",
-                minP.x, minP.y, minP.z, maxP.x, maxP.y, maxP.z, (int)table.objects.size (), (ros::Time::now () - ts).toSec ());
-      ROS_INFO ("Table found. Bounds: [%f, %f, %f] -> [%f, %f, %f]. Number of objects: %d. Total time: %f.",
-                table.table_min.x, table.table_min.y, table.table_min.z, table.table_max.x, table.table_max.y, table.table_max.z, (int)table.objects.size (), (ros::Time::now () - ts).toSec ());
-
-      table_pub_.publish (table);
-      // Should only used for debugging purposes (on screen visualization)
-      if (publish_debug_)
-      {
-        // Break the object inliers into clusters in an Euclidean sense
-        vector<vector<int> > objects;
-        cloud_geometry::nearest::extractEuclideanClusters (cloud_in_, inliers, object_cluster_tolerance_, objects, -1, -1, -1, -1, object_cluster_min_pts_);
-
-        int total_nr_pts = 0;
-        for (unsigned int i = 0; i < objects.size (); i++)
-          total_nr_pts += objects[i].size ();
-
-        cloud_annotated_.header = cloud_down_.header;
-        cloud_annotated_.points.resize (total_nr_pts);
-
-        // Copy all the channels from the original pointcloud
-        cloud_annotated_.channels.resize (cloud_in_.channels.size () + 1);
-        for (unsigned int d = 0; d < cloud_in_.channels.size (); d++)
+        catch (tf::TransformException)
         {
-          cloud_annotated_.channels[d].name = cloud_in_.channels[d].name;
-          cloud_annotated_.channels[d].values.resize (total_nr_pts);
+          ROS_ERROR ("Failed to PolygonalMap from frame %s to frame %s", cloud_down_.header.frame_id.c_str(), global_frame_.c_str());
+          return;
         }
-        cloud_annotated_.channels[cloud_in_.channels.size ()].name = "rgb";
-        cloud_annotated_.channels[cloud_in_.channels.size ()].values.resize (total_nr_pts);
 
-        // For each object in the set
-        int nr_p = 0;
-        for (unsigned int i = 0; i < objects.size (); i++)
+        table.table = pmap_.polygons[0];
+
+
+        ROS_INFO ("Table found. Bounds: [%f, %f, %f] -> [%f, %f, %f]. Number of objects: %d. Total time: %f.",
+                  minP.x, minP.y, minP.z, maxP.x, maxP.y, maxP.z, (int)table.objects.size (), (ros::Time::now () - ts).toSec ());
+        ROS_INFO ("Table found. Bounds: [%f, %f, %f] -> [%f, %f, %f]. Number of objects: %d. Total time: %f.",
+                  table.table_min.x, table.table_min.y, table.table_min.z, table.table_max.x, table.table_max.y, table.table_max.z, (int)table.objects.size (), (ros::Time::now () - ts).toSec ());
+
+        table_pub_.publish (table);
+        // Should only used for debugging purposes (on screen visualization)
+        if (publish_debug_)
         {
-          float rgb = getRGB (rand () / (RAND_MAX + 1.0), rand () / (RAND_MAX + 1.0), rand () / (RAND_MAX + 1.0));
-          // Get its points
+          // Break the object inliers into clusters in an Euclidean sense
+          vector<vector<int> > objects;
+          cloud_geometry::nearest::extractEuclideanClusters (cloud_in_, inliers, object_cluster_tolerance_, objects, -1, -1, -1, -1, object_cluster_min_pts_);
 
-          for (unsigned int j = 0; j < objects[i].size (); j++)
+          int total_nr_pts = 0;
+          for (unsigned int i = 0; i < objects.size (); i++)
+            total_nr_pts += objects[i].size ();
+
+          cloud_annotated_.header = cloud_down_.header;
+          cloud_annotated_.points.resize (total_nr_pts);
+
+          // Copy all the channels from the original pointcloud
+          cloud_annotated_.channels.resize (cloud_in_.channels.size () + 1);
+          for (unsigned int d = 0; d < cloud_in_.channels.size (); d++)
           {
-            cloud_annotated_.points[nr_p] = cloud_in_.points.at (objects[i][j]);
-            for (unsigned int d = 0; d < cloud_in_.channels.size (); d++)
-              cloud_annotated_.channels[d].values[nr_p] = cloud_in_.channels[d].values.at (objects[i][j]);
-            cloud_annotated_.channels[cloud_in_.channels.size ()].values[nr_p] = rgb;
-            nr_p++;
+            cloud_annotated_.channels[d].name = cloud_in_.channels[d].name;
+            cloud_annotated_.channels[d].values.resize (total_nr_pts);
           }
+          cloud_annotated_.channels[cloud_in_.channels.size ()].name = "rgb";
+          cloud_annotated_.channels[cloud_in_.channels.size ()].values.resize (total_nr_pts);
+
+          // For each object in the set
+          int nr_p = 0;
+          for (unsigned int i = 0; i < objects.size (); i++)
+          {
+            float rgb = getRGB (rand () / (RAND_MAX + 1.0), rand () / (RAND_MAX + 1.0), rand () / (RAND_MAX + 1.0));
+            // Get its points
+
+            for (unsigned int j = 0; j < objects[i].size (); j++)
+            {
+              cloud_annotated_.points[nr_p] = cloud_in_.points.at (objects[i][j]);
+              for (unsigned int d = 0; d < cloud_in_.channels.size (); d++)
+                cloud_annotated_.channels[d].values[nr_p] = cloud_in_.channels[d].values.at (objects[i][j]);
+              cloud_annotated_.channels[cloud_in_.channels.size ()].values[nr_p] = rgb;
+              nr_p++;
+            }
+          }
+          cloud_publisher_.publish(cloud_annotated_);
+          semantic_map_publisher_.publish(pmap_);
         }
-        cloud_publisher_.publish(cloud_annotated_);
-        semantic_map_publisher_.publish(pmap_);
       }
       ROS_INFO ("- callback");
       return;
@@ -569,7 +625,6 @@ class TableObjectDetector
         viewpoint_cloud.point.x = viewpoint_cloud.point.y = viewpoint_cloud.point.z = 0.0;
       }
 
-#pragma omp parallel for schedule(dynamic)
       for (int i = 0; i < (int)cloud.points.size (); i++)
       {
         // Compute the point normals (nx, ny, nz), surface curvature estimates (c)

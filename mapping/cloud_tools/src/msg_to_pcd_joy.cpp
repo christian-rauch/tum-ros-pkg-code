@@ -5,6 +5,7 @@
 #include <ros/node_handle.h>
 #include <sensor_msgs/PointCloud.h>
 #include <point_cloud_mapping/cloud_io.h>
+#include <boost/thread/mutex.hpp>
 
 class MsgToPCDJoy
 {
