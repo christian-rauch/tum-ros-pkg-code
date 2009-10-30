@@ -98,8 +98,10 @@ class TableMemory
     ros::NodeHandle &nh_;
     std::string input_table_topic_;
     std::string input_cop_topic_;
+    std::string output_cloud_topic_;
     std::string output_table_state_topic_;
     ros::Publisher mem_state_pub_;
+    ros::Publisher cloud_pub_;
     ros::Subscriber table_sub_;
     ros::Subscriber cop_sub_;
     ros::ServiceServer table_memory_clusters_service_;
@@ -146,18 +148,20 @@ class TableMemory
     {
       nh_.param ("input_table_topic", input_table_topic_, std::string("table_with_objects"));       // 15 degrees
       nh_.param ("input_cop_topic", input_cop_topic_, std::string("/tracking/out"));       // 15 degrees
+      nh_.param ("output_cloud_topic", output_cloud_topic_, std::string("table_mem_state_point_clusters"));       // 15 degrees
       nh_.param ("output_table_state_topic", output_table_state_topic_, std::string("table_mem_state"));       // 15 degrees
 
       table_sub_ = nh_.subscribe (input_table_topic_, 1, &TableMemory::table_cb, this);
 //       cop_sub_ = nh_.subscribe (input_cop_topic_, 1, &TableMemory::cop_cb, this);
       mem_state_pub_ = nh_.advertise<mapping_msgs::PolygonalMap> (output_table_state_topic_, 1);
+      cloud_pub_ = nh_.advertise<sensor_msgs::PointCloud> (output_cloud_topic_, 1);
       table_memory_clusters_service_ = nh_.advertiseService ("table_memory_clusters_service", &TableMemory::clusters_service, this);
     }
     
     bool compare_table (Table& old_table, const ias_table_msgs::TableWithObjects::ConstPtr& new_table)
     {
       ros::ServiceClient polygon_clipper = nh_.serviceClient<vision_srvs::clip_polygon> ("/intersect_poly", true);
-      if (polygon_clipper.exists())
+      if (polygon_clipper.exists() && old_table.polygon.points.size() > 2 &&new_table->table.points.size() > 2)
       {
         ROS_WARN ("blablabla");
         vision_srvs::clip_polygon::Request req;
@@ -233,10 +237,19 @@ class TableMemory
         req.operation = req.UNION;
         req.poly1 = old_table.polygon;
         req.poly2 = new_table->table; 
+        double z_mean = 0.0;
+        for (unsigned int poly_i = 0; poly_i < req.poly1.points.size(); poly_i++)
+          z_mean += req.poly1.points.at(poly_i).z;
+        for (unsigned int poly_i = 0; poly_i < req.poly2.points.size(); poly_i++)
+          z_mean += req.poly2.points.at(poly_i).z;
+        z_mean /= (req.poly2.points.size () + req.poly1.points.size());
+
         vision_srvs::clip_polygon::Response resp;
         ROS_WARN ("blablabla");
         
         polygon_clipper.call (req, resp);
+        for (unsigned int poly_i = 0; poly_i < resp.poly_clip.points.size(); poly_i++)
+          resp.poly_clip.points.at(poly_i).z = z_mean;
         ROS_WARN ("blablabla");
         std::vector<double> normal_z(3);
         normal_z[0] = 0.0;
@@ -519,7 +532,11 @@ class TableMemory
         t.center.x = table->table_min.x + ((table->table_max.x - table->table_min.x) / 2.0);
         t.center.y = table->table_min.y + ((table->table_max.y - table->table_min.y) / 2.0);
         t.center.z = table->table_min.z + ((table->table_max.z - table->table_min.z) / 2.0);
-        t.polygon  = table->table;
+        for (unsigned int i = 0; i < table->table.points.size(); i++)
+          t.polygon.points.push_back (table->table.points.at(i));
+        
+        if (table->table.points.size() < 1)
+          ROS_WARN ("Got degenerate polygon.");
         t.color = ((int)(rand()/(RAND_MAX + 1.0)) << 16) +
                   ((int)(rand()/(RAND_MAX + 1.0)) << 8) +
                   ((int)(rand()/(RAND_MAX + 1.0)));
@@ -552,6 +569,17 @@ class TableMemory
         pmap.chan[0].values.push_back (tables[i].color);
       }
       mem_state_pub_.publish (pmap);
+
+
+      sensor_msgs::PointCloud pc;
+      pc.header.frame_id = "/map";
+      for (unsigned int i = 0; i < tables.size(); i++)
+      {
+        for (unsigned int ob_i = 0; ob_i < tables[i].getCurrentInstance ()->objects.size(); ob_i++)
+          for (unsigned int pc_i = 0; pc_i < tables[i].getCurrentInstance ()->objects[ob_i]->point_cluster.points.size(); pc_i++)
+            pc.points.push_back (tables[i].getCurrentInstance ()->objects[ob_i]->point_cluster.points[pc_i]);
+      }
+      cloud_pub_.publish (pc);
     }
 
     void 
