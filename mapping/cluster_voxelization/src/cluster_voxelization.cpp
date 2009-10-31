@@ -153,9 +153,9 @@ class ClusterVoxelization
     {
       axis_.x = 0; axis_.y = 0; axis_.z = 1;
       {
-        nh_.param ("~downsample_leaf_width_x", leaf_width_.x, 0.03);          // 3cm radius by default
-        nh_.param ("~downsample_leaf_width_y", leaf_width_.y, 0.03);          // 3cm radius by default
-        nh_.param ("~downsample_leaf_width_z", leaf_width_.z, 0.03);          // 3cm radius by default
+        nh_.param ("~downsample_leaf_width_x", leaf_width_.x, 0.01);          // 3cm radius by default
+        nh_.param ("~downsample_leaf_width_y", leaf_width_.y, 0.01);          // 3cm radius by default
+        nh_.param ("~downsample_leaf_width_z", leaf_width_.z, 0.01);          // 3cm radius by default
         nh_.param ("~search_k_closest", k_, 10);                 // 10 k-neighbors by default
       }
 
@@ -258,21 +258,29 @@ class ClusterVoxelization
         if (dist_to_plane < sac_distance_threshold_ &&
             cloud_in_->points[i].x >= min_p.x && cloud_in_->points[i].x <= max_p.x &&
             cloud_in_->points[i].y >= min_p.y && cloud_in_->points[i].y <= max_p.y)
-          table_object_inliers[j++] = i;
+        {
+          table_object_inliers.push_back (i);
+          j++;
+        } 
+//          table_object_inliers[j++] = i;
       }
       for (unsigned int k = 0; k < object_clusters.size (); k++)
       {
         if (object_clusters[k].size () == 0)
           continue;
         for (unsigned int l = 0; l < object_clusters[k].size (); l++)
-          table_object_inliers[j++] = object_clusters[k][l];
+        {
+          table_object_inliers.push_back (object_clusters[k][l]);
+          j++;
+        }
+//           table_object_inliers[j++] = object_clusters[k][l];
       }
-      table_object_inliers.resize (j);
+ //     table_object_inliers.resize (j);
 
       // ---[ Then obtain the 3D bounds of the space around the table
       VoxelList voxels;
       ts = ros::WallTime::now ();
-      computeOcclusionMap (*cloud_in_, table_object_inliers, min_p, max_p, req.leaf_width, voxels);
+      //computeOcclusionMap (*cloud_in_, table_object_inliers, min_p, max_p, req.leaf_width, voxels);
       ROS_INFO ("Occlusion map estimated in %g seconds.", (ros::WallTime::now () - ts).toSec ());
 
       ROS_INFO ("Service request terminated.");
@@ -749,7 +757,7 @@ int
   ros::init (argc, argv, "cluster_voxelization");
 
   ClusterVoxelization p;
-  p.publish_debug_ = false;
+  p.publish_debug_ = true;
   ros::spin ();
 
   return (0);

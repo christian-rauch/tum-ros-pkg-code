@@ -1,6 +1,8 @@
 <launch>
 
   <node pkg="cluster_voxelization" type="cluster_voxelization_node" name="cluster_voxelization" respawn="true" output="screen">
+    <param name="~input_cloud_topic"                 value="shoulder_cloud" />
+
     <param name="~table_min_height"                 value="0.5" />
     <param name="~table_max_height"                 value="1.5" />
     <param name="~table_clusters_growing_tolerance" value ="0.1" />
