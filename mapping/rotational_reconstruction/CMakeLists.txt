@@ -6,6 +6,6 @@ rosbuild_init ()
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
-rosbuild_add_executable(rotational_reconstruction_node src/rotational_reconstruction_node.cpp src/sac_model_rotational.cpp)
+rosbuild_add_executable(rotational_reconstruction_node src/rotational_reconstruction_node.cpp src/sac_model_rotational.cpp src/File.cpp src/dxfwriter.cpp)
 rosbuild_add_executable(rotational_reconstructions_query_service src/query_rotational_reconstruction_service.cpp)
 

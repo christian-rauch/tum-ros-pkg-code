@@ -31,6 +31,10 @@
 /** \author Nico Blodow, Radu Bogdan Rusu */
 
 #include <stdlib.h>
+// basic file operations
+#include <iostream>
+#include <fstream>
+
 #include <sac_model_rotational.h>
 #include <point_cloud_mapping/geometry/point.h>
 #include <point_cloud_mapping/geometry/distances.h>
@@ -41,12 +45,167 @@
 #include <mapping_msgs/PolygonalMap.h>
 #include <tf/tf.h>
 #include <Eigen/LU>
-
+ 
+#include <lm.h>
 #include <cminpack.h>
 
 using namespace mapping_msgs;
 using namespace sensor_msgs;
 using namespace geometry_msgs;
+
+/* Subroutine */ int lmdif2(minpack_func_mn fcn, void *p, int m, int n, double *x, 
+	double *fvec, double tol, int *iwa, 
+	double *wa, int lwa)
+{
+    /* Initialized data */
+
+    const double factor = 100.;
+
+    int mp5n, mode, nfev;
+    double ftol, gtol, xtol;
+    double epsfcn;
+    int maxfev, nprint;
+    int info;
+
+/*     ********** */
+
+/*     subroutine lmdif1 */
+
+/*     the purpose of lmdif1 is to minimize the sum of the squares of */
+/*     m nonlinear functions in n variables by a modification of the */
+/*     levenberg-marquardt algorithm. this is done by using the more */
+/*     general least-squares solver lmdif. the user must provide a */
+/*     subroutine which calculates the functions. the jacobian is */
+/*     then calculated by a forward-difference approximation. */
+
+/*     the subroutine statement is */
+
+/*       subroutine lmdif1(fcn,m,n,x,fvec,tol,info,iwa,wa,lwa) */
+
+/*     where */
+
+/*       fcn is the name of the user-supplied subroutine which */
+/*         calculates the functions. fcn must be declared */
+/*         in an external statement in the user calling */
+/*         program, and should be written as follows. */
+
+/*         subroutine fcn(m,n,x,fvec,iflag) */
+/*         integer m,n,iflag */
+/*         double precision x(n),fvec(m) */
+/*         ---------- */
+/*         calculate the functions at x and */
+/*         return this vector in fvec. */
+/*         ---------- */
+/*         return */
+/*         end */
+
+/*         the value of iflag should not be changed by fcn unless */
+/*         the user wants to terminate execution of lmdif1. */
+/*         in this case set iflag to a negative integer. */
+
+/*       m is a positive integer input variable set to the number */
+/*         of functions. */
+
+/*       n is a positive integer input variable set to the number */
+/*         of variables. n must not exceed m. */
+
+/*       x is an array of length n. on input x must contain */
+/*         an initial estimate of the solution vector. on output x */
+/*         contains the final estimate of the solution vector. */
+
+/*       fvec is an output array of length m which contains */
+/*         the functions evaluated at the output x. */
+
+/*       tol is a nonnegative input variable. termination occurs */
+/*         when the algorithm estimates either that the relative */
+/*         error in the sum of squares is at most tol or that */
+/*         the relative error between x and the solution is at */
+/*         most tol. */
+
+/*       info is an integer output variable. if the user has */
+/*         terminated execution, info is set to the (negative) */
+/*         value of iflag. see description of fcn. otherwise, */
+/*         info is set as follows. */
+
+/*         info = 0  improper input parameters. */
+
+/*         info = 1  algorithm estimates that the relative error */
+/*                   in the sum of squares is at most tol. */
+
+/*         info = 2  algorithm estimates that the relative error */
+/*                   between x and the solution is at most tol. */
+
+/*         info = 3  conditions for info = 1 and info = 2 both hold. */
+
+/*         info = 4  fvec is orthogonal to the columns of the */
+/*                   jacobian to machine precision. */
+
+/*         info = 5  number of calls to fcn has reached or */
+/*                   exceeded 200*(n+1). */
+
+/*         info = 6  tol is too small. no further reduction in */
+/*                   the sum of squares is possible. */
+
+/*         info = 7  tol is too small. no further improvement in */
+/*                   the approximate solution x is possible. */
+
+/*       iwa is an integer work array of length n. */
+
+/*       wa is a work array of length lwa. */
+
+/*       lwa is a positive integer input variable not less than */
+/*         m*n+5*n+m. */
+
+/*     subprograms called */
+
+/*       user-supplied ...... fcn */
+
+/*       minpack-supplied ... lmdif */
+
+/*     argonne national laboratory. minpack project. march 1980. */
+/*     burton s. garbow, kenneth e. hillstrom, jorge j. more */
+
+/*     ********** */
+    /* Parameter adjustments */
+    --fvec;
+    --iwa;
+    --x;
+    --wa;
+
+    /* Function Body */
+    info = 0;
+
+/*     check the input parameters for errors. */
+
+    if (n <= 0 || m < n || tol < 0. || lwa < m * n + n * 5 + m) {
+	/* goto L10; */
+        return info;
+    }
+
+/*     call lmdif. */
+
+    maxfev = (n + 1) * 200;
+    ftol = tol;
+    xtol = tol;
+    gtol = 0.;
+    epsfcn = 0.;
+    mode = 1;
+    nprint = 0;
+    mp5n = m + n * 5;
+    info = lmdif(fcn, p, m, n, &x[1], &fvec[1], ftol, xtol, gtol, maxfev,
+	    epsfcn, &wa[1], mode, factor, nprint, &nfev, &wa[mp5n + 
+	    1], m, &iwa[1], &wa[n + 1], &wa[(n << 1) + 1], &wa[n * 3 + 1], 
+	    &wa[(n << 2) + 1], &wa[n * 5 + 1]);
+    if (info == 8) {
+	info = 4;
+    }
+/* L10: */
+    return info;
+
+/*     last card of subroutine lmdif1. */
+
+} /* lmdif1_ */
+
 
 namespace sample_consensus
 {
@@ -68,16 +227,17 @@ std::pair<double,double> getMinMaxK (PointCloud &cloud, std::vector<double> mode
 
   //double norm = sqrt(axis.x*axis.x + axis.y*axis.y + axis.z*axis.z);
 
-  //  ANNcoord k0 = (0.0 - DOT_PROD_3D (p, p21)) / DOT_PROD_3D (p21, p21);
+//   double k0 = (0.0
+//              - cloud_geometry::dot (point0, axis)) 
+//              / cloud_geometry::dot (axis, axis);
   for (unsigned int i = 0; i < inliers.size(); i++)
     //   for (unsigned int i = 0; i < cloud.pts.size(); i++)
   {
     // "k" is the position (x-value?) of the projection of current point on the rot. axis
-#define DOT_PROD_3D(x,y) ((x[0])*(y[0])+(x[1])*(y[1])+(x[2])*(y[2]))
     double k = (cloud_geometry::dot (cloud.points[inliers[i]], axis) 
-        - cloud_geometry::dot (point0, axis)) 
-      / cloud_geometry::dot (axis, axis);
-    //    k = (k - k0);
+              - cloud_geometry::dot (point0, axis)) 
+              / cloud_geometry::dot (axis, axis);
+//         k = (k - k0);
     if (k < minimum)
       minimum = k;
     if (k > maximum)
@@ -168,30 +328,37 @@ std::pair<double,double> getMinMaxK (PointCloud &cloud, std::vector<double> mode
     SACModelRotational::samplePointsOnRotational  
     (const std::vector<double> modelCoefficients, std::pair<double,double> minmaxK, std::vector<int> inliers)
   {
+    static int count = 0;
+    count++;
     PointCloud ret;
 
     // create 100 points from min_k to max_k on the outline of the rotational volume
 
-    double p21[3];
-    p21[0] = modelCoefficients[3] - modelCoefficients[0];
-    p21[1] = modelCoefficients[4] - modelCoefficients[1];
-    p21[2] = modelCoefficients[5] - modelCoefficients[2];
+    Point32 axis;
+    axis.x = modelCoefficients[3] - modelCoefficients[0];
+    axis.y = modelCoefficients[4] - modelCoefficients[1];
+    axis.z = modelCoefficients[5] - modelCoefficients[2];
+    Point32 point0;
+    point0.x = modelCoefficients[0];
+    point0.y = modelCoefficients[1];
+    point0.z = modelCoefficients[2];
 #define SQR(x) ((x)*(x))
 #define SQR_VECT_LENGTH(x) (SQR(x[0])+SQR(x[1])+SQR(x[2]))
 #define SQR_NORM(x) SQR_VECT_LENGTH(x)
     
-    double norm = sqrt(SQR_NORM (p21)); 
+    double norm = sqrt(axis.x*axis.x + axis.y*axis.y + axis.z*axis.z);
     
     //cross product with (0,0,1) is cheap:
     Point32 rotationaxis;
-    rotationaxis.x = p21[1]/norm;
-    rotationaxis.y = -p21[0]/norm;
+    rotationaxis.x = axis.y/norm;
+    rotationaxis.y = -axis.x/norm;
     rotationaxis.z = 0.0;
 #define RAD2DEG(r) (double)((r) * 180.0 / M_PI)
-    double rotationangle = - RAD2DEG ( acos (p21[2] / norm) );  // dot product of a with (0,0,1) is a[2]
+//     double rotationangle = - ( acos (axis.z / norm) );  // dot product of a with (0,0,1) is a[2]
 
 #define DOT_PROD_3D(x,y) ((x[0])*(y[0])+(x[1])*(y[1])+(x[2])*(y[2]))
-    double k0 = (0.0 - DOT_PROD_3D (modelCoefficients, p21)) / DOT_PROD_3D (p21, p21);
+    double k0 = (0.0 - cloud_geometry::dot (point0, axis)) / 
+                       cloud_geometry::dot (axis, axis);                                    
     // resolution around axis = 60...
     
     double res_axial = 50.0;
@@ -205,7 +372,6 @@ std::pair<double,double> getMinMaxK (PointCloud &cloud, std::vector<double> mode
       // evaluate polynomial at position X
       for (int w = 0; w < polynomial_order+1; w++)
         Y += modelCoefficients[6+w] * pow(X,(double)w);
-ROS_WARN ("%f %f", X, Y);
       Point32 p;
       for (int j = 0; j < res_radial; j++)
       {
@@ -214,25 +380,63 @@ ROS_WARN ("%f %f", X, Y);
         p.z = ((double)i/res_axial)*norm*(minmaxK.second - minmaxK.first);
 
         Eigen::Matrix3d rotation1, rotation2;
-        Point32 z_axis;
-        z_axis.x = 0;
-        z_axis.y = 0;
-        z_axis.z = 1;
-        cloud_geometry::transforms::convertAxisAngleToRotationMatrix (z_axis, M_PI*2*j/res_radial, rotation2);
-        cloud_geometry::transforms::convertAxisAngleToRotationMatrix (rotationaxis, rotationangle, rotation1);
+        Point32 z_axis_vec;
+        z_axis_vec.x = 0;
+        z_axis_vec.y = 0;
+        z_axis_vec.z = 1;
+        std::vector<double> norm_rot_axis(3);
+        norm_rot_axis[0] = axis.x/norm;
+        norm_rot_axis[1] = axis.y/norm;
+        norm_rot_axis[2] = axis.z/norm;
+        std::vector<double> z_axis(3);
+        z_axis[0] = 0;
+        z_axis[1] = 0;
+        z_axis[2] = 1;
+        cloud_geometry::transforms::convertAxisAngleToRotationMatrix (z_axis_vec, i+M_PI*2.0*((double)j)/res_radial, rotation2);
+        Eigen::Matrix4d transformation;
+        cloud_geometry::transforms::getPlaneToPlaneTransformation (z_axis, norm_rot_axis,
+            modelCoefficients[0] + minmaxK.first * axis.x,
+            modelCoefficients[1] + minmaxK.first * axis.y,
+            modelCoefficients[2] + minmaxK.first * axis.z, transformation);
+        
+        
+//         cloud_geometry::transforms::convertAxisAngleToRotationMatrix (rotationaxis, rotationangle, rotation1);
+        
+        
         Eigen::Vector3d p_0 (p.x, p.y, p.z);
-        Eigen::Vector3d q_0 = rotation1 * rotation2 * p_0;
+        p_0 = rotation2 * p_0;
+        Eigen::Vector4d p_1 (p_0[0], p_0[1], p_0[2], 1.0);
+        Eigen::Vector4d q_0 = transformation * p_1;
+
 
 //         rotateUp (p, PI*(j/60.0)) 
         //RotateWXYZ (p, rotationangle, rotationaxis);
-        p.x = q_0[0] + modelCoefficients[0] + minmaxK.first * p21[0];
-        p.y = q_0[1] + modelCoefficients[1] + minmaxK.first * p21[1];
-        p.z = q_0[2] + modelCoefficients[2] + minmaxK.first * p21[2];
+//         p.x = q_0[0] + modelCoefficients[0] + minmaxK.first * axis.x;
+//         p.y = q_0[1] + modelCoefficients[1] + minmaxK.first * axis.y;
+//         p.z = q_0[2] + modelCoefficients[2] + minmaxK.first * axis.z;
+        p.x = q_0[0];
+        p.y = q_0[1];
+        p.z = q_0[2];
         
         ret.points.push_back (p);
       }
     }
-    return ret;
+      Point32 p1;
+      Point32 p2;
+      geometry_msgs::Polygon polygon;
+      p1.x = modelCoefficients[0];
+      p1.y = modelCoefficients[1];
+      p1.z = modelCoefficients[2];
+      p2.x = modelCoefficients[3];
+      p2.y = modelCoefficients[4];
+      p2.z = modelCoefficients[5];
+      polygon.points.push_back (p1);
+      polygon.points.push_back (p2);
+      pmap.polygons.push_back (polygon);
+      pmap.chan[0].values.push_back (0);
+      pmap.chan[1].values.push_back (0);
+      pmap.chan[2].values.push_back (0);
+  return ret;
   }
 
 
@@ -240,36 +444,38 @@ ROS_WARN ("%f %f", X, Y);
       (const std::vector<double> &modelCoefficients, std::pair<double,double> minmaxK, std::vector<int> inliers, PointCloud &cloud_synth, double threshold)
   {
       
-    ROS_ERROR ("inliers: %i\n", inliers.size());
-      std::cerr << "SCORE FOR THE FOLLOWING COEFFS: ";
-      for (unsigned int i = 0; i < modelCoefficients.size(); i++)
-        std::cerr << modelCoefficients[i] << " "; 
-      std::cerr << std::endl;
-    ROS_ERROR ("coefficients: %g %g %g %g %g %g %g %g %g %g \n",
+//     ROS_ERROR ("inliers: %i\n", inliers.size());
+//       std::cerr << "SCORE FOR THE FOLLOWING COEFFS: ";
+//       for (unsigned int i = 0; i < modelCoefficients.size(); i++)
+//         std::cerr << modelCoefficients[i] << " "; 
+//       std::cerr << std::endl;
+    ROS_INFO ("coefficients: %g %g %g %g %g %g %g %g %g %g \n",
                modelCoefficients.at (0), modelCoefficients.at (1), modelCoefficients.at (2), modelCoefficients.at (3),
                modelCoefficients.at (4), modelCoefficients.at (5), modelCoefficients.at (6), 
                modelCoefficients.at (7), modelCoefficients.at (8), modelCoefficients.at (9)); 
     static int count = 0;
-    std::cerr << "before sampling" << std::endl;
+//     std::cerr << "before sampling" << std::endl;
     PointCloud synth_points = samplePointsOnRotational (modelCoefficients, minmaxK, inliers);
-    std::cerr << "after sampling, kdtree for " << synth_points.points.size() << std::endl;
+//     std::cerr << "after sampling, kdtree for " << synth_points.pts.size() << std::endl;
     std::vector <int> marks (synth_points.points.size());
 
     // create kd-tree from synth_points
-    
-//     cloud_kdtree::KdTreeANN *kd_tree = new cloud_kdtree::KdTreeANN (synth_points);
-//     // go through inliers, mark synth_points that are close as "cat.1"
-//     
-//     for (unsigned int i = 0; i < inliers.size (); i++)
-//     {
-//       std::vector<int> k_indices;
-//       std::vector<float> k_distances;
-//       kd_tree->radiusSearch (cloud_->points[inliers[i]] , threshold*2, k_indices, k_distances);
-//       for (unsigned int j = 0; j < k_indices.size(); j++)
-//       {
-//         marks[k_indices[j]] = 1;
-//       }
-//     }
+      
+     ROS_INFO ("Creating kd-tree with %i points.", synth_points.points.size());
+     cloud_kdtree::KdTreeANN *kd_tree = new cloud_kdtree::KdTreeANN (synth_points);
+     ROS_INFO ("Created kd-tree.");
+     // go through inliers, mark synth_points that are close as "cat.1"
+     
+     for (unsigned int i = 0; i < inliers.size (); i++)
+     {
+       std::vector<int> k_indices;
+       std::vector<float> k_distances;
+       kd_tree->radiusSearch (cloud_->points[inliers[i]] , threshold*2, k_indices, k_distances);
+       for (unsigned int j = 0; j < k_indices.size(); j++)
+       {
+         marks[k_indices[j]] = 1;
+       }
+     }
     int mark_count_1 = 0;
     int mark_count_2 = 0;
     for (unsigned int j = 0; j < marks.size(); j++)
@@ -277,7 +483,7 @@ ROS_WARN ("%f %f", X, Y);
       if (marks[j] == 1)
         mark_count_1++;
     }
-    std::cerr << "after marking" << std::endl;
+//     std::cerr << "after marking" << std::endl;
 
     // go through unmarked synth_points, mark as "cat.2" if not in free space
     for (unsigned int j = 0; j < marks.size(); j++)
@@ -291,19 +497,20 @@ ROS_WARN ("%f %f", X, Y);
     
     //    int cur = pmap.polygons.size ();
     //    pmap.polygons.resize(pmap.polygons.size()+1);
-    for (unsigned int i = 0; i < inliers.size (); i++)
-    {
-      cloud_synth.channels[0].values.push_back (count);
-      cloud_synth.points.push_back (cloud_->points[inliers[i]]);
-    }
+//     for (unsigned int i = 0; i < inliers.size (); i++)
+//     {
+//       cloud_synth.chan[0].vals.push_back (count);
+//       cloud_synth.pts.push_back (cloud_->pts[inliers[i]]);
+//     }
+    double score = double(mark_count_1+mark_count_2) / double (synth_points.points.size ());
     for (unsigned int i = 0; i < synth_points.points.size (); i++)
     {
-      cloud_synth.channels[0].values.push_back (count);
+      cloud_synth.channels[0].values.push_back (score);
       cloud_synth.points.push_back (synth_points.points[i]);
     }
 //      pmap.polygons[cur].points.push_back (synth_points.points[i]);
     count++;
-    ROS_ERROR ("SAMPLED %i POINTS!!!!!", cloud_synth.points.size());
+    ROS_ERROR ("SAMPLED %i POINTS! score is : %f", cloud_synth.points.size(), score);
     return double(mark_count_1+mark_count_2) / double (synth_points.points.size ());
   }
 
@@ -475,23 +682,23 @@ ROS_WARN ("%f %f", X, Y);
     model_coefficients_[4] = centroid.y + 0.0;
     model_coefficients_[5] = centroid.z + 1.0;
 
-    Point32 p1;
-    Point32 p2;
-    geometry_msgs::Polygon polygon;
-    for (unsigned int i = 0; i < samples.size(); i++)
-    {
-    polygon.points.clear();
-      polygon.points.push_back ( cloud_->points[samples[i]] );
-      p1.x = 0.2*cloud_->channels[nx_idx_].values[samples[i]] + cloud_->points[samples[i]].x;
-      p1.y = 0.2*cloud_->channels[ny_idx_].values[samples[i]] + cloud_->points[samples[i]].y;
-      p1.z = 0.2*cloud_->channels[nz_idx_].values[samples[i]] + cloud_->points[samples[i]].z;
-      polygon.points.push_back ( p1 );
-      pmap.polygons.push_back (polygon);
-      pmap.chan[0].values.push_back (0);
-      pmap.chan[1].values.push_back (0);
-      pmap.chan[2].values.push_back (0);
-    }
-
+      Point32 p1;
+      Point32 p2;
+      geometry_msgs::Polygon polygon;
+//     for (unsigned int i = 0; i < samples.size(); i++)
+//     {
+//     polygon.points.clear();
+//       polygon.points.push_back ( cloud_->points[samples[i]] );
+//       p1.x = 0.2*cloud_->channels[nx_idx_].values[samples[i]] + cloud_->points[samples[i]].x;
+//       p1.y = 0.2*cloud_->channels[ny_idx_].values[samples[i]] + cloud_->points[samples[i]].y;
+//       p1.z = 0.2*cloud_->channels[nz_idx_].values[samples[i]] + cloud_->points[samples[i]].z;
+//       polygon.points.push_back ( p1 );
+//       pmap.polygons.push_back (polygon);
+//       pmap.chan[0].values.push_back (0);
+//       pmap.chan[1].values.push_back (0);
+//       pmap.chan[2].values.push_back (0);
+//     }
+//
 //     p1.x = model_coefficients_[0];
 //     p1.y = model_coefficients_[1];
 //     p1.z = model_coefficients_[2];
@@ -501,62 +708,71 @@ ROS_WARN ("%f %f", X, Y);
 //     polygon.points.push_back (p1);
 //     polygon.points.push_back (p2);
 //     pmap.polygons.push_back (polygon);
-//     pmap.channels[0].vals.push_back (0);
-//     pmap.channels[1].vals.push_back (0);
-//     pmap.channels[2].vals.push_back (0);
+//     pmap.chan[0].values.push_back (0);
+//     pmap.chan[1].values.push_back (0);
+//     pmap.chan[2].values.push_back (0);
 
-    refitAxis (samples, model_coefficients_);
-    p1.x = model_coefficients_[0];
-    p1.y = model_coefficients_[1];
-    p1.z = model_coefficients_[2];
-    p2.x = model_coefficients_[3];
-    p2.y = model_coefficients_[4];
-    p2.z = model_coefficients_[5];
-    polygon.points.clear();
-    polygon.points.push_back (p1);
-    polygon.points.push_back (p2);
-    pmap.polygons.push_back (polygon);
-    pmap.chan[0].values.push_back (1);
-    pmap.chan[1].values.push_back (1);
-    pmap.chan[2].values.push_back (1);
+     if (!refitAxis (samples, model_coefficients_))
+       return false;
+//      if (!refitModelNoAxis (samples, model_coefficients_))
+//        return false;
+//----------------------- visualize the axis
+       p1.x = model_coefficients_[0];
+       p1.y = model_coefficients_[1];
+       p1.z = model_coefficients_[2];
+       p2.x = model_coefficients_[3];
+       p2.y = model_coefficients_[4];
+       p2.z = model_coefficients_[5];
+       polygon.points.clear();
+       polygon.points.push_back (p1);
+       polygon.points.push_back (p2);
+       pmap.polygons.push_back (polygon);
+       pmap.chan[0].values.push_back (1);
+       pmap.chan[1].values.push_back (1);
+       pmap.chan[2].values.push_back (1);
+//-----------------------
 //    pmap.polygons.resize (pmap.polygons.size()+1);
 //     pmap.polygons[(pmap.polygons.size()-1)].push_back (p1);
 //     pmap.polygons[(pmap.polygons.size()-1)].push_back (p2);
 //    firstOptimization ();
-    Eigen::MatrixXf A = Eigen::MatrixXf (polynomial_order + 1, polynomial_order + 1);
-    Eigen::VectorXf b = Eigen::VectorXf (polynomial_order + 1);
-    Eigen::VectorXf x;
+      return true;
+      Eigen::MatrixXf A = Eigen::MatrixXf (polynomial_order + 1, polynomial_order + 1);
+      Eigen::VectorXf b = Eigen::VectorXf (polynomial_order + 1);
+      Eigen::VectorXf xvec;
 
-    geometry_msgs::Point32 axis;   // axis direction vector
-    geometry_msgs::Point32 point0; // point on axis
-    axis.x = model_coefficients_[3] - model_coefficients_[0];
-    axis.y = model_coefficients_[4] - model_coefficients_[1];
-    axis.z = model_coefficients_[5] - model_coefficients_[2];
+      geometry_msgs::Point32 axis;   // axis direction vector
+      geometry_msgs::Point32 point0; // point on axis
+      axis.x = model_coefficients_[3] - model_coefficients_[0];
+      axis.y = model_coefficients_[4] - model_coefficients_[1];
+      axis.z = model_coefficients_[5] - model_coefficients_[2];
 
-    point0.x = model_coefficients_[0];
-    point0.y = model_coefficients_[1];
-    point0.z = model_coefficients_[2];
-    
-    double k0 = (0.0 - cloud_geometry::dot (point0, axis)) / 
-                       cloud_geometry::dot (axis, axis);                                    
+      point0.x = model_coefficients_[0];
+      point0.y = model_coefficients_[1];
+      point0.z = model_coefficients_[2];
+      
+      double k0 = (0.0 - cloud_geometry::dot (point0, axis)) / 
+                         cloud_geometry::dot (axis, axis);                                    
 
-    for (int d1 = 0; d1 < polynomial_order + 1; d1++)
-    {
-      double x = (cloud_geometry::dot (cloud_->points.at (samples.at (d1)), axis) 
-                - cloud_geometry::dot (point0, axis)) 
-                / cloud_geometry::dot (axis, axis);
-      x = x - k0;
-      b[d1] = cloud_geometry::distances::pointToLineDistance (cloud_->points.at (samples.at (d1)), point0, axis);
-      for (int d2 = 0; d2 < polynomial_order + 1; d2++)
-        A(d2,d1) = pow (x, (double) d2);
-    }
+      for (int d1 = 0; d1 < polynomial_order + 1; d1++)
+      {
+        double x = (cloud_geometry::dot (cloud_->points.at (samples.at (d1)), axis) 
+                  - cloud_geometry::dot (point0, axis)) 
+                  / cloud_geometry::dot (axis, axis);
+        x = x - k0;
+        b[d1] = cloud_geometry::distances::pointToLineDistance (cloud_->points.at (samples.at (d1)), point0, axis);
+        for (int d2 = 0; d2 < polynomial_order + 1; d2++)
+          A(d1,d2) = pow (x, (double) d2);
+      }
 
-    if (!A.lu().solve(b, &x))
-      return (false);
-
-    for (int i = 0; i < polynomial_order + 1; i++)
-      model_coefficients_[6+i] = x[i];
-
+      if (!A.lu().solve(b, &xvec))
+      {
+        return (false);
+      }
+     for (int i = 0; i < polynomial_order + 1; i++)
+       model_coefficients_[6+i] = xvec[i];
+    for (int i = 0; i < 4; i++)
+      std::cerr << pointToRotationalDistance (cloud_->points.at(samples[i]), model_coefficients_, polynomial_order) << " - ";
+    std::cerr << std::endl;
     return (true);
   }
 
@@ -571,7 +787,7 @@ ROS_WARN ("%f %f", X, Y);
   {
     if (inliers.size () == 0)
     {
-      ROS_ERROR ("[SACModelRotational::RefitModel] Cannot re-fit 0 inliers!");
+       ROS_ERROR ("[SACModelRotational::RefitModel] Cannot re-fit 0 inliers!");
       refit_coefficients = model_coefficients_;
       return;
     }
@@ -587,41 +803,111 @@ ROS_WARN ("%f %f", X, Y);
 
     double *fvec = new double[m];
 
-    int n = 7;      // 7 unknowns
+    int n = 10;      // 7 unknowns
     int iwa[n];
 
     int lwa = m * n + 5 * n + m;
     double *wa = new double[lwa];
 
     // Set the initial solution
-    double x[7] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-    if ((int)model_coefficients_.size () == n)
+    double x[10] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+    if ((int)model_coefficients_.size () >= n)
       for (int d = 0; d < n; d++)
         x[d] = model_coefficients_.at (d);
 
     // Set tol to the square root of the machine. Unless high solutions are required, these are the recommended settings.
-    double tol = sqrt (dpmpar (1));
+    double tol = sqrt (dpmpar (2));
 
     // Optimize using forward-difference approximation LM
-    int info = lmdif1 (&sample_consensus::SACModelRotational::functionToOptimize, this, m, n, x, fvec, tol, iwa, wa, lwa);
+    int info = lmdif2 (&sample_consensus::SACModelRotational::functionToOptimize, this, m, n, x, fvec, tol, iwa, wa, lwa);
 
     // Compute the L2 norm of the residuals
-    ROS_DEBUG ("LM solver finished with exit code %i, having a residual norm of %g. \nInitial solution: %g %g %g %g %g %g %g \nFinal solution: %g %g %g %g %g %g %g",
-               info, enorm (m, fvec), model_coefficients_.at (0), model_coefficients_.at (1), model_coefficients_.at (2), model_coefficients_.at (3),
-               model_coefficients_.at (4), model_coefficients_.at (5), model_coefficients_.at (6), x[0], x[1], x[2], x[3], x[4], x[5], x[6]);
+     ROS_INFO ("LM solver finished with exit code %i, having a residual norm of %g. \nInitial solution: %g %g %g %g %g %g %g \nFinal solution: %g %g %g %g %g %g %g",
+                info, enorm (m, fvec), model_coefficients_.at (0), model_coefficients_.at (1), model_coefficients_.at (2), model_coefficients_.at (3),
+                model_coefficients_.at (4), model_coefficients_.at (5), model_coefficients_.at (6), x[0], x[1], x[2], x[3], x[4], x[5], x[6]);
 
-    refit_coefficients.resize (n);
+//    refit_coefficients.resize (n);
     for (int d = 0; d < n; d++)
       refit_coefficients[d] = x[d];
 
     free (wa); free (fvec);
+  }
+  bool
+    SACModelRotational::refitModelNoAxis (const std::vector<int> &inliers, std::vector<double> &refit_coefficients)
+  {
+    if (inliers.size () == 0)
+    {
+       ROS_ERROR ("[SACModelRotational::RefitModel] Cannot re-fit 0 inliers!");
+      refit_coefficients = model_coefficients_;
+      return false;
+    }
+    if (model_coefficients_.size () == 0)
+    {
+      ROS_WARN ("[SACModelRotational::RefitModel] Initial model coefficients have not been estimated yet - proceeding without an initial solution!");
+      best_inliers_ = indices_;
+    }
+
+    tmp_inliers_ = &inliers;
+
+    int m = inliers.size ();
+
+    double *fvec = new double[m];
+
+    int n = 4;      // 7 unknowns
+    int iwa[n];
+
+    int lwa = m * n + 5 * n + m;
+    double *wa = new double[lwa];
+
+    // Set the initial solution
+    double x[4] = {0.0, 0.0, 0.0, 0.0};
+//    if ((int)model_coefficients_.size () >= n)
+      for (int d = 0; d < n; d++)
+        x[d] = model_coefficients_.at (d+6);
+
+    // Set tol to the square root of the machine. Unless high solutions are required, these are the recommended settings.
+    double tol = sqrt (dpmpar (2));
+
+    // Optimize using forward-difference approximation LM
+    int info = lmdif2 (&sample_consensus::SACModelRotational::functionToOptimize, this, m, n, x, fvec, tol, iwa, wa, lwa);
+
+    // Compute the L2 norm of the residuals
+     ROS_INFO ("LM solver finished with exit code %i, having a residual norm of %g. \nInitial solution: %g %g %g %g \nFinal solution: %g %g %g %g",
+                info, enorm (m, fvec), model_coefficients_.at (0), model_coefficients_.at (1), model_coefficients_.at (2), model_coefficients_.at (3),
+                x[0], x[1], x[2], x[3]);
+
+//    refit_coefficients.resize (n);
+    for (int d = 0; d < n; d++)
+      refit_coefficients[d+6] = x[d];
+
+    free (wa); free (fvec);
+    return true;
   }
 
 void
   rot_axis_func (double *p, double *X, int m, int n, void *data)
 {
   struct LMStrucData *d = (struct LMStrucData *) data;
+//      ROS_INFO ("rot_axis_func %g %g %g %g %g %g", 
+//                 p[0], p[1], p[2], p[3], p[4], p[5]);
   
+//      Point32 p1;
+//      Point32 p2;
+//      geometry_msgs::Polygon polygon;
+//      p1.x = p[0];
+//      p1.y = p[1];
+//      p1.z = p[2];
+//      p2.x = p[3];
+//      p2.y = p[4];
+//      p2.z = p[5];
+//      polygon.points.clear();
+//      polygon.points.push_back (p1);
+//      polygon.points.push_back (p2);
+//      d->model->pmap.polygons.push_back (polygon);
+//      d->model->pmap.chan[0].values.push_back (1);
+//      d->model->pmap.chan[1].values.push_back (1);
+//      d->model->pmap.chan[2].values.push_back (1);
+
     std::vector<double> rot_coeff (6);
     for (int d = 0; d < 6; d++)
       rot_coeff[d] = p[d];
@@ -634,24 +920,29 @@ void
       point_normal_line[1] = d->cloud->points[d->samples.at(i)].y;
       point_normal_line[2] = d->cloud->points[d->samples.at(i)].z;
       
-      point_normal_line[3] = d->cloud->channels[d->nx_idx_].values[d->samples.at(i)];
-      point_normal_line[4] = d->cloud->channels[d->ny_idx_].values[d->samples.at(i)];
-      point_normal_line[5] = d->cloud->channels[d->nz_idx_].values[d->samples.at(i)];
+      point_normal_line[3] = d->cloud->points[d->samples.at(i)].x + d->cloud->channels[d->nx_idx_].values[d->samples.at(i)];
+      point_normal_line[4] = d->cloud->points[d->samples.at(i)].y + d->cloud->channels[d->ny_idx_].values[d->samples.at(i)];
+      point_normal_line[5] = d->cloud->points[d->samples.at(i)].z + d->cloud->channels[d->nz_idx_].values[d->samples.at(i)];
       
       double ll = LineToLineDistance (rot_coeff, point_normal_line, 1e-5); 
-      X[i] = ll * ll;
+      X[i] = ll;// * ll;
     }
 }
 
-  void
+  bool
     SACModelRotational::refitAxis (const std::vector<int> &inliers, std::vector<double> &refit_coefficients)
   {
+    std::cerr << "REFIT AXIS COEFFS BEFOR: ";
+    for (unsigned int i = 0; i < refit_coefficients.size(); i++)
+      std::cerr << refit_coefficients[i] << " "; 
+    std::cerr << std::endl;
     ROS_INFO ("optimizing axis from %i points", inliers.size());
+    
     if (inliers.size () == 0)
     {
       ROS_ERROR ("[SACModelRotational::RefitModel] Cannot re-fit 0 inliers!");
       refit_coefficients = model_coefficients_;
-      return;
+      return false;
     }
     if (model_coefficients_.size () == 0)
     {
@@ -682,18 +973,222 @@ void
 
      // Optimize using forward-difference approximation LM
      int info = lmdif1 (&sample_consensus::SACModelRotational::functionToOptimizeAxis, this, m, n, x, fvec, tol, iwa, wa, lwa);
-
+      info=info;
      // Compute the L2 norm of the residuals
-     ROS_INFO ("LM solver finished with exit code %i, having a residual norm of %g. \nInitial solution: %g %g %g %g %g %g \nFinal solution: %g %g %g %g %g %g ",
-                info, enorm (m, fvec), 
-                refit_coefficients.at (0), refit_coefficients.at (1), refit_coefficients.at (2), refit_coefficients.at (3),
-                refit_coefficients.at (4), refit_coefficients.at (5), x[0], x[1], x[2], x[3], x[4], x[5]);
+      ROS_INFO ("LM solver finished with exit code %i, having a residual norm of %g. \nInitial solution: %g %g %g %g %g %g \nFinal solution: %g %g %g %g %g %g ",
+                 info, enorm (m, fvec), 
+                 refit_coefficients.at (0), refit_coefficients.at (1), refit_coefficients.at (2), refit_coefficients.at (3),
+                 refit_coefficients.at (4), refit_coefficients.at (5), x[0], x[1], x[2], x[3], x[4], x[5]);
 
      //refit_coefficients.resize (n);
      for (int d = 0; d < n; d++)
        refit_coefficients[d] = x[d];
 
+    // renormalize coeffs
     std::pair<double,double> minmax = getMinMaxK (*cloud_ , refit_coefficients, inliers);
+    
+    geometry_msgs::Point32 axis;   // axis direction vector
+    geometry_msgs::Point32 p1;
+    geometry_msgs::Point32 p2;
+    axis.x = refit_coefficients[3] - refit_coefficients[0];
+    axis.y = refit_coefficients[4] - refit_coefficients[1];
+    axis.z = refit_coefficients[5] - refit_coefficients[2];
+    
+    p1.x = refit_coefficients[0] + minmax.first  * axis.x;
+    p2.x = refit_coefficients[0] + minmax.second * axis.x;
+    p1.y = refit_coefficients[1] + minmax.first  * axis.y;
+    p2.y = refit_coefficients[1] + minmax.second * axis.y;
+    p1.z = refit_coefficients[2] + minmax.first  * axis.z;
+    p2.z = refit_coefficients[2] + minmax.second * axis.z;
+
+    refit_coefficients[0] = p1.x;
+    refit_coefficients[1] = p1.y;
+    refit_coefficients[2] = p1.z;
+    refit_coefficients[3] = p2.x;
+    refit_coefficients[4] = p2.y;
+    refit_coefficients[5] = p2.z;
+
+    // refit polynomial
+    Eigen::MatrixXf A = Eigen::MatrixXf (inliers.size(), polynomial_order + 1);
+    Eigen::VectorXf b = Eigen::VectorXf (inliers.size());
+    Eigen::VectorXf xvec;
+
+    axis.x = p2.x - p1.x;
+    axis.y = p2.y - p1.y;
+    axis.z = p2.z - p1.z;
+    
+    double k0 = (0.0 - cloud_geometry::dot (p1, axis)) / 
+                       cloud_geometry::dot (axis, axis);                                    
+
+    for (unsigned int d1 = 0; d1 < inliers.size(); d1++)
+    {
+      double x = (cloud_geometry::dot (cloud_->points.at (inliers.at (d1)), axis) 
+                - cloud_geometry::dot (p1, axis)) 
+                / cloud_geometry::dot (axis, axis);
+      x = x - k0;
+      b[d1] = cloud_geometry::distances::pointToLineDistance (cloud_->points.at (inliers.at (d1)), p1, axis);
+      for (int d2 = 0; d2 < polynomial_order + 1; d2++)
+        A(d1,d2) = pow (x, (double) d2);
+    }
+  
+    Eigen::MatrixXf A_t1 = A.transpose (); 
+    Eigen::MatrixXf A_t2 = A.transpose (); 
+    Eigen::MatrixXf A_temp = A_t1 * A;
+    xvec = A_temp.inverse () * A_t2 * b;
+    bool isnanorinf = false;
+    for (int i = 0; i < polynomial_order+1; i++)
+      if (std::isinf (xvec[i]) || std::isnan (xvec[i]))
+      {
+        ROS_ERROR ("NAN OR INF: %f", xvec[i]);
+        isnanorinf = true;
+      }
+
+    if (isnanorinf)
+    {
+// write affected points to file
+//       static int filecounter = 0;
+//       std::ofstream myfile;
+//       std::stringstream filename;
+//       filename << "nan" << filecounter++ << ".pcd";
+//       myfile.open (filename.str().c_str());
+//       myfile << "COLUMNS x y z i\nPOINTS " << inliers.size()+2 << "\nDATA ascii\n";
+//       myfile << p1.x 
+//              << " "<< p1.y
+//              << " "<< p1.z << " " << filecounter << std::endl;
+//       myfile << p2.x 
+//              << " "<< p2.y
+//              << " "<< p2.z << " " << filecounter << std::endl;
+
+//       for (unsigned int d1 = 0; d1 < inliers.size(); d1++)
+//         myfile << cloud_->points.at (inliers.at (d1)).x
+//                << " "<< cloud_->points.at (inliers.at (d1)).y
+//                << " "<< cloud_->points.at (inliers.at (d1)).z << " " << filecounter << std::endl;
+//       myfile.close();
+
+      return false;
+
+    }
+//     if (!A.lu().solve(b, &xvec))
+//     {
+//       return (false);
+//     }
+    for (int i = 0; i < polynomial_order + 1; i++)
+      refit_coefficients[6+i] = xvec[i];
+       std::cerr << "REFIT AXIS COEFFS AFTER: ";
+       for (unsigned int i = 0; i < refit_coefficients.size(); i++)
+         std::cerr << refit_coefficients[i] << " "; 
+       std::cerr << std::endl;
+    return true; 
+//     free (wa); free (fvec);
+  }
+
+  void
+    SACModelRotational::refitAxisGoodLevmar (const std::vector<int> &samples, std::vector<double> &refit_coefficients)
+  {
+//     ROS_INFO ("optimizing axis from %i points... normal indices: %i, %i, %i", samples.size(), nx_idx_, ny_idx_, nz_idx_);
+    if (samples.size () == 0)
+    {
+      ROS_ERROR ("[SACModelRotational::RefitModel] Cannot re-fit 0 inliers!");
+      refit_coefficients = model_coefficients_;
+      return;
+    }
+    if (model_coefficients_.size () == 0)
+    {
+      ROS_WARN ("[SACModelRotational::RefitModel] Initial model coefficients have not been estimated yet - proceeding without an initial solution!");
+      best_inliers_ = indices_;
+    }
+            LMStrucData data;
+            data.model  = this;
+            data.cloud  = cloud_;
+            data.samples = samples;
+            data.nx_idx_ = nx_idx_;
+            data.ny_idx_ = ny_idx_;
+            data.nz_idx_ = nz_idx_;
+
+            double *x (new double[samples.size ()]);
+            for (unsigned int i = 0; i < samples.size (); i++)
+              x[i] = 0;
+
+            // I: minim. options [\tau, \epsilon1, \epsilon2, \epsilon3]. Respectively the scale factor for initial \mu,
+            // stopping thresholds for ||J^T e||_inf, ||Dp||_2 and ||e||_2. Set to NULL for defaults to be used
+            double opts[LM_OPTS_SZ], info[LM_INFO_SZ];
+            opts[0] = LM_INIT_MU;
+            opts[1] = 1E-15;
+            opts[2] = 1E-15;
+            opts[3] = 1E-20;
+            opts[4] = LM_DIFF_DELTA;
+
+            int m = 6;  // parameter vector dimension (i.e. #unknowns)
+            int n = samples.size (); // I: measurement vector dimension
+            int itmax = 5000;        // I: maximum number of iterations
+
+            // I/O: initial parameter estimates. On output contains the estimated solution
+            double p[m];
+            for (int d = 0; d < m; d++)
+              p[d] = refit_coefficients[d];
+
+//            print_info (stderr, "[SACModelRotational::RefitModel] Refitting the rotational axis: ");
+//            for (int i = 0; i < 6; i++)
+//              fprintf (stderr, "%.5g ", p[i]);
+//            fprintf (stderr, "\n");
+
+            //int ret = dlevmar_der (rotational_func, rotational_jac, p, x, m, n, itmax, opts, info, NULL, NULL, (void *) &data);
+            int ret = dlevmar_dif (rot_axis_func, p, x, m, n, itmax, opts, info, NULL, NULL, (void *) &data);
+            ret=ret;
+//      ROS_INFO ("LM solver finished with exit code %i\nInitial solution: %g %g %g %g %g %g \nFinal solution: %g %g %g %g %g %g ",
+//                 ret,  
+//                 refit_coefficients.at (0), refit_coefficients.at (1), refit_coefficients.at (2), refit_coefficients.at (3),
+//                 refit_coefficients.at (4), refit_coefficients.at (5), p[0], p[1], p[2], p[3], p[4], p[5]);
+            delete [] x;
+
+            ANNpoint newcoeff = annAllocPt (6);
+            newcoeff[0] = p[0]; newcoeff[1] = p[1]; newcoeff[2] = p[2];
+            newcoeff[3] = p[3]; newcoeff[4] = p[4]; newcoeff[5] = p[5];
+            for (int d = 0; d < m; d++)
+              newcoeff[d] = p[d];
+
+            // recompute the line coefficients so that they store the first and last points of the Rotational
+            // Compute the line direction (P2 - P1)
+            ANNcoord p21[3];
+            p21[0] = p[3] - p[0];
+            p21[1] = p[4] - p[1];
+            p21[2] = p[5] - p[2];
+
+            double k_min = FLT_MAX;
+            double k_max = -FLT_MAX;
+            double k0 = (0.0 - DOT_PROD_3D (p, p21)) / DOT_PROD_3D (p21, p21);
+            for (unsigned int i = 0; i < samples.size (); i++)
+            {
+              double point[3] = 
+              { cloud_->points[samples[i]].x,
+                cloud_->points[samples[i]].y,
+                cloud_->points[samples[i]].z};
+              double k = (DOT_PROD_3D (point, p21) - DOT_PROD_3D (p, p21)) / DOT_PROD_3D (p21, p21);
+              k = k - k0;
+              if (k < k_min)
+                k_min = k;
+              if (k > k_max)
+                k_max = k;
+            }
+            for (int d = 0; d <3; d++)
+            {
+              newcoeff[d+0] = p[d] + k_min * p21[d];
+              newcoeff[d+3] = p[d] + k_max * p21[d];
+            }
+//            print_info (stderr, "[SACModelRotational::RefitModel] Rot. Axis got %04d / %04g iterations, reason %g, solution: ", ret, info[5], info[6]);
+//            for (int i = 0; i < 6; i++)
+//              fprintf (stderr, "%.5g ", newcoeff[i]);
+//            fprintf (stderr, "\n");
+//            cerr << "k is in the range [" << k_min << " : " << k_max << "]" << endl; 
+
+            for (int d = 0; d < 6; d++)
+              refit_coefficients[d] = newcoeff[d];
+
+
+
+
+
+    std::pair<double,double> minmax = getMinMaxK (*cloud_ , refit_coefficients, samples);
     
     std::vector<double> axis(3);
     std::vector<double> p1(3);
@@ -729,6 +1224,24 @@ void
     * \param iflag set to -1 inside the function to terminate execution
     */
   int
+    SACModelRotational::functionToOptimizeNoAxis (void *p, int m, int n, const double *x, double *fvec, int iflag)
+  {
+    SACModelRotational *model = (SACModelRotational*)p;
+    
+    std::vector<double> rot_coeff (6+1+model->polynomial_order);
+    
+    for (int d = 0; d < 6; d++)
+      rot_coeff[d] = model->model_coefficients_[d];
+    for (int d = 6; d < 6+1+model->polynomial_order; d++)
+      rot_coeff[d] = x[6-d];
+
+    for (int i = 0; i < m; i++)
+      // dist = f - r
+      fvec[i] = 100*pointToRotationalDistance (model->cloud_->points[model->tmp_inliers_->at (i)], rot_coeff, model->polynomial_order);
+
+    return (0);
+  }
+  int
     SACModelRotational::functionToOptimize (void *p, int m, int n, const double *x, double *fvec, int iflag)
   {
     SACModelRotational *model = (SACModelRotational*)p;
@@ -739,7 +1252,7 @@ void
 
     for (int i = 0; i < m; i++)
       // dist = f - r
-      fvec[i] = pointToRotationalDistance (model->cloud_->points[model->tmp_inliers_->at (i)], rot_coeff, model->polynomial_order) - x[6];
+      fvec[i] = 100*pointToRotationalDistance (model->cloud_->points[model->tmp_inliers_->at (i)], rot_coeff, model->polynomial_order);
 
     return (0);
   }
@@ -747,25 +1260,43 @@ void
   int
     SACModelRotational::functionToOptimizeAxis (void *p, int m, int n, const double *x, double *fvec, int iflag)
   {
+     // Compute the L2 norm of the residuals
     SACModelRotational *model = (SACModelRotational*)p;
-    
+   
     std::vector<double> rot_coeff (6);
     for (int d = 0; d < 6; d++)
       rot_coeff[d] = x[d];
 
     std::vector<double> point_normal_line (6);
 
+//     Point32 p1;
+//     Point32 p2;
+//     robot_msgs::Polygon3D polygon;
+//     p1.x = x[0];
+//     p1.y = x[1];
+//     p1.z = x[2];
+//     p2.x = x[3];
+//     p2.y = x[4];
+//     p2.z = x[5];
+//     polygon.points.clear();
+//     polygon.points.push_back (p1);
+//     polygon.points.push_back (p2);
+//     model->pmap.polygons.push_back (polygon);
+//     model->pmap.chan[0].vals.push_back (1);
+//     model->pmap.chan[1].vals.push_back (1);
+//     model->pmap.chan[2].vals.push_back (1);
+    
     for (int i = 0; i < m; i++)
     {
       point_normal_line[0] = model->cloud_->points[model->tmp_inliers_->at(i)].x;
       point_normal_line[1] = model->cloud_->points[model->tmp_inliers_->at(i)].y;
       point_normal_line[2] = model->cloud_->points[model->tmp_inliers_->at(i)].z;
       
-      point_normal_line[3] = model->cloud_->channels[model->nx_idx_].values[model->tmp_inliers_->at(i)];
-      point_normal_line[4] = model->cloud_->channels[model->ny_idx_].values[model->tmp_inliers_->at(i)];
-      point_normal_line[5] = model->cloud_->channels[model->nz_idx_].values[model->tmp_inliers_->at(i)];
+      point_normal_line[3] = model->cloud_->points[model->tmp_inliers_->at(i)].x + model->cloud_->channels[model->nx_idx_].values[model->tmp_inliers_->at(i)];
+      point_normal_line[4] = model->cloud_->points[model->tmp_inliers_->at(i)].y + model->cloud_->channels[model->ny_idx_].values[model->tmp_inliers_->at(i)];
+      point_normal_line[5] = model->cloud_->points[model->tmp_inliers_->at(i)].z + model->cloud_->channels[model->nz_idx_].values[model->tmp_inliers_->at(i)];
       
-      double ll = 100.0*LineToLineDistance (rot_coeff, point_normal_line, 1e-5); 
+      double ll = LineToLineDistance (rot_coeff, point_normal_line, 1e-5); 
       // dist = f - r
       fvec[i] = ll * ll;
 //       fvec[i] = pointToRotationalDistance (model->cloud_->points[model->tmp_inliers_->at (i)], rot_coeff, model->polynomial_order) - x[6];

@@ -38,7 +38,6 @@
 // ROS core
 #include <ros/node_handle.h>
 // ROS messages
-#include <geometry_msgs/Point32.h>
 #include <sensor_msgs/PointCloud.h>
 #include <mapping_msgs/PolygonalMap.h>
 
@@ -46,7 +45,6 @@
 #include <point_cloud_mapping/sample_consensus/sac.h>
 #include <point_cloud_mapping/sample_consensus/msac.h>
 #include <point_cloud_mapping/sample_consensus/ransac.h>
-#include <point_cloud_mapping/sample_consensus/sac_model_plane.h>
 #include <sac_model_rotational.h>
 
 #include <angles/angles.h>
@@ -71,21 +69,21 @@
 
 using namespace std;
 using namespace ros;
+using namespace std_msgs;
 using namespace sensor_msgs;
+using namespace geometry_msgs;
 using namespace mapping_msgs;
 using namespace perception_srvs;
 using namespace perception_msgs;
 using namespace sample_consensus;
-using namespace geometry_msgs;
+
 
 void
   findRotationalObjects (PointCloud cloud, std::vector<std::vector<std::vector<bool> > > freevoxels, double threshold_, double probability_, int max_iterations_, PointCloud &cloud_synth, Point32 min, Point32 ndivs, Point32 leaf_width, mapping_msgs::PolygonalMap &pmap)
 {
   int debug = 2;
   SACModelRotational *sac_model_ = new SACModelRotational (freevoxels, min, ndivs,leaf_width, pmap);
-  SACModelPlane *sac_model_planes = new SACModelPlane ();
   sac_model_->setDataSet (&cloud);
-  sac_model_planes->setDataSet (&cloud);
 
   int iterations_ = 0;
   int n_best_inliers_count = -1;
@@ -94,10 +92,6 @@ void
   std::vector<int> best_model;
   std::vector<int> best_inliers, inliers;
   std::vector<int> selection;
-  std::vector<int> inliers_planes;
-  std::vector<int> selection_planes;
-  
-  int best_model_type = -1;
 
   int n_inliers_count = 0;
   std::vector<double> best_coeffs;
@@ -116,83 +110,25 @@ void
     
     // Get X samples which satisfy the model criteria
     sac_model_->getSamples (iterations_, selection);
-    // Get X samples which satisfy the model criteria
-    sac_model_planes->getSamples (iterations_, selection_planes);
 
-    if (selection.size () == 0 && selection_planes.size() == 0) break;
+    if (selection.size () == 0) break;
 
-    // Search for inliers in the point cloud for the current plane model M
     bool success = sac_model_->computeModelCoefficients (selection);
-    // Search for inliers in the point cloud for the current plane model M
-    bool success_planes = sac_model_planes->computeModelCoefficients (selection_planes);
-
     sac_model_->selectWithinDistance (sac_model_->getModelCoefficients (), threshold_, inliers);
-    sac_model_planes->selectWithinDistance (sac_model_planes->getModelCoefficients (), threshold_, inliers_planes);
-    if (success_planes)
-    {
-      if (inliers_planes.size() < 3)
-        ROS_ERROR ("this shoudlgnbt hapenre goddamoit");
-     
-      std::vector<double> coeffs = sac_model_planes->getModelCoefficients ();
-      int after, before = inliers_planes.size ();
-      do
-      {
-        std::vector<double> backup_coeff (coeffs);
-        std::vector<int> backup_inliers (inliers_planes);
-        before = inliers_planes.size ();
-        ROS_WARN ("before refit: %i inliers", inliers_planes.size());
-        sac_model_planes->refitModel  (inliers_planes, coeffs);
-        sac_model_planes->selectWithinDistance (coeffs, threshold_, inliers_planes);
-//         sac_model_->refitModelNoAxis (inliers, coeffs);
-//         sac_model_->selectWithinDistance (coeffs, threshold_, inliers);
-        ROS_WARN ("after refit: %i inliers", inliers_planes.size());
-        after = inliers_planes.size ();
-        if (after > before)
-        {
-          backup_inliers = inliers_planes;
-          backup_coeff = coeffs;
-        }
-        else
-        {
-          coeffs = backup_coeff;
-          inliers_planes = backup_inliers;
-          break;
-        }
-      } while (true);
 
-      n_inliers_count = ((double)inliers_planes.size ());
-
-      // Better match ?
-      if (n_inliers_count > n_best_inliers_count)
-      {
-        n_best_inliers_count = n_inliers_count;
-        best_inliers = inliers_planes;
-        //inliers.clear ();
-        best_model = selection_planes;
-        best_coeffs = coeffs;
-        cerr << "BEST COEFFS: ";
-        for (unsigned int i = 0; i < best_coeffs.size(); i++)
-          cerr << best_coeffs[i] << " "; 
-        cerr << endl;
-
-        // Compute the k parameter (k=log(z)/log(1-w^n))
-        double w = (double)((double)n_inliers_count / (double)sac_model_->getIndices ()->size ());
-        double p_no_outliers = 1 - pow (w, (double)selection.size ());
-        p_no_outliers = std::max (std::numeric_limits<double>::epsilon (), p_no_outliers);       // Avoid division by -Inf
-        p_no_outliers = std::min (1 - std::numeric_limits<double>::epsilon (), p_no_outliers);   // Avoid division by 0.
-        k = log (1 - probability_) / log (p_no_outliers);
-        best_model_type = 0; // plane
-      }
-    }
     if (success)
     {
       if (inliers.size() < 4)
+      {
         ROS_ERROR ("this shoudlgnbt hapenre goddamoit");
-     
+        continue; 
+      }
+
       std::vector<double> coeffs = sac_model_->getModelCoefficients ();
       int after, before = inliers.size ();
       do
       {
+        break;
         std::vector<double> backup_coeff (coeffs);
         std::vector<int> backup_inliers (inliers);
         before = inliers.size ();
@@ -240,28 +176,17 @@ void
         p_no_outliers = std::max (std::numeric_limits<double>::epsilon (), p_no_outliers);       // Avoid division by -Inf
         p_no_outliers = std::min (1 - std::numeric_limits<double>::epsilon (), p_no_outliers);   // Avoid division by 0.
         k = log (1 - probability_) / log (p_no_outliers);
-        best_model_type = 1; // plane
       }
     }
   }
 
   if (best_model.size () != 0)
   {
-    if (best_model_type == 0)
-    {
-      Polygon p;
-      cloud_geometry::areas::convexHull2D (cloud, inliers_planes, best_coeffs, p);
-      pmap.polygons.push_back (p); 
-    }
-    else
-    {
-      double score = sac_model_->computeScore (best_coeffs, getMinMaxK (cloud, best_coeffs, best_inliers) , best_inliers, cloud_synth, threshold_);
-
-    }
-
     cerr << "before" <<endl;
+    double score = sac_model_->computeScore (best_coeffs, getMinMaxK (cloud, best_coeffs, best_inliers) , best_inliers, cloud_synth, threshold_);
+    cerr << "after" <<endl;
     if (debug > 0)
-      std::cerr << "[RANSAC::computeModel] Model found: " << n_best_inliers_count << std::endl;
+      std::cerr << "[RANSAC::computeModel] Model found: " << n_best_inliers_count << " inliers, score is: " << score << std::endl;
     sac_model_->setBestModel (best_model);
     sac_model_->setBestInliers (best_inliers);
     //      pmap.polygons.resize (1);
@@ -301,7 +226,7 @@ class RotationalReconstructionService
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     RotationalReconstructionService ()
     {
-      nh_.param ("~ransac_dist_threshold", thresh_, 0.005); // 1 cm
+      nh_.param ("~ransac_dist_threshold", thresh_, 0.002); // 1 cm
       nh_.param ("/global_frame_id", global_frame_, std::string("/base_link"));
       rotational_reconstruction_service_ = nh_.advertiseService ("rotational_reconstruction_service", &RotationalReconstructionService::rotational_reconstruction_service, this);
       pmap_pub_           = nh_.advertise<PolygonalMap>  ("rotational_polygonal_map", 1);
@@ -340,7 +265,7 @@ class RotationalReconstructionService
       }
       
       perception_msgs::VoxelList vl = srv.response.vlist;
-      std::vector<PointCloud> clusters = srv.response.clusters;
+      std::vector<sensor_msgs::PointCloud> clusters = srv.response.clusters;
       std::vector<perception_msgs::Voxel> voxels = vl.voxels;
 
       Point32 min = vl.min;
@@ -397,7 +322,7 @@ class RotationalReconstructionService
       PolygonalMap pmap;
       pmap.header.frame_id = global_frame_;
       pmap.header.stamp = ros::Time::now ();
-      pmap.set_chan_size (3);
+      pmap.chan.resize (3);
       pmap.chan[0].name = "r";
       pmap.chan[1].name = "g";
       pmap.chan[2].name = "b";
@@ -412,9 +337,9 @@ class RotationalReconstructionService
         ROS_INFO ("accessing cluster nr. %i", i);
         PointCloud cur_cloud = clusters.at(i);
         ROS_INFO ("finding rot. objects");
-        findRotationalObjects (cur_cloud, lookup_v, thresh_, 0.99, 100, cloud_synth, min, size, leafwidth, pmap);
-//          for (int j = 0; j < cur_cloud.pts.size(); j++)
-//            cloud.pts.push_back (cur_cloud.points[j]);
+        findRotationalObjects (cur_cloud, lookup_v, thresh_, 0.99, 1500, cloud_synth, min, size, leafwidth, pmap);
+//          for (int j = 0; j < cur_cloud.points.size(); j++)
+//            cloud.points.push_back (cur_cloud.points[j]);
 //         model->setOccupancyLookup (lookup_v);
 //         model->setDataSet (&cur_cloud);
 //         if (sac->computeModel (0))

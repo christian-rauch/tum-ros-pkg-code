@@ -48,6 +48,7 @@ namespace sample_consensus
   /// General datastructure for passing points and samples to the LM optimizer
   struct LMStrucData
   {
+    class SACModelRotational* model;
     sensor_msgs::PointCloud *cloud;
     std::vector<int> samples;
     int nx_idx_;
@@ -93,7 +94,7 @@ namespace sample_consensus
       virtual bool computeModelCoefficients (const std::vector<int> &samples);
 
       virtual void refitModel (const std::vector<int> &inliers, std::vector<double> &refit_coefficients);
-      virtual void refitModelNoAxis (const std::vector<int> &inliers, std::vector<double> &refit_coefficients);
+      virtual bool refitModelNoAxis (const std::vector<int> &inliers, std::vector<double> &refit_coefficients);
       virtual bool refitAxis (const std::vector<int> &inliers, std::vector<double> &refit_coefficients);
       virtual void refitAxisGoodLevmar (const std::vector<int> &inliers, std::vector<double> &refit_coefficients);
       virtual void getDistancesToModel (const std::vector<double> &model_coefficients, std::vector<double> &distances);
@@ -127,16 +128,6 @@ namespace sample_consensus
       geometry_msgs::Point32 occupancy_ndivs;
       geometry_msgs::Point32 occupancy_leaf_width;
       std::vector<std::vector<std::vector<bool> > > &occupancy_lookup;
-  };
-  /// General datastructure for passing points and samples to the LM optimizer
-  struct LMStrucData
-  {
-    SACModelRotational *model;
-    robot_msgs::PointCloud *cloud;
-    std::vector<int> samples;
-    int nx_idx_;
-    int ny_idx_;
-    int nz_idx_;
   };
 }
 #endif
