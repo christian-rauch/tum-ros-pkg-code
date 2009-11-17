@@ -1,0 +1,15 @@
+<package>
+  <description brief="cffi">
+      CFFI - The Common Foreign Function Interface
+      http://common-lisp.net/project/cffi/
+  </description>
+  <license>cffi</license>
+  <review status="unreviewed" notes=""/>
+
+  <depend package="lisp_asdf_manager"/>
+  <depend package="alexandria"/>
+  <depend package="trivial_features"/>
+  <depend package="babel"/>
+</package>
+
+
