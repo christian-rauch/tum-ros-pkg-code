@@ -1,0 +1,12 @@
+<package>
+  <description brief="trivial_features">
+      trivial-features
+      http://www.cliki.net/trivial-features
+  </description>
+  <license>trivial-features</license>
+  <review status="unreviewed" notes=""/>
+
+  <depend package="lisp_asdf_manager"/>
+</package>
+
+
