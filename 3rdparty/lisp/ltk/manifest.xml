@@ -1,0 +1,12 @@
+<package>
+  <description brief="ltk">
+    LTK
+    http://www.peter-herth.de/ltk/
+  </description>
+  <license>lgpl</license>
+  <review status="unreviewed" notes=""/>
+
+  <depend package="lisp_asdf_manager"/>
+</package>
+
+
