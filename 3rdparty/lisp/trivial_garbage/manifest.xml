@@ -1,0 +1,12 @@
+<package>
+  <description brief="trivial-garbage">
+      trivial-garbage
+      http://www.cliki.net/trivial-garbage
+  </description>
+  <license>Public domain</license>
+  <review status="unreviewed" notes=""/>
+
+  <depend package="lisp_asdf_manager"/>
+</package>
+
+
