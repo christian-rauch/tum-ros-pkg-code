@@ -1,0 +1,7 @@
+uint32 UNION = 0
+uint32 INTERSECTION = 1
+uint32 operation
+geometry_msgs/Polygon poly1
+geometry_msgs/Polygon poly2
+---
+geometry_msgs/Polygon poly_clip

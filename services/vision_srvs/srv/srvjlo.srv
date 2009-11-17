@@ -1,0 +1,6 @@
+# srvjlo, U. Klank klank@in.tum.de
+string command  # #define IDQUERY "idquery" #define NAMEQUERY "namequery"  #define FRAMEQUERY "framequery" #define DELETE "del" #define UPDATE "update"
+vision_msgs/partial_lo query
+-----------
+string error
+vision_msgs/partial_lo answer
