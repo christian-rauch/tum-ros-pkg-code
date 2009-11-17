@@ -1,0 +1,7 @@
+<package>
+<description>Intersect polygons</description>
+<author>Ulrich F Klank</author>
+<license>Unknown</license>
+<depend package="roscpp" />
+<depend package="vision_srvs" />
+</package>

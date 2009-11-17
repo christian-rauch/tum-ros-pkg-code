@@ -1,0 +1,10 @@
+Cognitive Perception
+Author: Ulrich Friedrich Klank <klank@in.tum.de>
+
+this module depends on HALCON
+
+HALCON is a commercial product of MVTec GmbH, Muenchen <www.mvtec.com>
+
+You can compile cop without halcon available by removing the C preprocessor
+definition HALCONIMG (see CMakeLists.txt) or you can get a testing or a
+research license from mvtec.com.
