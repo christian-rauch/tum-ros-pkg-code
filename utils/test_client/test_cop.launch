@@ -1,0 +1,12 @@
+
+<launch>
+  <node pkg="jlo" type="jlo" args="$(find test_client)/test_resource/lo-config.ini jlo"
+                  launch-prefix="$(find test_client)/exec_in_dir.sh $(find test_client)/test_out"
+                  output="screen"
+                  respawn="true" />
+  <node pkg="cop" type="cop_srv" args="$(find test_client)/test_resource/cop_configuration_dummycam.ini"
+                  launch-prefix="$(find test_client)/exec_in_dir.sh  $(find test_client)/test_out"
+                  output="screen"
+                  respawn="true" />
+  <node pkg="test_client" type="test_cop" respawn="false" output="screen" />
+</launch>
