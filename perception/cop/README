@@ -1,0 +1,136 @@
+Cognitive Perception
+Author: Ulrich Friedrich Klank <klank@in.tum.de>
+
+cop depends on lo, libxml2, dxflib, collada-dom, libwww and halconcpp
+
+HALCON(tm) is a commercial product of MVTec GmbH, Muenchen <www.mvtec.com>
+
+You can compile cop without halcon available by removing the C preprocessor
+definition HALCONIMG (see CMakeLists.txt) or you can get a testing or a
+research license from mvtec.com.
+
+cop_srv requires a xml-file that describes the current configuration.
+This xml file is structured as follows:
+<config>
+  <VisualFinder>
+  <!-- 
+  VisualFinder contains the list of locating algorithms that is stored in a
+  std::vector. A locating algorithm implements the interface LocateAlgorithm
+  Example:
+  -->
+    <std_vector>
+      <AlgorithmEval>
+        <ShapeBased3DAlg Greediness="0.800000" Levels="0" MinScore="0.600000"/>
+        <AlgType>1</AlgType>
+        <Eval>0.980000</Eval>
+        <AvgTime>0.200000</AvgTime>
+      </AlgorithmEval>
+    </std_vector>
+  </VisualFinder>
+  <VisLearner>
+  <!--   
+  VisualLearner contains the list of refining and proving algorithms that
+  are stored in std::vectors. They implement the interface RefineAlgorithm 
+  and ProveAlgorithm 
+  Example:
+  -->
+    <std_vector>
+      <AlgorithmEval>
+        <CheckColorClass mlpPath="./test_resource/"/>
+        <AlgType>1</AlgType>
+        <Eval>0.500000</Eval>
+        <AvgTime>0.0200</AvgTime>
+      </AlgorithmEval>
+    </std_vector>
+  </VisLearner>
+  <ImageInputSystem>
+  <!--
+  ImageInputSystem contains the list of cameras that can be used by the
+  algorithms. They implement the intefae Camera
+  Example:
+  -->
+    <std_vector>
+      <CameraDriver Bitsperchannel="-1"
+                    CalibFileName="stoc_calib_left_11062009.dat" 
+                    CamColor="0"
+                    CamPort="-1" 
+                    CameraType="0:3:4" 
+                    Colospace="default" 
+                    Device="default"
+                    Externaltrigger="default" 
+                    Field="default" Gain="-1" 
+                    GrabberName="1394IIDC"
+                    HasPTU="0" 
+                    Hresolution="1" 
+                    Linein="-1" 
+                    SetImageHeight="0" 
+                    SetImageWidth="0"
+                    Startcolumn="0" 
+                    Startrow="0" 
+                    Vresolution="1">
+	   <RelPose loid="19"/>
+      </CameraDriver>
+    </std_vector>
+  </ImageInputSystem>
+  <SignatureDB>
+    <!--
+  SignatureDB contains all known objects with their visual descriptors, this
+  defines a starting point and is normally extended automatically using
+  VisLearner
+  Example:
+  -->
+
+    <SigDBRoot>
+      <Signature ElemID="0">
+        <DescibingElems>
+          <ShapeModel DescriptorQuality="1.000000" ElemID="2" initLevel="1.000000">
+            <Class ClassName="Mug" ElemID="1"/>
+            <ShapeParamList>
+              <ShapeParamEntry>
+                <ShapeModelParamSet>
+                  <longMin>-0.300000</longMin>
+                  <longMax>0.300000</longMax>  
+                  <latMin>-0.300000</latMin>
+                  <latMax>0.300000</latMax>
+                  <crMin>-1.800000</crMin>
+                  <crMax>1.800000</crMax>
+                  <refrotX>0.000000</refrotX>
+                  <refrotY>0.000000</refrotY>
+                  <refrotZ>0.000000</refrotZ>
+                  <distMin>1.000000</distMin>
+                  <distMax>1.200000</distMax>
+                  <Measure>1.000000</Measure>
+                  <cam_scale>1.000000</cam_scale>
+                  <minContrast>10</minContrast> 
+                  <minFaceAngle>3.140000</minFaceAngle>
+                  <CalibMatrix>
+                    <CalibMatrix>
+                      <double>0.003163</double>
+                      <double>-499.940676</double>
+                      <double>0.000007</double>
+                      <double>0.000007</double>
+                      <double>275.068286</double>
+                      <double>228.307822</double>
+                    </CalibMatrix>
+                     <Width>640</Width>
+                    <Height>480</Height>
+                  </CalibMatrix>
+                  </ShapeModelParamSet>
+                  <std_string>mug_summer_school_rot.DXF</std_string>
+                  <int>1</int>
+               </ShapeParamEntry>
+            </ShapeParamList>
+         </ShapeModel>
+      </DescibingElems>
+      <Classes>
+        <Class ClassName="Mug" ElemID="1"/>
+      </Classes>
+    </Signature>
+  </SigDBRoot>
+ </SignatureDB>
+</config>
+
+
+This example makes it possible given a firewire camera with calibration file, the CAD model
+mug_summer_school_rot.DXF and a trained mlp to locate a mug and find out its
+color.
