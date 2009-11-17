@@ -1,0 +1,18 @@
+<package>
+  <description brief="Cram based kimp planner.">
+  </description>
+  <author>Piotr Esden-Tempski, Lorenz Moesenlechner</author>
+  <license>GPLv3</license>
+  <review status="unreviewed" notes=""/>
+  <rosdep name="sbcl"/>
+  <depend package="cram"/>
+  <depend package="ltk"/>
+  <depend package="vision_srvs"/>
+  <depend package="roslisp"/>
+  <depend package="clactionlib"/>
+  <depend package="cogman_msgs"/>
+  <depend package="alexandria"/>
+  <depend package="nav_pcontroller"/>
+</package>
+
+
