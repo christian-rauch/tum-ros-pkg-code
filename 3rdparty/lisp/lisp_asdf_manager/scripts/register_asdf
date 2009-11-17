@@ -1,0 +1,16 @@
+#!/bin/bash
+
+if [ -z "$2" ]; then
+    echo "Usage: $0 <Package> <relative asdf path>"
+    exit 1
+fi
+
+SOURCE_PATH=$(rospack find $1)/$2
+DESTINATION_PATH=$(rospack find lisp_asdf_manager)/asdf/$(basename $2)
+
+if [ -f ${SOURCE_PATH} ]; then
+    ln -s ${SOURCE_PATH} ${DESTINATION_PATH}
+else
+    echo "Error. Unable to find $1/$2"
+    exit 1
+fi

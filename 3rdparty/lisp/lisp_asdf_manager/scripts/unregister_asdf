@@ -1,0 +1,11 @@
+#!/bin/bash
+
+if [ -z "$1" ]; then
+    echo "Usage: $0 <asdf>"
+    exit 1
+fi
+
+ASDF_PATH=$(rospack find lisp_asdf_manager)/asdf/$1
+
+rm -f ${ASDF_PATH}
+
