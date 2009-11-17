@@ -1,0 +1,9 @@
+#goal definition
+std_msgs/UInt64 target_lo
+---
+#result definition
+std_msgs/Float32 distance
+---
+#feedback
+std_msgs/Float32 speed
+std_msgs/Float32 distance
