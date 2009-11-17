@@ -1,0 +1,8 @@
+#goal
+string command
+---
+#result
+string answer
+---
+#feedback
+string rightnow

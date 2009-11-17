@@ -1,0 +1,19 @@
+string command              # 'arm_cart_loid', 'arm_cart_pose', 'arm_cart_name', 'arm_joints', 'arm_joint_name', 'reach_primitive', 'hand_primitive', 'lift', 'put_down'
+string pose_name            # When moving to pre-defined poses, cointains the name
+float32[] joint_angles      # If command is 'arm_joints', the joint angles
+geometry_msgs/Pose end_effector_pose  # command=arm_cart_pose: where the arm should go
+uint64 end_effector_loid    # one lo_id where the arm should go
+string hand_primitive       # Allowed strings: open open_thumb90 3pinch 2pinch cup_top peace handshake noop. Used when command is 'finger_primitive'
+string object_type          # If command is 'reach_primitive', it will define how to grasp (orientation ...)
+uint64[] obstacle_ids       # List of lo_id's corresponding to obstacles
+float32 distance            # For reach_primitive: distance from grasp point to approach point (m). For 'lift', distance to lift up (m)
+float32 supporting_plane    # Height of the table (m)
+---
+#result
+float32 distance_to_goal
+string situation            #Allowed: grasped slipped released unreachable ik_deadlock need_to_move_base
+uint64[] better_base_ids    #List of lo_id's where we could grasp better
+---
+#feedback
+float32 distance_to_goal
+

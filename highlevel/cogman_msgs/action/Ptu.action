@@ -1,0 +1,8 @@
+#goal
+uint32 lo_id
+---
+#result
+string answer
+---
+#feedback
+string status
