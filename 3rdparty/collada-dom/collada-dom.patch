@@ -1,0 +1,25 @@
+diff -Naur collada-dom.orig/dom/make/dom.mk collada-dom/dom/make/dom.mk
+--- collada-dom.orig/dom/make/dom.mk	2008-10-09 13:01:48.000000000 +0200
++++ collada-dom/dom/make/dom.mk	2009-10-09 14:46:21.000000000 +0200
+@@ -109,9 +109,6 @@
+ endif
+ endif
+ 
+-ifeq ($(os),ps3)
+-# PS3 doesn't support C++ locales, so tell boost not to use them
+ ccFlags += -DBOOST_NO_STD_LOCALE -DNO_BOOST -DNO_ZAE
+-endif
+ 
+ include make/rules.mk
+diff -Naur collada-dom.orig/dom/Makefile collada-dom/dom/Makefile
+--- collada-dom.orig/dom/Makefile	2008-10-02 17:48:30.000000000 +0200
++++ collada-dom/dom/Makefile	2009-10-12 11:31:48.000000000 +0200
+@@ -92,7 +92,7 @@
+ $(error Invalid setting arch=$(arch))
+ endif
+ 
+-$(eval $(call setBuildVar,project,minizip dom domTest))
++$(eval $(call setBuildVar,project,minizip dom))
+ $(eval $(call setBuildVar,colladaVersion,1.4 1.5))
+ $(eval $(call setBuildVar,conf,debug release))
+ $(eval $(call setBuildVar,parser,libxml tinyxml))

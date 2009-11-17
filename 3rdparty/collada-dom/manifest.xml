@@ -1,0 +1,14 @@
+<package>
+  <description>
+  </description>
+  <author>   Copyright 2004-2008 Sony Computer Entertianment Inc. </author>
+  <license>  MIT License, refer to dom.txt in the "others" folder.  </license>
+<export>
+    <cpp cflags="-I${prefix}/build/collada-dom/dom/include/1.4
+                 -I${prefix}/build/collada-dom/dom/include/
+                 `rosboost-cfg --cflags`"
+         lflags="-L${prefix}/build/collada-dom/dom/build/linux-1.4
+                 -lcollada14dom `rosboost-cfg --lflags system`"/>
+</export>
+</package>
+
