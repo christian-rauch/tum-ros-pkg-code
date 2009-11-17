@@ -1,0 +1,12 @@
+<package>
+  <description brief="alexandria">
+      Alexandria
+      http://common-lisp.net/project/alexandria/
+  </description>
+  <license>Public domain</license>
+  <review status="unreviewed" notes=""/>
+
+  <depend package="lisp_asdf_manager"/>
+</package>
+
+
