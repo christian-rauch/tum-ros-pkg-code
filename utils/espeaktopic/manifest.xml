@@ -1,0 +1,11 @@
+<package>
+<description>Drive to a point in the map</description>
+<author>Ulrich F Klank</author>
+<license>Unknown</license>
+<depend package="roscpp" />
+<depend package="std_msgs" />
+<depend package="vision_msgs" />
+<depend package="nav_pcontroller" />
+<depend package="cogman_msgs" />
+
+</package>
