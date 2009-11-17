@@ -1,0 +1,35 @@
+digraph G {
+	waiting_for_goal_ack -> pending [label="pending"];
+	waiting_for_goal_ack -> active [label="active"];
+	waiting_for_goal_ack -> preempting [label="preempting"];
+	waiting_for_goal_ack -> waiting_for_result [label="rejected, recalled,\npreempted, succeeded,\naborted"];
+	pending -> pending [label="pending"];
+	pending -> active [label="active"];
+	pending -> preempting [label="preempting"];
+	pending -> waiting_for_result [label="rejected, recalled,\npreempted, succeeded,\naborted"];
+	active -> active [label="active"];
+	active -> preempting [label="preempting"];
+	active -> waiting_for_result [label="preempted, succeeded"];
+	waiting_for_result -> waiting_for_result [label="active, rejected,\nrecalled, preempted,\nsucceeded, aborted"];
+	waiting_for_cancel_ack -> recalling [label="recalling"];
+	waiting_for_cancel_ack -> preempting [label="preempting"];
+	waiting_for_cancel_ack -> waiting_for_result [label="pending, active"];
+	waiting_for_cancel_ack -> waiting_for_cancel_ack [label="rejected, recalled,\npreempted, succeeded,\naborted"];
+	recalling -> recalling [label="recalling"];
+	recalling -> preempting [label="preempting"];
+	recalling -> waiting_for_result [label="rejected, recalled,\npreempted, succeeded,\naborted"];
+	preempting -> preempting [label="preempting"];
+	preempting -> waiting_for_result [label="preempted, succeeded,\naborted"];
+	done -> done [label="rejected, recalled,\npreempted, succeeded,\naborted"];
+
+	waiting_for_goal_ack -> waiting_for_cancel_ack [label="cancel()",style=dotted];
+	pending -> waiting_for_cancel_ack [label="cancel()",style=dotted];
+	active -> waiting_for_cancel_ack [label="cancel()",style=dotted];
+
+	waiting_for_goal_ack -> done [label="result()",style=bold];
+	pending -> done [label="result()",style=bold];
+	active -> done [label="result()",style=bold];
+	waiting_for_result -> done [label="result()",style=bold];
+	recalling -> done [label="result()",style=bold];
+	preempting -> done [label="result()",style=bold];
+}

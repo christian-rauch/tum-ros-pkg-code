@@ -1,0 +1,14 @@
+<package>
+  <description brief="Common lisp actionlib.">
+  </description>
+  <author>Piotr Esden-Tempski</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <rosdep name="sbcl"/>
+  <depend package="roslisp"/>
+  <depend package="actionlib_msgs"/>
+  <depend package="portable_threads"/>
+  <depend package="trivial_garbage"/>
+</package>
+
+
