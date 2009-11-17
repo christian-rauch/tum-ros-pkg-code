@@ -1,0 +1,12 @@
+<package>
+  <description brief="portable-threads">
+      Portable-Threads
+      http://www.cliki.net/Portable-Threads
+  </description>
+  <license>Apache license</license>
+  <review status="unreviewed" notes=""/>
+
+  <depend package="lisp_asdf_manager"/>
+</package>
+
+
