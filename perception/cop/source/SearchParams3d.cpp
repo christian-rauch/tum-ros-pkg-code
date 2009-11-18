@@ -1,32 +1,33 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 #include "SearchParams3d.h"
 #include "Camera.h"
 #include "RegionOI.h"
 //#include "cpp/HObjectModel3D.h"
 //#include "cpp/HalconCpp.h"
+using namespace cop;
 
 
 using namespace Halcon;
 using namespace std;
 
-ReturnMatrix GetExtremePoses(const Matrix& cov)
+ReturnMatrix cop::GetExtremePoses(const Matrix& cov)
 {
   Matrix m(6, 12);
 
@@ -66,7 +67,8 @@ ReturnMatrix GetExtremePoses(const Matrix& cov)
   return m;
 }
 #ifdef HALCONIMG
-void GetVPFromPose(const HTuple& Pose, HTuple *ViewPoint, double *ObjGravPoint)
+
+void cop::GetVPFromPose(const HTuple& Pose, HTuple *ViewPoint, double *ObjGravPoint)
 {
   HTuple Hom, HomTrans,invHomTrans, camPose;
   try
@@ -95,7 +97,7 @@ void GetVPFromPose(const HTuple& Pose, HTuple *ViewPoint, double *ObjGravPoint)
   tuple_concat((const HTuple)*ViewPoint, (const HTuple)Rad, ViewPoint);
 }
 
-HTuple GetExtents(const Matrix& ExtremePosesTransp, const HTuple& MeanPose, double* gravPoint, Calibration* calib, RegionOI* &r)
+HTuple cop::GetExtents(const Matrix& ExtremePosesTransp, const HTuple& MeanPose, double* gravPoint, Calibration* calib, RegionOI* &r)
 {
   HTuple ViewPoint(3,0.0), SSpaceMax(3,0.0), SSpaceMin(3,0.0), Contrib(3,0.0), MeanVPoint(3,0.0);
   HTuple Row, Col, CamParam = calib->CamParam();

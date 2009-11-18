@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 /************************************************************************
                         TexturedModel.h - Copyright klank
 
@@ -26,85 +26,88 @@
 #define TEXTUREDMODEL_H
 
 #include "Descriptor.h"
-class XMLTag;
 
-
-#define XML_NODE_TEXMODEL "TextureModel"
-
-/**
-  * class TexturedModel
-  */
-
-class TexturedModel : public Descriptor
+namespace cop
 {
-public:
-
-  // Constructors/Destructors
-  //  
+  class XMLTag;
 
 
-	/**
-	* Empty Constructor
-	*/
-	TexturedModel ( Class* pClass);
-	TexturedModel ( XMLTag* tag);
+  #define XML_NODE_TEXMODEL "TextureModel"
 
-	/**
-	* Empty Destructor
-	*/
-	virtual ~TexturedModel ( );
+  /**
+    * class TexturedModel
+    */
 
-	// Static Public attributes
-	//  
+  class TexturedModel : public Descriptor
+  {
+  public:
 
-	// Public attributes
-	//  
+    // Constructors/Destructors
+    //
 
 
-	// Public attribute accessor methods
-	//  
-	virtual std::string GetNodeName() const{return XML_NODE_TEXMODEL;}
+    /**
+    * Empty Constructor
+    */
+    TexturedModel ( Class* pClass);
+    TexturedModel ( XMLTag* tag);
+
+    /**
+    * Empty Destructor
+    */
+    virtual ~TexturedModel ( );
+
+    // Static Public attributes
+    //
+
+    // Public attributes
+    //
 
 
-  // Public attribute accessor methods
-  //  
+    // Public attribute accessor methods
+    //
+    virtual std::string GetNodeName() const{return XML_NODE_TEXMODEL;}
 
 
-protected:
-
-  // Static Protected attributes
-  //  
-
-  // Protected attributes
-  //  
+    // Public attribute accessor methods
+    //
 
 
-  // Protected attribute accessor methods
-  //  
+  protected:
+
+    // Static Protected attributes
+    //
+
+    // Protected attributes
+    //
 
 
-  // Protected attribute accessor methods
-  //  
+    // Protected attribute accessor methods
+    //
 
 
-private:
-
-  // Static Private attributes
-  //  
-
-  // Private attributes
-  //  
+    // Protected attribute accessor methods
+    //
 
 
-  // Private attribute accessor methods
-  //  
+  private:
+
+    // Static Private attributes
+    //
+
+    // Private attributes
+    //
 
 
-  // Private attribute accessor methods
-  //  
+    // Private attribute accessor methods
+    //
+
+
+    // Private attribute accessor methods
+    //
 
 
 
-};
-
+  };
+}
 #endif // TEXTUREDMODEL_H

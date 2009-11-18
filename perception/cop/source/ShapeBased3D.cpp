@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 /************************************************************************
                         ShapeBased3D.cpp - Copyright klank
 
@@ -29,12 +29,13 @@
 #include "SupportingPlaneDetector.h"
 using namespace Halcon;
 #endif
-
 #include "ShapeModel.h"
 
 #define XML_ATTRIBUTE_MINSCORE "MinScore"
 #define XML_ATTRIBUTE_GREEDY   "Greediness"
 #define XML_ATTRIBUTE_LEVELS   "Levels"
+
+using namespace cop;
 
 
 
@@ -323,14 +324,19 @@ std::vector<RelPose*>  ShapeBased3D::PerformForAll(Image* img, RelPose* camPose,
   qualityMeasure = quality[index_best];
   return  result[index_best];
 }
-std::vector<RelPose*> ShapeBased3D::Perform(std::vector<Camera*> cam, RelPose* lastKnownPose_in, Signature& object, int &numOfObjects, double& qualityMeasure)
+std::vector<RelPose*> ShapeBased3D::Perform(std::vector<Sensor*> sensors, RelPose* lastKnownPose_in, Signature& object, int &numOfObjects, double& qualityMeasure)
 {
   std::vector<RelPose*> result;
-  if(cam.size() > 0)
+  printf("GetFirstCam");
+  Camera* cam = Camera::GetFirstCamera(sensors);
+#ifdef _DEBUG
+  printf("Got Camera: %s\n", cam != NULL ? cam->GetName().c_str() : "None");
+#endif // _DEBUG
+  if(cam != NULL)
   {
-    Calibration* calib = &(cam[0]->m_calibration);
-    Image* img = cam[0]->GetImage(-1);
-    RelPose* camPose = cam[0]->m_relPose;
+    Calibration* calib = &(cam->m_calibration);
+    Image* img = cam->GetImage(-1);
+    RelPose* camPose = img->GetPose();
     RelPose* lastKnownPose = RelPoseFactory::GetRelPose(lastKnownPose_in->m_uniqueID, camPose->m_uniqueID);
     if(object.CountElems() > 1)
     {
@@ -342,6 +348,11 @@ std::vector<RelPose*> ShapeBased3D::Perform(std::vector<Camera*> cam, RelPose* l
         result = Inner(img, camPose, calib, lastKnownPose,  object, numOfObjects, qualityMeasure);
     }
     RelPoseFactory::FreeRelPose(lastKnownPose);
+  }
+  else
+  {
+    numOfObjects = 0;
+    qualityMeasure = 0.0;
   }
   return result;
 }
@@ -538,7 +549,7 @@ std::vector<RelPose*> ShapeBased3D::Inner(Image* img, RelPose* camPose,Calibrati
   return result;
 }
 
-double ShapeBased3D::CheckSignature(Signature& object)
+double ShapeBased3D::CheckSignature(const Signature& object, const std::vector<Sensor*> &sensors)
 {
   //TODO
   printf("ShapeBased3D::CheckSignature: Obj %d, num elems %ld\n", object.m_ID, object.CountElems());

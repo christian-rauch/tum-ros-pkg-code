@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 /*********************************************************************
 *  Camera.cpp Copyright klank
 *********************************************************************/
@@ -50,6 +50,9 @@ typedef boost::detail::thread::lock_ops<boost::mutex> locker;
 #define BOOST(A) ;
 #endif
 
+using namespace cop;
+
+
 // Constructors/Destructors
 //
 
@@ -78,6 +81,22 @@ Camera* Camera::CamFactory(XMLTag* tag)
     return NULL;
 }
 
+Camera* Camera::GetFirstCamera(const std::vector<Sensor*> &sensors)
+{
+  printf("Enter (%ld sensors)\n", sensors.size());
+  for(std::vector<Sensor*>::const_iterator it = sensors.begin(); it != sensors.end(); it++)
+  {
+    printf("Checking %s for beeing Camera = %s\n", (*it)->GetName().c_str(), (*it)->IsCamera() ? "true" : "false");
+    if((*it)->IsCamera())
+    {
+      return (Camera*)(*it);
+    }
+  }
+  return NULL;
+}
+
+
+
 Calibration::~Calibration()
 {
 #ifdef HALCONIMG
@@ -90,7 +109,7 @@ Calibration::~Calibration()
 }
 
 #ifdef HALCONIMG
-HTuple Calibration::CamParam()
+HTuple Calibration::CamParam() const
 {
   if(m_radialDistortionHandling)
     return *m_camdist;
@@ -243,44 +262,14 @@ void Calibration::SaveTo(XMLTag* tag)
   tag->AddChild(XMLTag::Tag(m_height, XML_NODE_HEIGHT));
 }
 
-Camera::Camera() :
-#ifdef HALCONIMG
-      m_win(NULL),
-#endif
-     m_relPose(NULL),
-			m_FrameCount(0),
-			m_deletedOffset(0)
-	{};
 
 Camera::~Camera()
 {
-  for(std::vector<Image*>::iterator iter = m_images.begin(); iter != m_images.end(); iter++)
-  {
-    delete (*iter);
-  }
-  m_images.clear();
 #ifdef HALCONIMG
   delete m_win;
 #endif /*HALCONIMG*/
 }
 
-void Camera::PushBack(Image* img)
-{
-#ifdef BOOST_1_35
-  BOOST(m_mutexImageList.lock());
-#else
-  BOOST(locker::lock(m_mutexImageList));
-#endif
-
-  m_images.push_back(img);
-  m_FrameCount++;
-#ifdef BOOST_1_35
-  BOOST(m_mutexImageList.unlock());
-#else
-  BOOST(locker::unlock(m_mutexImageList));
-#endif
-
-}
 
 bool Camera::DeleteImg()
 {
@@ -321,28 +310,6 @@ bool Camera::DeleteImg()
 }
 
 
-Image* Camera::GetImage_Lock(size_t index)
-{
-#ifdef BOOST_1_35
-  BOOST(m_mutexImageList.lock());
-#else
-  BOOST(locker::lock(m_mutexImageList));
-#endif
-
-  if(index >= m_images.size())
-  {
-    printf("Camera skew asked %ldth frame which does not exist, will return %ld\n", index, m_images.size() - 1 );
-    index = m_images.size() -1;
-  }
-  m_images[index]->Hold();
-#ifdef BOOST_1_35
-  BOOST(m_mutexImageList.unlock());
-#else
-  BOOST(locker::unlock(m_mutexImageList));
-#endif
-
-  return m_images[index];
-}
 void Camera::ReadCamParam(std::string filename)
 {
 #ifdef HALCONIMG
@@ -362,19 +329,16 @@ void Camera::ReadCamParam(std::string filename)
 void Camera::SaveTo(XMLTag* tag)
 {
   m_calibration.SaveTo(tag);
-  if(m_relPose != NULL)
-    tag->AddChild(m_relPose->Save());
+  Sensor::SaveTo(tag);
 }
 
 
 Camera::Camera(XMLTag* tag) :
+  Sensor(RelPoseFactory::FRelPose(tag == NULL? NULL :tag->GetChild(XML_NODE_RELPOSE))),
   m_calibration(tag),
 #ifdef HALCONIMG
-  m_win(NULL),
+  m_win(NULL)
 #endif
-  m_relPose(RelPoseFactory::FRelPose(tag == NULL? NULL :tag->GetChild(XML_NODE_RELPOSE))),
-	m_FrameCount(0),
-  m_deletedOffset(0)
 {
   if(m_relPose== NULL)
     m_relPose = RelPoseFactory::FRelPoseWorld();

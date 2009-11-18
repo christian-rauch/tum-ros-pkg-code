@@ -1,25 +1,28 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 #include "RFAColorByShape.h"
 #include "ColorClass.h"
 /*#include "ShapeModel.h"*/
 #include "CheckColorClass.h"
+#include "Camera.h"
+
+using namespace cop;
 
 RFAColorByShape::RFAColorByShape(XMLTag* tag)
 {
@@ -34,19 +37,21 @@ RFAColorByShape::RFAColorByShape(CheckColorClass* checkColor) :
 {
 }
 
+
 RFAColorByShape::~RFAColorByShape(void)
 {
 }
 
-Descriptor* RFAColorByShape::Perform(std::vector<Camera*> cam, RelPose* pose, Signature& sig, int &numOfObjects, double& qualityMeasure)
+Descriptor* RFAColorByShape::Perform(std::vector<Sensor*> sensors, RelPose* pose, Signature& sig, int &numOfObjects, double& qualityMeasure)
 {
 	ColorClass* cm = NULL;
-	if(cam.size() > 0)
+	Camera* cam = Camera::GetFirstCamera(sensors);
+	if(cam != NULL)
 	{
-    if(cam[0]->CanSee(*pose))
+    if(cam->CanSee(*pose))
     {
-      Image* img = cam[0]->GetImage(-1);
-      RegionOI* region = ColorClass::GetRegion(pose, cam[0]->m_relPose->m_uniqueID, &(cam[0]->m_calibration));
+      Image* img = cam->GetImage(-1);
+      RegionOI* region = ColorClass::GetRegion(pose, cam->m_relPose->m_uniqueID, &(cam->m_calibration));
       std::string stColor;
 	  /*(Hobject *img, Hobject *region, std::string &color, double& qualityMeasure)*/
 #ifdef HALCONIMG
@@ -80,7 +85,7 @@ Descriptor* RFAColorByShape::Perform(std::vector<Camera*> cam, RelPose* pose, Si
 
 }
 
-double RFAColorByShape::CheckSignature(Signature& sig)
+double RFAColorByShape::CheckSignature(const Signature& sig, const  std::vector<Sensor*> &sens)
 {
 	return 1.0;
 }

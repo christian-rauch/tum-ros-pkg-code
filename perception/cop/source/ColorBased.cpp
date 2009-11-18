@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 /************************************************************************
                         ColorBased.cpp - Copyright klank
 
@@ -24,12 +24,16 @@
 #include "ColorBased.h"
 #include "ColorModel.h"
 #include "XMLTag.h"
+#include "Camera.h"
 #ifdef HALCONIMG
 #include "cpp/HalconCpp.h"
 #endif
+
+
+using namespace cop;
+
 // Constructors/Destructors
 //
-
 ColorBased::ColorBased ( ) :
   LocateAlgorithm()
 {
@@ -52,13 +56,14 @@ XMLTag* ColorBased::Save()
   return tag;
 }
 
-std::vector<RelPose*> ColorBased::Perform(std::vector<Camera*> cam, RelPose* , Signature& object, int &numOfObjects, double& qualityMeasure)
+std::vector<RelPose*> ColorBased::Perform(std::vector<Sensor*> sensors, RelPose* , Signature& object, int &numOfObjects, double& qualityMeasure)
 {
   std::vector<RelPose*> result;
-  if(cam.size() > 0)
+  Camera* cam = Camera::GetFirstCamera(sensors);
+  if(cam != NULL)
   {
-    Image* img = cam[0]->GetImage(-1);
-    RelPose* campose = cam[0]->m_relPose;
+    Image* img = cam->GetImage(-1);
+    RelPose* campose = cam->m_relPose;
 #ifdef HALCONIMG
     if(campose != NULL)
     {
@@ -139,9 +144,10 @@ std::vector<RelPose*> ColorBased::Perform(std::vector<Camera*> cam, RelPose* , S
   return result;
 }
 
-double ColorBased::CheckSignature(Signature& Object)
+
+double ColorBased::CheckSignature(const Signature& object, const std::vector<Sensor*> &sensors)
 {
-  if(Object.GetElement(0, DESCRIPTOR_COLOR) != NULL)
+  if(object.GetElement(0, DESCRIPTOR_COLOR) != NULL)
     return 1.0;
   else return 0.0;
 }

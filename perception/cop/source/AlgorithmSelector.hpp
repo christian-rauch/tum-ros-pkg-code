@@ -53,7 +53,7 @@ Algorithm<T>* AlgorithmSelector<T>::getAlgorithm(int index)
 
 
 template<typename T>
-Algorithm<T>* AlgorithmSelector<T>::BestAlgorithm(int type, Signature &sig)
+Algorithm<T>* AlgorithmSelector<T>::BestAlgorithm(int type, const Signature &sig, const std::vector<Sensor*> &sensors)
 {
   Algorithm<T>* selAlgorithm = NULL;
   double maxEval = -1.0;
@@ -64,7 +64,7 @@ Algorithm<T>* AlgorithmSelector<T>::BestAlgorithm(int type, Signature &sig)
   {
     if(CheckTypeCompatibility((*iter).m_algorithmType, type) && (*iter).m_eval >= maxEval)
     {
-      double sig_compatibility = (*iter).m_algorithm->CheckSignature(sig);
+      double sig_compatibility = (*iter).m_algorithm->CheckSignature(sig, sensors);
       if(sig_compatibility > 0.0)
       {
         maxEval = (*iter).m_eval * sig_compatibility;

@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 #include "SupportingPlaneDetector.h"
 #include "SupportingPlanerDescriptor.h"
 #include "FindCalTab.h"
@@ -28,6 +28,8 @@
 #include <tabletop_msgs/ObjectOnTable.h>
 #endif
 #include "ClusterDetector.h"
+using namespace cop;
+
 
 #ifdef SWISS_RANGER_SERVICE
 class PlaneClusterResult
@@ -178,12 +180,13 @@ bool GetPlane(RelPose* rel, RelPose*& pose_plane)
 }
 #endif /*SWISS_RANGER_SERVICE*/
 
-std::vector<RelPose*> SupportingPlaneDetector::Perform(std::vector<Camera*> cam, RelPose* pose, Signature& object, int &numOfObjects, double& qualityMeasure)
+std::vector<RelPose*> SupportingPlaneDetector::Perform(std::vector<Sensor*> sensors, RelPose* pose, Signature& object, int &numOfObjects, double& qualityMeasure)
 {
     std::vector<RelPose*> results;
-    Image* img = cam[0]->GetImage(-1);
-    Calibration* calib = &cam[0]->m_calibration;
-    results = Inner(img, cam[0]->m_relPose, calib, pose, object, numOfObjects, qualityMeasure, 0);
+    Camera* cam = Camera::GetFirstCamera(sensors);
+    Image* img = cam->GetImage(-1);
+    Calibration* calib = &cam->m_calibration;
+    results = Inner(img, cam->m_relPose, calib, pose, object, numOfObjects, qualityMeasure, 0);
     /*TODO plane clusters*/
     return results;
 }
@@ -234,7 +237,7 @@ std::vector<RelPose*> SupportingPlaneDetector::Inner(Image* img, RelPose* campos
   }
   return results;
 }
-double SupportingPlaneDetector::CheckSignature(Signature& object)
+double SupportingPlaneDetector::CheckSignature(const Signature& object, const std::vector<Sensor*> &sensors)
 {
     SupportingPlanerDescriptor* plane = (SupportingPlanerDescriptor*)object.GetElement(DESCRIPTOR_PLANE, 0);
     if(plane != NULL)
@@ -245,7 +248,7 @@ double SupportingPlaneDetector::CheckSignature(Signature& object)
   }
 }
 
-bool SupportingPlaneDetector::TrackingPossible(const Image& img, const Signature& sig, RelPose* pose)
+bool SupportingPlaneDetector::TrackingPossible(const Reading& img, const Signature& sig, RelPose* pose)
 {
     return false;
 }

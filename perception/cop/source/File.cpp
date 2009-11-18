@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 #include "File.h"
 
 #ifndef WIN32
@@ -108,55 +108,55 @@ void linfile::File::WriteInt(int nValue)
 {
 	sprintf_s(nextElem, LIN__BUFFERSIZE, "%d ", nValue);
 	int nLen = strlen(nextElem);
-	m_file.write(nextElem, nLen);	
+	m_file.write(nextElem, nLen);
 }
 
 void linfile::File::WriteSingleInt(int nValue)
 {
 	sprintf_s(nextElem, LIN__BUFFERSIZE, "%d", nValue);
 	int nLen = strlen(nextElem);
-	m_file.write(nextElem, nLen);	
+	m_file.write(nextElem, nLen);
 }
 
 void linfile::File::WriteIntAsHex(int nValue)
 {
 	sprintf_s(nextElem, LIN__BUFFERSIZE, "%X ", nValue);
 	int nLen = strlen(nextElem);
-	m_file.write(nextElem, nLen);	
+	m_file.write(nextElem, nLen);
 }
 
 void linfile::File::WriteSingleIntAsHex(int nValue)
 {
 	sprintf_s(nextElem, LIN__BUFFERSIZE, "%X", nValue);
 	int nLen = strlen(nextElem);
-	m_file.write(nextElem, nLen);	
+	m_file.write(nextElem, nLen);
 }
 
 void linfile::File::WriteDouble(const double dValue)
 {
 	sprintf_s(nextElem, LIN__BUFFERSIZE, "%f ", dValue);
 	int nLen = strlen(nextElem);
-	m_file.write(nextElem, nLen);	
+	m_file.write(nextElem, nLen);
 }
 
 void linfile::File::WriteSingleDouble(const double dValue)
 {
 	sprintf_s(nextElem, LIN__BUFFERSIZE, "%f", dValue);
 	int nLen = strlen(nextElem);
-	m_file.write(nextElem, nLen);	
+	m_file.write(nextElem, nLen);
 }
 
 void linfile::File::WriteDoubleLimLength(const double dValue, const int nDigits)
 {
 	sprintf_s(nextElem, LIN__BUFFERSIZE, "%.1f", dValue);
 	int nLen = strlen(nextElem);
-	m_file.write(nextElem, nLen);	
+	m_file.write(nextElem, nLen);
 }
 
 void linfile::File::WriteLine(const char* stLine)
 {
 	int nLen = strlen(stLine);
-	m_file.write(stLine, nLen);	
+	m_file.write(stLine, nLen);
 }
 
 void linfile::File::WriteVector(std::vector<int> viData)

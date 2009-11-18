@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 /************************************************************************
                         SimulatedCamera.cpp - Copyright klank
 
@@ -28,6 +28,8 @@
 #include "XMLTag.h"
 
 #define MAX_SIM_IMAGES 10
+using namespace cop;
+
 
 
 
@@ -176,11 +178,11 @@ Image* SimulatedCamera::ReadFromFile(std::string filename)
 //
 // Methods
 //
-Image* SimulatedCamera::GetImage(const long &Frame)
+Reading* SimulatedCamera::GetReading(const long &Frame)
 {
     if(Frame != -1 && m_FrameCount > Frame)
     {
-        return GetImage_Lock(Frame - m_deletedOffset);
+        return GetReading_Lock(Frame - m_deletedOffset);
     }
     else
     {
@@ -212,19 +214,18 @@ Image* SimulatedCamera::GetImage(const long &Frame)
       if(m_images.size() == 0)
           return NULL;
       nFrame = m_FrameCount < (signed long)m_images.size() ? m_FrameCount : 0;
-      return GetImage_Lock(nFrame - m_deletedOffset);
+      return GetReading_Lock(nFrame - m_deletedOffset);
     }
-        return GetImage_Lock(nFrame - m_deletedOffset);
+        return GetReading_Lock(nFrame - m_deletedOffset);
     }
 }
-bool SimulatedCamera::CanSee(RelPose &)
+
+bool SimulatedCamera::CanSee  (RelPose &) const
 {
     return true;
 }
-double  SimulatedCamera::LookAt(RelPose &)
-{
-    return 0.0;
-}
+
+
 
 bool	SimulatedCamera::Start()
 {

@@ -1,28 +1,31 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 #include "RelPoseFactory.h"
 #include "XMLTag.h"
 #define XML_PROPERTY_NUM "Num"
 
+using namespace cop;
+
 #ifdef NO_LO_SERVICE_AVAILABLE
 std::vector<RelPose*> RelPoseFactory::s_relPoses;
 #else  /*NO_LO_SERVICE_AVAILABLE*/
+Comm* RelPoseFactory::s_loService = NULL;
 #endif /*NO_LO_SERVICE_AVAILABLE*/
 
 RelPoseFactory::RelPoseFactory(void)
@@ -165,6 +168,18 @@ RelPose* RelPoseFactory::FRelPose(jlo::LocatedObject& pose)
   return new RelPose(pose);
 #endif /*NO_LO_SERVICE_AVAILABLE*/
 }
+
+RelPose* RelPoseFactory::FRelPoseIdentityChild(RelPose* parent)
+{
+#ifdef NO_LO_SERVICE_AVAILABLE
+  throw "Not yet implemented: FRelPoseIdentityChild";
+#else /*NO_LO_SERVICE_AVAILABLE*/
+  IdentityMatrix m(4);
+  Matrix cov(6,6);
+  return RelPoseFactory::FRelPose(parent, m, cov);
+#endif /*NO_LO_SERVICE_AVAILABLE*/
+}
+
 
 RelPose* RelPoseFactory::CloneRelPose(RelPose* pose)
 {

@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 #include "DxfWriter.h"
 
 dxfwriter::dxfwriter(std::string FileName) :
@@ -1468,7 +1468,7 @@ void dxfwriter::WriteGroupHex(int st, double value)
 	WriteLine("\n");
 }
 
-void dxfwriter::WriteSolid(double dx0, double dy0, double dz0, 
+void dxfwriter::WriteSolid(double dx0, double dy0, double dz0,
 						   double dx1, double dy1, double dz1,
 						   double dx2, double dy2, double dz2,
 						   double dx3, double dy3, double dz3)
@@ -1489,10 +1489,10 @@ void dxfwriter::WriteSolid(double dx0, double dy0, double dz0,
 	WriteGroup(13, dx3);
 	WriteGroup(23, dy3);
 	WriteGroup(33, dz3);
-	WriteLine("0\n");		
+	WriteLine("0\n");
 }
 
-void dxfwriter::WriteSolid(double dx0, double dy0, double dz0, 
+void dxfwriter::WriteSolid(double dx0, double dy0, double dz0,
 						   double dx1, double dy1, double dz1,
 						   double dx2, double dy2, double dz2)
 {
@@ -1512,7 +1512,7 @@ void dxfwriter::WriteSolid(double dx0, double dy0, double dz0,
 	WriteGroup(13, dx2);
 	WriteGroup(23, dy2);
 	WriteGroup(33, dz2);
-	WriteLine("0\n");		
+	WriteLine("0\n");
 }
 
 void dxfwriter::WriteBox(double offsetx, double offsety, double offsetz, double sizex, double sizey, double sizez)
@@ -1570,11 +1570,11 @@ void dxfwriter::WriteBox(double offsetx, double offsety, double offsetz, double 
 #define line(a,b) Write3dLINE(dx##a, dy##a, dz##a, dx##b, dy##b, dz##b)
 #define SOLID(a,b,c,e) WriteSolid(dx##a, dy##a, dz##a, dx##b, dy##b, dz##b,dx##c, dy##c, dz##c,dx##e, dy##e, dz##e)
 
-void dxfwriter::WriteBoxFromPoints(double dx0, double dy0, double dz0, 
+void dxfwriter::WriteBoxFromPoints(double dx0, double dy0, double dz0,
 						   double dx1, double dy1, double dz1,
 						   double dx2, double dy2, double dz2,
 						   double dx3, double dy3, double dz3,
-						   double dx4, double dy4, double dz4, 
+						   double dx4, double dy4, double dz4,
 						   double dx5, double dy5, double dz5,
 						   double dx6, double dy6, double dz6,
 						   double dx7, double dy7, double dz7)
@@ -1612,7 +1612,7 @@ void dxfwriter::WriteBoxFromPoints(double dx0, double dy0, double dz0,
 	line(7,3);
 }
 
-void dxfwriter::WriteCylinder(double centerx0, double centery0, double centerz0, 
+void dxfwriter::WriteCylinder(double centerx0, double centery0, double centerz0,
 						   double radius, double height, double angleX)
 {
 	int num_faces = 16;
@@ -1634,7 +1634,7 @@ void dxfwriter::WriteCylinder(double centerx0, double centery0, double centerz0,
 		dy3 += temp + height * cos(angleX);
 		dy1 -= temp ;
 		dy2 -= temp - height * cos(angleX);
-	
+
 		dz0 = dz1 = dz2 = dz3 = centerz0+ radius * sin(angle) * cos(angleX);
 		temp = facelength * cos(angle) * cos(angleX);
 		dz0 += temp ;

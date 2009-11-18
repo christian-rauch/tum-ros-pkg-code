@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 /************************************************************************
                         CombinedShapeDescr.cpp - Copyright klank
 
@@ -39,7 +39,7 @@ using namespace Halcon;
 
 
 // Constructors/Destructors
-//  
+//
 CombinedShapeDescr::CombinedShapeDescr () :
 	LocateAlgorithm(),
 	m_minScore(0.7),
@@ -117,7 +117,7 @@ void printPose(Halcon::HTuple refpos)
 	printf("%f %f %f // %f %f %f // %d\n", refpos[0].D(), refpos[1].D(), refpos[2].D(), refpos[3].D(), refpos[4].D(), refpos[5].D(), refpos[6].I());
 }
 
-CombinedShapeDescr::~CombinedShapeDescr ( ) 
+CombinedShapeDescr::~CombinedShapeDescr ( )
 {
 #ifdef HALCONIMG
 	delete m_paramList;
@@ -142,20 +142,20 @@ void GuidedPoseRestictionComb(Halcon::HTuple* paramList,Halcon::HTuple* paramNam
 	printPose(poseout);
 	double dlong = pm->m_longitudeMin * fraction;//model->GetShapeModel3dParams((*paramNameList)[0].S())[0].D() * fraction;
   double dlat = pm->m_latitudeMin * fraction;//model->GetShapeModel3dParams((*paramNameList)[2].S())[0].D() * fraction;
-	(*paramList)[0] = longitude - dlong;  /*long min*/	
-	(*paramList)[1] = longitude + dlong;	/*long max*/	
-	(*paramList)[2] = latitude - dlat;		 /*lat min*/		
-	(*paramList)[3] = latitude + dlat;		 /*lat max*/		
+	(*paramList)[0] = longitude - dlong;  /*long min*/
+	(*paramList)[1] = longitude + dlong;	/*long max*/
+	(*paramList)[2] = latitude - dlat;		 /*lat min*/
+	(*paramList)[3] = latitude + dlat;		 /*lat max*/
   (*paramList)[4] = pm->m_camRollMin * fraction;//model->GetShapeModel3dParams((*paramNameList)[4].S());		 /*cam roll min*/
   (*paramList)[5] = pm->m_camRollMax * fraction;//model->GetShapeModel3dParams((*paramNameList)[5].S());		 /*cam roll max*/
-  (*paramList)[6] = pm->m_distMin* fraction;//model->GetShapeModel3dParams((*paramNameList)[6].S());		 /*dist min*/	
-  (*paramList)[7] = pm->m_distMax* fraction;//model->GetShapeModel3dParams((*paramNameList)[7].S());		 /*dist max*/	
+  (*paramList)[6] = pm->m_distMin* fraction;//model->GetShapeModel3dParams((*paramNameList)[6].S());		 /*dist min*/
+  (*paramList)[7] = pm->m_distMax* fraction;//model->GetShapeModel3dParams((*paramNameList)[7].S());		 /*dist max*/
 }
-#endif 
-//  
+#endif
+//
 // Methods
-//  
-std::vector<RelPose*> CombinedShapeDescr::Perform(std::vector<Camera*> cam, RelPose* lastKnownPose, Signature& object, int &numOfObjects, double& qualityMeasure)
+//
+std::vector<RelPose*> CombinedShapeDescr::Perform(std::vector<Sensor*> sensors, RelPose* lastKnownPose, Signature& object, int &numOfObjects, double& qualityMeasure)
 {
 	std::vector<RelPose*> result;
 	if(cam.size() > 0)
@@ -183,11 +183,11 @@ std::vector<RelPose*> CombinedShapeDescr::Inner(Image* img, RelPose* camPose,Cal
 		int n = 3;
 		double Partly = 1.0 - (0.3* (n-1));
 		HTuple  ViewPose, pose, CovPose, Score;
-		
+
 		/*printf("Get Shape Model\n");*/
 		ShapeModel* sm = (ShapeModel*)(object.GetElement(0, DESCRIPTOR_SHAPE ));
     ShapeModelParamSet* pm =  sm->GetParamSet();
-    double scale = pm->m_scale;		
+    double scale = pm->m_scale;
 		/*printf("Start Shape model detection\n");*/
 		qualityMeasure = 0.0;
 		double minScore = m_minScore;
@@ -220,15 +220,15 @@ std::vector<RelPose*> CombinedShapeDescr::Inner(Image* img, RelPose* camPose,Cal
 			else
 			{
 			/* Restriction of Search array (TODO derive it from estimated position)*/
-				
-        (*m_paramList)[0] = pm->m_longitudeMin;/*(*m_paramList)[0] = model->GetShapeModel3dParams((*m_paramNameList)[0].S()) * Partly;/*long min*/	
-        (*m_paramList)[1] = pm->m_longitudeMax;/*model->GetShapeModel3dParams((*m_paramNameList)[1].S()) * Partly;		 /*long max*/	
-        (*m_paramList)[2] = pm->m_latitudeMin;/*model->GetShapeModel3dParams((*m_paramNameList)[2].S()) * Partly;		 /*lat min*/		
-        (*m_paramList)[3] = pm->m_latitudeMax;/*model->GetShapeModel3dParams((*m_paramNameList)[3].S()) * Partly;		 /*lat max*/		
+
+        (*m_paramList)[0] = pm->m_longitudeMin;/*(*m_paramList)[0] = model->GetShapeModel3dParams((*m_paramNameList)[0].S()) * Partly;/*long min*/
+        (*m_paramList)[1] = pm->m_longitudeMax;/*model->GetShapeModel3dParams((*m_paramNameList)[1].S()) * Partly;		 /*long max*/
+        (*m_paramList)[2] = pm->m_latitudeMin;/*model->GetShapeModel3dParams((*m_paramNameList)[2].S()) * Partly;		 /*lat min*/
+        (*m_paramList)[3] = pm->m_latitudeMax;/*model->GetShapeModel3dParams((*m_paramNameList)[3].S()) * Partly;		 /*lat max*/
         (*m_paramList)[4] = pm->m_camRollMin;/*model->GetShapeModel3dParams((*m_paramNameList)[4].S());		 /*cam roll min*/
         (*m_paramList)[5] = pm->m_camRollMax;/*model->GetShapeModel3dParams((*m_paramNameList)[5].S());		 /*cam roll max*/
-        (*m_paramList)[6] = pm->m_distMin;/*model->GetShapeModel3dParams((*m_paramNameList)[6].S());		 /*dist min*/	
-        (*m_paramList)[7] = pm->m_distMax;/*model->GetShapeModel3dParams((*m_paramNameList)[7].S());		 /*dist max*/	
+        (*m_paramList)[6] = pm->m_distMin;/*model->GetShapeModel3dParams((*m_paramNameList)[6].S());		 /*dist min*/
+        (*m_paramList)[7] = pm->m_distMax;/*model->GetShapeModel3dParams((*m_paramNameList)[7].S());		 /*dist max*/
 			}
 			printf("Parameter for detection (%f %%):\n%f %f // %f %f \n %f %f // %f %f\n", Partly * 100,
 /*long min*/																		  (*m_paramList)[0].D(),
@@ -262,7 +262,7 @@ std::vector<RelPose*> CombinedShapeDescr::Inner(Image* img, RelPose* camPose,Cal
 			{
 //#ifdef _DEBUG
 				printf("Find %d objects with max score %f\nPose: %f,%f,%f, // %f,%f,%f // %d\n", Score.Num(), Score[0].D(), pose[0].D(), pose[1].D(), pose[2].D(), pose[3].D(), pose[4].D(), pose[5].D(), pose[6].I());
-//#endif		
+//#endif
 				qualityMeasure = Score[0].D();
 				numOfObjects = Score.Num();
 				if(Score[0].D() > 0.85)
@@ -299,7 +299,7 @@ if(level > 2)
 	return result;
 }
 
-double CombinedShapeDescr::CheckSignature(Signature& object) 
+double CombinedShapeDescr::CheckSignature(Signature& object)
 {
 	if(object.GetElement(0,DESCRIPTOR_SHAPE) && object.GetElement(0,DESCRIPTOR_FEATURE))
 		return 1.0;
@@ -319,7 +319,7 @@ std::vector<RelPose*> CombinedShapeDescr::InnerDesc(Image* img,RelPose* camPose,
 		int n = 4;
 		double Partly = 1.0 - (0.3* (n-1));
 		HTuple empty;
-		HTuple  matches, 
+		HTuple  matches,
 				xDescriptorSource,yDescriptorSource,zDescriptorSource,
                 rowDescriptorTarget,colDescriptorTarget,
                 xFinalSource,yFinalSource,zFinalSource,

@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
   /************************************************************************
                         NetworkCamera.cpp - Copyright klank
 
@@ -67,9 +67,10 @@ extern volatile bool g_stopall;
 #define XML_ATTRIBUTE_EXTERNALTRIGGER "Externaltrigger"
 #define XML_ATTRIBUTE_LINEIN          "Linein"*/
 
+using namespace cop;
 
 NetworkCamera::NetworkCamera ( XMLTag* ConfigFile) :
-  Camera(),
+  Camera(ConfigFile),
   m_hasPTU(false),
   m_isSTOC(false),
 #ifdef PTU_USED
@@ -92,35 +93,6 @@ NetworkCamera::NetworkCamera ( XMLTag* ConfigFile) :
   {
     if(ConfigFile != NULL)
     {
-      try
-      {
-        XMLTag* tag = ConfigFile->GetChild(XML_NODE_RELPOSE);
-        if(tag != NULL)
-        {
-          m_relPose = RelPoseFactory::FRelPose(tag);
-          if(m_relPose != NULL)
-          {
-#ifdef _DEBUG
-          printf("  CD: Camera is localized at position %ld\n", m_relPose->m_uniqueID);
-#endif
-          }
-#ifdef _DEBUG
-          else
-            printf("  CD: Camera has no location\n");
-#endif
-        }
-        else
-        {
-#ifdef _DEBUG
-          printf("  CD: Camera has no location\n");
-#endif
-        }
-      }
-      catch(...)
-      {
-        printf("  CD: error Reading RelPose\n");
-      }
-
       m_stPortName = ConfigFile->GetProperty(XML_ATTRIBUTE_CAMERAPORTNAME, "/copCamera");
       std::string stFileName  = ConfigFile->GetProperty(XML_ATTRIBUTE_CALIBFILE);
       if(stFileName.length() > 0)
@@ -128,7 +100,6 @@ NetworkCamera::NetworkCamera ( XMLTag* ConfigFile) :
         ReadCamParam(stFileName);
       }
     }
-    Start();
   }
   catch(char const* text)
   {
@@ -300,7 +271,7 @@ NetworkCamera::~NetworkCamera ( )
 //
 // Methods
 //
-Image* NetworkCamera::GetImage(const long &Frame)
+Reading* NetworkCamera::GetReading(const long &Frame)
 {
   if((signed)m_images.size() < (Frame - m_deletedOffset + 1) || m_images.size() == 0)
   {
@@ -339,22 +310,13 @@ Image* NetworkCamera::GetImage(const long &Frame)
   }
   if(Frame == -1 || (Frame - m_deletedOffset < 0 && (unsigned)(Frame - m_deletedOffset) >= m_images.size()))
   {
-    return GetImage_Lock(m_images.size() -1);
+    return GetReading_Lock(m_images.size() -1);
     /*return m_images[m_images.size() -1];*/
   }
-  return GetImage_Lock(Frame - m_deletedOffset);
+  return GetReading_Lock(Frame - m_deletedOffset);
   /*return m_images[Frame - m_deletedOffset];*/
 }
 
-bool  NetworkCamera::CanSee(RelPose &pose)
-{
-  return true;
-}
-
-double  NetworkCamera::LookAt(RelPose &pose)
-{
-  return 0.0;
-}
 
 bool NetworkCamera::Start()
 {

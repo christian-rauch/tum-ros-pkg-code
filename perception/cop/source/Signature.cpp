@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
   /************************************************************************
                         Signature.cpp - Copyright klank
 
@@ -46,6 +46,8 @@ typedef boost::detail::thread::lock_ops<boost::mutex> locker;
 #else
 #define BOOST(A)
 #endif
+using namespace cop;
+
 
 // Constructors/Destructors
 //
@@ -278,13 +280,9 @@ void Signature::SaveTo(XMLTag* tag)
  * @param  index
  * @param  type
  */
-Elem* Signature::GetElement (int index, int type ) {
+ Elem* Signature::GetElement (const int &index, const int &type ) const
+ {
   Elem* elem = NULL;
-#ifdef BOOST_1_35
-  BOOST(m_mutexElems.lock());
-#else
-  BOOST(locker::lock(m_mutexElems));
-#endif
 
   if(type == 0)
   {
@@ -309,12 +307,6 @@ Elem* Signature::GetElement (int index, int type ) {
       }
     }
   }
-#ifdef BOOST_1_35
-  BOOST(m_mutexElems.unlock());
-#else
-  BOOST(locker::unlock(m_mutexElems));
-#endif
-
   return elem;
 }
 

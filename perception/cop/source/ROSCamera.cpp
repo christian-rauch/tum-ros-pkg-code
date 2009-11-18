@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 #include "ROSCamera.h"
 #include "XMLTag.h"
 
@@ -32,9 +32,10 @@
 
 #define XML_ATTRIBUTE_CALIBFILE       "CalibFileName"
 #define XML_ATTRIBUTE_TOPICNAME  "TopicName"
+using namespace cop;
 
 ROSCOPCamera::ROSCOPCamera ( XMLTag* ConfigFile) :
-  Camera(),
+  Camera(ConfigFile),
   m_grabbing(false)
 {
   printf("Creating a ROSCOPCAMERA\n");
@@ -76,7 +77,6 @@ ROSCOPCamera::ROSCOPCamera ( XMLTag* ConfigFile) :
       {
         ReadCamParam(m_stCalibName);
       }
-      Start();
     }
   }
   catch(char const* text)
@@ -125,7 +125,7 @@ bool ROSCOPCamera::Stop()
 //
 // Methods
 //
-Image* ROSCOPCamera::GetImage(const long &Frame)
+Reading* ROSCOPCamera::GetReading(const long &Frame)
 {
   printf("ROSCOPCamera::GetImage (Grabbing %s, Images %ld )\n", m_grabbing ? "true" : "false", m_images.size());
   if((signed)m_images.size() < (Frame - m_deletedOffset + 1) || m_images.size() == 0)
@@ -165,10 +165,10 @@ Image* ROSCOPCamera::GetImage(const long &Frame)
   }
   if(Frame == -1 || (Frame - m_deletedOffset < 0 && (unsigned)(Frame - m_deletedOffset) >= m_images.size()))
   {
-    return GetImage_Lock(m_images.size() -1);
+    return GetReading_Lock(m_images.size() -1);
     /*return m_images[m_images.size() -1];*/
   }
-  return GetImage_Lock(Frame - m_deletedOffset);
+  return GetReading_Lock(Frame - m_deletedOffset);
   /*return m_images[Frame - m_deletedOffset];*/
 }
 

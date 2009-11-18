@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 /************************************************************************
                         VisLearner.cpp - Copyright klank
 
@@ -37,6 +37,9 @@ extern volatile bool g_stopall;
 
 #define XML_NODE_REFINEMENTALGORITHMS "RefineAlgs"
 #define XML_NODE_PROVINGALGORITHMS "ProveAlgs"
+
+using namespace cop;
+
 
 bool VisLearner::s_Learning = false;
 bool VisLearner::s_Running = true;
@@ -87,6 +90,7 @@ VisLearner::~VisLearner ( )
 //
  void VisLearner::threadfunc()
 {
+	std::vector<Sensor*> cam = m_imageSys.GetAllSensors();
 
 	while(VisLearner::s_Running && !g_stopall)
 	{
@@ -96,13 +100,12 @@ VisLearner::~VisLearner ( )
 			s_Learning = true;
 			TaskID type = m_taskList[0].first;
 			Signature* sig = m_taskList[0].second;
-			std::vector<Camera*> cam;
 			int numOfObjects = 1;
 			double qualityMeasure = 0.0;
 #ifdef _DEBUG
 			printf("New Learning Task\n");
 #endif /*_DEBUG*/
-			RefineAlgorithm* refalg = (RefineAlgorithm*)m_refinements.BestAlgorithm(type, *sig);
+			RefineAlgorithm* refalg = (RefineAlgorithm*)m_refinements.BestAlgorithm(type, *sig, cam);
 
 			if(refalg != NULL)
 			{
@@ -119,7 +122,7 @@ VisLearner::~VisLearner ( )
             }
 			else
 			{
-				ProveAlgorithm* provalg = (ProveAlgorithm*)m_checks.BestAlgorithm(type, *sig);
+				ProveAlgorithm* provalg = (ProveAlgorithm*)m_checks.BestAlgorithm(type, *sig, cam);
 				if(provalg != NULL)
 				{
           printf("Alg selected: %s\n", refalg->GetName().c_str());
@@ -192,37 +195,28 @@ SignatureLocations_t VisLearner::RefineObject (PossibleLocations_t* lastKnownPos
 {
   SignatureLocations_t ret_vec;
   TaskID type = 0x100;
-  RefineAlgorithm* refalg = (RefineAlgorithm*)m_refinements.BestAlgorithm(type, sig);
   PossibleLocations_t::const_iterator it = (*lastKnownPoses).begin();
+  std::vector<Sensor*> sensors;
   for(;it!=(*lastKnownPoses).end(); it++)
   {
     RelPose* lastKnownPose = (*it).first;
-    std::vector<Camera*> cameras;
-    unsigned int nCamera;
     try
     {
-      int offset = 0;
-      while(true)
-      {
-          Camera* cam = m_imageSys.GetBestCamera(*lastKnownPose, nCamera, offset);
-          if(cam == NULL)
-              break;
-          cameras.push_back(cam);
-          offset++;
-      }
+      sensors = m_imageSys.GetBestSensor(*lastKnownPose);
     }
     catch(const char* text)
     {
       printf ("Error selecting a camera: %s\n", text);
       continue;
     }
+    RefineAlgorithm* refalg = (RefineAlgorithm*)m_refinements.BestAlgorithm(type, sig, sensors);
     if(refalg != NULL)
     {
         printf("Alg selected: %s\n", refalg->GetName().c_str());
         try
         {
           double qualityMeasure;
-          Descriptor* d = refalg->Perform(cameras, lastKnownPose, sig, numOfObjects, qualityMeasure);
+          Descriptor* d = refalg->Perform(sensors, lastKnownPose, sig, numOfObjects, qualityMeasure);
           sig.SetElem(d);
           lastKnownPose->m_qualityMeasure = qualityMeasure;
           ret_vec.push_back(std::pair<RelPose*, Signature*>(lastKnownPose, &sig));
@@ -234,14 +228,14 @@ SignatureLocations_t VisLearner::RefineObject (PossibleLocations_t* lastKnownPos
     }
     else
     {
-      ProveAlgorithm* provalg = (ProveAlgorithm*)m_checks.BestAlgorithm(type, sig);
+      ProveAlgorithm* provalg = (ProveAlgorithm*)m_checks.BestAlgorithm(type, sig, sensors);
       if(provalg != NULL)
       {
         printf("Alg selected: %s\n", refalg->GetName().c_str());
         try
         {
           double qualityMeasure;
-          double d = provalg->Perform(cameras, lastKnownPose, sig, numOfObjects, qualityMeasure);
+          double d = provalg->Perform(sensors, lastKnownPose, sig, numOfObjects, qualityMeasure);
   #ifdef _DEBUG
           printf("Evaluation results in: %f\n", d);
   #endif /*_DEBUG*/

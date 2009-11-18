@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 #include "BlobLocalizer.h"
 #include "Blob.h"
 #include "XMLTag.h"
@@ -23,6 +23,9 @@
 #ifdef HALCONIMG
 #include <cpp/HalconCpp.h>
 #endif
+
+using namespace cop;
+
 
 
 BlobLocalizer::BlobLocalizer()
@@ -137,21 +140,22 @@ XMLTag* BlobLocalizer::Save()
 {
   return new XMLTag(XML_NODE_BLOBLOCALIZER);
 }
-std::vector<RelPose*> BlobLocalizer::Perform(std::vector<Camera*> cam, RelPose* lastKnownPose, Signature& object, int &numOfObjects, double& qualityMeasure)
+std::vector<RelPose*> BlobLocalizer::Perform(std::vector<Sensor*> sensors, RelPose* lastKnownPose, Signature& object, int &numOfObjects, double& qualityMeasure)
 {
   std::vector<RelPose*> result;
-  if(cam.size() > 0)
+  Camera* cam = Camera::GetFirstCamera(sensors);
+  if(cam != NULL)
   {
-    Calibration* calib = &(cam[0]->m_calibration);
-    Image* img = cam[0]->GetImage(-1);
-    RelPose* camPose = cam[0]->m_relPose;
+    Calibration* calib = &(cam->m_calibration);
+    Image* img = cam->GetImage(-1);
+     RelPose* camPose = img->GetPose();
         if(img != NULL && camPose != NULL)
         result = Inner(img, camPose, calib, lastKnownPose,  object, numOfObjects, qualityMeasure);
   }
   return result;
 }
 
-double BlobLocalizer::CheckSignature(Signature& object)
+double BlobLocalizer::CheckSignature(const Signature& object, const std::vector<Sensor*> &sensors)
 {
   if(object.GetElement(0,DESCRIPTOR_BLOB) != NULL)
     return 1.0;

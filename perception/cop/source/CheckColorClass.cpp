@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 #include "CheckColorClass.h"
 #include "ColorClass.h"
 
@@ -29,6 +29,9 @@
 
 Halcon::HTuple Colors;
 #include <cpp/HalconCpp.h>
+
+
+using namespace cop;
 
 // Procedure declarations
 // Local procedures
@@ -156,7 +159,7 @@ void CheckColorClass::Inner(Hobject *img, Hobject *region, std::string &color, d
 #endif
 // Public attribute accessor methods
 //
-std::vector<RelPose*> CheckColorClass::Perform(std::vector<Camera*> cam, RelPose* pose, Signature& object, int &numOfObjects, double& qualityMeasure)
+std::vector<RelPose*> CheckColorClass::Perform(std::vector<Sensor*> sensors, RelPose* pose, Signature& object, int &numOfObjects, double& qualityMeasure)
 {
 #ifdef HALCONIMG
   int i = 0;
@@ -164,6 +167,7 @@ std::vector<RelPose*> CheckColorClass::Perform(std::vector<Camera*> cam, RelPose
   std::vector<RelPose*> results;
   numOfObjects = 0;
   qualityMeasure = 0;
+  Camera* cam = Camera::GetFirstCamera(sensors);
   while (true)
   {
     Elem *cl = object.GetElement(i++,DESCRIPTOR_COLORCLASS);
@@ -174,12 +178,12 @@ std::vector<RelPose*> CheckColorClass::Perform(std::vector<Camera*> cam, RelPose
     else
       break;
   }
-  if(possibleColors.size() > 0 && cam.size() > 0)
+  if(possibleColors.size() > 0 && cam != NULL)
   {
     Halcon::HTuple Color;
     Halcon::HTuple Score;
-    Image* img = cam[0]->GetImage(-1);
-    RegionOI* region = ColorClass::GetRegion(pose, cam[0]->m_relPose->m_uniqueID, &(cam[0]->m_calibration));
+    Image* img = cam->GetImage(-1);
+    RegionOI* region = ColorClass::GetRegion(pose, cam->m_relPose->m_uniqueID, &(cam->m_calibration));
     if(img != NULL && region != NULL && img->GetType() == HALCONIMAGE)
     {
       Halcon::Hobject* obj = img->GetHImage();
@@ -211,7 +215,7 @@ std::vector<RelPose*> CheckColorClass::Perform(std::vector<Camera*> cam, RelPose
 #endif
 }
 
-double CheckColorClass::CheckSignature(Signature& object)
+double CheckColorClass::CheckSignature(const Signature& object, const std::vector<Sensor*> &sensors)
 {
     if(object.GetElement(0,DESCRIPTOR_COLORCLASS) != NULL)
       return 1.0;

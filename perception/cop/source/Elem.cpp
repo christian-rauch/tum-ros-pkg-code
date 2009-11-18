@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 /************************************************************************
                         Elem.cpp - Copyright klank
 
@@ -43,6 +43,12 @@
 #include "ColorClass.h"
 #include "SupportingPlanerDescriptor.h"
 #include <time.h>
+
+
+#include <pluginlib/class_loader.h>
+
+using namespace cop;
+
 
 int Elem::m_LastID = 0;
 
@@ -155,7 +161,24 @@ Elem* Elem::ElemFactory ( XMLTag* tag)
         elem = new DeformShapeModel(tag);
     }
 #endif
-    return elem;
+    else
+    {
+
+      pluginlib::ClassLoader<Elem> alg_loader("cop", "Elem");
+
+      try
+      {
+        elem = alg_loader.createClassInstance(name);
+        elem->SetData(tag);
+      }
+      catch(pluginlib::PluginlibException& ex)
+      {
+      //handle the class failing to load
+        printf("The plugin failed to load for some reason. Error: %s", ex.what());
+      }
+
+      }
+      return elem;
 }
 
 Elem* Elem::Duplicate(bool bStaticCopy)

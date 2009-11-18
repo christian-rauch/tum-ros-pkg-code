@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 #ifndef USE_YARP_COMM
 
 
@@ -35,6 +35,7 @@ boost::mutex s_mutexAnswer;
 #else
 #define BOOST (A) ;
 #endif
+using namespace cop;
 
 typedef double Probability_1D_t;
 
@@ -136,7 +137,6 @@ void ROSComm::threadfunc()
         try
         {
           const SignatureLocations_t &new_location = m_visFinder.m_visLearner.RefineObject(m_pose, m_sig, m_numOfObjects);
-          BOOST(s_mutexAnswer.lock());
           if(m_numOfObjects > 0 && new_location.size() > 0)
           {
                   PutPoseIntoAMessage(answer, new_location);
@@ -145,13 +145,14 @@ void ROSComm::threadfunc()
           {
             answer.error = "No Object Found!";
           }
+          BOOST(s_mutexAnswer.lock());
           m_publisher->publish(answer);
           BOOST(s_mutexAnswer.unlock());
         }
         catch(...)
         {
-          BOOST(s_mutexAnswer.lock());
           answer.error = "Locate failed";
+          BOOST(s_mutexAnswer.lock());
           m_publisher->publish(answer);
           BOOST(s_mutexAnswer.unlock());
         }
@@ -176,7 +177,6 @@ void ROSComm::threadfunc()
         try
         {
           const SignatureLocations_t &new_location = m_visFinder.Locate(m_pose, m_sig, m_numOfObjects);
-        BOOST(s_mutexAnswer.lock());
           if(m_numOfObjects > 0 && new_location.size() > 0)
           {
                   PutPoseIntoAMessage(answer, new_location);
@@ -185,33 +185,23 @@ void ROSComm::threadfunc()
           {
             answer.error = "No Object Found!";
           }
+          BOOST(s_mutexAnswer.lock());
           m_publisher->publish(answer);
           BOOST(s_mutexAnswer.unlock());
-
-#ifdef WIN32
-          BOOST(boost::system_time t);
-
-          BOOST(t = get_system_time());
-          t +=  boost::posix_time::seconds(1);  //TODO Check
-
-          boost::thread::sleep(t);
-          delete m_visFinder.m_imageSys.GetCamara(0)->m_win;
-          m_visFinder.m_imageSys.GetCamara(0)->m_win = NULL;
-#endif
         }
         catch(char const* text)
         {
           printf("Locate called by ros failed: %s\n", text);
-          BOOST(s_mutexAnswer.lock());
           answer.error = "Locate failed";
+          BOOST(s_mutexAnswer.lock());
           m_publisher->publish(answer);
           BOOST(s_mutexAnswer.unlock());
           return;
         }
         catch(...)
         {
-          BOOST(s_mutexAnswer.lock());
           answer.error = "Locate failed";
+          BOOST(s_mutexAnswer.lock());
           m_publisher->publish(answer);
           BOOST(s_mutexAnswer.unlock());
          break;
@@ -220,8 +210,8 @@ void ROSComm::threadfunc()
       }
       break;
     default:
-          BOOST(s_mutexAnswer.lock());
           answer.error = "Locate failed";
+          BOOST(s_mutexAnswer.lock());
           m_publisher->publish(answer);
           BOOST(s_mutexAnswer.unlock());
        bFinished = true;
@@ -361,7 +351,7 @@ bool ROSTopicManager::ListenCallBack(cop_call::Request& msg, cop_call::Response&
   if(m_openTopics.find(topicname) == m_openTopics.end())
   {
     ros::NodeHandle n;
-    printf("Publisher pub = n.advertise<ccop_answer>(%s, 1000)\n", topicname.c_str());
+    printf("Publisher pub = n.advertise<cop_answer>(%s, 1000)\n", topicname.c_str());
     ros::Publisher* pub= new ros::Publisher();
     *pub = n.advertise<cop_answer>(topicname, 5);
 /*     ros::Rate r(1);
@@ -386,11 +376,8 @@ void ROSTopicManager::Listen(std::string name, volatile bool &g_stopall, ros::No
    */
   /*ros::Publisher pub = n.advertise<cop_call>(name, 1000);*/
 
-#ifdef ROS_ACTIONLIB
-#else
   printf("advertiseService<cop_call> (%s, ...)\n", name.c_str());
   ros::ServiceServer srv = node->advertiseService("/tracking/in", &ROSTopicManager::ListenCallBack, this);
-#endif
   /*ros::Subscriber sub2 = n.subscribe<cop_call>(name, 1000, &ROSTopicManager::ListenCallBack, this_p);
   printf("Topic check: %s\n", sub2.getTopic().c_str());*/
   /**

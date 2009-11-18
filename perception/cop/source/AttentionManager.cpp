@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 /************************************************************************
                         AttentionManager.cpp - Copyright klank
 
@@ -30,14 +30,14 @@
 #include "boost/bind.hpp"
 #define BOOST(A) A
 #else
-#define BOOST(A) 
+#define BOOST(A)
 #endif
 
 #define XML_PROPERTY_ATTENDING "IsAttending"
-
+using namespace cop;
 extern volatile bool g_stopall;
 // Constructors/Destructors
-//  
+//
 
 AttentionManager::AttentionManager ( XMLTag* /*config*/ , ImageInputSystem& imginsys
 #ifdef LOGFILE
@@ -59,7 +59,7 @@ AttentionManager::AttentionManager ( XMLTag* /*config*/ , ImageInputSystem& imgi
 
 }
 
-AttentionManager::~AttentionManager ( ) 
+AttentionManager::~AttentionManager ( )
 {
 	m_Attending = false;
 #ifdef BOOST_THREAD
@@ -70,23 +70,23 @@ AttentionManager::~AttentionManager ( )
 #endif
 }
 
-//  
+//
 // Methods
-//  
+//
 
 
 // Accessor methods
-//  
+//
 
 
 // Other methods
-//  
+//
 void AttentionManager::threadfunc()
 {
 	while(m_Attending && !g_stopall)
 	{
 		{
-			Camera* cam = m_imginsys.GetCamara(0);
+/*			Camera* cam = m_imginsys.GetBestSensor();
 			if(cam != NULL)
 			{
 				Image* img = cam->GetImage(-1);
@@ -94,16 +94,16 @@ void AttentionManager::threadfunc()
 				{
 					img->Free();
 				}
-			}
+			}*/
 #ifdef BOOST_THREAD
 			//printf("Learning Thread Sleeps \n\n\n");
-#ifdef BOOST_1_35 
+#ifdef BOOST_1_35
                       BOOST(boost::system_time t);
 #else
                       boost::xtime t;
 #endif
 
-#ifdef BOOST_1_35 
+#ifdef BOOST_1_35
                      BOOST(t = get_system_time());
                      BOOST(t += boost::posix_time::seconds(10));
 #else
@@ -124,7 +124,7 @@ void AttentionManager::threadfunc()
  * @param  RoISize
  * @param  eval
  */
-void AttentionManager::SetDistractionPoint (RelPose /*pose*/, double /*RoISize*/, double /*eval*/ ) 
+void AttentionManager::SetDistractionPoint (RelPose /*pose*/, double /*RoISize*/, double /*eval*/ )
 {
 
 }

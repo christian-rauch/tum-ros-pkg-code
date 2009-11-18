@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 /************************************************************************
                         RelPose.h - Copyright klank
 
@@ -43,48 +43,48 @@
 #ifdef HALCONIMG
 #include <cpp/HalconCpp.h>
 #endif
-
-class XMLTag;
-/**
-*   class RelPose
-*   @brief Specialization of jlo::LocatedObject, manages a list of such objects
-*/
-class RelPose : public jlo::LocatedObject
+namespace cop
 {
-public:
-  ~RelPose(){}
+  class XMLTag;
   /**
-  *     Constructor for a Locate Object Reference (see lo, jlo)
-  *       Construction should be done using the static functions of RelPoseFactory
+  *   class RelPose
+  *   @brief Specialization of jlo::LocatedObject, manages a list of such objects
   */
-  RelPose(jlo::LazyLocatedObjectLoader* loader, int id, int parentID, Matrix m, Matrix cov);
+  class RelPose : public jlo::LocatedObject
+  {
+  public:
+    ~RelPose(){}
+    /**
+    *     Constructor for a Locate Object Reference (see lo, jlo)
+    *       Construction should be done using the static functions of RelPoseFactory
+    */
+    RelPose(jlo::LazyLocatedObjectLoader* loader, int id, int parentID, Matrix m, Matrix cov);
 
-   /** Temporary variable for holding the algorithmic success used to generate this lo*/
-   double m_qualityMeasure;
+     /** Temporary variable for holding the algorithmic success used to generate this lo*/
+     double m_qualityMeasure;
 
-private:
-  RelPose(jlo::LazyLocatedObjectLoader* );
-  RelPose(jlo::LocatedObject& pose);
-  RelPose(RelPose* pose, Matrix m, Matrix cov);
-  RelPose(jlo::LocatedObject* pose, Matrix m, Matrix cov);
-#ifdef HALCONIMG
-  RelPose(Halcon::HTuple& poseDesc, Halcon::HTuple& covariance, RelPose* relation);
-  void Update(Halcon::HTuple& poseDesc, Halcon::HTuple& covariance, RelPose* relation);
-public:
-   static bool TupleToMat(Halcon::HTuple& poseDesc, Halcon::HTuple&  covariance, Matrix &m, Matrix &d);
-  void GetPose(Halcon::HTuple* pose, int poseRel = 0);
-  void GetHommat(Halcon::HTuple* hommat, int poseRel) ;
-#ifdef _DEBUG
-  void Print();
-#endif
-#endif
-public:
-  XMLTag* SaveComplete() ;
-/*	void TransformPointLocally(const double& x_in, const double& y_in, const double& z_in, double& x_out, double& y_out, double& z_out, const double& scale);*/
-  XMLTag* Save() ;
-private:
-  friend class RelPoseFactory;
-};
-
-
+  private:
+    RelPose(jlo::LazyLocatedObjectLoader* );
+    RelPose(jlo::LocatedObject& pose);
+    RelPose(RelPose* pose, Matrix m, Matrix cov);
+    RelPose(jlo::LocatedObject* pose, Matrix m, Matrix cov);
+  #ifdef HALCONIMG
+    RelPose(Halcon::HTuple& poseDesc, Halcon::HTuple& covariance, RelPose* relation);
+    void Update(Halcon::HTuple& poseDesc, Halcon::HTuple& covariance, RelPose* relation);
+  public:
+     static bool TupleToMat(Halcon::HTuple& poseDesc, Halcon::HTuple&  covariance, Matrix &m, Matrix &d);
+    void GetPose(Halcon::HTuple* pose, int poseRel = 0);
+    void GetHommat(Halcon::HTuple* hommat, int poseRel) ;
+  #ifdef _DEBUG
+    void Print();
+  #endif
+  #endif
+  public:
+    XMLTag* SaveComplete() ;
+  /*	void TransformPointLocally(const double& x_in, const double& y_in, const double& z_in, double& x_out, double& y_out, double& z_out, const double& scale);*/
+    XMLTag* Save() ;
+  private:
+    friend class RelPoseFactory;
+  };
+}
 #endif // RELPOSE_H

@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 #include "ColorModel.h"
 #include "XMLTag.h"
 #include "ShapeModel.h"
@@ -27,6 +27,9 @@
 #define XML_NODE_PATCHSIZE "PatchSize"
 #define XML_NODE_COLORSPEC "ColorSpec"
 
+
+using namespace cop;
+
 ColorModel::ColorModel(XMLTag* tag)
 	: Descriptor(tag)
 {
@@ -37,7 +40,7 @@ ColorModel::ColorModel(XMLTag* tag)
 			m_patchSize = tag->Load(patchSize,&m_patchSize) ;
 		XMLTag* colorspec = tag->GetChild(XML_NODE_COLORSPEC);
 		if(colorspec != NULL)
-			m_colorSpec = tag->Load(colorspec,&m_colorSpec) ;		
+			m_colorSpec = tag->Load(colorspec,&m_colorSpec) ;
 	}
 }
 
@@ -45,7 +48,7 @@ ColorModel::ColorModel(Class* classref, Signature* sig)
 : Descriptor(classref)
 {
 	ShapeModel* sm = (ShapeModel*)sig->GetElement(0, DESCRIPTOR_SHAPE);
-	Image* img = sm->GetLastMatchedImage();
+	Image* img = (Image*)sm->GetLastMatchedImage();
 #ifdef HALCONIMG
 	try
 	{
@@ -102,7 +105,7 @@ void ColorModel::SaveTo(XMLTag* tag)
 
 double ColorModel::Compare(std::vector<double> vec)
 {
-	size_t length = m_colorSpec.size() > vec.size() ? vec.size() : m_colorSpec.size(); 
+	size_t length = m_colorSpec.size() > vec.size() ? vec.size() : m_colorSpec.size();
 	double d = 0.0;
 	for(unsigned int i = 0; i < length; i++)
 	{

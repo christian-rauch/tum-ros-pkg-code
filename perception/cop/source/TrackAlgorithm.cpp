@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 /************************************************************************
                         TrackAlgorithm.cpp - Copyright klank
 
@@ -35,13 +35,17 @@ extern volatile bool g_stopall;
 #else
 #define BOOST(A)
 #endif
+
+using namespace cop;
+
+
 // Constructors/Destructors
 //
 
 TrackAlgorithm::TrackAlgorithm (Signature& sig, Algorithm<std::vector<RelPose*> > *alg,
-                                ImageInputSystem& imageSys) :
-  m_alg(alg),
+                               ImageInputSystem& imageSys) :
     m_Running(true),
+    m_alg(alg),
     m_curObject(sig),
     m_imageSys( imageSys)
 {
@@ -90,23 +94,10 @@ TrackAlgorithm::~TrackAlgorithm ( )
 #endif
 #endif
     RelPose* lastKnownPose = m_curObject.m_relPose;
-    std::vector<Camera*> cameras;
-    unsigned int nCamera;
     int numOfObjects = 1;
     try
     {
-      int offset = 0;
-      while(true)
-      {
-        Camera* cam = m_imageSys.GetBestCamera(*lastKnownPose, nCamera, offset);
-#ifdef _DEBUG
-        printf("Check Camera %d (%p)\n", offset, cam);
-#endif
-        if(cam == NULL)
-          break;
-        cameras.push_back(cam);
-        offset++;
-      }
+      std::vector<Sensor*> sensors = m_imageSys.GetBestSensor(*lastKnownPose);
 #ifdef _DEBUG
       printf("Algorithm for track: %s (%p)\n",m_alg != NULL ? m_alg->GetName().c_str() : "NoName", m_alg );
 #endif
@@ -126,7 +117,7 @@ TrackAlgorithm::~TrackAlgorithm ( )
 #endif
 #endif
 
-        std::vector<RelPose*> pose = m_alg->Perform(cameras, lastKnownPose, m_curObject, numOfObjects, qualityMeasure);
+        std::vector<RelPose*> pose = m_alg->Perform(sensors, lastKnownPose, m_curObject, numOfObjects, qualityMeasure);
 #ifdef BOOST_THREAD
 #ifdef BOOST_1_35
   BOOST(t1 = get_system_time());

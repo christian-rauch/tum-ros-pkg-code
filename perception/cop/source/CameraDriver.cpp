@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
   /************************************************************************
                         CameraDriver.cpp - Copyright klank
 
@@ -58,6 +58,8 @@ void Sleeping(long ms)
 #endif
 
 
+using namespace cop;
+
 extern volatile bool g_stopall;
 
 // Constructors/Destructors
@@ -90,7 +92,7 @@ extern volatile bool g_stopall;
 
 
 CameraDriver::CameraDriver ( XMLTag* ConfigFile) :
-  Camera(),
+  Camera(ConfigFile),
   m_hasPTU(false),
   m_isSTOC(false),
 #ifdef PTU_USED
@@ -202,13 +204,15 @@ CameraDriver::CameraDriver ( XMLTag* ConfigFile) :
       {
         ReadCamParam(m_stCalibName);
       }
-      Start();
     }
   }
   catch(char const* text)
   {
     printf("Error Loading CameraDriver: %s\n", text);
   }
+#ifdef _DEBUG
+  printf("Successfully initialized Camera Driver\n");
+#endif
 }
 
 void CameraDriver::threadfunc()
@@ -359,7 +363,7 @@ void CameraDriver::threadfunc()
       PushBack(img);
     }
 #endif
-    while(m_images.size() > MAX_CAMERA_IMAGES)
+    while(m_images.size() > m_max_cameraImages)
     {
       if(DeleteImg())
         continue;
@@ -388,7 +392,7 @@ CameraDriver::~CameraDriver ( )
 //
 // Methods
 //
-Image* CameraDriver::GetImage(const long &Frame)
+Reading* CameraDriver::GetReading(const long &Frame)
 {
   if((signed)m_images.size() < (Frame - m_deletedOffset + 1) || m_images.size() == 0)
   {
@@ -427,14 +431,14 @@ Image* CameraDriver::GetImage(const long &Frame)
   }
   if(Frame == -1 || (Frame - m_deletedOffset < 0 && (unsigned)(Frame - m_deletedOffset) >= m_images.size()))
   {
-    return GetImage_Lock(m_images.size() -1);
+    return GetReading_Lock(m_images.size() -1);
     /*return m_images[m_images.size() -1];*/
   }
-  return GetImage_Lock(Frame - m_deletedOffset);
+  return GetReading_Lock(Frame - m_deletedOffset);
   /*return m_images[Frame - m_deletedOffset];*/
 }
 
-bool  CameraDriver::CanSee(RelPose &pose)
+bool  CameraDriver::CanSee (RelPose &pose) const
 {
   printf("Can See\n");
   if(m_relPose == NULL)
@@ -450,15 +454,22 @@ bool  CameraDriver::CanSee(RelPose &pose)
   double x = m.element(0,3);
   double y = m.element(1,3);
   double z = m.element(2,3);
-#ifdef  HALCONIMG
-  Halcon::HTuple R, C;
-  Halcon::project_3d_point(x,y,z, m_calibration.CamParam(), &R , &C);
-  if(R >= 0 && R < m_calibration.m_height
-    && C >= 0 && C < m_calibration.m_width)
-    return true;
-  else
+  if(z > 0.0)
   {
-    return false;
+
+#ifdef  HALCONIMG
+    try
+    {
+      Halcon::HTuple R, C;
+      Halcon::project_3d_point(x,y,z, m_calibration.CamParam(), &R , &C);
+      if(R >= 0 && R < m_calibration.m_height
+        && C >= 0 && C < m_calibration.m_width)
+        return true;
+    }
+    catch(Halcon::HException ex)
+    {
+      printf("Error: %s\n", ex.message);
+    }
   }
 #endif
   //TODO what when the position can be in the image, but not in the center?
@@ -478,21 +489,6 @@ bool  CameraDriver::CanSee(RelPose &pose)
 
 }*/
 #endif
-double  CameraDriver::LookAt(RelPose &pose)
-{
-#ifdef PTU_USED
-  if(m_hasPTU && m_ptuClient != NULL)
-  {
-    //printf("Move PTU\n", m_relPose);
-    Matrix m = pose.GetMatrix(m_ptuClient->m_uniqueID);
-    //cout  << "Relative Matrix to PTU "<< m << std::endl;
-    //cout  << "To Compare Absolute Matrix "<< pose.GetMatrix() << std::endl;
-    return m_ptuClient->Move(m);
-  }
-#endif
-  return 0.0;
-}
-
 bool CameraDriver::Start()
 {
   if(m_grabberName.compare("1394IIDC") == 0 || m_grabberName.compare("GigEVision") == 0)

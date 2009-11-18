@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 #include "PRAShapeVsPointDescr.h"
 #include "PointDescrModel.h"
 #include "ShapeModel.h"
@@ -23,6 +23,8 @@
 #include "DescriptorBased.h"
 #include "XMLTag.h"
 #include "RelPoseFactory.h"
+
+using namespace cop;
 
 PRAShapeVsPointDescr::PRAShapeVsPointDescr(void)
 {
@@ -35,7 +37,7 @@ PRAShapeVsPointDescr::~PRAShapeVsPointDescr(void)
 {
 }
 
-double PRAShapeVsPointDescr::Perform(std::vector<Camera*> cam, RelPose* pose, Signature& sig, int &numOfObjects, double& qualityMeasure)
+double PRAShapeVsPointDescr::Perform(std::vector<Sensor*> cam, RelPose* pose, Signature& sig, int &numOfObjects, double& qualityMeasure)
 {
 #ifdef DESCRIPTOR_AVAILABLE
 	PointDescrModel* p1 =  (PointDescrModel*)sig.GetElement(0,DESCRIPTOR_FEATURE);
@@ -46,7 +48,7 @@ double PRAShapeVsPointDescr::Perform(std::vector<Camera*> cam, RelPose* pose, Si
   std::vector<RelPose*> pose2;
 
 	if(p1->date() > p2->date() && p1->GetLastMatchedImage() != NULL)
-	{	
+	{
 		img = p1->GetLastMatchedImage();
 		Calibration* calib = p1->GetCurCalibration();
   try
@@ -111,7 +113,7 @@ double PRAShapeVsPointDescr::Perform(std::vector<Camera*> cam, RelPose* pose, Si
   return 0.0;
 }
 
-double PRAShapeVsPointDescr::CheckSignature(Signature& sig)
+double PRAShapeVsPointDescr::CheckSignature(const Signature& sig, const std::vector<Sensor*> &sensors)
 {
 	if(sig.GetElement(0,DESCRIPTOR_FEATURE) != NULL && sig.GetElement(0,DESCRIPTOR_SHAPE) != NULL)
 	{

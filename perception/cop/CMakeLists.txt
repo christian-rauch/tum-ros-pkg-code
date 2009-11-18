@@ -104,7 +104,8 @@ ROSBUILD_ADD_LIBRARY(cop
 ./source/ShapeModelDownloader.cpp   ./source/SimulatedLocate.cpp
 ./source/NetworkCamera.cpp          ./source/CheckColorClass.cpp
 ./source/dxfwriter.cpp              ./source/TwoInOneAlg.cpp
-./source/File.cpp
+./source/File.cpp                   ./source/Reading.cpp
+./source/Sensor.cpp
 )
 
 #if ( LIBXML2_FOUND )
@@ -182,4 +183,5 @@ INSTALL(
 ../include/DxfWriter.h            ../include/SimulatedLocate.h
 ../include/ShapeModelDownloader.h  ../include/CheckColorClass.h
 ../include/File.h                  ../include/ColorClass.h
+../include/Reading.h               ../include/Sensor.h
     DESTINATION include/cop )

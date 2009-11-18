@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 /************************************************************************
                         DescriptorBased.cpp - Copyright klank
 
@@ -35,8 +35,11 @@
 using namespace Halcon;
 #endif
 
+using namespace cop;
+
+
 // Constructors/Destructors
-//  
+//
 
 DescriptorBased::DescriptorBased () :
 	LocateAlgorithm ()
@@ -51,7 +54,7 @@ DescriptorBased::DescriptorBased () :
 DescriptorBased::DescriptorBased (XMLTag* tag) :
 	LocateAlgorithm ()
 #ifdef HALCONIMG
-	, 
+	,
 	m_row(NULL),
 	m_col(NULL)
 #endif
@@ -61,9 +64,9 @@ DescriptorBased::DescriptorBased (XMLTag* tag) :
 
 DescriptorBased::~DescriptorBased ( ) { }
 
-//  
+//
 // Methods
-//  
+//
 XMLTag* DescriptorBased::Save()
 {
 	XMLTag* tag = new XMLTag(XML_NODE_DESCRIPTORBASEDALG);
@@ -182,7 +185,7 @@ Halcon::HTuple RansacPose(Halcon::HTuple sx, Halcon::HTuple sy, Halcon::HTuple s
 }
 
 
-std::vector<RelPose*> DescriptorBased::Perform(std::vector<Camera*> cam, RelPose* lastKnownPose, 
+std::vector<RelPose*> DescriptorBased::Perform(std::vector<Sensor*> sensors, RelPose* lastKnownPose,
 Signature& object, int &numOfObjects, double& qualityMeasure)
 {
   std::vector<RelPose*> result;
@@ -211,7 +214,7 @@ std::vector<RelPose*> DescriptorBased::Inner(Image* img,RelPose* camPose, Calibr
 		int n = 4;
 		double Partly = 1.0 - (0.3* (n-1));
 		HTuple empty;
-		HTuple  matches, 
+		HTuple  matches,
 				xDescriptorSource,yDescriptorSource,zDescriptorSource,
                 rowDescriptorTarget,colDescriptorTarget,
                 xFinalSource,yFinalSource,zFinalSource,

@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 /*****************************************************************
                         Image.cpp - Copyright klank
 
@@ -32,37 +32,38 @@
 #include "himage2iplimage.h"
 #endif /*OPENCV_USED*/
 
+using namespace cop;
+
+
 
 // Constructors/Destructors
 //
 
 Image::Image (int type)  :
+  Reading(HALCONIMAGE),
 #ifdef HALCONIMG
  m_image(NULL),
 #endif
-  m_type(type),
-  m_timestamp((unsigned long)time(NULL))
-
+  m_type(type)
 {
 }
 
 Image::Image ( const Image& img) :
+   Reading(HALCONIMAGE),
 #ifdef HALCONIMG
-    m_image(img.m_image),
+   m_image(img.m_image),
 #endif
-  m_type(img.m_type),
-  m_usageCount(0),
-  m_timestamp((unsigned long)time(NULL))
+   m_type(img.m_type)
 {
 };
 
 #ifdef HALCONIMG
-Image::Image ( Halcon::Hobject* img, int type) :
+Image::Image ( Halcon::Hobject* img, int type, RelPose* pose) :
+    Reading(HALCONIMAGE),
     m_image(img),
-    m_type(type),
-    m_usageCount(0),
-    m_timestamp((unsigned long)time(NULL))
+    m_type(type)
 {
+  SetPose(pose);
 }
 #endif
 
@@ -77,8 +78,8 @@ Image::~Image ( )
 }
 
 Image::Image (XMLTag* tag)	:
-  m_type(GRAY_IMAGE),
-  m_usageCount(0)
+  Reading(HALCONIMAGE),
+  m_type(GRAY_IMAGE)
 {
 #ifdef HALCONIMG
     std::string stFileName = tag->GetProperty(XML_ATTRIBUTE_FILENAME);
@@ -103,12 +104,11 @@ Image::Image (XMLTag* tag)	:
 #endif
 }
 
-
 //
 // Methods
 //
 #ifdef HALCONIMG
-Halcon::Hobject* Image::GetHImage()
+Halcon::Hobject* Image::GetHImage() const
 {
     //Halcon::HTuple a,b,c,d;
     //Halcon::get_image_pointer1(*m_image, &a,&b,&c,&d);
@@ -165,7 +165,7 @@ void Image::Delete(XMLTag* tag)
 {
 
 }
-Image* Image::Clone()
+Reading* Image::Clone()
 {
 #ifdef HALCONIMG
     Halcon::Hobject* obj = new Halcon::Hobject();

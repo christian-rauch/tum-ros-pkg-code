@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 /************************************************************************
                         Image.h - Copyright klank
 
@@ -31,10 +31,8 @@
 #include "highgui.h"
 #endif /*OPENCV_USED*/
 
-#define NO_TYPE 0
-#ifdef HALCONIMG
-#define HALCONIMAGE 1
-#endif
+#include "Reading.h"
+
 /**
   * class Image
   */
@@ -57,100 +55,100 @@ namespace Halcon
     class Hobject;
 }
 #endif
-
-class XMLTag;
-/******************************************************************
-*           class Image                                           */
-/** ****************************************************************
-*   @brief Abstraction of an images, can be derived for different 
-            images or acquisition devices
-*   Provides Halcon Image and IplImage
-*******************************************************************/
-class Image
+namespace cop
 {
-public:
-
-  // Constructors/Destructors
-  //  
-
-
-  /**
-   * Empty Constructor
-   */
-  Image (int type);
-  Image ( const Image& img);
-
-    
-    /**
-    * Constructor Image
-    *   @param tag contains a file name or similar information
-    *   @throws char* with an error message in case of failure
-    */
-    Image ( XMLTag* tag);
-    
-#ifdef HALCONIMG
-    Image ( Halcon::Hobject* img,int type);
-#endif
-  /**
-   * Empty Destructor
-   *   @throws char* with an error message in case of failure
-   */
-  virtual ~Image ( );
-  XMLTag* Save();
-  void Delete(XMLTag* tag) ;
-
-  Image* Clone();
-  
-  int GetColorSpace(){return m_type;}
-  void Hold()
+  class XMLTag;
+  class RelPose;
+  /******************************************************************
+  *           class Image                                           */
+  /** ****************************************************************
+  *   @brief Abstraction of an images, can be derived for different
+              images or acquisition devices
+  *   Provides Halcon Image and IplImage
+  *******************************************************************/
+  class Image : public Reading
   {
-      m_usageCount++;
-  }
-  void Free(){
-      m_usageCount--;
-  }
-#ifdef HALCONIMG
-     int GetType() const{return HALCONIMAGE;}
-     Halcon::Hobject* GetHImage();
-     Halcon::Hobject* ZoomImage(int width, int height);
-#ifdef OPENCV_USED
-     IplImage* GetIplImage();
-#endif /*OPENCV_USED*/
-#else
-      int GetType() const{return NO_TYPE;}
-#endif
+  public:
 
-virtual unsigned long date() const
-{
-    return m_timestamp;
+    // Constructors/Destructors
+    //
+
+
+    /**
+     * Empty Constructor
+     */
+    Image (int type);
+    Image ( const Image& img);
+
+
+      /**
+      * Constructor Image
+      *   @param tag contains a file name or similar information
+      *   @throws char* with an error message in case of failure
+      */
+      Image ( XMLTag* tag);
+
+  #ifdef HALCONIMG
+      Image ( Halcon::Hobject* img,int type, RelPose* pose = NULL);
+  #endif
+    /**
+     * Empty Destructor
+     *   @throws char* with an error message in case of failure
+     */
+    virtual ~Image ( );
+
+    /**
+     *   Save the image in a file and put a string in the xml
+     */
+    XMLTag* Save();
+    /**
+     *   remove a file? TODO implement
+     */
+    void Delete(XMLTag* tag) ;
+
+    /**
+     *   Make a copy in meory of the image
+     */
+    virtual Reading* Clone();
+    /**
+     *   Get image information
+     */
+    int GetColorSpace() const {return m_type;}
+
+
+#ifdef HALCONIMG
+    /**
+     *   Get the Halcon image representation
+     */
+    Halcon::Hobject* GetHImage() const;
+    /**
+     *   Get the Halcon image representation of a zoom of the image
+     */
+    Halcon::Hobject* ZoomImage(int width, int height);
+#endif
+  #ifdef OPENCV_USED
+    /**
+     *   Get an opencv image
+     */
+    IplImage* GetIplImage();
+  #endif /*OPENCV_USED*/
+
+  protected:
+
+
+  private:
+
+    // Static Private attributes
+    //
+  #ifdef HALCONIMG
+      Halcon::Hobject* m_image;
+  #endif
+  public:
+      int m_type;
+
+
+
+  };
 }
-protected:
-
-
-private:
-
-  // Static Private attributes
-  //  
-#ifdef HALCONIMG
-    Halcon::Hobject* m_image;
-#endif
-public:
-    int m_type;
-    int m_usageCount;
-    unsigned long m_timestamp;
-  // Private attributes
-  //  
-
-
-  // Private attribute accessor methods
-  //  
-
-
-  // Private attribute accessor methods
-  //  
-
-
-
-};
 
 #endif // IMAGE_H

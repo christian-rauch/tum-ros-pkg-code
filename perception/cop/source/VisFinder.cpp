@@ -1,21 +1,21 @@
 /*
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
- * 
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- 
+
 /************************************************************************
                         VisFinder.cpp - Copyright klank
 
@@ -53,6 +53,8 @@ boost::mutex s_mutexDisplay;
 #else
 #define BOOST (A) ;
 #endif
+
+using namespace cop;
 
 
 
@@ -284,23 +286,13 @@ XMLTag* VisFinder::Query(std::string queryString)
      */
     RelPose* VisFinder::Locate (RelPose &lastKnownPose, Signature& object, int &numOfObjects)
     {
-        std::vector<Camera*> cameras;
-        unsigned int nCamera;
         RelPose* ret = 0;
         try
         {
-            int offset = 0;
-            while(true)
-            {
-                Camera* cam = m_imageSys.GetBestCamera(lastKnownPose, nCamera, offset);
-                if(cam == NULL)
-                    break;
-                cameras.push_back(cam);
-                offset++;
-            }
+            std::vector<Sensor*> cameras = m_imageSys.GetBestSensor(lastKnownPose);
             int locatertype = ALGORITHMTYPE_LOCATE;
             locatertype += numOfObjects > 1 ? ALGORITHMSPEC_ONETARGET : ALGORITHMSPEC_SEVERALTARGET;
-            Algorithm<std::vector<RelPose*> >* alg = m_selLocate.BestAlgorithm(locatertype, object);
+            Algorithm<std::vector<RelPose*> >* alg = m_selLocate.BestAlgorithm(locatertype, object, cameras);
             if(alg != NULL)
             {
                 double qualityMeasure = 0.0;
@@ -363,7 +355,7 @@ XMLTag* VisFinder::Query(std::string queryString)
     {
        RelPose* pose;
        double quality;
-       Camera* camera;
+       Sensor* camera;
        Algorithm<std::vector<RelPose*> > * alg;
     } Results_t;
 
@@ -404,10 +396,9 @@ float64 d
 robot_msgs/Point32 pcenter
 robot_msgs/ObjectOnTable[] oclusters
 */
-bool VisFinder::GetPlaneClusterCall(PossibleLocations_t *cluster_ids, RelPose* pose, Signature& sig)
+bool VisFinder::GetPlaneClusterCall(PossibleLocations_t *cluster_ids, RelPose* pose, Signature& sig, const std::vector<Sensor*> &sensors)
 {
-
-  ClusterDetector* det = (ClusterDetector*)m_selLocate.BestAlgorithm(123, sig);
+  ClusterDetector* det = (ClusterDetector*)m_selLocate.BestAlgorithm(123, sig, sensors);
   if(det == NULL)
     return false;
   int num;
@@ -423,39 +414,42 @@ bool VisFinder::GetPlaneClusterCall(PossibleLocations_t *cluster_ids, RelPose* p
 
 void ShowSearchSpace(PossibleLocations_t* lastKnownPoses, Camera* cam)
 {
-  cam->Show();
-  printf("Showing searchspaces\n");
-  for(size_t i = 0; i < lastKnownPoses->size(); i++)
+  if(cam != NULL)
   {
-#ifdef HALCONIMG
-  try
-  {
-    Halcon::HTuple r,c;
-    Halcon::HWindow* handle = cam->GetWindow();
-    if( (*lastKnownPoses)[i].first->m_uniqueID == cam->m_relPose->m_uniqueID)
-      continue;
-    RelPose* pose = (*lastKnownPoses)[i].first;
-    RelPose* posetmp = RelPoseFactory::GetRelPose(pose->m_uniqueID, cam->m_relPose->m_uniqueID);
-    Matrix m = posetmp->GetMatrix();
-    RelPoseFactory::FreeRelPose(posetmp);
-    cout << m << endl;
-    Halcon::project_3d_point(m.element(0, 3), m.element(1, 3), m.element(2, 3), cam->m_calibration.CamParam(), &r,&c);
-    printf("%f %f %f\n", m.element(0, 3), m.element(1, 3), m.element(2, 3));
-    printf("Position proj at : %f %f\n", r[0].D(), c[0].D());
-    Halcon::Hobject circle1, circle2;
-    Halcon::gen_circle(&circle1,r, c, 10);
-    Halcon::gen_circle(&circle2,r, c, 20);
-    Halcon::set_draw(handle->WindowHandle(), "margin");
-    Halcon::set_color(handle->WindowHandle(), "yellow");
-    Halcon::set_line_width(handle->WindowHandle(), 1);
-    Halcon::disp_obj(circle1, handle->WindowHandle());
-    Halcon::disp_obj(circle2, handle->WindowHandle());
-   }
-   catch(...)
-   {
-     printf("Display failed \n");
-   }
-#endif
+    cam->Show();
+    printf("Showing searchspaces\n");
+    for(size_t i = 0; i < lastKnownPoses->size(); i++)
+    {
+  #ifdef HALCONIMG
+    try
+    {
+      Halcon::HTuple r,c;
+      Halcon::HWindow* handle = cam->GetWindow();
+      if( (*lastKnownPoses)[i].first->m_uniqueID == cam->m_relPose->m_uniqueID)
+        continue;
+      RelPose* pose = (*lastKnownPoses)[i].first;
+      RelPose* posetmp = RelPoseFactory::GetRelPose(pose->m_uniqueID, cam->m_relPose->m_uniqueID);
+      Matrix m = posetmp->GetMatrix();
+      RelPoseFactory::FreeRelPose(posetmp);
+      cout << m << endl;
+      Halcon::project_3d_point(m.element(0, 3), m.element(1, 3), m.element(2, 3), cam->m_calibration.CamParam(), &r,&c);
+      printf("%f %f %f\n", m.element(0, 3), m.element(1, 3), m.element(2, 3));
+      printf("Position proj at : %f %f\n", r[0].D(), c[0].D());
+      Halcon::Hobject circle1, circle2;
+      Halcon::gen_circle(&circle1,r, c, 10);
+      Halcon::gen_circle(&circle2,r, c, 20);
+      Halcon::set_draw(handle->WindowHandle(), "margin");
+      Halcon::set_color(handle->WindowHandle(), "yellow");
+      Halcon::set_line_width(handle->WindowHandle(), 1);
+      Halcon::disp_obj(circle1, handle->WindowHandle());
+      Halcon::disp_obj(circle2, handle->WindowHandle());
+     }
+     catch(...)
+     {
+       printf("Display failed \n");
+     }
+  #endif
+    }
   }
 }
 
@@ -468,8 +462,7 @@ void ShowSearchSpace(PossibleLocations_t* lastKnownPoses, Camera* cam)
      */
 SignatureLocations_t VisFinder::Locate (PossibleLocations_t* lastKnownPoses, Signature& object, int &numOfObjects)
 {
-        std::vector<Camera*> cameras;
-        unsigned int nCamera;
+        std::vector<Sensor*> cameras;
         double qualityMeasure = 0.0;
         Algorithm<std::vector<RelPose*> >* alg_fail = NULL;
         SignatureLocations_t ret;
@@ -503,13 +496,14 @@ SignatureLocations_t VisFinder::Locate (PossibleLocations_t* lastKnownPoses, Sig
 #ifdef SWISS_RANGER_SERVICE
         if(lastKnownPoses->size() == 0)
         {
-          Camera* cam = m_imageSys.GetCamara(0);
+          Sensor* cam = m_imageSys.GetSensor(0);
+          std::vector<Sensor*> testing;
           if(cam != NULL)
-              if(!GetPlaneClusterCall(lastKnownPoses, cam->m_relPose, object))
-              {
-                numOfObjects = 0;
-                printf("No search position specified: 0 Results, no search\n");
-              }
+          if(!GetPlaneClusterCall(lastKnownPoses, cam->GetRelPose(), object, testing))
+          {
+            numOfObjects = 0;
+            printf("No search position specified: 0 Results, no search\n");
+          }
           printf("Got a new Searchspace\n");
           printf("lkp size %ld\n", lastKnownPoses->size());
           if(lastKnownPoses->size() > 0)
@@ -522,52 +516,35 @@ SignatureLocations_t VisFinder::Locate (PossibleLocations_t* lastKnownPoses, Sig
             RelPose* lastKnownPose = (*it).first;
             if(lastKnownPoses == NULL)
             {
-              printf("VisFinder: Errornous pose infromation\n");
+              printf("VisFinder: Errorn in pose information\n");
                continue;
             }
             try
             {
-                int offset = 0;
-                printf("Get Best Camn \n");
-                while(true)
+                cameras = m_imageSys.GetBestSensor(*lastKnownPose);
+                if(cameras.size() == 0)
                 {
-                    Camera* cam = m_imageSys.GetBestCamera(*lastKnownPose, nCamera, offset);
-                    if(cam == NULL)
-                        break;
-                    cameras.push_back(cam);
-                    offset++;
+                  printf("No Sensor for this location available\n");
+
+                  continue;
                 }
+                Camera* cam = Camera::GetFirstCamera(cameras);
                 int locatertype = ALGORITHMTYPE_LOCATE;
                 if(object.m_relPose == NULL)
                   object.SetPose(&lastKnownPose[0]);
-//#ifdef _DEBUG
-#ifndef WIN32
-#ifdef BOOST_1_35
-  BOOST(s_mutexDisplay.lock());
-#else
-  BOOST(locker::lock(s_mutexDisplay));
-#endif
 
-#endif /* WIN32*/
-               if(count_poses == 1)
-               {
-                ShowSearchSpace(lastKnownPoses, cameras[0]);
-                count_poses++;
+                if(count_poses == 1 && cam != NULL)
+                {
+                  ShowSearchSpace(lastKnownPoses, cam);
+                  count_poses++;
                 }
 
 
-#ifndef WIN32
-#ifdef BOOST_1_35
-  BOOST(s_mutexDisplay.unlock());
-#else
-  BOOST(locker::unlock(s_mutexDisplay));
-#endif
-
-#endif /* WIN32*/
-//#endif
                 locatertype += numOfObjects > 1 ? ALGORITHMSPEC_SEVERALTARGET : ALGORITHMSPEC_ONETARGET ;
-                Algorithm<std::vector<RelPose*> > * alg = m_selLocate.BestAlgorithm(locatertype, object);
-                cameras[0]->NextFrame();
+                Algorithm<std::vector<RelPose*> > * alg = m_selLocate.BestAlgorithm(locatertype, object, cameras);
+#ifdef _DEBUG
+                printf("Selected Algorithm: %s\n", alg != NULL ? alg->GetName().c_str() : "None" );
+#endif
                 if(alg != NULL)
                 {
 #ifdef BOOST_THREAD
@@ -577,11 +554,9 @@ SignatureLocations_t VisFinder::Locate (PossibleLocations_t* lastKnownPoses, Sig
                    boost::xtime_get(&t0, boost::TIME_UTC);
 #endif
 #endif
-#ifdef _DEBUG
-                    printf("Pose ID before Perform: %ld\n", lastKnownPose->m_uniqueID);
-#endif
                     int numOfObjects_tmp = numOfObjects;
                     std::vector<RelPose*> r = alg->Perform(cameras, lastKnownPose, object, numOfObjects_tmp, qualityMeasure);
+                    printf("Results num = %d\n", numOfObjects_tmp);
                     alg_fail = alg;
 #ifdef BOOST_THREAD
 #ifdef BOOST_1_35
@@ -601,13 +576,14 @@ SignatureLocations_t VisFinder::Locate (PossibleLocations_t* lastKnownPoses, Sig
                   /**TODO: remove : ugly HACK */
                   try
                   {
+
                     ShapeModel* sm = (ShapeModel*)(object.GetElement(0, DESCRIPTOR_SHAPE ));
                     if(sm != NULL)
-                      sm->ShowRegion(cameras[0]);
+                      sm->ShowRegion(cam);
 #ifdef HALCONIMG
                     Halcon::HTuple pose2;
                     lastKnownPose->GetPose(&pose2, -1);
-                    disp_3d_coord_system (cameras[0]->GetWindow()->WindowHandle(), cameras[0]->m_calibration.CamParam(), pose2, 0.3);
+                    disp_3d_coord_system (cam->GetWindow()->WindowHandle(), cam->m_calibration.CamParam(), pose2, 0.3);
 #endif /*HALCONIMG*/
                   }
                   catch(...)
@@ -640,53 +616,22 @@ SignatureLocations_t VisFinder::Locate (PossibleLocations_t* lastKnownPoses, Sig
         std::sort(all_matches.begin(), all_matches.end(), comp_qual);
         if(all_matches.size() > 0 && numOfObjects > 0)
         {
-#ifdef _DEBUG
-                      /*#ifdef BOOST_1_35
-  BOOST(s_mutexDisplay.lock());
-#else
-  BOOST(locker::lock(s_mutexDisplay));
-#endif
 
-                      cameras[0]->Show();
-#ifdef BOOST_1_35
-  BOOST(s_mutexDisplay.unlock());
-#else
-  BOOST(locker::unlock(s_mutexDisplay));
-#endif
-*/
-#endif
           for(unsigned int i = 0; i < all_matches.size(); i++)
           {
             RelPose* pose = all_matches[i].pose;
             if(i == 0)
             {
               object.SetPose(pose);
-//#ifdef _DEBUG
-#ifndef WIN32
-#ifdef BOOST_1_35
-              BOOST(s_mutexDisplay.lock());
-#else
-              BOOST(locker::lock(s_mutexDisplay));
-#endif
-
-#endif
               try
               {
-                object.Show(all_matches[i].camera);
+                if(all_matches[i].camera->IsCamera())
+                  object.Show((Camera*)all_matches[i].camera);
               }
               catch(char* error)
               {
                 printf("Error in Display: %s\n", error);
               }
-#ifndef WIN32
-#ifdef BOOST_1_35
-              BOOST(s_mutexDisplay.unlock());
-#else
-              BOOST(locker::unlock(s_mutexDisplay));
-#endif
-
-#endif
-//#endif
               pose->m_qualityMeasure = all_matches[i].quality;
               ret.push_back(std::pair<RelPose*, Signature*>(pose, &object));
               if(pose->m_qualityMeasure > 0.70)
@@ -721,31 +666,17 @@ SignatureLocations_t VisFinder::Locate (PossibleLocations_t* lastKnownPoses, Sig
 #endif
               sig->SetPose(pose);
 //#ifdef _DEBUG
-#ifndef WIN32
-#ifdef BOOST_1_35
-              BOOST(s_mutexDisplay.lock());
-#else
-              BOOST(locker::lock(s_mutexDisplay));
-#endif
 
-#endif
               try
               {
-                sig->Show(all_matches[i].camera);
+                if(all_matches[i].camera->IsCamera())
+                sig->Show((Camera*)all_matches[i].camera);
               }
               catch(char* error)
               {
                 printf("Error in Display: %s\n", error);
               }
-#ifndef WIN32
-#ifdef BOOST_1_35
-              BOOST(s_mutexDisplay.unlock());
-#else
-              BOOST(locker::unlock(s_mutexDisplay));
-#endif
 
-#endif
-//#endif
               /*pose->m_qualityMeasure = qualityMeasure;*/
               ret.push_back(std::pair<RelPose*, Signature*>(pose, sig));
 #ifdef BOOST_THREAD
@@ -773,40 +704,11 @@ SignatureLocations_t VisFinder::Locate (PossibleLocations_t* lastKnownPoses, Sig
 #else
            m_sigdb.AddSignature(&object);
 #endif
-            /*
-#ifdef _DEBUG
-#ifdef BOOST_1_35
-  BOOST(s_mutexDisplay.lock());
-#else
-  BOOST(locker::lock(s_mutexDisplay));
-#endif
-           object.Show(cameras[0]);
-#ifdef BOOST_1_35
-  BOOST(s_mutexDisplay.unlock());
-#else
-  BOOST(locker::unlock(s_mutexDisplay));
-#endif
-
-#endif*/
        }
 #ifdef HALCONIMG
-  if(cameras.size() > 0 && cameras[0] != NULL)
-   Halcon::dump_window(cameras[0]->GetWindow()->WindowHandle(), "png", "sceenshot.png");
+  if(cameras.size() > 0 && cameras[0] != NULL && cameras[0]->IsCamera())
+   Halcon::dump_window(((Camera*)cameras[0])->GetWindow()->WindowHandle(), "png", "sceenshot.png");
 #endif
-//#ifdef _DEBUG
-#ifdef BOOST_THREAD
-#ifndef WIN32
-#else
-#ifdef BOOST_1_35
-  BOOST(s_mutexDisplay.unlock());
-#else
-  BOOST(locker::unlock(s_mutexDisplay));
-#endif
-
-        printf("\nUNLOCK_DISPLAY s(%d)\n\n", i_cur);
-#endif /*Win32*/
-#endif
-//#endif
         return ret;
 }
 
@@ -818,9 +720,10 @@ SignatureLocations_t VisFinder::Locate (PossibleLocations_t* lastKnownPoses, Sig
     {
         try
         {
+            std::vector<Sensor*> cameras = m_imageSys.GetBestSensor(*poseEstimation);
             int locatertype = ALGORITHMTYPE_TRACK;
             locatertype = ALGORITHMSPEC_SEVERALTARGET; /** TODO: Check how to include Locating and special Tracking algorithms*/
-            Algorithm<std::vector<RelPose*> > * alg = m_selLocate.BestAlgorithm(locatertype, object);
+            Algorithm<std::vector<RelPose*> > * alg = m_selLocate.BestAlgorithm(locatertype, object, cameras);
             if(alg != NULL)
             {
               if(poseEstimation != NULL)
