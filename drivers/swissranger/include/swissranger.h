@@ -45,7 +45,7 @@
 #define SR_IMG_AMPLITUDE  1
 #define SR_IMG_CONFIDENCE 2
 
-#include <libusbSR.h>
+#include <libMesaSR.h>
 
 // ROS include
 #include <sensor_msgs/PointCloud.h>

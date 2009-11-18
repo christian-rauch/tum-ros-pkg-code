@@ -70,11 +70,12 @@ Reads the following parameters from the parameter server
  **/
 
 // ROS core
+#include <ros/node.h>
 #include <ros/node_handle.h>
 #include <ros/time.h>
 #include <ros/common.h>
 
-#include <robot_msgs/PointCloud.h>
+#include <sensor_msgs/PointCloud.h>
 #include <deprecated_msgs/ImageArray.h>
 #include <swissranger_srv/SRDumpToggle.h>
 
@@ -92,7 +93,7 @@ Reads the following parameters from the parameter server
 
 using namespace std;
 using namespace ros;
-using namespace robot_msgs;
+using namespace sensor_msgs;
 using namespace deprecated_msgs;
 using namespace swissranger_srv;
 
@@ -119,15 +120,15 @@ class SwissRangerTestNode
     bool dump_to_disk_;
     int img_count_, snap_count_;
 
-    SwissRangerTestNode () : dump_to_disk_ (false), img_count_ (1), snap_count_ (1)
+    SwissRangerTestNode () : nh_("~"),  dump_to_disk_ (false), img_count_ (1), snap_count_ (1)
     {
       // Initialize internal parameters
-      nh_.param ("~sr_auto_illumination", sr_auto_illumination_, DEFAULT_INT_VALUE);
-      nh_.param ("~sr_integration_time", sr_integration_time_, DEFAULT_INT_VALUE);
-      nh_.param ("~sr_modulation_freq", sr_modulation_freq_, DEFAULT_INT_VALUE);
-      nh_.param ("~sr_amp_threshold", sr_amp_threshold_, DEFAULT_INT_VALUE);
+      nh_.param ("sr_auto_illumination", sr_auto_illumination_, DEFAULT_INT_VALUE);
+      nh_.param ("sr_integration_time", sr_integration_time_, DEFAULT_INT_VALUE);
+      nh_.param ("sr_modulation_freq", sr_modulation_freq_, DEFAULT_INT_VALUE);
+      nh_.param ("sr_amp_threshold", sr_amp_threshold_, DEFAULT_INT_VALUE);
 
-      nh_.param ("~sr_dump_to_disk", dump_to_disk_, false);
+      nh_.param ("sr_dump_to_disk", dump_to_disk_, false);
       
       sr_auto_illumination_prev_ = sr_integration_time_prev_ = sr_modulation_freq_prev_ = sr_amp_threshold_prev_ = DEFAULT_INT_VALUE;
       
@@ -189,11 +190,11 @@ class SwissRangerTestNode
       getParametersFromServer ()
     {
       // Swissranger related parameters
-      nh_.getParam ("~sr_auto_illumination", sr_auto_illumination_);
-      nh_.getParam ("~sr_integration_time", sr_integration_time_);
-      nh_.getParam ("~sr_modulation_freq", sr_modulation_freq_);
-      nh_.getParam ("~sr_amp_threshold", sr_amp_threshold_);
-      nh_.getParam ("~sr_dump_to_disk", dump_to_disk_);
+      nh_.getParam ("sr_auto_illumination", sr_auto_illumination_);
+      nh_.getParam ("sr_integration_time", sr_integration_time_);
+      nh_.getParam ("sr_modulation_freq", sr_modulation_freq_);
+      nh_.getParam ("sr_amp_threshold", sr_amp_threshold_);
+      nh_.getParam ("sr_dump_to_disk", dump_to_disk_);
    }
     
     ////////////////////////////////////////////////////////////////////////////////
