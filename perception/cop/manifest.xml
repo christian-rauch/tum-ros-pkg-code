@@ -12,7 +12,6 @@
   <depend package="point_cloud_mapping"/>
   <depend package="tabletop_msgs" />
   <depend package="geometry_msgs" />
-  <depend package="mapping_ias_msgs" />
   <depend package="lo" />
   <depend package="pluginlib" />
   <depend package="eigen" />
