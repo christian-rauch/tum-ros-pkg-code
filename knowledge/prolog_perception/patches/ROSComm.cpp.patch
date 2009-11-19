@@ -1,0 +1,30 @@
+diff --git a/services/cop/source/ROSComm.cpp b/services/cop/source/ROSComm.cpp
+index d4e87bd..3d7b5db 100644
+--- a/services/cop/source/ROSComm.cpp
++++ b/services/cop/source/ROSComm.cpp
+@@ -78,6 +78,7 @@ void ROSComm::NotifyPoseUpdate(RelPose* pose, bool sendObjectRelation)
+ #endif
+   cop_answer answer;
+   aposteriori_position ap_pose;
++  answer.callId = m_callId;
+   ap_pose.objectId = m_sig.m_ID;
+   ap_pose.probability = pose->m_qualityMeasure;
+   ap_pose.position = pose->m_uniqueID;
+@@ -116,7 +117,7 @@ void ROSComm::threadfunc()
+ #endif
+     bool bFinished = false;
+     cop_answer answer;
+-
++    answer.callId = m_callId;
+     switch(m_actionType)
+     {
+     case ALGORITHMTYPE_TRACK:
+@@ -378,7 +379,7 @@ bool ROSTopicManager::ListenCallBack(cop_call::Request& msg, cop_call::Response&
+      m_openTopics[topicname] = pub;
+   }
+ 
+-  ROSComm* comm = new ROSComm(m_visFinder, poses, *sig, m_openTopics[topicname], (int)msg.number_of_objects, (int)msg.action_type);
++  ROSComm* comm = new ROSComm(m_visFinder, poses, *sig, m_openTopics[topicname], (int)msg.number_of_objects, (int)msg.action_type, msg.callId);
+   comm->Start();
+   return true;
+ }

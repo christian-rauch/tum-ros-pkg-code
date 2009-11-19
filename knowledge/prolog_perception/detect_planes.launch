@@ -1,0 +1,6 @@
+<launch>
+  <node pkg="point_cloud_mapping" type="pcd_to_msg_node" name="pcd_generator" output="screen" respawn="true" args="$(find prolog_perception)/icetea_-150_.log.pcd 1">
+  </node>
+  <node pkg="plane_clusters" type="detect_planes_node" name="detect_planes" output="screen" respawn="true">
+  </node>
+</launch>

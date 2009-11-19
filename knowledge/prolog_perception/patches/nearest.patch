@@ -1,0 +1,76 @@
+Index: src/cloud_geometry/nearest.cpp
+===================================================================
+--- src/cloud_geometry/nearest.cpp	(revision 24323)
++++ src/cloud_geometry/nearest.cpp	(working copy)
+@@ -490,7 +490,7 @@
+ 
+       cloud_kdtree::KdTree *kdtree = new cloud_kdtree::KdTreeANN (surface);
+ 
+-#pragma omp parallel for schedule(dynamic)
++
+       for (int i = 0; i < nr_points; i++)                     // Get the nearest neighbors for all the point indices in the bounds
+       {
+         std::vector<int> nn_indices;
+@@ -535,7 +535,7 @@
+ 
+       cloud_kdtree::KdTree *kdtree = new cloud_kdtree::KdTreeANN (surface);
+ 
+-#pragma omp parallel for schedule(dynamic)
++
+       for (int i = 0; i < nr_points; i++)                     // Get the nearest neighbors for all the point indices in the bounds
+       {
+         std::vector<int> nn_indices;
+@@ -582,7 +582,7 @@
+ 
+       double total_search_time = 0.0, total_normal_time = 0.0;
+ 
+-#pragma omp parallel for schedule(dynamic)
++
+       for (int i = 0; i < nr_points; i++)                     // Get the nearest neighbors for all the point indices in the bounds
+       {
+         std::vector<int> nn_indices;
+@@ -632,7 +632,7 @@
+ 
+       cloud_kdtree::KdTree *kdtree = new cloud_kdtree::KdTreeANN (points);
+ 
+-#pragma omp parallel for schedule(dynamic)
++
+       for (int i = 0; i < nr_points; i++)                     // Get the nearest neighbors for all the point indices in the bounds
+       {
+         std::vector<int> nn_indices;
+@@ -695,7 +695,7 @@
+       double curvature;
+ 
+       int j = 0;
+-#pragma omp parallel for schedule(dynamic)
++
+       for (int i = 0; i < (int)surface.points.size (); i++)
+       {
+         // Obtain the <u,v> pixel values
+@@ -792,7 +792,7 @@
+       double curvature;
+ 
+       int j = 0;
+-#pragma omp parallel for schedule(dynamic)
++
+       for (int i = 0; i < (int)surface->points.size (); i++)
+       {
+         // Obtain the <u,v> pixel values
+@@ -892,7 +892,7 @@
+       double curvature;
+ 
+       int j = 0;
+-#pragma omp parallel for schedule(dynamic)
++
+       for (int i = 0; i < (int)surface.points.size (); i++)
+       {
+         // Obtain the <u,v> pixel values
+@@ -984,7 +984,7 @@
+       }
+ 
+       int j = 0;
+-#pragma omp parallel for schedule(dynamic)
++
+       for (int i = 0; i < (int)points.points.size (); i++)
+       {
+         // Obtain the <u,v> pixel values

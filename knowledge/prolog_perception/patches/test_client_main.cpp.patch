@@ -1,0 +1,21 @@
+diff --git a/utils/test_client/source/main.cpp b/utils/test_client/source/main.cpp
+index 742540c..5d16173 100644
+--- a/utils/test_client/source/main.cpp
++++ b/utils/test_client/source/main.cpp
+@@ -13,7 +13,7 @@ bool breaker = false;
+   for(int i = 0; i < msg->found_poses.size(); i++)
+   {
+     const aposteriori_position &pos =  msg->found_poses[i];
+-    printf("Foub Obj nr %d with prob %f at pos %d\n", (int)pos.objectId, pos.probability, (int)pos.position);
++    printf("Foub Obj nr %d with prob %f at pos %d\n msg->callId %d", (int)pos.objectId, pos.probability, (int)pos.position,  msg->callId);
+   }
+   printf("End!\n");
+   breaker = true;
+@@ -33,6 +33,7 @@ int main(int argc, char* argv[])
+   call.request.object_classes.push_back(argc > 1 ? argv[1] : "Mug");
+   call.request.action_type = 0;
+   call.request.number_of_objects = argc > 3 ? atoi(argv[3]): 1;
++  call.request.callId = 10;
+   apriori_position pos;
+   pos.probability = 1.0;
+   if(argc > 2)

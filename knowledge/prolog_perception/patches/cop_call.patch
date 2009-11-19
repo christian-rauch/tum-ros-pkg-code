@@ -1,0 +1,11 @@
+diff --git a/services/vision_srvs/srv/cop_call.srv b/services/vision_srvs/srv/cop_call.srv
+index c5ec38d..28a1365 100644
+--- a/services/vision_srvs/srv/cop_call.srv
++++ b/services/vision_srvs/srv/cop_call.srv
+@@ -5,4 +5,5 @@ uint64[] object_ids        #id of an previously seen object
+ uint64 action_type       #actiontype: e.g. track = 0x100 locate: 0x000
+ uint64 number_of_objects #number of objects
+ vision_msgs/apriori_position[] list_of_poses 	   #pose matrix, fully projective 4x4 matrix
++uint64 callId
+ ---
+\ No newline at end of file

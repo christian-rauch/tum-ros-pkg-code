@@ -1,0 +1,182 @@
+Index: src/table_memory.cpp
+===================================================================
+--- src/table_memory.cpp	(Revision 240)
++++ src/table_memory.cpp	(Arbeitskopie)
+@@ -34,6 +34,7 @@
+   std::vector<int> triangles;
+   std::string semantic_type;
+   std::vector<std::string> color;
++  double height, width;
+ };
+ 
+ struct TableStateInstance
+@@ -135,6 +136,11 @@
+ 	 ret.table_center =  tables[idxs[0]].center;
+ 	 ret.stamp =  tables[idxs[0]].inst[idxs[1]]->time_instance;
+ 	 ret.cluster_center =  tables[idxs[0]].inst[idxs[1]]->objects[idxs[2]]->center;
++	 ret.cluster_semantic_types.push_back(semantic_type(tables[idxs[0]].inst[idxs[1]]->objects[idxs[2]]->height, 
++							    tables[idxs[0]].inst[idxs[1]]->objects[idxs[2]]->width));
++	 ROS_INFO("Returning to Prolog %ld, %s, %lf, %lf", ret.table_id, ret.cluster_semantic_types[0].c_str(),
++		  tables[idxs[0]].inst[idxs[1]]->objects[idxs[2]]->height, 
++		  tables[idxs[0]].inst[idxs[1]]->objects[idxs[2]]->width);
+        }
+      else
+        {
+@@ -142,6 +148,20 @@
+        }
+      return ret;
+    }
++  //return a semantic type of object based on geometrical properties
++  std::string semantic_type (double height, double width)
++  {
++     if(height > 0.3)
++       return "BreakfastCerea";
++     else if ((0.2 < height) &&  (0.3 > height))
++       return "Tea-Iced";
++     else if ((0.05 > height) && (0.1 <  width))
++       return "Tea-Beverage";
++     else if ((0.05 < height) && (0.1 > height) && (0.1 >  width))
++       return "Cup";
++     else 
++       return "unknown";
++  }
+ 
+   public:
+   TableMemory (ros::NodeHandle &anode) : nh_(anode), counter_(0), color_probability_(0.2), lo_id_tmp_(0)
+@@ -198,12 +218,12 @@
+       double y = center.y;
+       double z = center.z;
+ 
+-      std::cerr << "Table compare returns false. Center = <" << x << "," << y << "," << z << ">." << std::endl; 
++      /*std::cerr << "Table compare returns false. Center = <" << x << "," << y << "," << z << ">." << std::endl; 
+       for (unsigned int i = 0; i < old_table.polygon.points.size() ; i ++)
+         std::cerr << "\t Polygon points " << i << " = <" << old_table.polygon.points[i].x
+                   << "," << old_table.polygon.points[i].y
+                   << "," << old_table.polygon.points[i].z
+-                  << ">." << std::endl; 
++                  << ">." << std::endl; */
+       return false;
+     }
+ 
+@@ -211,7 +231,7 @@
+       update_table (int table_num, const ias_table_msgs::TableWithObjects::ConstPtr& new_table)
+     {
+       Table &old_table = tables[table_num];
+-      ROS_INFO ("Updating table with new TableInstance.");
++      ROS_DEBUG ("Updating table with new TableInstance.");
+       TableStateInstance *inst = new TableStateInstance ();
+       for (unsigned int i = 0; i < new_table->objects.size(); i++)
+       {
+@@ -223,7 +243,9 @@
+         to->center.x = to->minP.x + (to->maxP.x - to->minP.x) * 0.5;
+         to->center.y = to->minP.y + (to->maxP.y - to->minP.y) * 0.5;
+         to->center.z = to->minP.z + (to->maxP.z - to->minP.z) * 0.5;
+-
++	to->height = fabs(to->maxP.z - to->minP.z);
++	to->width =  fabs(to->maxP.y - to->minP.y);
++	ROS_DEBUG("Height, Width %lf, %lf", to->height, to->width);
+         inst->objects.push_back (to);
+       }
+       inst->time_instance = new_table->header.stamp;
+@@ -268,7 +290,7 @@
+       clusters_service (ias_table_srvs::ias_table_clusters_service::Request &req, 
+                           ias_table_srvs::ias_table_clusters_service::Response &resp)
+     {
+-      ROS_INFO("Tables to update: %ld", update_prolog_.size());
++      ROS_DEBUG("Tables to update: %ld", update_prolog_.size());
+       for (unsigned int up = 0; up < update_prolog_.size(); up++)
+         {
+ 	  ias_table_msgs::PrologReturn pr =  getPrologReturn (update_prolog_[up]);
+@@ -281,25 +303,25 @@
+ 
+     void cop_cb (const boost::shared_ptr<const vision_msgs::cop_answer> &msg)
+     {
+-      ROS_INFO ("got answer from cop! (Errors: %s)\n", msg->error.c_str());
++      ROS_DEBUG ("got answer from cop! (Errors: %s)\n", msg->error.c_str());
+       for(unsigned int i = 0; i < msg->found_poses.size(); i++)
+       {
+         const vision_msgs::aposteriori_position &pos =  msg->found_poses [i];
+-        ROS_INFO ("Found Obj nr %d with prob %f at pos %d\n", (int)pos.objectId, pos.probability, (int)pos.position);
++        ROS_DEBUG ("Found Obj nr %d with prob %f at pos %d\n", (int)pos.objectId, pos.probability, (int)pos.position);
+         //this here asumes that color classes are returned in FIFO fashion wrt to cop query (see cop_call function)!!!
+         if(pos.probability >= color_probability_)
+         {
+           TableObject * to = getObjectFromLOId (pos.position);
+           for (unsigned int cls = 0; cls < pos.classes.size (); cls++)
+           {
+-            ROS_INFO("Object color is %s", pos.classes[cls].c_str());
++            ROS_DEBUG("Object color is %s", pos.classes[cls].c_str());
+             //possible returns: [red (or any other color), object type (Jug)]
+             //color is a vector of strings in case object contains multiple color hypotheses
+             to->color.push_back(pos.classes[cls]);
+           }
+         }
+       }
+-      ROS_INFO ("End!\n");
++      ROS_DEBUG ("End!\n");
+     }
+   
+ 
+@@ -370,7 +392,7 @@
+           return false;
+         } 
+         
+-        ROS_INFO ("New Id: %lld (parent %lld)\n", (long long int)call.response.answer.id, (long long int)call.response.answer.parent_id);
++        ROS_DEBUG ("New Id: %lld (parent %lld)\n", (long long int)call.response.answer.id, (long long int)call.response.answer.parent_id);
+         width = 4;
+         for(int r = 0; r < width; r++)
+         {
+@@ -429,12 +451,12 @@
+           
+         if(!cop_client_.call(call))
+         {
+-          ROS_INFO("Error calling cop\n");
++          ROS_DEBUG("Error calling cop\n");
+           return false;
+         }
+         else
+         {
+-          ROS_INFO("Called cop \n");
++          ROS_DEBUG("Called cop \n");
+         }
+       }
+       return true;
+@@ -452,7 +474,7 @@
+ 	idxs[1] = tables[table_num].inst.size()-1;
+ 	idxs[2] = o_idx;
+ 	//lo_ids [o->lo_id] = idxs;
+-	ROS_INFO("Pushing --------- lo_id: %lld, table_num: %ld, inst num: %ld, o_idx: %ld", lo_id_tmp_, idxs[0], idxs[1], idxs[2]);
++	ROS_DEBUG("Pushing --------- lo_id: %lld, table_num: %ld, inst num: %ld, o_idx: %ld", lo_id_tmp_, idxs[0], idxs[1], idxs[2]);
+ 	lo_ids [lo_id_tmp_] = idxs;
+ 	update_prolog_.push_back(lo_id_tmp_);
+ 	lo_id_tmp_++;
+@@ -502,13 +524,13 @@
+       table_cb (const ias_table_msgs::TableWithObjects::ConstPtr& table)
+     {
+       int table_found = -1;
+-      ROS_INFO ("Looking for table in list of known tables.");
++      ROS_DEBUG ("Looking for table in list of known tables.");
+       for (int i = 0; i < (signed int) tables.size (); i++)
+       {
+         if (compare_table (tables[i], table))
+         { 
+           // found same table earlier.. so we append a new table instance measurement
+-          ROS_INFO ("Table found.");
++          ROS_DEBUG ("Table found.");
+           update_table (i, table);
+           table_found = i;
+           break;
+@@ -523,11 +545,11 @@
+         double area = cloud_geometry::areas::compute2DPolygonalArea (table->table, normal_z);
+         if (area < 0.15)
+         {
+-          ROS_INFO ("Table area too small.");
++          ROS_DEBUG ("Table area too small.");
+           return;
+         }
+ 
+-        ROS_INFO ("Not found. Creating new table.");
++        ROS_DEBUG ("Not found. Creating new table.");
+         Table t;
+         t.center.x = table->table_min.x + ((table->table_max.x - table->table_min.x) / 2.0);
+         t.center.y = table->table_min.y + ((table->table_max.y - table->table_min.y) / 2.0);

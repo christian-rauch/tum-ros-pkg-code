@@ -1,0 +1,52 @@
+diff --git a/drivers/shoulder_scanner/manifest.xml b/drivers/shoulder_scanner/manifest.xml
+index c8081f3..d3342fa 100644
+--- a/drivers/shoulder_scanner/manifest.xml
++++ b/drivers/shoulder_scanner/manifest.xml
+@@ -5,9 +5,9 @@
+   <author>Nico Blodow</author>
+   <license>LGPL</license>
+   <review status="unreviewed" notes=""/>
+-  <depend package="point_cloud_assembler"/>
+-  <depend package="laser_scan"/>
+-  <depend package="hokuyo_node"/>
++  <depend package="laser_assembler"/>
++<!--  <depend package="laser_scan"/>
++  <depend package="hokuyo_node"/>-->
+ 
+ </package>
+ 
+diff --git a/drivers/shoulder_scanner/shoulder_scanner.launch b/drivers/shoulder_scanner/shoulder_scanner.launch
+index 1f997e3..64c53bb 100644
+--- a/drivers/shoulder_scanner/shoulder_scanner.launch
++++ b/drivers/shoulder_scanner/shoulder_scanner.launch
+@@ -1,18 +1,18 @@
+ <launch>
+-
++<!--
+   <node pkg="hokuyo_node" type="hokuyo_node" output="screen" name="shoulder_scanner">
+     <remap from="scan" to="shoulder_scan"/>
+     <param name="skip" type="int" value="1"/>
+   </node>
+ 
+-<!--
++
+   <node pkg="laser_scan" type="scan_shadows_filter_node" output="screen"  name="shadow_filter">
+     <remap from="tilt_laser_cloud_filtered" to="shoulder_filtered_scan"/>
+     <remap from="tilt_scan" to="shoulder_scan" />
+   </node>
+ -->
+ 
+-  <node pkg="point_cloud_assembler" type="laser_scan_assembler_srv" output="screen"  name="laser_scan_assembler">
++  <node pkg="laser_assembler" type="laser_scan_assembler_srv" output="screen"  name="laser_scan_assembler">
+     <remap from="scan_in" to="shoulder_scan"/>
+     <param name="tf_cache_time_secs" type="double" value="10.0" />
+     <param name="max_scans" type="int" value="400" />
+@@ -20,7 +20,7 @@
+     <param name="fixed_frame" type="string" value="shoulder_base" />
+   </node>
+ 
+-  <node pkg="point_cloud_assembler" type="point_cloud_snapshotter" output="screen" name="snapshotter">
++  <node pkg="laser_assembler" type="grab_cloud_data" output="screen" name="snapshotter">
+     <remap from="laser_scanner_signal" to="shoulder_scanner_signal"/>
+     <remap from="build_cloud" to="laser_scan_assembler/build_cloud" />
+     <remap from="full_cloud" to="shoulder_cloud" />

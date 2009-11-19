@@ -1,0 +1,134 @@
+Index: src/table_memory.cpp
+===================================================================
+--- src/table_memory.cpp	(revision 219)
++++ src/table_memory.cpp	(working copy)
+@@ -36,6 +36,7 @@
+ {
+   ros::Time time_instance;
+   std::vector<TableObject*> objects;
++  unsigned int cop_call_identifier;
+ };
+ 
+ struct Table
+@@ -73,17 +74,34 @@
+       }
+     return ret;
+   }
+-
++ 
+   TableStateInstance *getInstanceAtTime (ros::Time t)
+   {
+     TableStateInstance* ret = inst.back ();
+     for (std::vector<TableStateInstance*>::reverse_iterator it = inst.rbegin (); it != inst.rend (); it++)
++      // @NIco: Should not this be:
++      //if ((*it)->time_instance <= t)
+       if ((*it)->time_instance <= ret->time_instance)
+         ret = *it;
+       else
+         break;
+     return ret;
+   }
++
++  TableStateInstance *getInstanceAtCopCallIdentifier (unsigned int id)
++  {
++    TableStateInstance* ret = NULL;
++    for (std::vector<TableStateInstance*>::reverse_iterator it = inst.rbegin (); it != inst.rend (); it++)
++      if ((*it)->cop_call_identifier == id)
++        ret = *it;
++      
++    //  if (ret == NULL)
++    //       {
++    // 	ROS_ERROR("cop_call_identifier not found!");
++    // 	return ret;
++    //       }
++    return ret;
++  }
+ };
+ 
+ class TableMemory
+@@ -97,12 +115,13 @@
+     ros::ServiceServer table_memory_clusters_service_;
+     ros::ServiceClient table_reconstruct_clusters_client_;
+     int counter_;
+-
++    unsigned int cop_call_identifier_;
++    float color_probability_;
+     // THE structure... :D
+     std::vector<Table> tables;
+ 
+   public:
+-    TableMemory () : counter_(0)
++  TableMemory () : counter_(0), cop_call_identifier_(0), color_probability_(0.2)
+     {
+       nh_.param ("input_table_topic", input_table_topic_, std::string("table_with_objects"));       // 15 degrees
+       nh_.param ("input_cop_topic", input_cop_topic_, std::string("/tracking/out"));       // 15 degrees
+@@ -143,6 +162,7 @@
+         inst->time_instance = new_table->header.stamp;
+         inst->objects.push_back (to);
+       }
++      inst->cop_call_identifier = cop_call_identifier_++;
+       old_table.inst.push_back (inst);
+       old_table.new_flag++;
+     }
+@@ -156,7 +176,7 @@
+       {
+        	if (tables[i].new_flag != 0)
+ 	  {
+-	    std::vector<TableStateInstance*> instances = getLastInstances(tables[i].new_flag);
++	    std::vector<TableStateInstance*> instances = tables[i].getLastInstances(tables[i].new_flag);
+ 	    tables[i].new_flag = 0;
+ 	  }
+ 	      resp.tableId = i;
+@@ -175,15 +195,28 @@
+ 
+     void cop_cb (const boost::shared_ptr<const vision_msgs::cop_answer> &msg)
+     {
+-      
+       ROS_INFO ("got answer from cop! (Errors: %s)\n", msg->error.c_str());
+-
+       for(unsigned int i = 0; i < msg->found_poses.size(); i++)
+       {
+         const vision_msgs::aposteriori_position &pos =  msg->found_poses [i];
+         ROS_INFO ("Found Obj nr %d with prob %f at pos %d\n", (int)pos.objectId, pos.probability, (int)pos.position);
++	//this here asumes that color classes are returned in FIFO fashion wrt to cop query (see cop_call function)!!!
++	if(pos.probability >= color_probability_)
++	  {
++	    for (unsigned int j = 0; j < tables.size(); j++)
++	      {
++		TableStateInstance * instance = tables[j].getInstanceAtCopCallIdentifier (msg->callId);
++		if (instance != NULL)
++		  {
++		    ROS_INFO("Object color is %s", pos.classes[0].c_str());
++		    instance->objects[i].color = pos.classes[0];
++		    break;
++		  }
++	      }
++	    if (instance == NULL)
++	      ROS_ERROR("cop_call_identifier not found!");  
++	  }
+       }
+-
+       ROS_INFO ("End!\n");
+     }
+ 
+@@ -261,11 +294,9 @@
+         {
+           for(int c = 0; c < width; c++)
+           {
+-             printf("%f", call.response.answer.pose[r * width + c]);
++             ROS_INFO("Lo Pose: %f", call.response.answer.pose[r * width + c]);
+           }
+-          printf("\n");
+         }
+-        printf("\n");
+ 
+         o->lo_id = call.response.answer.id;
+       }
+@@ -286,6 +317,7 @@
+       {
+         /** Create the cop_call msg*/
+         vision_srvs::cop_call call;
++	call.request.callId =  tables[table_num].getCurrentInstance ()->cop_call_identifier;
+         call.request.outputtopic = input_cop_topic_;
+         call.request.object_classes.push_back (colors[col]);
+         call.request.action_type = 0;

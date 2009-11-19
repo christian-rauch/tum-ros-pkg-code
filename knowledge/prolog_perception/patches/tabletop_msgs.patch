@@ -1,0 +1,23 @@
+Index: manifest.xml
+===================================================================
+--- manifest.xml	(revision 25165)
++++ manifest.xml	(working copy)
+@@ -12,7 +12,7 @@
+   <depend package="geometry_msgs" />
+   <depend package="std_msgs"/>
+   <depend package="mapping_msgs" />
+-  
++  <depend package="sensor_msgs" />
+   <export>
+     <cpp cflags="-I${prefix}/msg/cpp"/>
+   </export>
+Index: msg/ObjectOnTable.msg
+===================================================================
+--- msg/ObjectOnTable.msg	(revision 25165)
++++ msg/ObjectOnTable.msg	(working copy)
+@@ -1,3 +1,4 @@
+ geometry_msgs/Point32 center
+ geometry_msgs/Point32 min_bound
+ geometry_msgs/Point32 max_bound
++sensor_msgs/PointCloud points
+\ No newline at end of file

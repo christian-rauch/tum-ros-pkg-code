@@ -1,0 +1,29 @@
+diff --git a/services/cop/include/ROSComm.h b/services/cop/include/ROSComm.h
+index 4790975..ab7449c 100644
+--- a/services/cop/include/ROSComm.h
++++ b/services/cop/include/ROSComm.h
+@@ -24,13 +24,14 @@ using namespace boost;
+ class ROSComm : public Comm
+ {
+ public:
+-  ROSComm(VisFinder& visFinder, PossibleLocations_t* pose, Signature& sig, ros::Publisher * pub, int numOfObjects, int actionType) :
++  ROSComm(VisFinder& visFinder, PossibleLocations_t* pose, Signature& sig, ros::Publisher * pub, int numOfObjects, int actionType, unsigned long callId = 0) :
+     m_visFinder(visFinder),
+     m_pose(pose),
+     m_sig(sig),
+     m_publisher(pub),
+     m_numOfObjects(numOfObjects),
+-    m_actionType(actionType)
++    m_actionType(actionType),
++    m_callId(callId)  
+   {
+   }
+ 
+@@ -65,6 +66,7 @@ public:
+   ros::Publisher* m_publisher;
+   int m_numOfObjects;
+   int m_actionType;
++  unsigned long m_callId;
+ };
+ 
+ class ROSTopicManager

@@ -1,0 +1,13 @@
+Index: teleop_head_keyboard.cpp
+===================================================================
+--- teleop_head_keyboard.cpp	(revision 25156)
++++ teleop_head_keyboard.cpp	(working copy)
+@@ -71,7 +71,7 @@
+     
+     n_.param("max_pan", max_pan, 2.7);
+     n_.param("max_tilt", max_tilt, 1.4);
+-    n_.param("min_tilt", min_tilt, -0.4);
++    n_.param("min_tilt", min_tilt, -1.4);
+     n_.param("tilt_step", tilt_step, 0.02);
+     n_.param("pan_step", pan_step, 0.03);
+     }
