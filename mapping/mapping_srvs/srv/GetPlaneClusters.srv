@@ -1,0 +1,8 @@
+---
+uint32 planeId
+float64 a
+float64 b
+float64 c
+float64 d
+geometry_msgs/Point32 pcenter
+tabletop_msgs/ObjectOnTable[] oclusters

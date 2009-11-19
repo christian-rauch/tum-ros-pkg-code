@@ -1,0 +1,4 @@
+float64 start_angle
+uint32 joint
+---
+float64 end_angle
