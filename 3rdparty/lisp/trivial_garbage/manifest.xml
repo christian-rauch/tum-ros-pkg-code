@@ -3,10 +3,11 @@
       trivial-garbage
       http://www.cliki.net/trivial-garbage
   </description>
-  <author></author>
+  <author>Luis Oliveira</author>
   <license>Public domain</license>
   <review status="unreviewed" notes=""/>
 
+  <rosdep name="darcs"/>
   <depend package="lisp_asdf_manager"/>
 </package>
 
