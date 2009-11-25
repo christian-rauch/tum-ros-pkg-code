@@ -10,15 +10,15 @@ checkedout:
 	mkdir -p $(BUILD_DIR)
 	cd $(BUILD_DIR) && wget http://downloads.sourceforge.net/project/collada-dom/Collada%20DOM/Collada%20DOM%202.2/collada-dom-2.2.zip?use_mirror=surfnet
 	cd $(BUILD_DIR) && unzip collada-dom-2.2.zip
-	touch checkedout
+	touch $(shell rospack find collada-dom)/checkedout
 
 installed: checkedout patched
 	cd $(SOURCE_DIR) && mkdir -p build/linux-1.4 && make 
-	touch installed
+	touch $(shell rospack find collada-dom)/installed
 
 patched: collada-dom.patch checkedout
 	cd $(BUILD_DIR) && patch -p0 < $(COLLADA_PATCH)
-	touch patched
+	touch $(shell rospack find collada-dom)/patched
 
 clean:
 	rm -rf $(BUILD_DIR)
