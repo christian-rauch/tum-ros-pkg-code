@@ -1,0 +1,32 @@
+#########################################################
+Short tutorial on how to get projected stereo going using:
+a)Videre STOC camera and
+b)regular wall projector
+c)random block pattern image generator
+Author: Dejan Pangercic <pangercic@cs.tum.edu>
+########################################################
+
+1)Connect your Videre camera to the computer and make sure /dev/*1394 
+exist and you have read/write rights
+
+2)Connect you wall projector to the VGA connector and configure your
+X server display to obtain "Separate X Screen" mode. We used nvidia-setting
+program to attain this.
+
+3)Fire up xterm on projector display and run:
+"echo $DISPLAY"
+Copy the result and replace the value of parameter "value" in the following file:
+"projected_light/launch/pattern.launch", within following tag: 
+"<env name="DISPLAY" value=":0.0" />"
+
+4)run "rosmake" to compile pattern generator script
+
+5)roscd projected_light/scripts; ./demo.sh
+This will
+a)start Videre camera,
+b)display random pattern on projector display,
+c)fire up rviz (ROS visualizer). In order to visualize the scene add display type "Point Cloud", 
+Set "Target Frame" to "/stereo" and subscribe to the topic "/stereo/cloud".
+d)provide you with the program to toggle pattern display on and off.
+
+6)Enjoy!

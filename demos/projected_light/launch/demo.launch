@@ -1,0 +1,9 @@
+<launch>
+
+  <include file="../launch/videre.launch"/>
+  <include file="../launch/pattern.launch"/>
+
+  <node pkg="rviz" type="rviz" name="rviz">
+  </node>
+
+</launch>

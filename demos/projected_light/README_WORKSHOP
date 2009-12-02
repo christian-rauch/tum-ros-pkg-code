@@ -1,0 +1,54 @@
+###################################################
+NOTE: Only relevant for IAS@TUM, Munich, Germany
+Howto start the demo for autumn Cotesys workshop 09
+###################################################
+
+#########################
+# possibility (1)
+#########################
+#
+# (a)
+#
+Edit projected_light/pattern.launch so that env DISPLAY contains the DISPLAY
+where you want to show the pattern (do 'echo $DISPLAY' there)
+#
+# (b)
+#
+Do
+ > export ROS_MASTER_URI=http://192.168.150.108:11311
+ > roscd projected_light
+ > ./demo_workshop.sh
+#########################
+
+
+
+
+#########################
+# possibility (2)
+#########################
+#
+# (a) the camera
+#
+The camera machine is 192.168.150.108, so
+ > ssh leha@192.168.150.108
+On that computer, do
+ > roscd projected_light
+ > roslaunch videre.launch
+#
+# (b) rviz
+#
+On the presentation machine do:
+ > export ROS_MASTER_URI=http://192.168.150.108:11311
+ > rosrun rviz rviz
+#
+# (c) the pattern
+#
+On the pattern projection machine, do
+ > roscd projected_light
+ > roslaunch pattern.launch
+#
+If you have a dual head setup,
+presentation machine and pattern projection machine can be the same one.
+In that case proceed as in (1.a)
+#########################
+

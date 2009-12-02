@@ -1,0 +1,6 @@
+<launch>
+  <node pkg="projected_light" type="project_light" name="project_light">
+    <param name="pattern_on" type="int" value="1"/>
+    <env name="DISPLAY" value=":0.0" />
+  </node>
+</launch>
