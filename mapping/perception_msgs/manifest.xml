@@ -2,6 +2,7 @@
   <description brief="perception_msgs">
      Messages for perception applications at TUM.
   </description>
+  <author>Radu B. Rusu</author>
   <license>BSD</license>
 
   <depend package="std_msgs" />
