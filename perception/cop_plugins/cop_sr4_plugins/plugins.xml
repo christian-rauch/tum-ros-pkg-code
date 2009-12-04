@@ -1,0 +1,14 @@
+<library path="lib/libSwissrangerRemoteSensor">
+  <class name="SwissRangerRemoteSensor" type="SwissRangerRemoteSensor" base_class_type="Sensor">
+    <description>
+      This is a plugin to make the swissranger available as a remote sensor
+      in cop.
+    </description>
+  </class>
+    <class name="ClusterDetector" type="cop::ClusterDetector"
+    base_class_type="LocateAlgorithm">
+    <description>
+       Detect clusters on planes in the swissranger data.
+    </description>
+  </class>
+</library>
