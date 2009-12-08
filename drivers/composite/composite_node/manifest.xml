@@ -4,7 +4,8 @@
   <license>BSD</license>
   <depend package="roscpp" />
   <depend package="std_msgs" />
-  <depend package="opencv_latest" />
+  <depend package="opencv2" /> 
+  <depend package="cv_bridge" />
   <depend package="flir_driver" />
   <depend package="stoc_driver" />
   <depend package="composite_swissranger" />
