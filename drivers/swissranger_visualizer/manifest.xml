@@ -4,6 +4,7 @@
   <license>BSD</license>
   <depend package="roscpp" />
   <depend package="deprecated_msgs" />
-  <depend package="opencv_latest" />
+  <depend package="opencv2" />
+  <depend package="cv_bridge" />
   <url></url>
 </package>
