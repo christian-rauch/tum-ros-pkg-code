@@ -33,12 +33,7 @@
 (defpackage :cram-language-tests
   (:documentation "Package for the cram-language test-suite")
   (:nicknames :cpl-tests)
-  (:use #:common-lisp #:portable-threads
-        #:fiveam #:cram-language)
-  (:import-from #:alexandria #:with-gensyms #:symbolicate)
+  (:use :cpl :portable-threads :fiveam :alexandria)
   (:import-from #:cram-walker #:make-plan-tree-node)
-  (:shadowing-import-from
-   #:cram-language
-   #:< #:> #:+ #:- #:* #:/ #:= #:eq #:eql #:not
-   #:fail))
+  (:shadowing-import-from :cpl #:fail))
 

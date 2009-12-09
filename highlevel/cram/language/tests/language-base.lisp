@@ -105,7 +105,7 @@
       (with-deadlock-handling (:timeout 1.00)
           (top-level
             (with-tags
-              (ignore-errors
+              (ignore-some-conditions (cpl:simple-plan-error cpl-impl::rethrown-error)
                 (par
                   (:tag producer
                     (sleep 0.01)
@@ -133,51 +133,52 @@
     (for-all ()
       (let ((final-times (make-array 2))
             (blockee-trigger (make-fluent :name :blockee-trigger :value nil)))
-      (with-deadlock-handling (:timeout 0.5)
+        (with-deadlock-handling (:timeout 0.5)
             (top-level
               (with-tags
                 (par
                   (:tag blocker
-                    (let ((start-time (get-internal-real-time)))
+                    (let ((start-time nil))
                       (wait-for (eq (status blockee) :waiting))
-                      (with-task-blocked blockee
+                      (with-task-suspended blockee
+                        (setf start-time (get-internal-real-time))
                         (setf (value blockee-trigger) t)
-                        (sleep 0.1))
-                      (setf (aref final-times 0) (- (get-internal-real-time) start-time))))
+                        (sleep 0.1)
+                        (setf (aref final-times 0) (- (get-internal-real-time) start-time)))))
                   (:tag blockee
                     (let ((start-time nil))
-                      (on-suspend
-                          (wait-for blockee-trigger)
-                        (setf start-time (get-internal-real-time)))
+                      (on-suspension
+                          (setf start-time (get-internal-real-time))
+                        (wait-for blockee-trigger))
                       (setf (aref final-times 1) (- (get-internal-real-time) start-time)))))))
-          (is (or (>= (aref final-times 1) (aref final-times 0))
-                  (time-equal (aref final-times 1) (aref final-times 0) :threshold 0.1))))))))
+          (is (>= (aref final-times 1) (aref final-times 0))))))))
 
-(test test-suspend-protect
-  (flet ((time-equal (t1 t2  &key (threshold 0.01))
-           (<=  (/ (abs (- t2 t1))
-                   internal-time-units-per-second)
-                threshold)))
-    (for-all ()
-      (let ((protected nil)
-            (runs 0))
-      (with-deadlock-handling (:timeout 0.30)
-            (top-level
-              (with-tags
-                (par
-                  (:tag blocker
-                    (wait-for (not (eq (status blockee) :created)))
-                    (sleep 0.05)
-                    (with-task-blocked blockee
-                      (sleep 0.05)))
-                  (:tag blockee
-                    (suspend-protect
-                        (progn
-                          (incf runs)
-                          (sleep 0.15))
-                      (setf protected t))))))
-          (is (eq protected t))
-          (is (eql runs 2)))))))
+;;; Deprecated! We now have new semantics for suspend-protect
+;; (test test-suspend-protect
+;;   (flet ((time-equal (t1 t2  &key (threshold 0.01))
+;;            (<=  (/ (abs (- t2 t1))
+;;                    internal-time-units-per-second)
+;;                 threshold)))
+;;     (for-all ()
+;;       (let ((protected nil)
+;;             (runs 0))
+;;       (with-deadlock-handling (:timeout 0.30)
+;;             (top-level
+;;               (with-tags
+;;                 (par
+;;                   (:tag blocker
+;;                     (wait-for (not (eq (status blockee) :created)))
+;;                     (sleep 0.05)
+;;                     (with-task-suspended blockee
+;;                       (sleep 0.05)))
+;;                   (:tag blockee
+;;                     (suspend-protect
+;;                         (progn
+;;                           (incf runs)
+;;                           (sleep 0.15))
+;;                       (setf protected t))))))
+;;           (is (eq protected t))
+;;           (is (eql runs 2)))))))
 
 (test test-pursue
   (for-all ()

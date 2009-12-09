@@ -1,6 +1,8 @@
-; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Base: 10 -*-
+;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Base: 10 -*-
 
-(operate 'load-op "lisp_asdf_manager/lisp_asdf_manager")
+(in-package :cl-user)
+
+(asdf:operate 'asdf:load-op "lisp_asdf_manager/lisp_asdf_manager")
 
 (asdf:defsystem cram/language
   :name "cram-language"
@@ -21,6 +23,7 @@
   ((:module "src"
     :components
     ((:file "packages")
+     (:file "utils")
      (:file "time")
      (:file "ts-queue")
      (:file "object-identities")
@@ -42,8 +45,13 @@
      (:file "fluent-net")
      (:file "task-tree")
      (:file "task.implementation")
-     (:file "utils")
      (:file "base")
      (:file "plans")
-     (:file "goals"))
+     (:file "goals")
+     (:file "language"))
     :serial t)))
+
+(defmethod asdf:perform ((o asdf:test-op)
+                         (c (eql (asdf:find-system 'cram/language))))
+  (asdf:operate 'asdf:load-op 'cram/language-tests)
+  (asdf:operate 'asdf:test-op 'cram/language-tests))

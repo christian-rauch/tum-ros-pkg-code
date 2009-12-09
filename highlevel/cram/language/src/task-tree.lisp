@@ -29,9 +29,12 @@
 ;;;
 
 
-(in-package :cpl)
+(in-package :cpl-impl)
 
 (declaim (optimize (debug 3)))
+
+;;; NOTE: DOC: Paths in CRAM are read from right to left, such that when
+;;; decending a task-tree or plan-tree, the path grows at the left.
 
 ;;; Represents code sexp is the sexp of the code, function is a
 ;;; compiled function and tasks is the list of tasks, in reverse
@@ -54,20 +57,49 @@
   (children nil)
   (path nil))
 
-;;; Define our own pretty print method, to avoid infinit recursion when
-;;; *print-circle* is nil. It is similar to the general struct pretty printer
-;;; but doesn't print the parent slot.
-(defmethod print-object ((object task-tree-node) stream) 
-  (format stream "~<#(~;~W ~:@_:CODE ~@_~W~:@_:CODE-REPLACEMENTS ~@_~W~:@_:PATH ~@_~W~:@_:CHILDREN ~@_~W~;)~:>"
-	  (list 'task-tree-node
-	        (and (task-tree-node-code object) :some)
-            (and (task-tree-node-code-replacements object) :some)
-            (task-tree-node-path object)
-            (length (task-tree-node-children object)))))
+;; #demmeln: ask rittweiler for advice on layout of  pretty printing
 
-(defvar *current-path* nil "Contains the current path (in reverse order).")
-(defvar *task-tree* nil)
-(defvar *current-task-tree-node* nil)
+;;; Define our own pretty print method, to avoid infinit recursion
+;;; when *print-circle* is nil. It is similar to the general struct
+;;; pretty printer but doesn't print the parent slot. Some dynamic
+;;; variables control how verbose task-trees are displayed.
+
+(defparameter *task-tree-print-path* :full
+  "Determines how task-tree-nodes are pretty-printed. One of (nil :one :full). Default :full")
+(defparameter *task-tree-print-code* nil
+  "Determines how task-tree-nodes are pretty-printed. Generalized Boolean. Default nil")
+(defparameter *task-tree-print-children* :count
+  "Determines how task-tree-nodes are pretty-printed. One of (nil :count :full). Default :count")
+(defparameter *task-tree-print-identity* t
+  "Determines how task-tree-nodes are pretty-printed. Generalized Boolean. Default t")
+
+(defmethod print-object ((object task-tree-node) stream)
+  (assert (member *task-tree-print-children* '(nil :count :full)))
+  (assert (member *task-tree-print-path* '(nil :one :full)))
+  (print-unreadable-object (object stream :type t :identity *task-tree-print-identity*)
+    (when *task-tree-print-path*
+      (let ((path (task-tree-node-path object)))
+        (format stream "~:@_:PATH ~:@_~W" (case *task-tree-print-path*
+                                            (:one  (list (first path) "..."))
+                                            (:full path)
+                                            (otherwise (assert nil))))))
+    (when *task-tree-print-code*
+      (let ((code (task-tree-node-code object)))
+        (format stream "~:@_ :CODE ~:@_~W" code)))
+    (when *task-tree-print-children*
+      (let ((children (task-tree-node-children object)))
+        (case *task-tree-print-children*
+          (:count (format stream "~:@_ :CHILD-COUNT ~:@_~W" (length children)))
+          (:full (format stream "~:@_ :CHILDREN ~:@_~W" children))
+          (otherwise (assert nil)))))
+    (format stream "~:@_")))
+
+(defvar *current-path* nil
+  "Contains the current path (in reverse order).")
+
+(define-task-variable *task-tree* nil)
+
+(define-task-variable *current-task-tree-node* nil)
 
 (defmacro with-task-tree-node ((&key (path-part (error "Path parameter is required."))
                                      sexp lambda-list parameters)
@@ -77,7 +109,8 @@
     `(let* ((*current-path* (cons ,path-part *current-path*))
             (*current-task-tree-node* (ensure-tree-node *current-path*)))
        (declare (special *current-path* *current-task-tree-node*))
-       (let ((,task (make-task :sexp ',(or sexp body)
+       (let ((,task (make-task :name ',(gensym "[WITH-TASK-TREE-NODE]-")
+                               :sexp ',(or sexp body)
                                :function (lambda ,lambda-list
                                            ,@body)
                                :parameters ,parameters)))
@@ -125,22 +158,27 @@
         `(,@(subseq path-part 0 (position :call path-part)) :call ,(1+ (cadr iterations-spec)))
         (append path-part '(:call 2)))))
 
-(defun make-task (&key (sexp nil) (function nil) (path *current-path*) (parameters nil))
+(defun make-task (&key (name (gensym "[MAKE-TASK]-"))
+                       (sexp nil) 
+                       (function nil)
+                       (path *current-path*)
+                       (parameters nil))
   "Returns a runnable task for the path"
   (let* ((node (register-task-code sexp function :path path))
          (code (task-tree-node-effective-code node)))
     (cond ((not (code-task code))
-           (setf (code-parameters code)
-                 parameters)
+           (setf (code-parameters code) parameters)
            (setf (code-task code)
                  (make-instance 'task
+                   :name name
                    :thread-fun (lambda ()
                                  (apply (code-function code)
                                         parameters))
                    :run-thread nil
                    :path path)))
           ((executed (code-task code))
-           (make-task :sexp sexp
+           (make-task :name name
+                      :sexp sexp
                       :function function
                       :path `(,(path-next-iteration (car path)) . ,(cdr path))
                       :parameters parameters))
@@ -149,11 +187,12 @@
 
 (defun sub-task (path)
   "Small helper function to get a sub-task of the current task."
-  (make-task :path (append path *current-path*)))
+  (make-task :name (gensym "[SUB-TASK]-") 
+             :path (append path *current-path*)))
 
-(defun task (path)
+(defun task (name path)
   "Small helper function to get a task from a path."
-  (make-task :path path))
+  (make-task :name name :path path))
 
 (defun clear-tasks (task-tree-node)
   "Removes recursively all tasks from the tree."

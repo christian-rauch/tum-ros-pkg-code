@@ -29,7 +29,7 @@
 ;;;
 
 
-(in-package :cpl)
+(in-package :cpl-impl)
 
 (defclass fluent ()
   ((value :initarg :value :initform nil
@@ -37,7 +37,7 @@
    (pulse-count :initform 0 :documentation "For internal use. Indicates a pulse.")
    (subscribed-threads :initform (list)
                        :documentation "alist of subscribed threads and the pulse-count
-                                       of the last pulse received by the task.")
+                                       of the last pulse received by the thread.")
    (name :initarg :name :initform (error "No name specified.")
          :reader name :type symbol
          :documentation "The name of the fluent. Should be a globally unique symbol.")
@@ -72,7 +72,7 @@
                    true and value-changed is nil, wait-for imediately
                    returns. Otherwise it waits for at least timeout.
                    The parameter wait-status indicates the status of
-                   the task when it is waiting. The parameter
+                   the thread when it is waiting. The parameter
                    handle-missed-pulses can be either :never :once
                    or :always. :never means that missed pulses are
                    ignored, :once means that independent of the number
@@ -121,51 +121,35 @@
     (format stream "[~s]" (value fluent))))
 
 (defmethod value ((fluent fluent))
-  (with-lock-held ((slot-value fluent 'value-lock))
+  (with-unsuspendable-lock (slot-value fluent 'value-lock)
     (slot-value fluent 'value)))
-
-;;; NOTE: suspend-protect is used in (setf value), wait-for and pulse to
-;;; make sure the fluent(-nets) are always properly pulsed even if a
-;;; task is suspended while handling value changes/pulses. This means
-;;; however, that the body of these suspend-protect forms is
-;;; potentially executed more than once and so are the side effects in
-;;; those bodies. Since side effects here are only incrementing pulse
-;;; counters and broadcasting conditions, it is for now not regarded
-;;; as a problem. Extensive unit tests also show that it works quite
-;;; well.  If in the future this is determined to cause trouble, one
-;;; might have to wrap the fluent change propagation in a
-;;; "without-interrupts" clause to make sure the thread is not
-;;; suspended during fluent value propagation. This might be tricky
-;;; and one would have to make sure that tasks suspension still works
-;;; quickly.
 
 (defmethod (setf value) (new-value (fluent fluent))
   (with-slots (value-lock test value) fluent
-    (terminate-protect
-      (suspend-protect
-          (with-lock-held (value-lock)
-            (unless (funcall test value new-value)
-              (setf (slot-value fluent 'value) new-value)
-              (pulse fluent))))))
+    (without-termination
+      (with-unsuspendable-lock value-lock
+        (unless (funcall test value new-value)
+          (setf (slot-value fluent 'value) new-value)
+          (pulse fluent)))))
   new-value)
 
 (defmethod register-update-callback ((fluent fluent) name update-fun)
-  (with-lock-held ((slot-value fluent 'value-lock))
+  (with-unsuspendable-lock (slot-value fluent 'value-lock)
     (setf (gethash name (slot-value fluent 'on-update)) update-fun)))
 
 (defmethod remove-update-callback ((fluent fluent) name)
-  (with-lock-held ((slot-value fluent 'value-lock))
+  (with-unsuspendable-lock (slot-value fluent 'value-lock)
     (remhash name (slot-value fluent 'on-update))))
 
 (defmethod subscribe-current-thread ((fluent fluent))
   (with-slots (subscribed-threads pulse-count value-lock) fluent
     (flet ((gc-subscriptions ()
              (loop for subscription in subscribed-threads
-                  for (task . count) = subscription
-                when (tg:weak-pointer-value task) collect subscription into result
+                for (thread . count) = subscription
+                when (tg:weak-pointer-value thread) collect subscription into result
                 finally (setf subscribed-threads result))))
       (let ((weak-thread (tg:make-weak-pointer (current-thread))))
-        (with-lock-held (value-lock)
+        (with-unsuspendable-lock value-lock
           (or (assoc (current-thread) subscribed-threads :key #'tg:weak-pointer-value)
               (let ((new-entry (cons weak-thread pulse-count)))
                 (gc-subscriptions)
@@ -178,41 +162,59 @@
                      (wait-status :waiting) (handle-missed-pulses :once))
   (with-slots (changed-condition value-lock value pulse-count) fluent
     (with-status (wait-status)
-      (suspend-protect
-          (with-lock-held (value-lock)
-            (let ((subscription-info (subscribe-current-thread fluent))
-                  (start-time (get-internal-real-time)))
-              (destructuring-bind (thread . old-pulse-count) subscription-info
-                (declare (ignore thread))
-                (or (when (> pulse-count old-pulse-count)
-                      (ecase handle-missed-pulses
-                        (:never (setf (cdr subscription-info) pulse-count)
-                                nil)
-                        (:once (setf (cdr subscription-info) pulse-count))
-                        (:always (incf (cdr subscription-info)))))
-                    (unless value-changed value)
-                    (loop with old-pulse-count = pulse-count
-                       do (if timeout
-                              (condition-variable-wait-with-timeout changed-condition timeout)
-                              (condition-variable-wait changed-condition))
-                       until (or (and timeout (>= (/ (- (get-internal-real-time)
+      (let ((subscription-info (subscribe-current-thread fluent))
+            (start-time (get-internal-real-time)))
+        (destructuring-bind (thread . old-pulse-count) subscription-info
+          (declare (ignore thread))
+          (without-suspension
+            (or (with-lock-held (value-lock)
+                  (when (> pulse-count old-pulse-count)
+                    (ecase handle-missed-pulses
+                      (:never (setf (cdr subscription-info) pulse-count)
+                              nil)
+                      (:once (setf (cdr subscription-info) pulse-count))
+                      (:always (incf (cdr subscription-info))))))
+                (unless value-changed
+                  (with-lock-held (value-lock)
+                    value))
+                ;; We need to do ugly explicit handling of suspension
+                ;; here.  WAIT-FOR is a very special case since we need
+                ;; to assure that even if CONDITION-VARIABLE-WAIT gets
+                ;; suspended, the value-lock is released and we wait
+                ;; again after suspension.
+                (let ((old-pulse-count (with-lock-held (value-lock)
+                                         pulse-count)))
+                  (tagbody retry
+                     (with-suspension
+                       (handler-case
+                           (with-lock-held (value-lock)
+                             (unless (value (> pulse-count old-pulse-count))
+                               (if timeout
+                                   (condition-variable-wait-with-timeout changed-condition timeout)
+                                   (condition-variable-wait changed-condition))))
+                         (suspension (c)
+                           (signal-suspension c)
+                           t)))
+                     (unless (or (and timeout (>= (/ (- (get-internal-real-time)
                                                         start-time)
                                                      internal-time-units-per-second)
                                                   timeout))
-                                 (and value (not (= pulse-count old-pulse-count)))))
-                    value))))))))
+                                 (with-lock-held (value-lock)
+                                   (and value
+                                        (> pulse-count old-pulse-count))))
+                       (go retry))))))
+          value)))))
 
 (defmethod pulse ((fluent fluent))
   (with-slots (changed-condition pulse-count on-update value-lock) fluent
-    (terminate-protect
-      (suspend-protect
-          (with-lock-held (value-lock)
-            (incf pulse-count)
-            (on-update-hook fluent)
-            (condition-variable-broadcast changed-condition)
-            (loop with on-update-copy = (copy-hash-table on-update)
-               for callback being the hash-values of on-update-copy
-               do (funcall callback)))))))
+    (without-termination
+      (with-unsuspendable-lock value-lock
+        (incf pulse-count)
+        (on-update-hook fluent)
+        (condition-variable-broadcast changed-condition)
+        (loop with on-update-copy = (copy-hash-table on-update)
+           for callback being the hash-values of on-update-copy
+           do (funcall callback))))))
 
 
 (defmethod on-update-hook ((fluent fluent))
@@ -225,17 +227,16 @@
   `(flet ((loop-body ()
              ,@body))
      (let ((condition-fl-var ,condition-fl))
-       (with-slots (value) condition-fl-var
-         (suspend-protect
-             (loop
-                when value do (loop-body)
-                do (wait-for condition-fl-var
-                             :value-changed t
-                             :wait-status ,wait-status
-                             :handle-missed-pulses ,handle-missed-pulses)))))))
+       (with-slots (value value-lock) condition-fl-var
+         (loop
+            when (with-unsuspendable-lock value-lock value) do (loop-body)
+            do (wait-for condition-fl-var
+                         :value-changed t
+                         :wait-status ,wait-status
+                         :handle-missed-pulses ,handle-missed-pulses))))))
 
 (defmacro with-fluent-locked (fluent &body body)
-  `(with-lock-held ((slot-value ,fluent 'value-lock))
+  `(with-unsuspendable-lock (slot-value ,fluent 'value-lock)
      ,@body))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

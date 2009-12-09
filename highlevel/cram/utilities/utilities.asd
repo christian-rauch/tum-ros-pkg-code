@@ -20,5 +20,7 @@
             ((:file "package")
              (:file "utils")
              (:file "lazy")
-             (:file "patmatch"))
+             (:file "patmatch")
+             (:file "data-pool"))
             :serial t)))
+

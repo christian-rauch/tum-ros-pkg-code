@@ -45,7 +45,10 @@
    ;; patmatch
    #:is-var #:is-unnamed-var #:is-segvar #:is-segform #:var-name
    #:substitute-vars #:var-value #:gen-var #:is-genvar #:add-bdg
-   #:pat-match #:pat-match-p #:vars-in #:with-vars-bound #:is-var
+   #:pat-match #:pat-match-p #:vars-in #:with-vars-bound
    #:match-segvar
+   ;; data-pool
+   #:make-data-pool #:new-pool-value #:pool-value
+   #:delete-pool-value
    ;; utils
    #:map-tree #:pop-if!))

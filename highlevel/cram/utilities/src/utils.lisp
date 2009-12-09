@@ -32,26 +32,16 @@
 (in-package :cut)
 
 (defun map-tree (fun tree)
-  (labels ((%mapcar* (fun seq &optional result-cons)
-             (cond ((null seq)
-                    nil)
-                   ((atom seq)
-                    (setf (cdr result-cons) (funcall fun seq)))
-                   (t
-                    (let ((new-cons (cons (funcall fun (car seq)) nil)))
-                      (cond (result-cons
-                             (setf (cdr result-cons) new-cons)
-                             (%mapcar* fun (cdr seq) new-cons))
-                            (t
-                             (%mapcar* fun (cdr seq) new-cons)
-                             new-cons)))))))
-    (cond ((listp tree)
-           (%mapcar* (lambda (elem)
-                       (if (listp elem)
-                           (map-tree fun elem)
-                           (funcall fun elem)))
-                     tree))
-          (t (funcall fun tree)))))
+  "Traverses a cons cell tree and applies fun to every car, aswell as
+   every cdr that is not nil. fun is never called for cons cells as
+   they are decended into."
+  (cond ((null tree)
+         nil)
+        ((atom tree)
+         (funcall fun tree))
+        (t
+         (cons (map-tree fun (car tree))
+               (map-tree fun (cdr tree))))))
 
 (defmacro pop-if! (pred lst)
   "Destructively modifies the sequence. The first item for which pred

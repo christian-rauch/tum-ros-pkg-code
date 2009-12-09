@@ -28,7 +28,7 @@
 ;;;
 
 
-(in-package :cpl)
+(in-package :cpl-impl)
 
 ;;; We need to manage the task trees somehow. The idea is to have a
 ;;; hash-table containing one task-tree for every top-level

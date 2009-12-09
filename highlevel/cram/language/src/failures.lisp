@@ -28,7 +28,7 @@
 ;;;
 
 
-(in-package :cpl)
+(in-package :cpl-impl)
 
 (defvar *break-on-plan-failures* nil
   "When t, invoke the debugger on plan failures. Otherwise, they are
@@ -56,6 +56,7 @@
                                   :format-control (car args)
                                   :format-arguments (cadr args)))))
       (error (make-condition 'simple-plan-error :format-control "Plan failure."))))
+
 
 (defmacro with-failure-handling (clauses &body body)
   "Macro that replaces handler-case in cram-language. This is

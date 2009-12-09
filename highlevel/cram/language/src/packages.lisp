@@ -28,12 +28,12 @@
 ;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
-
 (in-package :cl-user)
 
 (defpackage :cram-walker
-  (:documentation "A fairly basic code walker for use in CPL for expanding plans.")
   (:nicknames :walker)
+  (:documentation 
+   "A fairly basic code walker for use in CPL for expanding plans.")
   (:use #:common-lisp)
   (:export
    ;; plan tree
@@ -47,60 +47,109 @@
    #:expand-plan
    #:walk-with-tag-handler)
   (:shadow ;; Do this in case some lisp implementation defines
-           ;; these cltl2 functions in the common-lisp package
+   ;; these cltl2 functions in the common-lisp package
    #:augment-environment
    #:parse-macro
    #:enclose)
   (:import-from #:alexandria
                 #:rcurry))
 
-(defpackage :cram-language
-  (:documentation "Main package of a new planning language similar to RPL, but implemented on the basis
-                   of macros and the portable-threads library")
-  (:nicknames :cpl)
-  (:use #:common-lisp #:portable-threads #:walker :alexandria)
-  (:export
-   ;; walker
-   #:plan-tree-node #:plan-tree-node-sexp #:plan-tree-node-parent
-   #:plan-tree-node-children #:plan-tree-node-path #:find-plan-node
-   #:expand-plan
-   ;; fluent.lisp
-   #:make-fluent #:fluent #:value #:wait-for #:pulse #:whenever
-   #:name #:logged-fluent
-   ;; fluent-net.lisp
-   #:< #:> #:+ #:- #:* #:/ #:= #:eq #:eql #:not
-   #:fl-and #:fl-or #:pulsed #:fl-funcall
-   ;; failures.lisp
-   #:fail #:plan-error #:simple-plan-error #:plan-error-message #:plan-error-data
-   #:with-failure-handling #:retry
-   ;; task.lisp
-   #:status #:result
-   #:suspend-protect #:on-suspend #:*current-task*
-   #:with-termination-handler #:without-termination #:terminate-protect
-   ;; task-tree.lisp
-   #:code #:task-tree-node #:with-task-tree-node
-   #:replaceable-function #:task-tree-node-effective-code #:make-task
-   #:sub-task #:task #:clear-tasks #:task-tree-node #:replace-task-code
-   #:flatten-task-tree #:task-tree-node-path #:*task-tree*
-   #:task-tree-node-code #:code-parameters #:code-sexp #:code-function
-   #:code-task #:flatten-task-tree
-   ;; base.lisp
-   #:top-level #:seq #:par #:tag #:with-tags #:with-task-blocked
-   #:pursue #:composite-failure #:try-all #:try-in-order #:tagged
-   #:partial-order
-   ;; plans.lisp
-   #:def-top-level-plan #:get-top-level-task-tree #:def-plan
-   ;; goals.lisp
-   #:declare-goal #:def-goal #:goal
-   ;; time
-   #:current-timestamp
-   #:set-default-timestamp-function
-   #:set-timestamp-function
-   #:time-value-p
-   ;; logging.lisp
-   #:clear-instance-log #:get-logged-instances #:get-logged-timespan
-   #:logged-instance #:make-logged-instance #:get-min-logged-time
-   #:timestamp #:id #:logged-value)
-  (:shadow
-   ;; Symbols shadowed by fluent-nets
-   #:< #:> #:+ #:- #:* #:/ #:= #:eq #:eql #:not))
+;;;; A few notes on the package setup.
+;;;
+;;; Cram, the language, is split up into two packages, CPL-IMPL and
+;;; CPL. Tbe former contains the language implementation whereas the
+;;; latter is supposed to be :USEd.
+;;;
+;;; There are two notable differences:
+;;;
+;;;   i) CPL-IMPL only exports symbols which are specific to CRAM.
+;;;
+;;;      CPL additionally reexports all of CL. So users are supposed
+;;;      to simply write (:USE :CPL), and to not include :CL there.
+;;;
+;;;  ii) The fluent operations are prefixed with "FL" in CPL-IMPL; 
+;;;      however, in CPL, these are exported as +,-,*,/,etc.
+;;; 
+;;;      E.g. CPL:+ is actually CPL-IMPL:FL+.
+;;;
+;;; Caveat: 
+;;;   CPL:EQL is not the same as CL:EQL. That means, if you want to
+;;;   use, e.g., eql-specializers in a package which uses CPL, you
+;;;   have to write CL:EQL explicitly.
+
+#.(let ((cpl-symbols
+         '(;; walker
+           #:plan-tree-node #:plan-tree-node-sexp #:plan-tree-node-parent
+           #:plan-tree-node-children #:plan-tree-node-path 
+           #:find-plan-node
+           #:expand-plan
+           ;; fluent.lisp
+           #:make-fluent #:fluent #:value #:wait-for #:pulse #:whenever
+           #:name #:logged-fluent
+           ;; failures.lisp
+           #:fail #:simple-plan-error 
+           #:plan-error #:plan-error-message #:plan-error-data
+           #:with-failure-handling #:retry
+           ;; task.lisp
+           #:*current-task*
+           #:status #:result
+           #:suspend-protect #:without-suspension #:with-suspension #:on-suspension
+           #:with-termination-handler #:ignore-termination #:without-termination
+           ;; task-tree.lisp
+           #:code #:task-tree-node #:with-task-tree-node
+           #:replaceable-function #:task-tree-node-effective-code #:make-task
+           #:sub-task #:task #:clear-tasks #:task-tree-node #:replace-task-code
+           #:flatten-task-tree #:task-tree-node-path #:*task-tree*
+           #:task-tree-node-code #:code-parameters #:code-sexp #:code-function
+           #:code-task #:flatten-task-tree
+           ;; base.lisp
+           #:top-level #:seq #:par #:tag #:with-tags #:with-task-suspended
+           #:pursue #:composite-failure #:try-all #:try-in-order #:tagged
+           #:partial-order
+           ;; plans.lisp
+           #:def-top-level-plan #:get-top-level-task-tree #:def-plan
+           ;; goals.lisp
+           #:declare-goal #:def-goal #:goal #:register-goal
+           ;; time
+           #:current-timestamp
+           #:set-default-timestamp-function
+           #:set-timestamp-function
+           #:time-value-p
+           ;; logging.lisp
+           #:clear-instance-log #:get-logged-instances #:get-logged-timespan
+           #:logged-instance #:make-logged-instance #:get-min-logged-time
+           #:timestamp #:id #:logged-value))
+        (fluent-ops
+         '(;; fluent-net.lisp
+           #:fl< #:fl> #:fl=  #:fl+ #:fl- #:fl* #:fl/
+           #:fl-eq #:fl-eql #:fl-not #:fl-and #:fl-or 
+           #:fl-pulsed #:fl-funcall))
+        (cl-symbols
+         (let (r) (do-external-symbols (s :cl r) (push s r)))))
+
+    `(progn
+
+       (defpackage :cram-implementation
+         (:nicknames :cpl-impl)
+         (:documentation "Internal implementation package of CPL.")
+         (:use :common-lisp 
+               :portable-threads
+               :walker
+               :trivial-garbage
+               :alexandria)
+         (:export ,@cpl-symbols ,@fluent-ops))
+
+       (defpackage :cram-language
+         (:nicknames :cpl)
+         (:documentation 
+          "Main package of a new planning language similar to RPL, but
+           implemented on the basis of macros and the portable-threads
+           library")
+         (:use :common-lisp :cram-implementation)
+         (:export ,@cl-symbols 
+                  ,@cpl-symbols
+                  ;; Wrappers are defined in src/language.lisp.
+                  #:< #:> #:+ #:- #:* #:/ #:= #:eq #:eql #:not
+                  #:pulsed #:fl-and #:fl-or #:fl-funcall)
+         (:shadow
+          #:< #:> #:+ #:- #:* #:/ #:= #:eq #:eql #:not))))

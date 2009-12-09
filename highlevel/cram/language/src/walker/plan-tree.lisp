@@ -31,7 +31,7 @@
 
 (defstruct plan-tree-node
   (sexp nil)      ; The sexp of the _call_ to the plan as found in the walked source code.
-  (path nil)      ; Full path of the plan of that node (in reverse order).
+  (path nil)      ; Full path of the plan of that node.
   (parent nil)    ; NIL for the root of the tree.
   (children nil)) ; list of plan-tree-nodes.
 
@@ -46,12 +46,13 @@
 		(plan-tree-node-children object))))
 
 (defun find-plan-node (plan-tree path)
-  "Return the plan-tree-node specified by the (not reversed) path.
+  "Return the plan-tree-node specified by the path.
 Returns nil, if the path is not valid."
   (when plan-tree
     (if (null path)
 	plan-tree
-	(dolist (x (plan-tree-node-children plan-tree) nil)
-	  (when (equal (car path)
-		       (car (plan-tree-node-path x)))
-	    (return (find-plan-node x (cdr path))))))))
+    (let ((last-path-elem (car (last path))))
+      (dolist (x (plan-tree-node-children plan-tree) nil)
+        (when (equal last-path-elem
+                     (car (plan-tree-node-path x)))
+          (return (find-plan-node x (butlast path)))))))))

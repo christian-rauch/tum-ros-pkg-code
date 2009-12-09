@@ -28,7 +28,7 @@
 ;;;
 
 
-(in-package :cpl)
+(in-package :cpl-impl)
 
 (defun matching-goal-fun (name args &optional (goal-funs (get name :goals)))
   (when goal-funs
@@ -68,10 +68,12 @@
 
 (defmacro declare-goal (name lambda-list &body body)
   (with-gensyms (pattern)
-    `(defun ,name (&rest ,pattern)
-       (block nil
-         (apply (lambda ,lambda-list ,@body) ,pattern)
-         (call-goal ',name ,pattern)))))
+    `(progn
+       (setf (get ',name :goals) nil)
+       (defun ,name (&rest ,pattern)
+         (block nil
+           (apply (lambda ,lambda-list ,@body) ,pattern)
+           (call-goal ',name ,pattern))))))
 
 (defmacro def-goal ((name &rest pattern) &body body)
   "

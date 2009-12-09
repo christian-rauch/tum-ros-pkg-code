@@ -28,12 +28,20 @@
 ;;;
 
 
-(in-package :cpl)
+(in-package :cpl-impl)
 
-(defvar *current-task* nil "Dynamically bound current task.")
+(defvar *current-task* nil
+  "Dynamically bound current task.")
 
-(defvar *save-tasks* nil "When t, every created task is pushed to *tasks*.")
-(defvar *tasks* (list) "List of all created tasks. Used for debugging")
+(defvar *save-tasks* nil
+  "When t, every created task is pushed to *tasks*.")
+(defvar *tasks* (list)
+  "List of all created tasks. Used for debugging")
+
+(defvar *task-pprint-verbosity* 0
+  "Verbosity level for how TASK objects are printed.
+   A value of 0 means that no information is printed that may depend
+   on a lock.")
 
 ;;; Protocol definition of task
 (defgeneric execute (task &key thread-fun ignore-no-parent)
@@ -52,12 +60,12 @@
    "Returns the result of the thread. For multiple values, this
     function also returns multiple values."))
 
-(deftype task-status ()
-  `(:created :running :blocked :waiting :done :evaporated :failed))
+(deftype status-indicator ()
+  "Cf. *STATUS-TRANSITIONS*"
+  `(member :created :running :suspended :waiting :succeeded :evaporated :failed))
 
 (defgeneric status (task)
-  (:documentation "Returns the status fluent of the task.")
-  (declare (values task-status)))
+  (:documentation "Returns the status fluent of the task."))
 
 (defgeneric child-tasks (task)
   (:documentation
@@ -76,8 +84,8 @@
    "Terminates a task. The status' fluent and the result value are set
     and the task function is terminated.
 
-    TERMINATE does nothing if the thread is running, blocked or
-    waiting."))
+    TERMINATE does nothing if the thread's status
+    is :RUNNING, :SUSPENDED or :WAITING."))
 
 (defgeneric suspend (task)
   (:documentation
@@ -85,8 +93,7 @@
 
 (defgeneric wake-up (task)
   (:documentation
-   "Wakes up a blocked thread. If the thread is not blocked,
-    it does nothing."))
+   "Wakes up `task' if it's suspended; otherwise do nothing."))
 
 (defgeneric join-task (task)
   (:documentation
@@ -98,43 +105,44 @@
   (:documentation
    "Returns the path of the task."))
 
-(defmacro with-status ((status &optional (task '*current-task*)) &body body)
-  "Sets the task's status to `status' before executing body, and
+(defmacro with-status ((new-status &optional (task '*current-task*)) &body body)
+  "Sets the task's status to `new-status' before executing body, and
    restores the old value at the end. The status is only restored to
-   its original value if the thread status is still `status' upon
+   its original value if the thread status is still `new-status' upon
    executing the cleanup form."
-  (with-gensyms (old-status)
-    (once-only (task)
-      `(let ((,old-status (and ,task (value (status ,task)))))
-	 (unwind-protect
-	      (progn
-		(when ,task
-		  (setf (value (status ,task)) ,status))
-		,@body)
-	   (when (and ,task (eq (value (status ,task)) ,status))
-	     (setf (value (slot-value ,task 'status)) ,old-status)))))))
+  `(call-with-saved-status #'(lambda () ,@body) ,task ,new-status))
+
+(defun call-with-saved-status (thunk task new-status)
+  (check-type new-status status-indicator)
+  (let ((old-status (and task (value (status task)))))
+    (unwind-protect
+         (progn
+           (when task (update-status task new-status))
+           (funcall thunk))
+      (when (and task (eq (value (status task)) new-status))
+        (update-status task old-status)))))
 
 (defun clear-saved-tasks ()
   (setf *tasks* (list)))
 
 (defun task-alive (task)
   "Returns a fluent indicating if the task is alive"
-  (fl-funcall #'member (status task) '(:created :running :waiting :blocked)))
+  (fl-funcall #'member (status task) '(:created :running :waiting :suspended)))
 
 (defun task-dead (task)
-  (fl-funcall #'member (status task) '(:failed :done :evaporated)))
+  (fl-funcall #'member (status task) '(:failed :succeeded :evaporated)))
 
-(define-condition suspend-notification (condition)
+(define-condition suspension (condition)
   ((suspend-handler :initform (required-argument :handler)
-		    :initarg :handler
-		    :reader suspend-handler))
+                    :initarg :handler
+                    :reader suspend-handler))
   (:documentation
    "This condition is signaled _in the contour_ of a task that is
-    supposed to be blocked. By establishing a handler for this
+    supposed to be suspended. By establishing a handler for this
     condition and by means of the following restarts, a task can
     control if and when blocking occurs.
 
-      IGNORE-SUSPEND:
+      IGNORE-REQUEST:
 	the request for suspension should be ignored.
 
       SUSPEND:
@@ -150,48 +158,79 @@
     You probably want to use one of the abstractions SUSPEND-PROTECT,
     ON-SUSPENSION, or WITHOUT-SUSPENSION."))
 
-(defun signal-suspend (suspend-function)
-  (restart-case (signal 'suspend-notification :handler suspend-function)
-    (ignore-suspend ()
-      (return-from signal-suspend t))
+(defun signal-suspension (suspend-descr)
+  ;; N.B. this implicitly associates the restarts with the implicitly
+  ;; created condition. (Cf. "Notes" section of RESTART-CASE's
+  ;; dictionary entry.)
+  (restart-case (typecase suspend-descr
+                  (suspension (signal suspend-descr))
+                  (t (signal 'suspension :handler suspend-descr)))
+    (ignore-request ()
+      :report "Ignore SUSPENSION request."
+      (return-from signal-suspension t))
     (suspend ()))			; fall through
-  (funcall suspend-function))
+  (funcall (typecase suspend-descr
+             (suspension (suspend-handler suspend-descr))
+             (t suspend-descr))))
 
 (defmacro suspend-protect (form &body protection-forms)
-  "Executes `form'. When the current task is suspended while the form runs,
-   `protection-forms' are executed, and the task is suspended. After
-   wakeup, form is executed again.  WARNING: Do not perform side
-   effects! The number of executions depends on the number of
-   blocks/restarts!"
-  (with-gensyms (retry)
-    `(prog ()
-	,retry
-	(handler-case
-	    (return (unwind-protect ,form ,@protection-forms))
-	  (suspend-notification (condition)
-	    ;; rethrow the condition to allow outside handlers to handle
-	    (signal condition)
-	    (funcall (suspend-handler condition))
-	    (go ,retry))))))
-
-(defmacro on-suspend (form &body when-suspended-forms)
-  "Executes `when-suspended-forms' whenever a suspension signal occurs
-   while `form' is being executed."
-  `(handler-bind
-       ((suspend-notification (lambda  (condition)
-				(declare (ignore condition))
-				,@when-suspended-forms)))
+  "When the current task is suspended during the execution of `form',
+   execute `protection-forms' just before suspending."
+  `(handler-bind ((suspension (lambda (condition)
+                                ;; Use unwind-protect here to prevent
+                                ;; abortion of suspension request by
+                                ;; non-local exit.
+                                (unwind-protect
+                                     (progn ,@protection-forms)
+                                  (invoke-restart 'suspend)))))
      ,form))
 
-(defmacro without-suspend (&body body)
-  "Ignore all suspension signals while `body' is running."
-  `(handler-bind
-       ((suspend-notification (lambda (condition)
-				(declare (ignore condition))
-				(invoke-restart 'ignore-suspend))))
+(defun process-pending-suspensions ()
+  (declare (special *pending-suspensions*))
+  (loop for s in *pending-suspensions*
+     do (signal-suspension s))
+  (setf *pending-suspensions* nil))
+
+(defmacro without-suspension (&body body)
+  "Execution of `body' cannot be interrupted by a suspension. If a suspension "
+  `(let ((*suspensions-disabled* t)
+         (*pending-suspensions* nil))
+     (declare (special *pending-suspensions* *suspensions-disabled*))
+     (unwind-protect
+          (handler-bind
+              ((suspension (lambda (condition)
+                             (when *suspensions-disabled*
+                               (push condition *pending-suspensions*)
+                               (ignore-request condition)))))
+            ,@body)
+       (process-pending-suspensions))))
+
+(defmacro with-suspension (&body body)
+  "Explicitly allows suspension. To be used within the dynamic context
+   of WITHOUT-SUSPENSION."
+  `(let ((*suspensions-disabled* nil))
+     (declare (special *pending-suspensions* *suspensions-disabled*))
+     (when *pending-suspensions*
+       (process-pending-suspensions))
      ,@body))
 
-(define-condition termination-notification (condition)
+(defmacro on-suspension (when-suspended-form &body body)
+  "Executes `when-suspended-form' whenever a suspension signal occurs
+   while `form' is being executed."
+  `(handler-bind
+       ((suspension (lambda  (condition)
+                      (declare (ignore condition))
+                      ,when-suspended-form)))
+     ,@body))
+
+(defmacro with-unsuspendable-lock (lock &body body)
+  "Executes `body' with lock held and delays suspensions until
+   execution of `body' finishes."
+  `(without-suspension
+     (with-lock-held (,lock)
+       ,@body)))
+
+(define-condition termination (condition)
   ((status :initform :evaporated :initarg :status :accessor status)
    (result :initform nil :initarg :result :accessor result))
   (:documentation
@@ -200,59 +239,73 @@
     condition and by means of the following restarts, a task can
     control if and when termnation is supposed to happen.
 
-      IGNORE-TERMINATE:
+      IGNORE-REQUEST:
 	the request for termination should be ignored.
-
-      TERMINATE: the suspension should proceed. (By explicitly
-	invoking this restart, you can specify things that are
-	supposed to happen before termination.)
 
     If the condition is not handled, termination proceeds implicitly.
 
-    The suspension process is performed by invoking the function
-    stored in the `suspension-handler' slot.
-
     You probably want to use one of the abstractions
-    TERMINATE-PROTECT, ON-TERMINATION, or WITHOUT-TERMINATION."))
+    WITHOUT-TERMINATION, ON-TERMINATION, or IGNORE-TERMINATION."))
 
-(defun signal-terminate (status &optional result)
-  (restart-case
-      (cond ((typep status 'condition)
-	     (signal status))
-	    (t
-	     (signal (make-condition 'termination-notification
-				     :status status :result result))))
-    (ignore-terminate ()
-      t)))
+(defun signal-termination (status &optional result)
+  (let ((condition (cond ((typep status 'condition)
+                          (assert (typep status 'termination))
+                          status)
+                         (t (make-condition 'termination
+                                            :status status 
+                                            :result result)))))
+    (if (find-restart 'ignore-request condition)
+        (signal condition)
+        (restart-case (signal condition)      
+          (ignore-request ()
+            :report "Ignore TERMINATION request."
+            t)))))
 
 (defmacro with-termination-handler (handler &body body)
-  "Executes handler whenever a termination signal occurs."
+  "Executes `handler' whenever a termination signal occurs."
   (with-gensyms (handler-fun)
     `(let ((,handler-fun ,handler))
        (handler-bind
-	    ((termination-notification (lambda (condition)
-					 (funcall ,handler-fun
-						  (status condition)
-						  (result condition)))))
-	  ,@body))))
+           ((termination (lambda (condition)
+                           (funcall ,handler-fun
+                                    (status condition)
+                                    (result condition)))))
+         ,@body))))
 
-(defmacro without-termination (&body body)
-  "Ignors all terminations occuring while body is running"
-  `(handler-bind
-       ((termination-notification (lambda (condition)
-				    (declare (ignore condition))
-				    (invoke-restart 'ignore-terminate))))
+(defmacro ignore-termination (&body body)
+  "Ignores all terminations occuring while `body' is running"
+  `(handler-bind ((termination #'ignore-request))
      ,@body))
 
-(defmacro terminate-protect (&body body)
-  "Assures that body is finished before the termination request is
-  processed."
+(defmacro without-termination (&body body)
+  "Assures that `body' is finished before the termination request is
+   processed."
   (with-gensyms (received-termination)
     `(let ((,received-termination nil))
-       (handler-bind
-	   ((termination-notification (lambda (condition)
-					(setf ,received-termination condition)
-					(invoke-restart 'ignore-terminate))))
-	 ,@body)
-       (when ,received-termination
-	 (signal-terminate ,received-termination)))))
+       (unwind-protect
+            (handler-bind
+                ((termination (lambda (condition)
+                                (setf ,received-termination condition)
+                                (ignore-request condition))))
+              ,@body)
+         (when ,received-termination
+           (signal-termination ,received-termination))))))
+
+(defun ignore-request (&optional condition)
+  "Invoke the IGNORE-REQUEST restart _associated with_ CONDITION."
+  (invoke-restart (or (find-restart 'ignore-request condition)
+                      (error "Bug: tried to invoke non-existing ~
+                                   IGNORE-REQUEST restart."))))
+
+(defvar *task-local-variables* nil)
+(defmacro define-task-variable (name &optional (global-value nil gvp)
+                                               (docstring nil docp))
+  "Define `name' as a global and task-local variable with an initial
+value of `global-value', if given. Before the execution of a task, a
+new binding for `name' will be established within the task's thread."
+  `(progn
+     (defvar ,name
+       ,@(when gvp  (list global-value))
+       ,@(when docp (list docstring)))
+     (eval-when (:compile-toplevel :load-toplevel :execute)
+       (pushnew ',name *task-local-variables*))))

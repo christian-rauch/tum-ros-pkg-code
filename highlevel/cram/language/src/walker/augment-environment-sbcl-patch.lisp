@@ -28,6 +28,8 @@
 ;;;
 
 ;;;; Patch from the sbcl devel mailing list
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (require 'sb-cltl2))
 
 (in-package :sb-cltl2)
 

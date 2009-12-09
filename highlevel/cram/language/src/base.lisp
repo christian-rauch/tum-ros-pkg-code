@@ -28,7 +28,50 @@
 ;;;
 
 
-(in-package :cpl)
+(in-package :cpl-impl)
+
+(defmacro def-plan-macro (name lambda-list &body body)
+  (setf (get name 'plan-type) :plan-macro)
+  (setf (get name 'plan-lambda-list) lambda-list)
+  (setf (get name 'plan-sexp) body)
+  (let* ((documentation (when (stringp (car body))
+                          (car body)))
+         (body (if documentation
+                   (cdr body)
+                   body)))
+    `(defmacro ,name ,lambda-list
+       ,documentation
+       `(cond ((not *current-task*)
+               (error (format nil "'~a' form not inside a plan." ',',name)))
+              (t
+               ,,@body)))))
+
+(defmacro with-parallel-childs ((running done failed) child-forms
+                                &body watcher-body)
+  "Execute child-forms in parallel and execute watcher-body whenever
+   any child changes its status. The variables running, done and
+   failed are lexically bound in watcher-body and are lists of all
+   running, done and failed tasks. Please note that watcher-body can
+   be terminated by a return call."
+  `(with-task
+     ,@(loop with n = (length child-forms)
+             for form in child-forms and i from 1
+             collect `(make-instance 'task 
+                        :name ',(format-gensym "[PARALLEL-CHILD-#~D/~D]-" i n)
+                        :thread-fun (lambda () ,form)))
+     (wait-for (fl-funcall #'every (compose #'not (curry #'eq :created))
+                           (fl-funcall #'mapcar #'status (child-tasks *current-task*))))
+     (block nil
+       (whenever ((apply #'fl-pulsed (mapcar #'status (child-tasks *current-task*))))
+         (multiple-value-bind (,running ,done ,failed)
+             (loop
+                for task in (child-tasks *current-task*)
+                when (task-running-p task) collect task into running
+                when (task-done-p task)    collect task into done
+                when (task-failed-p task)  collect task into failed
+                finally
+                  (return (values running done failed)))
+           ,@watcher-body)))))
 
 (defmacro top-level (&body body)
   "Creates a new task, executes body in it and waits until it is
@@ -41,6 +84,7 @@
        (when *current-task*
          (error "top-level calls cannot be nested."))
        (let ((,task (make-instance 'task
+                      :name ',(gensym "[TOP-LEVEL]-")
                       :thread-fun (lambda () ,@body)
                       :ignore-no-parent t)))
          (with-failure-handling
@@ -48,14 +92,15 @@
                 (error e))
               (error (e)
                 (error e)))
-             (unwind-protect
-                  (join-task ,task)
-               (terminate ,task :evaporated)))))))
+           (unwind-protect
+                (join-task ,task)
+             (terminate ,task :evaporated)))))))
 
 (def-plan-macro with-task (&body body)
   "Executes body in a separate task and joins it."
   (with-gensyms (task)
     `(let ((,task (make-instance 'task
+                    :name ',(gensym "[WITH-TASK]-")
                     :thread-fun (lambda () ,@body))))
        (register-child *current-task* ,task)
        (join-task ,task))))
@@ -101,7 +146,7 @@
         `(with-task
            (let* ((,current-path *current-path*)
                   ,@(mapcar (lambda (tag)
-                              `(,tag (task (cons `(tagged ,',tag) ,current-path))))
+                              `(,tag (task ',tag (cons `(tagged ,',tag) ,current-path))))
                             tags))
              (declare (ignorable ,current-path))
              (macrolet ((:tag (name &body tag-body)
@@ -114,14 +159,14 @@
                              `(terminate ,tag :evaporated))
                            tags)))))))))
 
-(def-plan-macro with-task-blocked (task &body body)
-  "Execute body with 'task' blocked."
+(def-plan-macro with-task-suspended (task &body body)
+  "Execute body with 'task' being suspended."
   (with-gensyms (task-sym)
     `(let ((,task-sym ,task))
        (unwind-protect
             (progn
               (suspend ,task-sym)
-              (wait-for (eq (status ,task-sym) :blocked))
+              (wait-for (fl-eq (status ,task-sym) :suspended))
               ,@body)
          (wake-up ,task-sym)))))
 

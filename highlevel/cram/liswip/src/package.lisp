@@ -31,11 +31,11 @@
 (in-package :cl-user)
 
 (defpackage :liswip
-  (:use #:common-lisp #:cffi)
-  (:export #:pl-init #:get-term-value #:get-terms-from-list
+  (:use #:common-lisp #:cffi #:cram-utilities)
+  (:export #:swi-init #:get-term-value #:get-terms-from-list
            #:get-owl-type #:is-owl-integer #:is-owl-float #:is-owl-float
-           #:is-owl-type #:put-term-value #:var? #:query-var #:query-vars
-           #:pl-q #:pl-query #:pl-query-and #:pl-query-or #:pl-query-not
-           #:pl-query-simple
+           #:is-owl-type #:put-term-value
+           #:swi-prolog #:pl-query #:pl-query-and #:pl-query-or #:pl-query-not
+           #:pl-query-simple #:decode-term
            #:pl-atom #:pl-list #:pl-variable #:pl-integer #:pl-float
-           #:pl-string))
+           #:pl-string #:*pl-user-module*))

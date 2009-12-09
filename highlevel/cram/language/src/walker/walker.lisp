@@ -61,12 +61,12 @@
   (destructuring-bind (label name &rest body) form
     (declare (ignore label))
     (loop for handler in *tag-walker-handlers*
-          do (funcall handler name body))))
+       do (funcall handler name body))))
 
 (defun extend-path (type label current-path)
   (case type
     (:top-level-plan (assert (null current-path))
-		     (cons (list 'cpl::top-level label) current-path))
+                     (cons (list 'cpl::top-level label) current-path))
     (:plan (cons (list label) current-path))
     (:tag (cons (list 'cpl::tagged label) current-path))
     (otherwise (error "Trying to extend path in an invalid way."))))
@@ -77,66 +77,66 @@
 
 (defun register-child-plan (child)
   (setf (plan-tree-node-children *current-parent*)
-	(append (plan-tree-node-children *current-parent*) (list child))))
+        (append (plan-tree-node-children *current-parent*) (list child))))
 
 (defun walk-plan-form (form env)
   "Handles a plan or tag form and creates a node in the plan tree."
   (assert *current-parent*)
   (let ((label (if (get (car form) 'cpl::plan-type)
-		   (car form)    ; plan form
-		   (cadr form))) ; tagged form
-	(type (or (get (car form) 'cpl::plan-type) ; plan form
-		  :tag))                           ; tagged form
-	(sexp (or (get (car form) 'cpl::plan-sexp) ; plan form
-		  (cddr form))))                   ; tagged form
+                   (car form)    ; plan form
+                   (cadr form))) ; tagged form
+        (type (or (get (car form) 'cpl::plan-type) ; plan form
+                  :tag))                           ; tagged form
+        (sexp (or (get (car form) 'cpl::plan-sexp) ; plan form
+                  (cddr form))))                   ; tagged form
     (assert (if (eq type :tag)
-		(eq (car form) :tag)
-		t))
+                (eq (car form) :tag)
+                t))
     (when (not (eq :tag type))
       ;; If we encounter a plan call, walk the parameters first
       ;; (those might contain calls to plans aswell)
       (walk-funcall form env))
     (with-extended-path type label 
       (let ((node (make-plan-tree-node :sexp form
-				       :parent *current-parent*
-				       :path *current-path*)))
-	(register-child-plan node)
-	(let ((*current-parent* node))
-	  (if (eq :tag type)
-	      (walk-block form env)
-	      ;; If walking new plan, start with a clean slate
-	      ;; regarding env and *shadowed-funcitons*,
-	      (let ((*shadowed-functions* nil))
-		(walk-form (cons 'locally sexp) nil))))))))
+                                       :parent *current-parent*
+                                       :path *current-path*)))
+        (register-child-plan node)
+        (let ((*current-parent* node))
+          (if (eq :tag type)
+              (walk-block form env)
+              ;; If walking new plan, start with a clean slate
+              ;; regarding env and *shadowed-funcitons*,
+              (let ((*shadowed-functions* nil))
+                (walk-form (cons 'locally sexp) nil))))))))
 
 (defun walk-form (form env)
   "Takes a form and an environment and walkes the form if neccessary, after macroexpanding it fully and considering special cases."
   (flet ((handle-macro/funcall (form env)
-	   (multiple-value-bind (expansion expanded)
-	       (macroexpand-1 form env)
-	     (if expanded
-		 (walk-form expansion env)
-		 ;; Determin if form is a call to a plan, that is not shadowed
-		 ;; and the we actually want to create a plan tree (indicated
-		 ;; by *current-parent* not being nil.
-		 (if (and *current-parent*
-			  (get (car form) 'cpl::plan-type)
-			  (not (member (car form) *shadowed-functions*)))
-		     (progn (walk-plan-form form env) ;; call to plan 
-			    form)
-		     (walk-funcall form env)))))) ;; ordinary function
+           (multiple-value-bind (expansion expanded)
+               (macroexpand-1 form env)
+             (if expanded
+                 (walk-form expansion env)
+                 ;; Determin if form is a call to a plan, that is not shadowed
+                 ;; and the we actually want to create a plan tree (indicated
+                 ;; by *current-parent* not being nil.
+                 (if (and *current-parent*
+                          (get (car form) 'cpl::plan-type)
+                          (not (member (car form) *shadowed-functions*)))
+                     (progn (walk-plan-form form env) ;; call to plan 
+                            form)
+                     (walk-funcall form env)))))) ;; ordinary function
     (cond
       ((atom form)
        (multiple-value-bind (expansion expanded)
-	   (macroexpand-1 form env)
-	 (if expanded
-	     (walk-form expansion env)
-	     form)))
+           (macroexpand-1 form env)
+         (if expanded
+             (walk-form expansion env)
+             form)))
       ((not (symbolp (car form)))
        (if (not (and (consp (car form)) (eq (caar form) 'lambda)))
-	   (error "Invalid form ~a." form)
-	   `(,(walk-lambda (car form) env)
-	      ,(walk-list (cdr form) env))))
+           (error "Invalid form ~a." form)
+           `(,(walk-lambda (car form) env)
+              ,(walk-list (cdr form) env))))
       ((get (car form) 'walk-fn)
        (funcall (get (car form) 'walk-fn) form env))
       (t
@@ -156,7 +156,7 @@
 (defun walk-list (list env)
   "Walk each element of the list."
   (mapcar #'(lambda (x) (walk-form x env))
-	  list))
+          list))
 
 (defun walk-funcall (form env)
   "Walk all but car."
@@ -195,10 +195,10 @@
   (let ((new-env env))
     (values 
      (mapcar (lambda (b)
-	       (prog1 
-		   (walk-binding b (if let*-style-bindings new-env env))
-		 (setf new-env (aug-env new-env :variable (list b)))))
-	     list)
+               (prog1 
+                   (walk-binding b (if let*-style-bindings new-env env))
+                 (setf new-env (aug-env new-env :variable (list b)))))
+             list)
      new-env)))
 
 (defun walk-binding (b env)
@@ -214,58 +214,58 @@
   (let ((f (cadr form)))
     `(function
       ,(if (consp f)
-	   (cond 
-	     ((eq (car f) 'lambda)
-	      (walk-lambda f env))
-      #+sbcl ((eq (car f) 'sb-int:named-lambda)
-	      (walk-named-lambda f env))
+           (cond 
+             ((eq (car f) 'lambda)
+              (walk-lambda f env))
+             #+sbcl ((eq (car f) 'sb-int:named-lambda)
+                     (walk-named-lambda f env))
              ((and (eq (car f)  'setf)
-		   (cdr f)
-		   (symbolp (cadr f))
-		   (null (cddr f)))
-	      f)
+                   (cdr f)
+                   (symbolp (cadr f))
+                   (null (cddr f)))
+              f)
              (t (error "Invalid function form with ~a as cadr." f)))
-	   (walk-form f env))))) ;; must be symbol 
+           (walk-form f env))))) ;; must be symbol 
 
 (defun walk-lambda (form env)
   "Walk argument list and body."
   `(,(car form)
-    ,(walk-ordinary-lambda-list (cadr form) env)
-    ,@(walk-list (cddr form)
-		 (aug-env env :variable (cadr form)))))
+     ,(walk-ordinary-lambda-list (cadr form) env)
+     ,@(walk-list (cddr form)
+                  (aug-env env :variable (cadr form)))))
 
 #+sbcl
 (defun walk-named-lambda (form env)
   "Walk argument list and body."
   `(,(car form)
-    ,(cadr form)
-    ,(walk-ordinary-lambda-list (caddr form) env)
-    ,@(walk-list (cdddr form)
-		 (aug-env env :variable (caddr form)))))
+     ,(cadr form)
+     ,(walk-ordinary-lambda-list (caddr form) env)
+     ,@(walk-list (cdddr form)
+                  (aug-env env :variable (caddr form)))))
 
 (defun walk-ordinary-lambda-list (list env)
   "Walk lambda argument list (ordinary lambda list)."
   (mapcar (rcurry #'walk-argument env)
-	  list))
+          list))
 
 (defun walk-argument (arg env)
   "Walk lambda argument (part of an ordinary lambda list). If it is a list of at 
    least two elements, walk the cadr. Walk nothing else."
   (if (and (consp arg) (consp (cdr arg)))
       `(,(car arg)
-	,(walk-form (cadr arg) env)
-	,@(cddr arg))
+         ,(walk-form (cadr arg) env)
+         ,@(cddr arg))
       arg))
 
 (defun walk-macrolet (form env)
   "Add macro or symbol-macro definitions to the environment and 
    proceed expanding the body (wrapped in a locally)."
   (walk-form `(locally ,@(cddr form))
-	     (aug-env env (car form) (cadr form))))
+             (aug-env env (car form) (cadr form))))
 
 (defmacro with-shadowed-functions (binds &body body)
   `(let ((*shadowed-functions* (union (mapcar #'car ,binds)
-				      *shadowed-functions*)))
+                                      *shadowed-functions*)))
      ,@body))
 
 (defun walk-flet (form env)
@@ -273,9 +273,9 @@
    the environment."
   `(flet ,(walk-list-of-lambdas (cadr form) env)
      ,@(with-shadowed-functions (cadr form)
-	 (walk-list (cddr form)
-		    (aug-env env 'flet (cadr form)))))) ; aug-env only needs the function
-                                                       ;; name, so no need to expand here
+                                (walk-list (cddr form)
+                                           (aug-env env 'flet (cadr form)))))) ; aug-env only needs the function
+;; name, so no need to expand here
 
 (defun walk-labels (form env)
   "Add the function definitions to the environment, then walk those definitions 
@@ -283,55 +283,55 @@
   (let ((env (aug-env env 'labels (cadr form))))
     (with-shadowed-functions (cadr form)
       `(labels ,(walk-list-of-lambdas (cadr form) env)
-	 ,@(walk-list (cddr form) env)))))
+         ,@(walk-list (cddr form) env)))))
 
 (defun walk-list-of-lambdas (list env)
   "Walk each element like a lambda form."
   (mapcar (rcurry #'walk-lambda env)
-	  list))
+          list))
 
 
 ;;; Add walker function to the plist of the symbols that need to handled as
 ;;; special forms
 (mapc #'(lambda (x)
-	  (setf (get (car x) 'walk-fn)
-		(symbol-function (cadr x))))
+          (setf (get (car x) 'walk-fn)
+                (symbol-function (cadr x))))
       '(;; *** CL special forms
-	(cl:block                walk-block)
-	(cl:catch                walk-funcall)
-	(cl:eval-when            walk-block)
-	(cl:flet                 walk-flet)
-	(cl:function             walk-function)
-	(cl:go                   walk-quote)
-	(cl:if                   walk-funcall)
-	(cl:labels               walk-labels)
-	(cl:let                  walk-let)
-	(cl:let*                 walk-let*)
-	(cl:load-time-value      walk-load-time-value)
-	(cl:locally              walk-funcall)
-	(cl:macrolet             walk-macrolet)
-	(cl:multiple-value-call  walk-funcall)
-	(cl:multiple-value-prog1 walk-funcall)
-	(cl:progn                walk-funcall)
-	(cl:progv                walk-funcall)
-	(cl:quote                walk-quote)
-	(cl:return-from          walk-block)
-	(cl:setq                 walk-funcall)
-	(cl:symbol-macrolet      walk-macrolet)
-	(cl:tagbody              walk-funcall)
-	(cl:the                  walk-block)
-	(cl:throw                walk-funcall)
-	(cl:unwind-protect       walk-funcall)
+        (cl:block                walk-block)
+        (cl:catch                walk-funcall)
+        (cl:eval-when            walk-block)
+        (cl:flet                 walk-flet)
+        (cl:function             walk-function)
+        (cl:go                   walk-quote)
+        (cl:if                   walk-funcall)
+        (cl:labels               walk-labels)
+        (cl:let                  walk-let)
+        (cl:let*                 walk-let*)
+        (cl:load-time-value      walk-load-time-value)
+        (cl:locally              walk-funcall)
+        (cl:macrolet             walk-macrolet)
+        (cl:multiple-value-call  walk-funcall)
+        (cl:multiple-value-prog1 walk-funcall)
+        (cl:progn                walk-funcall)
+        (cl:progv                walk-funcall)
+        (cl:quote                walk-quote)
+        (cl:return-from          walk-block)
+        (cl:setq                 walk-funcall)
+        (cl:symbol-macrolet      walk-macrolet)
+        (cl:tagbody              walk-funcall)
+        (cl:the                  walk-block)
+        (cl:throw                walk-funcall)
+        (cl:unwind-protect       walk-funcall)
 
-	;; *** not secpial forms, but need to be handled seperatelly anyway
-	(cl:declare              walk-quote) ;; ingnore for now
+        ;; *** not secpial forms, but need to be handled seperatelly anyway
+        (cl:declare              walk-quote) ;; ingnore for now
 
-	;; *** cog-plan macros, that we treat specially
-	(:tag                    walk-cpl-tag)
-	
-	;; *** non standard support
-	;; compiler-let ;; was in CL 1 but not in ANSI CL,
-	                ;; so we don't process it for now. => (maybe) a TODO
-	(internal-the            walk-block) ;; special lispworks stuff found in cl-walker.
-	                                     ;; UNTESTED => (maybe) a TODO
-	))
+        ;; *** cog-plan macros, that we treat specially
+        (:tag                    walk-cpl-tag)
+        
+        ;; *** non standard support
+        ;; compiler-let ;; was in CL 1 but not in ANSI CL,
+        ;; so we don't process it for now. => (maybe) a TODO
+        (internal-the            walk-block) ;; special lispworks stuff found in cl-walker.
+        ;; UNTESTED => (maybe) a TODO
+        ))

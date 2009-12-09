@@ -28,9 +28,9 @@
 ;;;
 
 
-(in-package :cpl)
+(in-package :cpl-impl)
 
-(defmacro def-fluent-operator (name args &body body)
+(defmacro def-fluent-operator (&whole w name args &body body)
   "def-fluent-operator allows to define fluent operators. It creates a
    new function with the given name. When it is called with a fluent
    in its parameter list, a fluent network is returned, with the
@@ -41,96 +41,95 @@
    returned fluent net. This is solved by havin a second value. When
    the body returns a non-nil second value, the fluent net is always
    pulsed, otherwise only when the fluent net value has changed."
-  (let* ((documentation (when (stringp (car body))
-                          (car body)))
-         (body (if documentation
-                   (cdr body)
-                   body)))
+  (multiple-value-bind (body decls docstring) 
+      (parse-body body :documentation t :whole w)
     (with-gensyms (fl-args)
       `(defun ,name (&rest ,fl-args)
-         ,documentation
-         (labels ((,name ,args
-                    ,@body))
-           (macrolet ((for-each-fluent ((arg seq) &body body)
-                        `(loop for ,arg in ,seq
-                            when (typep ,arg 'fluent) do (progn ,@body)))
-                      (has-fluent? (seq)
-                        `(find-if (lambda (arg)
-                                    (typep arg 'fluent))
-                                  ,seq)))
+         ,docstring
+         (labels ((,name ,args ,@decls ,@body))
+           (let ((fluents (remove-if-not (of-type 'fluent) ,fl-args)))
+             (if fluents 
+                 (call-as-fluent-operator #',name ,fl-args 
+                                          :fluents fluents 
+                                          :name ',name)
+                 (apply #',name ,fl-args))))))))
 
-             (cond ((has-fluent? ,fl-args)
-                    (let* ((fluent-net-name (gensym (format nil "FN-~a" ',name)))
-                           (result-fluent (make-fluent
-                                           :name fluent-net-name
-                                           :value nil ; calculate value after registering at dependency-fluents
-                                           :dependencies (loop for fl in ,fl-args when (typep fl 'fluent) collecting fl)))
-                           (weak-result-fluent (tg:make-weak-pointer result-fluent)))
-                      (terminate-protect
-                        (for-each-fluent (fluent ,fl-args)
-                                         (register-update-callback
-                                          fluent fluent-net-name
-                                          (lambda ()
-                                            (terminate-protect
-                                              (let ((result-fluent (tg:weak-pointer-value weak-result-fluent)))
-                                                (cond (result-fluent
-                                                       ;; We need to find out if the fluent has been pulsed by setf.
-                                                       ;; Otherwise we need to pulse it by hand. This is a hack again,
-                                                       ;; but currently I see no better solution.
-                                                       (with-lock-held ((slot-value result-fluent 'value-lock))
-                                                         (multiple-value-bind (new-value pulse?) (apply #',name ,fl-args)
-                                                           (let ((old-pulse-count (slot-value result-fluent 'pulse-count)))
-                                                             (setf (value result-fluent)
-                                                                   new-value)
-                                                             (when (and pulse?
-                                                                        (= old-pulse-count
-                                                                           (slot-value result-fluent 'pulse-count)))
-                                                               (pulse result-fluent))))))
-                                                      (t
-                                                       ;; Do garbage-collection when reference to fluent is no longer valid.
-                                                       (for-each-fluent (fl ,fl-args)
-                                                                        (remove-update-callback fl fluent-net-name)))))))))
-                        (setf (value result-fluent) (apply #',name ,fl-args)))
-                      result-fluent))
-                   (t
-                    (apply #',name ,fl-args)))))))))
+(defun call-as-fluent-operator (function args 
+                                &key (fluents (required-argument))
+                                     (name    (required-argument)))
+  "The meat of DEF-FLUENT-OPERATOR."
+  (let* ((fl-name (format-gensym "FN-~A" name)) 
+         (result-fluent (make-fluent
+                         :name fl-name
+                         ;; calculate value after registering at 
+                         ;; dependency-fluents
+                         :value nil
+                         :dependencies fluents))
+         (weak-result-fluent (tg:make-weak-pointer result-fluent)))
+    (without-termination
+      (dolist (fluent fluents)
+        (register-update-callback
+         fluent fl-name
+         (lambda ()
+           (without-termination
+             (let ((result-fluent (tg:weak-pointer-value weak-result-fluent)))
+               (cond (result-fluent
+                      ;; We need to find out if the fluent has been pulsed by setf.
+                      ;; Otherwise we need to pulse it by hand. This is a hack again,
+                      ;; but currently I see no better solution.
 
-(macrolet ((def-cl-wrapper (name args)
+                      (with-lock-held ((slot-value result-fluent 'value-lock))
+                        (multiple-value-bind (new-value pulse?) (apply function args)
+                          (let ((old-pulse-count 
+                                 (slot-value result-fluent 'pulse-count)))
+                            (setf (value result-fluent) new-value)
+                            (when (and pulse?
+                                       (= old-pulse-count
+                                          (slot-value result-fluent 'pulse-count)))
+                              (pulse result-fluent))))))
+                     (t
+                      ;; Do garbage-collection when reference to
+                      ;; fluent is no longer valid.
+                      (dolist (fluent fluents)
+                        (remove-update-callback fluent fl-name)))))))))
+      (setf (value result-fluent) (apply function args)))
+    result-fluent))
+
+(macrolet ((wrap (fn args)
              ;; This solution is not the fastest one and not the
              ;; because of the use of mapcar, which causes at least
              ;; two iterations over args.
-             `(apply #',(intern (symbol-name name) :common-lisp)
-                     (mapcar #'value ,args))))
+             `(apply #',fn (mapcar #'value ,args))))
 
-  (def-fluent-operator < (&rest args)
-    (def-cl-wrapper < args))
+  (def-fluent-operator fl< (&rest args)
+    (wrap < args))
 
-  (def-fluent-operator > (&rest args)
-    (def-cl-wrapper > args))
+  (def-fluent-operator fl> (&rest args)
+    (wrap > args))
 
-  (def-fluent-operator = (&rest args)
-    (def-cl-wrapper = args))
+  (def-fluent-operator fl= (&rest args)
+    (wrap = args))
 
-  (def-fluent-operator eq (&rest args)
-    (def-cl-wrapper eq args))
+  (def-fluent-operator fl-eq (&rest args)
+    (wrap eq args))
 
-  (def-fluent-operator eql (&rest args)
-    (def-cl-wrapper eql args))
+  (def-fluent-operator fl-eql (&rest args)
+    (wrap eql args))
+  
+  (def-fluent-operator fl+ (&rest args)
+    (wrap + args))
 
-    (def-fluent-operator + (&rest args)
-    (def-cl-wrapper + args))
+  (def-fluent-operator fl- (&rest args)
+    (wrap - args))
 
-  (def-fluent-operator - (&rest args)
-    (def-cl-wrapper - args))
+  (def-fluent-operator fl* (&rest args)
+    (wrap * args))
 
-  (def-fluent-operator * (&rest args)
-    (def-cl-wrapper * args))
+  (def-fluent-operator fl/ (&rest args)
+    (wrap / args)))
 
-  (def-fluent-operator / (&rest args)
-    (def-cl-wrapper / args)))
-
-(def-fluent-operator not (arg)
-  (cl:not (value arg)))
+(def-fluent-operator fl-not (arg)
+  (not (value arg)))
 
 ;;; AND and OR cannot be implemented as macros for fluent. All
 ;;; previous operators return whether a fluent or the value, depending
@@ -144,7 +143,7 @@
   "The and-operator for fluents. It is fundamentally different to the
    definition of common-lisp's and in that it is not implemented as a
    macro. That means, all args are evaluated when using fl-and."
-  (cond ((not args)
+  (cond ((null args)
          t)
         ((cdr args)
          (and (value (car args))
@@ -159,7 +158,7 @@
     (or (value (car args))
         (apply #'fl-or (cdr args)))))
 
-(def-fluent-operator pulsed (&rest args)
+(def-fluent-operator fl-pulsed (&rest args)
   "Returns true and is invoked whenever one of its
    argument fluents gets pulsed."
   (when args
@@ -169,5 +168,4 @@
   "Generic fluent-operator. Applys args to function whenever a
    fluent in args changes."
   (when args
-    (apply fun (mapcar #'value
-                       args))))
+    (apply fun (mapcar #'value args))))

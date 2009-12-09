@@ -1,6 +1,8 @@
-; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Base: 10 -*-
+;;; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Base: 10 -*-
 
-(operate 'load-op "lisp_asdf_manager/lisp_asdf_manager")
+(in-package :cl-user)
+
+(asdf:operate 'asdf:load-op "lisp_asdf_manager/lisp_asdf_manager")
 
 (asdf:defsystem cram/language-tests
   :name "cram-language-tests"
@@ -19,3 +21,9 @@
                          (:file "fluents")
                          (:file "language-base"))
             :serial t)))
+
+(defmethod asdf:perform ((o asdf:test-op)
+                         (c (eql (asdf:find-system 'cram/language-tests))))
+  (flet ((symbol (pkg name)
+	   (intern (string name) (find-package pkg))))
+    (funcall (symbol :5am :run!) (symbol :cpl-tests :language-base))))
