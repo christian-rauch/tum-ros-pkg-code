@@ -16,10 +16,9 @@
 
 (in-package :kipla)
 
-(def-goal (achieve (looking-at ?lo-name))
-  (etypecase ?lo-name
-    (number (look-at ?lo-name))
-    (string (look-at (jlo:id ?lo-name)))
+(def-goal (achieve (looking-at ?lo))
+  (etypecase ?lo
+    (jlo:jlo (look-at ?lo))
     (symbol
-     (ecase ?lo-name
-       (:forward (look-at (jlo:id "/look_forward")))))))
+     (ecase ?lo
+       (:forward (look-at (jlo:make-jlo :name "/look_forward")))))))

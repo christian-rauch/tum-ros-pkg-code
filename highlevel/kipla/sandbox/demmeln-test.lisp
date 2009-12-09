@@ -17,7 +17,7 @@
 (in-package :kipla)
 
 #+nil
-(sb-ext:restrict-compiler-policy 'debug 3)
+(sb-ext:restrict-compiler-policy 'debug 2)
 
 #+nil
 (let ((cpl::*task-tree* (gethash 'my-grand-plan cpl::*top-level-plan-task-trees*)))

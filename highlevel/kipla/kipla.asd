@@ -101,4 +101,5 @@
               :serial t)
      (:module "sandbox"
               :components
-              ((:file "test-plans")))))
+              ((:file "test-plans")
+               (:file "launch")))))

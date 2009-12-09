@@ -55,7 +55,7 @@
                       *object-designator-resolvers*
                       :initial-value nil)))
     ;; (when (valid desig)
-    ;;   (push (perceived-object-lo-id (reference desig))
+    ;;   (push (perceived-object-jlo (reference desig))
     ;;         (cop-desig-location-info-poses (cop-desig-info-location info))))
     info))
 

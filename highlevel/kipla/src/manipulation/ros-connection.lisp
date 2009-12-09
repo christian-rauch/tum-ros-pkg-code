@@ -37,10 +37,10 @@
                         ;; :joint_angles (unused)
                         :hand_primitive (hand-primitive action-description)
                         :object_type (object-type action-description)
-                        :end_effector_loid (end-effector-lo-id action-description)
-                        :obstacle_ids (let ((content (remove (end-effector-lo-id action-description)
+                        :end_effector_loid (id (end-effector-pose action-description))
+                        :obstacle_ids (let ((content (remove (jlo:id (end-effector-pose action-description))
                                                              (remove-duplicates
-                                                              (mapcar #'perceived-object-lo-id *perceived-objects*)))))
+                                                              (mapcar (alexandria:compose #'jlo:id #'perceived-object-jlo) *perceived-objects*)))))
                                         (make-array (list-length content) :initial-contents content))
                         :distance (grasp-distance action-description)
                         ;; :supporting_plane (unused)

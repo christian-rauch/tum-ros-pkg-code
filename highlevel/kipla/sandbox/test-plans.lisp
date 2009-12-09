@@ -97,7 +97,7 @@
       (achieve `(loc ,obj ,counter)))))
 
 (def-plan pick-and-place-icetea&jug ()
-  (say "I will bring the icetea and the jug to the table.")
+  (say "I will bring the icetea and the jug to the counter.")
   (pursue
     (run-process-modules)
     (with-designators ((table (location `((on table))))
@@ -113,6 +113,7 @@
       (achieve `(object-placed-at ,jug ,counter-jug)))))
 
 (def-plan pick-and-place-icetea&jug-2 ()
+  (say "I will bring the icetea and the jug to the table.")
   (pursue
     (run-process-modules)
     (with-designators ((counter (location `((on counter))))

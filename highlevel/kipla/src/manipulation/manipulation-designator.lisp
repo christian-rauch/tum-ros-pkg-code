@@ -27,10 +27,10 @@
                 :documentation "The object type (e.g :top)")
    (hand-primitive :initform "" :reader hand-primitive :initarg :hand-primitive
                    :documentation "The hand primitive to use.")
-   (end-effector-pose :initform 0 :reader end-effector-lo-id :initarg :end-effector-pose
-                      :documentation "LO-ID of the commanded end effector pose.")
+   (end-effector-pose :initform 0 :reader end-effector-pose :initarg :end-effector-pose
+                      :documentation "JLO of the commanded end effector pose.")
    (obstacles :initform nil :reader obstacles :initarg :obstacles
-              :documentation "List of lo-ids that describe obstacles")
+              :documentation "List of jlo objects that describe obstacles")
    (grasp-distance :initform 0 :reader grasp-distance :initarg :grasp-distance
                    :documentation "Stop at this distance to the commanded pose.")
    (supporting-plane :initform 0 :reader supporting-plane :initarg :supporting-plane
@@ -52,12 +52,9 @@
   (assert (typep supporting 'location-designator))
   (assert (typep obj 'object-designator))
   (with-desig-props (at) obj
-    (let ((z-dist (jlo:z-distance (perceived-object-lo-id (reference obj)) (reference at)))
-          (base->supporting (jlo:frame-query "/base_link" (reference supporting))))
-      (setf (vision_msgs-msg:id-val base->supporting) 0)
-      (setf (aref (vision_msgs-msg:pose-val base->supporting) 11)
-            (+ (aref (vision_msgs-msg:pose-val base->supporting) 11) z-dist 0.01))
-      (vision_msgs-msg:id-val (jlo:update base->supporting)))))
+    (let ((z-dist (jlo:component-distance (perceived-object-jlo (reference obj)) (reference at) :axis :z))
+          (base->supporting (jlo:frame-query (jlo:make-jlo :name "/base_link") (reference supporting))))
+      (incf (jlo:pose base->supporting 2 3) (+ z-dist 0.01)))))
 
 ;;; Possible trajectory configs:
 ;;; (to grasp)
@@ -149,8 +146,8 @@
     (slot-value ?act trajectory-type "put_down")
     (slot-value ?act object-type ?obj-type)
     (lisp-fun calculate-put-down-end-effector-lo
-              ?loc-desig ?obj-desig ?lo-id)
-    (slot-value ?act end-effector-pose ?lo-id))
+              ?loc-desig ?obj-desig ?jlo)
+    (slot-value ?act end-effector-pose ?jlo))
 
   (<- (action-desig ?desig ?act)
     (manip-desig? ?desig)

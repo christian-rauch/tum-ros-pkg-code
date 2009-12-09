@@ -24,10 +24,12 @@
 (define-condition location-reached-but-not-terminated (plan-error) ())
 
 (defun get-nav-waypoints (goal)
-  (append (when (< (jlo:euclidean-distance "/base_link" "/map")
-                   (jlo:euclidean-distance "/base_link" goal))
-            (list (jlo:id "/map")))
-          (list goal)))
+  (let ((base-link (jlo:make-jlo :name "/base_link"))
+        (map (jlo:make-jlo :name "/map")))
+    (append (when (< (jlo:euclidean-distance base-link map)
+                     (jlo:euclidean-distance base-link goal))
+              (list map))
+            (list goal))))
 
 (defun approach-waypoint (goal last? &optional (threshold 0.3))
   (setf (value *navigation-distance-to-goal-fluent*) 100)

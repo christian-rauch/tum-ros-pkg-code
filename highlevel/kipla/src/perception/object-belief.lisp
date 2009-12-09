@@ -17,7 +17,7 @@
 (in-package :kipla-reasoning)
 
 (defstruct perceived-object
-  lo-id
+  jlo
   properties
   probability
   desig
@@ -71,17 +71,17 @@
 (defun perceived-objects-equal? (obj-1 obj-2)
   (and (compatible-properties (perceived-object-properties obj-1)
                               (perceived-object-properties obj-2))
-       (or (jlo:inlier? (perceived-object-lo-id obj-1)
-                       (perceived-object-lo-id obj-2))
-           (jlo:inlier? (perceived-object-lo-id obj-2)
-                       (perceived-object-lo-id obj-1)))))
+       (or (jlo:inlier? (perceived-object-jlo obj-1)
+                        (perceived-object-jlo obj-2))
+           (jlo:inlier? (perceived-object-jlo obj-2)
+                        (perceived-object-jlo obj-1)))))
 
 (defun update-perceived-object (old new)
-  ;; This is a bad hack. We just use the new lo-id, build the union of
+  ;; This is a bad hack. We just use the new jlo, build the union of
   ;; properties, use the new probability and new timestampt and keep
   ;; the old designator. Todo: good solution.
-  (setf (perceived-object-lo-id old)
-        (perceived-object-lo-id new))
+  (setf (perceived-object-jlo old)
+        (perceived-object-jlo new))
   (setf (perceived-object-properties old)
         (union (perceived-object-properties old)
                (perceived-object-properties new)

@@ -27,7 +27,7 @@
 (defun sort-locations (ref-loc locations)
   (when ref-loc
     (let ((ref-jlo (etypecase ref-loc
-                     (number ref-loc)
+                     (jlo:jlo ref-loc)
                      (location-designator (reference ref-loc)))))
       (sort locations (lambda (l1 l2)
                         (< (jlo:euclidean-distance ref-jlo l1)
@@ -35,7 +35,7 @@
 
 (defun obj-desig-location (obj-desig)
   (when (typep obj-desig 'object-designator)
-    (perceived-object-lo-id (reference obj-desig))))
+    (perceived-object-jlo (reference obj-desig))))
 
 (defun loc-desig-location (loc-desig)
   (when (and (typep loc-desig 'location-designator)
@@ -199,7 +199,7 @@
 
   (<- (desig-loc ?desig ?loc)
     (loc-desig? ?desig)
-    (desig-prop ?desig (lo-id ?loc)))
+    (desig-prop ?desig (jlo ?loc)))
 
   (<- (desig-loc ?desig ?loc)
     (loc-desig? ?desig)
@@ -208,5 +208,5 @@
 
   (<- (desig-loc ?desig ?loc)
     (loc-desig? ?desig)
-    (desig-prop ?desig (lo-id-list ?lo-list))
+    (desig-prop ?desig (jlo-list ?lo-list))
     (member ?loc ?lo-list)))

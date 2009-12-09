@@ -28,7 +28,7 @@
              (with-designators ((clusters (object '((type cluster) (matches 10)))))
                (let ((query-info (cop-desig-info-query (resolve-object-desig clusters :cop))))
                  (setf (cop-desig-query-info-poses query-info)
-                       (list (jlo:id "/RightEyeCalc")))
+                       (list (jlo:make-jlo :name "/RightEyeCalc")))
                  (cop-query query-info))
                (wait-for *cop-output-queue*)
                (let ((cop-reply (pop (value *cop-output-queue*))))
@@ -47,7 +47,7 @@
              (setf (value *cop-output-queue*) nil)
              (when cluster
                (setf (cop-desig-query-info-poses query-info)
-                     (list (perceived-object-lo-id cluster))))
+                     (list (perceived-object-jlo cluster))))
              (cop-query query-info)
              (wait-for *cop-output-queue* :handle-missed-pulses :never)
              (let ((cop-reply (pop (value *cop-output-queue*))))

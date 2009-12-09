@@ -27,7 +27,7 @@
    #:assert-occasion #:retract-occasion #:holds
    ;; object-belief
    #:perceived-object #:make-perceived-object
-   #:perceived-object-lo-id #:perceived-object-properties
+   #:perceived-object-jlo #:perceived-object-properties
    #:perceived-object-probability #:perceived-object-desig
    #:perceived-object-timestamp #:*perceived-objects*
    #:clear-object-belief #:update-perceived-object
@@ -40,12 +40,12 @@
    #:color #:black #:red
    #:at #:matches
    #:to #:reach #:on #:for #:see #:counter #:table #:of
-   #:lo-id-list #:lo-id
+   #:jlo-list #:jlo
    #:grasp #:navigate #:pose #:parked #:open #:lift #:carry #:put-down
    #:obj #:gripper #:close #:resolve-object-desig
    ;; trajectory-actions
    #:trajectory-action #:side #:trajectory-type #:stored-pose-type
-   #:object-type #:hand-primitive #:end-effector-lo-id
+   #:object-type #:hand-primitive #:end-effector-pose
    #:obstacles #:grasp-distance #:supporting-plane
    #:copy-trajectory-action
    ;; cop-designators
@@ -77,7 +77,7 @@
         #:cram-designators
         #:cram-process-modules
         #:kipla-reasoning)
-  (:export #:log-msg)
+  (:export #:log-msg #:run-demo-counter-to-table #:run-demo-table-to-counter)
   (:import-from #:alexandria
                 #:with-gensyms #:curry #:rcurry)
   (:import-from #:cram-reasoning

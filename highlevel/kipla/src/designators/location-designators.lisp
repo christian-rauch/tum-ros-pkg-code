@@ -35,7 +35,10 @@
 (defmethod reference ((desig location-designator))
   (unless (slot-value desig 'data)
     (setf (slot-value desig 'data)
-          (lazy-mapcar (alexandria:compose #'jlo:id
+          (lazy-mapcar (alexandria:compose #'(lambda (descr)
+                                               (etypecase descr
+                                                 (string (jlo:make-jlo :name descr))
+                                                 (number (jlo:make-jlo :id descr))))
                                            (curry #'var-value '?loc))
                        (prolog `(desig-loc ,desig ?loc)))))
   (or (lazy-car (slot-value desig 'data))

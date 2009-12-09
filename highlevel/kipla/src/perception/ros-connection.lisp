@@ -49,7 +49,7 @@
                                                                      (cop-desig-query-info-poses query-info)))))
 
 (defun cop-reply->object (reply)
-  (make-perceived-object :lo-id (vision_msgs-msg:position-val reply)
+  (make-perceived-object :jlo (jlo:make-jlo :id reply)
                          :properties (map 'list #'identity (vision_msgs-msg:classes-val reply))
                          :probability (vision_msgs-msg:probability-val reply)))
 

@@ -20,7 +20,8 @@
 
 (defun optimized-manipulation-location (side &optional obj)
   (let* ((robot->obj (and obj
-                          (jlo:frame-query "/base_link" (perceived-object-lo-id (reference obj))))))
+                          (jlo:frame-query (jlo:make-jlo :name "/base_link")
+                                           (reference obj)))))
     (when (or (not obj)
               (= (aref (vision_msgs-msg:pose-val robot->obj) 7)
                  0)
@@ -31,41 +32,40 @@
                                       180)))
                         (:left (/ (* 30 pi)
                                   180))))))
-      (let ((new-lo
-             (jlo:create-matrix "/base_link"
-                                :yaw (ecase side
-                                       (:right (/ (* 30 pi)
-                                                  180))
-                                       (:left (- (/ (* 30 pi)
-                                                    180)))))))
-        (make-designator 'location `((lo-id ,(vision_msgs-msg:id-val new-lo))))))
+      (let ((new-lo (jlo:make-jlo-rpy :parent (jlo:make-jlo :name "/base-link")
+                                      :yaw (ecase side
+                                             (:right (/ (* 30 pi)
+                                                        180))
+                                             (:left (- (/ (* 30 pi)
+                                                          180)))))))
+        (make-designator 'location `((jlo ,new-lo)))))
     ;; (cond (ignore-alternative-poses
     ;;        (setf pick-up-loc (next-solution pick-up-loc)))
     ;;       (t
     ;;        (setf ignore-alternative-poses t)
     ;;        (setf pick-up-loc
-    ;;              (merge-designators (make-designator 'location `((lo-id-list ,(alternative-poses f))))
+    ;;              (merge-designators (make-designator 'location `((jlo-list ,(alternative-poses f))))
     ;;                                 pick-up-loc))))
 ))
 
 (defun location-at-side (loc)
   "Returns if a location is left or right of the robot."
-  (let ((base->loc (jlo:frame-query "/base_link" (reference loc))))
-    (if (>= (aref (vision_msgs-msg:pose-val base->loc) 7) 0)
+  (let ((base->loc (jlo:frame-query (jlo:make-jlo :name "/base_link")
+                                    (reference loc))))
+    (if (>= (jlo:pose base->loc 1 3) 0)
         :left
         :right)))
 
 (defun alternative-put-down-location (loc offset)
-  (let ((new-loc (jlo:frame-query "/base_link" (reference loc))))
-    (setf (vision_msgs-msg:id-val new-loc) 0)
-    (incf (aref (vision_msgs-msg:pose-val new-loc) 7) offset)
-    (let ((new-lo (jlo:update new-loc)))
-      (make-designator 'location `((lo-id ,(vision_msgs-msg:id-val new-lo)))))))
+  (let ((new-loc (jlo:frame-query (jlo:make-jlo :name "/base_link")
+                                  (reference loc))))
+    (incf (jlo:pose new-loc 1 3) offset)
+    (make-designator 'location `((jlo ,new-loc)))))
 
 (defun clusters-within-range (loc range)
   (loop for c in *perceived-objects*
      when (< (jlo:euclidean-distance (reference loc)
-                                     (perceived-object-lo-id c))
+                                     (perceived-object-jlo c))
              range)
      collecting c))
 
