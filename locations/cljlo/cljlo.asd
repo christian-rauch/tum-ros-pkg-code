@@ -36,10 +36,14 @@
     :depends-on (roslisp
                  vision_srvs-srv
                  vision_msgs-msg
-                 trivial-garbage)
+                 trivial-garbage
+                 alexandria)
 
     :components
     ((:module "src"
               :components ((:file "package")
-                           (:file "jlo"))
+                           (:file "gc")
+                           (:file "service")
+                           (:file "jlo")
+                           (:file "utils"))
               :serial t)))

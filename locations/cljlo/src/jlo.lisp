@@ -16,165 +16,169 @@
 
 (in-package :jlo)
 
-(defvar *requested-jlo-objects* nil)
+;;; Note: Make this stuff thread save.
+
+(defvar *updates-enabled* t)
+(defvar *pending-updates* nil)
+
+(defmacro delay-updates (&body body)
+  "Delays updates until body is finished."
+  `(prog1
+       (let ((*updates-enabled* nil))
+         ,@body)
+     (loop for jlo in *pending-updates*
+        finally (setf *pending-updates* nil)
+        do (update jlo))))
+
+(defmacro with-updates (&body body)
+  `(let ((*updates-enabled* t))
+     ,@body))
 
 (defclass jlo ()
   ((id :initarg :id :initform 0 :reader id)
+   (parent-id :initarg :parent-id :initform 1 :reader parent-id)
    (name :initarg :name :initform nil :reader name)
    (partial-lo :initform nil :reader partial-lo)))
 
+(defgeneric make-jlo (&key id name parent pose cov)
+  (:documentation "Returns a (possibly cached) instance for the
+                   requested jlo object."))
+
+(defgeneric pose (jlo y x)
+  (:documentation "Reads a value from pose matrix."))
+
+(defgeneric (setf pose) (new-value jlo y x)
+  (:documentation "Sets a value in the pose matrix."))
+
+(defgeneric cov (jlo y x)
+  (:documentation "Reads a value from covariance matrix."))
+
+(defgeneric (setf cov) (new-value jlo y x)
+  (:documentation "Sets a value in the covariance matrix."))
+
+(defgeneric update (lo)
+  (:documentation "Updates a lo object."))
+
+(defgeneric frame-query (reference-jlo jlo)
+  (:documentation "Returns jlo in frame reference-jlo."))
+
+(defmethod make-jlo (&key (id 0) name parent pose cov)
+  (make-instance 'jlo :id id :name name :parent-id (if parent (id parent) 1) :pose pose :cov cov))
+
+(defmethod make-jlo :around (&key (id 0) &allow-other-keys)
+  (let ((cached-value (cdr (assoc id *requested-jlo-objects*))))
+    (if (and cached-value (tg:weak-pointer-value cached-value))
+        (tg:weak-pointer-value cached-value)
+        (call-next-method))))
+
+(defmethod initialize-instance :after ((jlo jlo) &key pose cov &allow-other-keys)
+  (delay-updates
+    (when pose
+      (setf (vision_msgs-msg:pose-val (partial-lo jlo))
+            (copy-array pose))
+      (update jlo))
+    (when cov
+      (setf (vision_msgs-msg:cov-val (partial-lo jlo))
+            (copy-array cov))
+      (update jlo))))
+
 (defmethod id :before ((jlo jlo))
-  (unless (slot-value jlo 'id)
-    (setf (slot-value jlo 'id)
-          (vision_msgs-msg:id-val (partial-lo jlo)))))
+  (when (eql (slot-value jlo 'id) 0)
+    (with-updates
+      (setf (slot-value jlo 'id)
+            (vision_msgs-msg:id-val (partial-lo jlo))))))
 
 (defmethod name :before ((jlo jlo))
   (unless (slot-value jlo 'name)
-    (setf (slot-value jlo 'name)
-          (vision_msgs-msg:name-val (partial-lo jlo)))))
+    (with-updates
+      (setf (slot-value jlo 'name)
+            (vision_msgs-msg:name-val (partial-lo jlo))))))
 
 (defmethod partial-lo :before ((jlo jlo))
-  (unless (slot-value jlo 'partial-lo)
-    (unless (or (slot-value jlo 'id)
-                (slot-value jlo 'name))
-      (error "jlo underspecified. Please specify either `id' or `name' slot."))
-    (setf (slot-value jlo 'partial-lo)
-          (query (or (slot-value jlo 'id)
-                     (slot-value jlo 'name))))
-    (jlo-register-gc jlo)))
-
-(defun jlo-register-gc (jlo)
-  (let ((id (id jlo)))
-    (assert (not (eql 0 id)) () "Cannot garbage collect jlo ids with id 0")
-    (push (cons id (trivial-garbage:make-weak-pointer jlo))
-          *requested-jlo-objects*)
-    jlo))
-
-(defun jlo-gc ()
-  nil
-  ;; (let ((removed-ids
-  ;;        (loop for (id . val) in *requested-jlo-objects*
-  ;;           unless (trivial-garbage:weak-pointer-value val)
-  ;;           collecting (prog1 id
-  ;;                        (log-msg :info "Garbage collecting lo `~a'~%" id)
-  ;;                        (unless (eql id 1)
-  ;;                          ;; We are not allowed to del the world, so
-  ;;                          ;; just avoid the call to save some
-  ;;                          ;; resources.
-  ;;                          (handler-case (call-service "/located_object" 'vision_srvs-srv:srvjlo :command "del"
-  ;;                                                      :query (make-instance 'vision_msgs-msg:<partial_lo>
-  ;;                                                               :id id))
-  ;;                            (error (e)
-  ;;                              (log-msg :warn "Garbage collection of lo `~a' failed:~%~a~%" id e))))))))
-  ;;   (setf *requested-jlo-objects* (delete-if (rcurry #'member removed-ids) *requested-jlo-objects* :key #'car)))
-  )
-
-(defun identity-matrix (parent-id &key (name "") (type 0))
-  (create-matrix parent-id :name name :type type))
-
-(defun shifted-identity-matrix (parent-id &key (name "") (type 0) (x 0) (y 0) (z 0))
-  (create-matrix parent-id :type type :name name :x x :y y :z z))
-
-(defun create-matrix (parent-id &key (name "") (type 0)
-                          (x 0) (y 0) (z 0)
-                          (roll 0) (pitch 0) (yaw 0))
-  (let* ((cos-roll (cos roll))
-         (sin-roll (sin roll))
-         (cos-pitch (cos pitch))
-         (sin-pitch (sin pitch))
-         (cos-yaw (cos yaw))
-         (sin-yaw (sin yaw))
-         (lo (make-instance 'vision_msgs-msg:<partial_lo>
-               :parent_id (id parent-id)
-               :type type
-               :name name
-               :pose (make-array 16 :initial-contents
-                                 `(,(* cos-yaw cos-pitch)
-                                    ,(- (* cos-yaw sin-pitch sin-roll) (* sin-yaw cos-roll))
-                                    ,(+ (* cos-yaw sin-pitch cos-roll) (* sin-yaw sin-roll))
-                                    ,x
-
-                                    ,(* sin-yaw cos-pitch)
-                                    ,(+ (* sin-yaw sin-pitch sin-roll) (* cos-yaw cos-roll))
-                                    ,(- (* sin-yaw sin-pitch cos-roll) (* cos-yaw sin-roll))
-                                    ,y
-
-                                    ,(- sin-pitch)
-                                    ,(* cos-pitch sin-roll)
-                                    ,(* cos-pitch cos-roll)
-                                    ,z
-                                    0 0 0 1))
-               :cov (make-array 36 :initial-element 0))))
-    (update lo)))
-
-(defun print-pose (lo)
-  (loop for x across (vision_msgs-msg:pose-val lo)
-       for i from 1
-     do (format t "~6,3F " x)
-     when (eql (mod i 4) 0) do (format t "~%")))
-
-(defun update (lo)
-  (jlo-gc)  
-  (jlo-register-gc
-   (vision_srvs-srv:answer-val
-    (call-service "/located_object" 'vision_srvs-srv:srvjlo :command "update" :query lo))))
-
-(defun query (id)
-  (prog1
-      (let ((result
-             (typecase id
-               (string (call-service "/located_object" 'vision_srvs-srv:srvjlo :command "namequery"
-                                     :query (make-instance 'vision_msgs-msg:<partial_lo> :name id)))
-               (t (call-service "/located_object" 'vision_srvs-srv:srvjlo :command "idquery"
-                                :query (make-instance 'vision_msgs-msg:<partial_lo> :id id))))))
-        (unless (equal (vision_srvs-srv:error-val result) "")
-          (error "jlo call failed. ~a" (vision_srvs-srv:error-val result)))
-        (vision_srvs-srv:answer-val result))
-    (jlo-gc)))
-
-(defun id (id)
-  (typecase id
-    (number id)
-    (string (vision_msgs-msg:id-val (query id)))))
-
-(defun frame-query (parent-id id)
-  (prog1
-      (let ((parent-id-num (id parent-id))
-            (id-num (id id)))
-        (cond ((eql id-num parent-id-num)
-               (identity parent-id-num))
+  (with-slots (partial-lo id name) jlo
+    (unless partial-lo
+      (with-updates
+        (format t "parital-lo with-updates ~a ~a~%" jlo id)
+        (cond ((not (eql id 0))
+               (setf partial-lo (query-jlo :id id))
+               (assert (eql id (vision_msgs-msg:id-val partial-lo)) ()
+                       "Id became invalid on partial-lo query.")
+               (setf name (vision_msgs-msg:name-val partial-lo)))
+              (name
+               (setf partial-lo (query-jlo :name name))
+               (setf id (vision_msgs-msg:id-val partial-lo))
+               (assert (equal name (vision_msgs-msg:name-val partial-lo)) ()
+                       "Name became invalid on partial-lo query."))
+              ((eql id 0)
+               (update jlo))
               (t
-               (let ((result (call-service "/located_object" 'vision_srvs-srv:srvjlo :command "framequery"
-                                           :query (make-instance 'vision_msgs-msg:<partial_lo>
-                                                    :id (id id) :parent_id (id parent-id)))))
-                 (unless (equal (vision_srvs-srv:error-val result) "")
-                   (error "jlo call failed. ~a" (vision_srvs-srv:error-val result)))
-                 (jlo-register-gc
-                  (vision_srvs-srv:answer-val result))))))
-    (jlo-gc)))
+               (error "jlo underspecified. Please specify either `id' or `name' slot."))))
+      (jlo-register-gc jlo))))
 
-(defun inlier? (reference-id obj-id &optional (threshold 0.05))
-  (let ((ref-lo (query reference-id))
-        (obj-lo (frame-query reference-id obj-id)))
-    (and (< (abs (- (aref (vision_msgs-msg:cov-val ref-lo) 0)
-                    (aref (vision_msgs-msg:pose-val obj-lo) 3)))
-            threshold)
-         (< (abs (- (aref (vision_msgs-msg:cov-val ref-lo) 7)
-                    (aref (vision_msgs-msg:pose-val obj-lo) 7)))
-            threshold)
-         (< (abs (- (aref (vision_msgs-msg:cov-val ref-lo) 14)
-                    (aref (vision_msgs-msg:pose-val obj-lo) 11)))
-            threshold))))
+(defmethod pose ((jlo jlo) y x)
+  (aref (vision_msgs-msg:pose-val (partial-lo jlo))
+        (+ (* 4 y) x)))
 
-(defun euclidean-distance (lo-1 lo-2)
-  (let ((distance-lo (frame-query lo-1 lo-2)))
-    (sqrt (+ (expt (aref (vision_msgs-msg:pose-val distance-lo) 3) 2)
-             (expt (aref (vision_msgs-msg:pose-val distance-lo) 7) 2)
-             (expt (aref (vision_msgs-msg:pose-val distance-lo) 11) 2)))))
+(defmethod (setf pose) (new-value (jlo jlo) y x)
+  (prog1
+      (setf (aref (vision_msgs-msg:pose-val (partial-lo jlo))
+                  (+ (* 4 y) x))
+            new-value)
+    (update jlo)))
 
-(defun z-distance (lo-1 lo-2)
-  "Returns the distance between 2 jlos in world z (lo-1.z - lo-2.z)."
-  (let ((world-lo-1 (frame-query "/map" lo-1))
-        (world-lo-2 (frame-query "/map" lo-2)))
-    (- (aref (vision_msgs-msg:pose-val world-lo-1) 11)
-       (aref (vision_msgs-msg:pose-val world-lo-2) 11))))
+(defmethod cov ((jlo jlo) y x)
+  (aref (vision_msgs-msg:cov-val (partial-lo jlo))
+        (+ (* 6 y) x)))
+
+(defmethod (setf cov) (new-value (jlo jlo) y x)
+  (prog1
+      (setf (aref (vision_msgs-msg:cov-val (partial-lo jlo))
+                  (+ (* 6 y) x))
+            new-value)
+    (update jlo)))
+
+(defmethod update ((jlo jlo))
+  (with-slots (id parent-id name partial-lo) jlo
+    (assert (not (and (eql id 0) name)) ()
+            "Cannot update when name is set but id is not set. Use query!")
+    (when partial-lo
+      (assert (eql id (vision_msgs-msg:id-val partial-lo)) ()
+              "Id of internal PARTIAL-LO and JLO do not match.")
+      (assert (equal name (vision_msgs-msg:name-val partial-lo)) ()
+              "Name of internal PARTIAL-LO and JLO do not match."))
+    (cond (*updates-enabled*
+           (setf partial-lo (cond (partial-lo
+                                   (update-jlo :partial-lo partial-lo))
+                                  (t
+                                   (update-jlo :id id :name (or name "") :parent-id parent-id))))
+           (let ((old-id id))
+             (setf id (vision_msgs-msg:id-val partial-lo))
+             (setf name (vision_msgs-msg:name-val partial-lo))      
+             (cond ((eql old-id 0)
+                    (jlo-register-gc jlo))
+                   ((not (eql old-id (vision_msgs-msg:id-val partial-lo)))
+                    (delete-id old-id)))))
+          (t
+           (pushnew jlo *pending-updates* :test #'eq))))
+  jlo)
+
+(defmethod frame-query ((reference jlo) (jlo jlo))
+  (let ((result (make-instance 'jlo))
+        (in-frame (frame-query-ids (id reference) (id jlo))))
+    (with-slots (id name parent-id partial-lo) result
+      (cond ((assoc (vision_msgs-msg:id-val in-frame) *requested-jlo-objects*)
+             (make-jlo :id id))
+            (t
+             (setf partial-lo in-frame
+                   id (vision_msgs-msg:id-val in-frame)
+                   name (vision_msgs-msg:name-val in-frame)
+                   parent-id (vision_msgs-msg:parent_id-val in-frame))
+             (assert (eql (id reference) parent-id) ()
+                     "Frame-query failed: invalid parent id.")
+             (jlo-register-gc result))))))
+
+;; (defun print-pose (lo)
+;;   (loop for x across (vision_msgs-msg:pose-val lo)
+;;        for i from 1
+;;      do (format t "~6,3F " x)
+;;      when (eql (mod i 4) 0) do (format t "~%")))

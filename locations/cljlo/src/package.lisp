@@ -19,8 +19,12 @@
 
 (defpackage :jlo
   (:documentation "Jlo interface")
-  (:use #:common-lisp #:roslisp)
+  (:use #:common-lisp #:roslisp #:alexandria)
   (:export
-   #:identity-matrix #:shifted-identity-matrix #:create-matrix
-   #:print-pose #:query #:id #:frame-query #:update
-   #:inlier? #:euclidean-distance #:z-distance))
+   ;; jlo.lisp
+   #:jlo #:id #:parent-id #:name #:partial-lo
+   #:delay-updates #:with-updates
+   #:make-jlo #:pose #:cov #:frame-query
+   ;; utils.lisp
+   #:indentity-jlo #:make-jlo-rpy #:inlier?
+   #:euclidean-distance #:component-distance))
