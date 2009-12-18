@@ -2,7 +2,10 @@
 #define STEREOSENSOR_H
 
 #include "Sensor.h"
+#include "SwissRangerReading.h"
 #include "cpp/HalconCpp.h"
+
+#include <ros/node_handle.h>
 
 
 #define XML_NODE_STEREOSENSOR "StereoSensor"
@@ -75,6 +78,11 @@ namespace cop
        Halcon::HTuple m_relPoseRect;
        Halcon::HTuple camposerectLeft;
        Halcon::HTuple camposerectRight;
+#ifdef _DEBUG
+       ros::Publisher m_cloud_pub;
+       bool m_advertised;
+       SwissRangerReading* m_lastReading;
+#endif
 
    };
 }

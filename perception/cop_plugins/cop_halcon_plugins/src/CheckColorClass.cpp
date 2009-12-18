@@ -68,14 +68,15 @@ void classify_colors_score (Halcon::Hobject Image, Halcon::Hobject Region, Halco
   using namespace Halcon;
 
   // Local iconic variables
-  Hobject  ImageReduced, RegionTemp;
+  Hobject  ImageReduced, RegionTemp, img_equ;
 
   // Local control variables
   HTuple  Number, Area, Row, Column, Indices, Area1;
   HTuple  Row1, Column1, Sum, WindowHandle;
   area_center(Region, &Area1, &Row, &Column);
   erosion_circle(Region, &RegionTemp, sqrt((double)Area1[0].I()) / 3);
-  reduce_domain(Image, RegionTemp, &ImageReduced);
+  equ_histo_image(Image, &img_equ);
+  reduce_domain(img_equ, RegionTemp, &ImageReduced);
 
 /*    open_window(200, 200, 400, 400, 0, "visible", "", &WindowHandle);
       set_part(WindowHandle, 0, 0, 1600, 1200);

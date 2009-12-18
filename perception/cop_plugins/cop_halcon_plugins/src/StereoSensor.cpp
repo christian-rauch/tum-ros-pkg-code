@@ -4,6 +4,7 @@
 #include "XMLTag.h"
 #include "Camera.h"
 #include "cpp/HalconCpp.h"
+#include <sensor_msgs/PointCloud.h>
 
 #define XML_PROPERTY_SENSORNAME_RIGHT "SensorName_CamRight"
 #define XML_PROPERTY_SENSORNAME_LEFT "SensorName_CamLeft"
@@ -51,7 +52,9 @@ StereoSensor::StereoSensor() :
   m_nameRight("uninit_1234679_right"),
   m_camLeft(NULL),
   m_nameLeft("uninit_1234679_left"),
-  m_mapInitialized(false)
+  m_mapInitialized(false),
+  m_advertised(false),
+  m_lastReading(NULL)
 {
 
 }
@@ -59,6 +62,7 @@ StereoSensor::StereoSensor() :
 
 StereoSensor::~StereoSensor()
 {
+  printf("Crashing?");
 }
 
 bool StereoSensor::Start()
@@ -126,6 +130,13 @@ void StereoSensor::SetSensorList(std::vector<Sensor*> cameras)
   }
 }
 
+unsigned long GetNanoSecAge(Halcon::Hobject img_l)
+{
+  Halcon::HTuple msec, sec, min, hour, day, yday, month, year;
+  Halcon::get_image_time(img_l, &msec, &sec, &min, &hour, &day, &yday, &month, &year);
+  return msec[0].I()  * 10000000 + sec[0].I() * 1000000000;
+}
+
 /**
 * GetReading
 * @param Frame frame number, to specify an offset or a specific file
@@ -153,8 +164,69 @@ Reading* StereoSensor::GetReading(const long &Frame)
                                             &camposerectRight, &m_relPoseRect);
         m_mapInitialized = true;
       }
-      Halcon::Hobject X,Y,Z, region;
-      binocular_xyz_proc(*leftImg->GetHImage(), m_mapLeft, *rightImg->GetHImage(), m_mapRight, &X, &Y, &Z, &region, m_calibLeft, m_calibRight, m_relPoseRect);
+      Halcon::Hobject X,Y,Z, region, img_l;
+      Halcon::HTuple num_channels, h,w,pr,pg,pb,t, px, py, pz;
+      img_l = *rightImg->GetHImage();
+      binocular_xyz_proc(*leftImg->GetHImage(), m_mapLeft, img_l, m_mapRight, &X, &Y, &Z, &region, m_calibLeft, m_calibRight, m_relPoseRect);
+      Halcon::count_channels(img_l, &num_channels);
+
+      Halcon::get_image_pointer1(X,&px,&h,&w,&t);
+      Halcon::get_image_pointer1(Y,&py,&h,&w,&t);
+      Halcon::get_image_pointer1(Z,&pz,&h,&w,&t);
+
+      if(num_channels[0].I() == 3)
+        Halcon::get_image_pointer3(img_l,&pr,&pg,&pb, &h,&w,&t);
+      else
+        Halcon::get_image_pointer1(img_l,&pr,&h,&w,&t);
+      m_lastReading = new SwissRangerReading();
+
+      m_lastReading->m_pcd.header.stamp = ros::Time::now();
+      m_lastReading->m_pcd.header.frame_id = "/base_link";
+
+      // resize channels and copy their names
+      m_lastReading->m_pcd.channels.resize (num_channels[0].I());
+      for (unsigned int i = 0; i < m_lastReading->m_pcd.channels.size(); i++)
+        m_lastReading->m_pcd.channels[i].name = i == 0 ? "R" : i == 1 ? "G" : "B";
+      unsigned char* image_pointer_red = (unsigned char*)pr[0].L();
+      unsigned char* image_pointer_green = NULL;
+      unsigned char* image_pointer_blue = NULL;
+      if(num_channels[0].I() == 3)
+      {
+        image_pointer_green = (unsigned char*)pg[0].L();
+        image_pointer_blue = (unsigned char*)pb[0].L();
+      }
+      float* image_pointer_x = (float*)px[0].L();
+      float* image_pointer_y = (float*)py[0].L();
+      float* image_pointer_z = (float*)pz[0].L();
+      // go through all points
+      Halcon::HTuple r, c;
+      Halcon::get_region_points(region, &r, &c);
+      int num = r.Num();
+      int num_final = num;
+      for (int iter_p = 0; iter_p < num; iter_p++)
+      {
+          // select all points that are within in the specified points
+          unsigned int index = r[iter_p].I()*w[0].I() + c[iter_p].I();
+          geometry_msgs::Point32 point;
+          point.x = image_pointer_x[index];
+          point.y = image_pointer_y[index];
+          point.z = image_pointer_z[index];
+          if(point.z < 0.001 || point.z > 2.50)
+          {
+          num_final--;
+            continue;
+          }
+          m_lastReading->m_pcd.points.push_back (point);
+
+          m_lastReading->m_pcd.channels[0].values.push_back (image_pointer_red[index]);
+          if(num_channels[0].I() == 3)
+          {
+            m_lastReading->m_pcd.channels[1].values.push_back (image_pointer_green[index]);
+            m_lastReading->m_pcd.channels[2].values.push_back (image_pointer_blue[index]);
+          }
+      }
+      PushBack(m_lastReading);
+      result = m_lastReading;
       /**  TODO: fill result
         result = new SwissRangerReading, DisparityBla, PointCloud, ...();
       */
@@ -169,6 +241,17 @@ Reading* StereoSensor::GetReading(const long &Frame)
 
 void StereoSensor::Show(const long frame)
 {
+  if(!m_advertised)
+  {
+    ros::NodeHandle nh;
+    m_cloud_pub = nh.advertise<sensor_msgs::PointCloud> ("cop_debug_out_stereo_sensor", 1);
+    m_advertised = true;
+  }
+  if(m_lastReading == NULL)
+  {
+    GetReading(-1);
+  }
+  m_cloud_pub.publish(m_lastReading->m_pcd);
   /** TODO
         publish results on a topic?,
         static topic?
