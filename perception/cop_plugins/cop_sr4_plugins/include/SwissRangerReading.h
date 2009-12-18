@@ -14,6 +14,11 @@ public:
       m_pcd = (*pcdcloud);
   }
 
+  SwissRangerReading() :
+      Reading(PCD_READING_TYPE)
+  {
+  }
+
   ~SwissRangerReading()
   {
   }

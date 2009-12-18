@@ -201,9 +201,8 @@ class PlaneClustersSR
        RelPoseFactory::FreeRelPose(pose);
        Matrix m_tmp = m;
        cloud_in_trans_.points.clear();
-       printf(".\n");
-       printf("Access %ld\n", cloud_in.points.size());
-       printf(",\n");
+       if(cloud_in.points.size() < 0 || cloud_in.points.size() > 1000000000)
+          throw "Error in pointcloud, failed check 0 < num_points < 1000000000";
        for(size_t i = 0; i < cloud_in.points.size(); i++)
        {
          ColumnVector v(4);
@@ -219,7 +218,7 @@ class PlaneClustersSR
        cloud_in_trans_.channels.clear();
        for(size_t channels = 0 ; channels < cloud_in.channels.size(); channels++)
        {
-        
+
          cloud_in_trans_.channels.push_back(ChannelFloat32());
          cloud_in_trans_.channels[channels].name = cloud_in.channels[channels].name;
          for(size_t points = 0; points < cloud_in.channels[channels].values.size(); points++)
@@ -568,7 +567,15 @@ bool ClusterDetector::CallStaticPlaneClusterExtractor(Sensor* sensor, PlaneClust
   if(s_planeCluster == NULL)
     s_planeCluster = new PlaneClustersSR(NULL);
   SwissRangerReading* reading = (SwissRangerReading*)sensor->GetReading(-1);
+  try
+  {
   return s_planeCluster->plane_clusters_service(*response, m_swissranger_jlo_id, m_ptu_jlo_id, reading->m_pcd);
+  }
+  catch(const char* text)
+  {
+    printf("Error in ClusterDetector: %s\n", text);
+  }
+  return false;
 }
 
 std::vector<RelPose*> ClusterDetector::Inner(Sensor* sens, int &numOfObjects, double& qualityMeasure)
