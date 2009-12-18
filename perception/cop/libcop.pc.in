@@ -1,7 +1,0 @@
-
-Name: libcop
-Description: Library for Cognitive Perception
-Version: 0.1-svn
-Libs: -L@CMAKE_INSTALL_PREFIX@/lib -lcop
-Cflags: -I@CMAKE_INSTALL_PREFIX@/include
-
