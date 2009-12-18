@@ -51,8 +51,8 @@ AttentionManager::AttentionManager ( XMLTag* config , SignatureDB& sig_db, Image
                                     ) :
 	m_imginsys(imginsys),
 #ifdef LOGFILE
-    m_logFile(log),
 		m_attendants(config != NULL ? config->GetChild(XML_NODE_ATTENTIONALGORITHMS) : NULL, log),
+    m_logFile(log),
 #else  /*LOGFILE*/
     m_attendants(config != NULL ? config->GetChild(XML_NODE_ATTENTIONALGORITHMS) : NULL),
 #endif /*LOGFILE*/

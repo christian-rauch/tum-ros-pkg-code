@@ -25,13 +25,9 @@
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
 boost::mutex s_mutexLogFile;
-#ifdef BOOST_1_35
 #include <boost/thread/mutex.hpp>
-#else
-#include <boost/thread/detail/lock.hpp>
-typedef boost::detail::thread::lock_ops<boost::mutex> locker;
-#endif
 #define BOOST(A) A
+
 #else
 #define BOOST (A) ;
 #endif

@@ -156,16 +156,18 @@ SignatureLocations_t VisFinder::Locate (PossibleLocations_t* lastKnownPoses, Sig
         if(lastKnownPoses->size() == 0)
         {
           std::vector<Sensor*> allsensors = m_imageSys.GetAllSensors();
-          if(allsensors.size() > 0)
-          if(!GetPlaneClusterCall(lastKnownPoses, allsensors[0]->GetRelPose(), object, allsensors))
+          if(allsensors.size() > 0 && allsensors[0] != NULL)
           {
-            numOfObjects = 0;
-            printf("No search position specified: 0 Results, no search\n");
+            if(!GetPlaneClusterCall(lastKnownPoses, allsensors[0]->GetRelPose(), object, allsensors))
+            {
+              numOfObjects = 0;
+              printf("No search position specified: 0 Results, no search\n");
+            }
+            printf("Got a new Searchspace\n");
+            printf("lkp size %ld\n", lastKnownPoses->size());
+            if(lastKnownPoses->size() > 0)
+              printf("lastKnownPoses[0]: id %ld\n", (*lastKnownPoses)[0].first->m_uniqueID);
           }
-          printf("Got a new Searchspace\n");
-          printf("lkp size %ld\n", lastKnownPoses->size());
-          if(lastKnownPoses->size() > 0)
-            printf("lastKnownPoses[0]: id %ld\n", (*lastKnownPoses)[0].first->m_uniqueID);
         }
         it = lastKnownPoses->begin();
         for(;it != lastKnownPoses->end(); it++)
