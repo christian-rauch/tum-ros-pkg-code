@@ -28,6 +28,7 @@
 #include <tf/transform_listener.h>
 #include <string>
 #include <boost/bind.hpp>
+#include <boost/thread.hpp>
 
 #define IDQUERY "idquery"
 #define NAMEQUERY "namequery"
@@ -41,9 +42,12 @@
 #define PRINTF_DEBUG(A) printf(A)
 #endif
 
+std::queue<unsigned long> RosLoService::m_queueOfLosToPublish;
+
 RosLoService::RosLoService(const char* nodename, ros::NodeHandle &n, std::string configFile)
     : jlo::ServiceInterface(configFile.c_str()),
-      located_object_service( n.advertiseService("/located_object", &RosLoService::ServiceCallback) )
+      located_object_service( n.advertiseService("/located_object", &RosLoService::ServiceCallback, this) ),
+      located_object_callback_reagister_service( n.advertiseService("/register_jlo_callback", &RosLoService::CallbackRegisterService, this) )
 {
   using namespace std;
 
@@ -83,6 +87,7 @@ RosLoService::RosLoService(const char* nodename, ros::NodeHandle &n, std::string
   n.param<string>( "tf_topic", tf_topic, "/tf" );
   printf("Subscribe \"%s\"\n", tf_topic.c_str());
   tf_subscription = n.subscribe<tf::tfMessage>( tf_topic, 100, boost::bind(&RosLoService::tf_subscription_callback, this, _1) );
+  boost::thread(boost::bind(&RosLoService::UpdateEventHandler, this));
 }
 
 RosLoService::~RosLoService()
@@ -91,40 +96,46 @@ RosLoService::~RosLoService()
   printf("Wrote data to bla.ini\n");
 }
 
-bool PutLoIntoResponse( jlo::ServiceLocatedObject* lo, vision_srvs::srvjlo::Response&  answer)
+bool PutLoIntoPartialLo( jlo::ServiceLocatedObject* lo, vision_msgs::partial_lo&  out_lo)
 {
   try
   {
-  vision_msgs::partial_lo& out_lo = answer.answer;
-  out_lo.id = lo->m_uniqueID;
-  out_lo.parent_id = lo->m_parentID;
-  int width = 4;
-  Matrix m = lo->GetMatrix();
-  Matrix cov = lo->GetCovarianceMatrix();
-  lo->IncreaseReferenceCounter();
-  for(int r = 0; r < width; r++)
-  {
-    for(int c = 0; c < width; c++)
+    out_lo.id = lo->m_uniqueID;
+    out_lo.parent_id = lo->m_parentID;
+    int width = 4;
+    Matrix m = lo->GetMatrix();
+    Matrix cov = lo->GetCovarianceMatrix();
+    lo->IncreaseReferenceCounter();
+    for(int r = 0; r < width; r++)
     {
-        out_lo.pose[r * width + c] = m.element(r,c);
+      for(int c = 0; c < width; c++)
+      {
+          out_lo.pose[r * width + c] = m.element(r,c);
+      }
     }
-  }
-  width = 6;
-  for(int r = 0; r < width; r++)
-  {
-    for(int c = 0; c < width; c++)
+    width = 6;
+    for(int r = 0; r < width; r++)
     {
-        out_lo.cov[r * width + c] = cov.element(r,c);
+      for(int c = 0; c < width; c++)
+      {
+          out_lo.cov[r * width + c] = cov.element(r,c);
+      }
     }
-  }
-  answer.answer.type = lo->GetLOType();
-  answer.answer.name = lo->m_mapstring;
+    out_lo.type = lo->GetLOType();
+    out_lo.name = lo->m_mapstring;
   }
   catch(...)
   {
     printf("Critical Error in PutLoIntoResponse \n");
+    return false;
   }
   return true;
+}
+
+bool PutLoIntoResponse( jlo::ServiceLocatedObject* lo, vision_srvs::srvjlo::Response&  answer)
+{
+  vision_msgs::partial_lo& out_lo = answer.answer;
+  return PutLoIntoPartialLo(lo, out_lo);
 }
 
  bool RosLoService::ServiceCallback(vision_srvs::srvjlo::Request& request, vision_srvs::srvjlo::Response&  answer)
@@ -138,9 +149,9 @@ bool PutLoIntoResponse( jlo::ServiceLocatedObject* lo, vision_srvs::srvjlo::Resp
               /*printf("Requested ID: %d => %p\n", (int)request.query.id, lo);*/
               if (lo == NULL)
               {
-                PRINTF_DEBUG("Error Parsing Input: Id does not exist!\n");
-                answer.error = "Error Parsing Input: Id does not exist!\n";
-                return false;
+                PRINTF_DEBUG("Error in IDquery: Id does not exist!\n");
+                answer.error = "Error in IDquery: Id does not exist!\n";
+                return true;
               }
               PutLoIntoResponse(lo, answer);
 	}
@@ -148,23 +159,23 @@ bool PutLoIntoResponse( jlo::ServiceLocatedObject* lo, vision_srvs::srvjlo::Resp
 	{
 	  /* case 1: One number can only mean an id: ID-Query*/
 	  long id = GetServiceLocatedObjectID(request.query.name);
-	  if(id != -1)
+	  if(id >= ID_WORLD)
 	  {
             jlo::ServiceLocatedObject* lo = GetServiceLocatedObject(id);
             if (lo == NULL)
             {
-              PRINTF_DEBUG("Error Parsing Input: Id does not exist!\n");
-              answer.error = "Error Parsing Input: Id does not exist!\n";
-              return false;
+              PRINTF_DEBUG("Error in NameQuery: Id does not exist!\n");
+              answer.error = "Error in NameQuery: Id does not exist!\n";
+              return true;
             }
             PutLoIntoResponse(lo, answer);
 	  }
 	  else
 	  {
-	    PRINTF_DEBUG("Error Parsing Input: Name does not exist!\n");
-            answer.error = "Error Parsing Input: Name does not exist!\n";
+	    PRINTF_DEBUG("Error in NameQuery: Name does not exist!\n");
+            answer.error = "Error in NameQuery: Name does not exist!\n";
             answer.answer.id = 0;
-            return false;
+            return true;
 	  }
 	}
 	else if (request.command.compare(FRAMEQUERY) == 0)
@@ -182,9 +193,9 @@ bool PutLoIntoResponse( jlo::ServiceLocatedObject* lo, vision_srvs::srvjlo::Resp
                 {
                   if (lo == NULL)
                   {
-                    PRINTF_DEBUG("Error Parsing Input: Id does not exist!\n");
-                    answer.error = "Error Parsing Input: Id does not exist!\n";
-                    return false;
+                    PRINTF_DEBUG("Error in Framequery: Id does not exist!\n");
+                    answer.error = "Error in Framequery: Id does not exist!\n";
+                    return true;
                   }
                   if(lo->m_uniqueID != ID_WORLD && lo->m_relation->m_uniqueID == (unsigned long)parentID)
                   {
@@ -195,9 +206,9 @@ bool PutLoIntoResponse( jlo::ServiceLocatedObject* lo, vision_srvs::srvjlo::Resp
                     jlo::ServiceLocatedObject* parent = GetServiceLocatedObject(parentID);
                     if (parent == NULL)
                     {
-                       PRINTF_DEBUG("Error Parsing Input: Parent Id does not exist!\n");
-                       answer.error = "Error Parsing Input: Parent Id does not exist!\n";
-                       return false;
+                       PRINTF_DEBUG("Error in Framequery: Parent Id does not exist!\n");
+                       answer.error = "Error in Framequery: Parent Id does not exist!\n";
+                       return true;
                     }
                     Matrix mat = lo->GetMatrix(*parent);
                     Matrix cov = lo->GetCovarianceMatrix(*parent);
@@ -209,7 +220,7 @@ bool PutLoIntoResponse( jlo::ServiceLocatedObject* lo, vision_srvs::srvjlo::Resp
               catch(...)
               {
                 printf("Critical error in FrameQuery\n");
-                return false;
+                return true;
               }
             }
             else if(request.command.compare(DELETE) == 0)
@@ -220,9 +231,9 @@ bool PutLoIntoResponse( jlo::ServiceLocatedObject* lo, vision_srvs::srvjlo::Resp
                     jlo::ServiceLocatedObject* obj  = GetServiceLocatedObject(id);
                     if(obj == NULL)
                     {
-                       PRINTF_DEBUG("Error: Can't delete ID_WORLD!\n");
-                       answer.error = "Error: Can't delete ID_WORLD!\n";
-                       return false;
+                       PRINTF_DEBUG("Error in delete: Can't delete ID_WORLD!\n");
+                       answer.error = "Error in delete: Can't delete ID_WORLD!\n";
+                       return true;
                     }
                     else
                     {
@@ -230,19 +241,15 @@ bool PutLoIntoResponse( jlo::ServiceLocatedObject* lo, vision_srvs::srvjlo::Resp
                       FreeServiceLocatedObject(obj);
                       if(ref_count > 1)
                       {
-                        answer.error = "Object is still referenced.";
-                      }
-                      else
-                      {
-                        answer.error = "Object deleted.";
+                        answer.error = "Warning in delete: Object is still referenced.";
                       }
      	            }
                   }
                   else
                   {
-                    PRINTF_DEBUG("Error: Can't delete ID_WORLD!\n");
-                     answer.error = "Error: Can't delete ID_WORLD!\n";
-                    return false;
+                    PRINTF_DEBUG("Error in delete: Can't delete ID_WORLD!\n");
+                     answer.error = "Error in delete: Can't delete ID_WORLD!\n";
+                    return true;
                   }
             }
  /*case error */
@@ -291,15 +298,15 @@ bool PutLoIntoResponse( jlo::ServiceLocatedObject* lo, vision_srvs::srvjlo::Resp
                 jlo::ServiceLocatedObject* parent = GetServiceLocatedObject(parentID);
                 if(parent == NULL)
                 {
-                  PRINTF_DEBUG("Error Parsing Bottle: Requested parent does not exist!\n");
-                  answer.error = "Error Parsing Bottle: Requested parent does not exist!\n";
-                  return false;
+                  PRINTF_DEBUG("Error in Update: Requested parent does not exist!\n");
+                  answer.error = "Error in Update: Requested parent does not exist!\n";
+                  return true;
                 }
                 jlo::ServiceLocatedObject* pose = FServiceLocatedObject(parent, mat, cov, type);
                 PutLoIntoResponse(pose, answer);
-                if(request.query.name.length() > 0 && GetServiceLocatedObjectID(request.query.name) == -1)
+                if(request.query.name.length() > 0 && GetServiceLocatedObjectID(request.query.name) < ID_WORLD)
                 {
-                   pose->m_mapstring = request.query.name;
+                  ServiceInterface::AddMapString(pose, request.query.name);
                 }
               }
               else
@@ -307,19 +314,23 @@ bool PutLoIntoResponse( jlo::ServiceLocatedObject* lo, vision_srvs::srvjlo::Resp
                 jlo::ServiceLocatedObject* parent = GetServiceLocatedObject(parentID);
                 if(parent == NULL || (parent->m_uniqueID == ID_WORLD && pose->m_uniqueID == ID_WORLD))
                 {
-                  PRINTF_DEBUG("Error Parsing Bottle: Requested parent does not exist!\n");
-                   answer.error = "Error Parsing Bottle: Requested parent does not exist!\n";
-                  return false;
+                  PRINTF_DEBUG("Error in Update: Requested parent does not exist!\n");
+                   answer.error = "Error in Update: Requested parent does not exist!\n";
+                  return true;
                 }
                 if((parent->m_uniqueID == ID_WORLD && pose->m_uniqueID == ID_WORLD))
                 {
-                    answer.error = "Error: Asked for world in world\n";
-                    return false;
+                    answer.error = "Error in Update: Asked for world in world\n";
+                    return true;
                 }
-                pose->Update(mat, cov, ServiceInterface::FServiceLocatedObjectCopy, ServiceInterface::FreeServiceLocatedObject);
-                if(request.query.name.length() > 0 && GetServiceLocatedObjectID(request.query.name) == -1)
+                pose->Update(mat, cov, ServiceInterface::FServiceLocatedObjectCopy, ServiceInterface::FreeServiceLocatedObject, &RosLoService::UpdateEventNotifier);
+                if(request.query.name.length() > 0 && GetServiceLocatedObjectID(request.query.name) < ID_WORLD)
                 {
-                   pose->m_mapstring = request.query.name;
+                  if(pose->m_mapstring.compare(request.query.name) != 0)
+                  {
+                    ServiceInterface::RemoveMapString(pose->m_mapstring);
+                  }
+                  ServiceInterface::AddMapString(pose, request.query.name);
                 }
                 PutLoIntoResponse(pose, answer);
               }
@@ -329,14 +340,14 @@ bool PutLoIntoResponse( jlo::ServiceLocatedObject* lo, vision_srvs::srvjlo::Resp
               jlo::ServiceLocatedObject* parent = GetServiceLocatedObject(parentID);
               if(parent == NULL)
               {
-                PRINTF_DEBUG("Error Parsing Bottle: Requested parent does not exist!\n");
-                answer.error = "Error Parsing Bottle: Requested parent does not exist!\n";
-                return false;
+                PRINTF_DEBUG("Error in Update: Requested parent does not exist!\n");
+                answer.error = "Error in Update: Requested parent does not exist!\n";
+                return true;
               }
               jlo::ServiceLocatedObject* pose = FServiceLocatedObject(parent, mat, cov, type);
-              if(request.query.name.length() > 0 && GetServiceLocatedObjectID(request.query.name) == -1)
+              if(request.query.name.length() > 0 && GetServiceLocatedObjectID(request.query.name) < ID_WORLD)
               {
-                 pose->m_mapstring = request.query.name;
+                 ServiceInterface::AddMapString(pose, request.query.name);
               }
               PutLoIntoResponse(pose, answer);
             }
@@ -349,7 +360,7 @@ bool PutLoIntoResponse( jlo::ServiceLocatedObject* lo, vision_srvs::srvjlo::Resp
           {
             PRINTF_DEBUG("Error Parsing Input: Id does not exist!\n");
             answer.error = "Error Parsing Input: Id does not exist!\n";
-            return false;
+            return true;
           }
           PutLoIntoResponse(lo, answer);
           std::string st = lo->SaveComplete()->WriteToString();
@@ -359,17 +370,82 @@ bool PutLoIntoResponse( jlo::ServiceLocatedObject* lo, vision_srvs::srvjlo::Resp
         {
           printf("Command %s not accepted\n", request.command.c_str());
            PRINTF_DEBUG("Error: Requested command does not exist!\n");
-           answer.error = "Error Parsing Bottle: Requested parent does not exist!\n";
-           return false;
+           answer.error = "Error COUTLO: Requested parent does not exist!\n";
+           return true;
         }
         return true;
       }
       catch(...)
       {
         printf("An exception occured during parsing the message!\n");
-        return false;
+        answer.error = "Error in jlo: Exception happened during execution!\n";
+        return true;
       }
 }
+
+boost::condition_variable cond;
+boost::mutex mut;
+
+void RosLoService::UpdateEventHandler()
+{
+  while(true)
+  {
+    boost::unique_lock<boost::mutex> lock(mut);
+    while(m_queueOfLosToPublish.size() > 0 )
+    {
+      unsigned long id = m_queueOfLosToPublish.front();
+      m_queueOfLosToPublish.pop();
+      if(m_jlotopicMap.find(id) != m_jlotopicMap.end())
+      {
+        jlo::ServiceLocatedObject* lo = GetServiceLocatedObject(id);
+        if(lo == NULL)
+        {
+          m_jlotopicMap.erase(m_jlotopicMap.find(id));
+          continue;
+        }
+        vision_msgs::partial_lo answer;
+        PutLoIntoPartialLo(lo, answer);
+
+        for(std::vector<ros::Publisher*>::iterator it = m_jlotopicMap[id].begin();
+               it != m_jlotopicMap[id].end(); it++)
+        {
+           (*it)->publish(answer);
+        }
+      }
+    }
+    cond.wait(lock);
+  }
+}
+
+void RosLoService::UpdateEventNotifier(unsigned long id)
+{
+  boost::lock_guard<boost::mutex> lock(mut);
+  m_queueOfLosToPublish.push(id);
+  cond.notify_one();
+}
+
+
+bool RosLoService::CallbackRegisterService(vision_srvs::register_jlo_callback::Request& request, vision_srvs::register_jlo_callback::Response&  answer)
+{
+  jlo::ServiceLocatedObject* obj = GetServiceLocatedObject(request.jlo_id);
+  if(obj != NULL)
+  {
+    ros::NodeHandle nh;
+    if(m_jlotopicMap.find(request.jlo_id) == m_jlotopicMap.end())
+      m_jlotopicMap[request.jlo_id] = std::vector<ros::Publisher*>();
+
+    std::map<std::string, ros::Publisher>::iterator it = m_topicPublisherMap.find(request.topic_name);
+    if(it == m_topicPublisherMap.end())
+    {
+      m_topicPublisherMap[request.topic_name] = (nh.advertise<vision_msgs::partial_lo>(request.topic_name, 20));
+    }
+    m_jlotopicMap[request.jlo_id].push_back(&m_topicPublisherMap[request.topic_name]);
+  }
+  else
+    answer.error = "Error: Object does not exist";
+  return true;
+}
+
 
 void RosLoService::tf_subscription_callback(const tf::tfMessage::ConstPtr &msg_in_)
 {
@@ -420,15 +496,14 @@ void RosLoService::tf_subscription_callback(const tf::tfMessage::ConstPtr &msg_i
       //printf("Getting tf %s parent %s\n", trans.frame_id_.c_str(), trans.parent_id_.c_str());
     }
 
-    long id = (long)GetServiceLocatedObjectID(trans.frame_id_);
-    long parentid = (long)GetServiceLocatedObjectID(trans.parent_id_);
-    if(parentid == -1)
+    unsigned long id = (long)GetServiceLocatedObjectID(trans.frame_id_);
+    unsigned long parentid = (long)GetServiceLocatedObjectID(trans.parent_id_);
+    if(parentid < ID_WORLD)
     {
-      parentid = ID_WORLD;
-      /*printf("Error: Requested parent does not exist!\n");*/
-
-      jlo::ServiceLocatedObject* parent = GetServiceLocatedObject(parentid);
-      parent->m_mapstring = trans.parent_id_;
+      printf("Error reading td: Requested parent does not exist!\n");
+      return;
+      /*jlo::ServiceLocatedObject* parent = GetServiceLocatedObject(parentid);
+      parent->m_mapstring = trans.parent_id_;*/
     }
 
     jlo::ServiceLocatedObject* pose = NULL;
@@ -453,7 +528,7 @@ void RosLoService::tf_subscription_callback(const tf::tfMessage::ConstPtr &msg_i
 
     int type = 1;
 
-    if(id == -1)
+    if(id < ID_WORLD)
     {
       jlo::ServiceLocatedObject* parent = GetServiceLocatedObject(parentid);
       if(parent == NULL)
@@ -462,7 +537,7 @@ void RosLoService::tf_subscription_callback(const tf::tfMessage::ConstPtr &msg_i
           return;
       }
       pose = FServiceLocatedObject(parent, mat, cov, type);
-      pose->m_mapstring = trans.frame_id_;
+      ServiceInterface::AddMapString(pose, trans.frame_id_);
     }
     else
     {
@@ -488,12 +563,12 @@ void RosLoService::tf_subscription_callback(const tf::tfMessage::ConstPtr &msg_i
               diff.element(2,0) < 0.0001 &&
               diff.element(2,1) < 0.0001 &&
               diff.element(2,2) < 0.0001 &&
-              diff.element(2,3) < 0.0001) || pose->m_uniqueID == 1)
+              diff.element(2,3) < 0.0001) || pose->m_uniqueID == ID_WORLD)
           {
             //printf("no significant change: ignoring tf\n");
             return;
           }
-          pose->Update(mat, cov, ServiceInterface::FServiceLocatedObjectCopy, ServiceInterface::FreeServiceLocatedObject);
+          pose->Update(mat, cov, ServiceInterface::FServiceLocatedObjectCopy, ServiceInterface::FreeServiceLocatedObject, &RosLoService::UpdateEventNotifier);
       }
       else
       {
@@ -505,7 +580,7 @@ void RosLoService::tf_subscription_callback(const tf::tfMessage::ConstPtr &msg_i
               return;
           }
           pose = FServiceLocatedObject(parent, mat, cov, type);
-          pose->m_mapstring = trans.frame_id_;
+          ServiceInterface::AddMapString(pose, trans.frame_id_);
       }
     }
 

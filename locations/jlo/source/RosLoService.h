@@ -25,12 +25,14 @@
 
 #include <vision_msgs/partial_lo.h>
 #include <vision_srvs/srvjlo.h>
+#include <vision_srvs/register_jlo_callback.h>
 #include <lo/ServiceInterface.h>
 
 #include "tf/tfMessage.h"
 #include "tf/tf.h"
 
 #include <set>
+#include <queue>
 #include <string>
 
 /**
@@ -50,19 +52,38 @@ public:
   ~RosLoService ();
   /**
   * Parses a service request and reacts on the input, by generating the answer
-  * @param botIn incoming request
-  * @param bot outgoing answer
+  * @param request incoming request: command := {idquery, framequery, update, del, cout}, [id|parentid|matrix, cov,type|name]+
+  * @param answer outgoing answer: error, [id, parentid, matrix, cov, type, name]
   */
-  static bool ServiceCallback(vision_srvs::srvjlo::Request& request, vision_srvs::srvjlo::Response&  answer);
+  bool ServiceCallback(vision_srvs::srvjlo::Request& request, vision_srvs::srvjlo::Response&  answer);
 
+  /**
+  * Register a callback that wil publish any change on a certain lo id
+  * @param request incoming request: topicname and id
+  * @param answer outgoing answer: error
+  */
+  bool CallbackRegisterService(vision_srvs::register_jlo_callback::Request& request, vision_srvs::register_jlo_callback::Response&  answer);
+  /**
+  *   UpdateEventHandler
+  *   @brief this function will wait for update events and publish then a partial lo to specified topics
+  */
+  void UpdateEventHandler();
+  /**
+  *   UpdateEventNotifier
+  *   @brief raises and update event
+  */
+  static void UpdateEventNotifier(unsigned long object_id);
 private:
   /**
   *
   */
   ros::Subscriber tf_subscription;
   ros::ServiceServer located_object_service;
-
+  ros::ServiceServer located_object_callback_reagister_service;
   std::set<std::string> tf_blacklist;
+  std::map<unsigned long, std::vector<ros::Publisher*> > m_jlotopicMap;
+  std::map<std::string, ros::Publisher> m_topicPublisherMap;
+  static std::queue<unsigned long> m_queueOfLosToPublish;
 
   /**
   * subscribing to one tf topic to update lowlevel entries
