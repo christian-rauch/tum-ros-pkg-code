@@ -536,7 +536,7 @@ public:
   XMLTag* SaveComplete() ;
 /*	void TransformPointLocally(const double& x_in, const double& y_in, const double& z_in, double& x_out, double& y_out, double& z_out, const double& scale);*/
   XMLTag* Save() ;
-  void Update(Matrix m, Matrix cov,  ServiceLocatedObject*(* copy)(ServiceLocatedObject*, ServiceLocatedObject*), unsigned long(*del)(ServiceLocatedObject*));
+  void Update(Matrix m, Matrix cov,  ServiceLocatedObject*(* copy)(ServiceLocatedObject*, ServiceLocatedObject*), unsigned long(*del)(ServiceLocatedObject*), void (*updated)(unsigned long));
   virtual void DecreaseReferenceCounter(){referenceCounter--;}
   void IncreaseReferenceCounter(){referenceCounter++;}
   unsigned long GetReferenceCounter(){return referenceCounter;}
@@ -598,7 +598,7 @@ public:
 *       \remarks if such an object is of type LO_TYPE_PHYSICAL
 *                  it will stay attached even if
 ********************************************************************/
-  virtual void PropagateMovement(ServiceLocatedObject*(* copy)(ServiceLocatedObject*, ServiceLocatedObject*), unsigned long (*del)(ServiceLocatedObject*), ServiceLocatedObject*){}
+  virtual void PropagateMovement(ServiceLocatedObject*(* copy)(ServiceLocatedObject*, ServiceLocatedObject*), unsigned long (*del)(ServiceLocatedObject*), void (*updated)(unsigned long), ServiceLocatedObject*){updated(m_uniqueID);}
   virtual bool NeedCopy (){return false;}
 /********************************************************************/
 /**     GetLOType

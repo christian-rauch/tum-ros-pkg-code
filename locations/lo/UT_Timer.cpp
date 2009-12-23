@@ -36,7 +36,7 @@ double UT_Timer::end( char *message )
   secs     = tv_end.tv_sec  - tv_start.tv_sec;
   ges_usecs = 1000000*secs  + usecs;
   if( message!=NULL )
-    std::cerr << message << "  " << std::setw(10) << std::setfill(' ') 
+    std::cerr << message << "  " << std::setw(10) << std::setfill(' ')
          << 0.001*ges_usecs << " ms";
   return  0.001*ges_usecs;
 }

@@ -112,7 +112,7 @@ public:
 *       \remarks if such an object is of type LO_TYPE_PHYSICAL
 *                  it will stay attached even if
 ********************************************************************/
- virtual  void PropagateMovement(ServiceLocatedObject*(* copy)(ServiceLocatedObject*, ServiceLocatedObject*), unsigned long (*del)(ServiceLocatedObject*), ServiceLocatedObject* parent_copy = NULL);
+ virtual  void PropagateMovement(ServiceLocatedObject*(* copy)(ServiceLocatedObject*, ServiceLocatedObject*), unsigned long (*del)(ServiceLocatedObject*), void (*updated)(unsigned long), ServiceLocatedObject* parent_copy = NULL);
 protected:
   virtual bool NeedCopy ();
 public:

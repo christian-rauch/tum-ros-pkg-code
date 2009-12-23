@@ -84,12 +84,17 @@ bool ObjectContainer::NeedCopy()
   return needCopy;
 }
 
-void ObjectContainer::PropagateMovement(ServiceLocatedObject*(*copy)(ServiceLocatedObject*, ServiceLocatedObject*), unsigned long (*del)(ServiceLocatedObject*), ServiceLocatedObject* parent) {
-  std::vector<ServiceLocatedObject*>::iterator it = m_attachedLocatedObjectList.begin();
+void ObjectContainer::PropagateMovement(ServiceLocatedObject*(*copy)(ServiceLocatedObject*, ServiceLocatedObject*),
+                          unsigned long (*del)(ServiceLocatedObject*), void (*updated)(unsigned long), ServiceLocatedObject* parent)
+{
+  updated(m_uniqueID);
+
   ObjectContainer* copyOfThis = NULL;
   bool needCopy = NeedCopy();
   if(!needCopy)
     return;
+
+  std::vector<ServiceLocatedObject*>::iterator it = m_attachedLocatedObjectList.begin();
   for(;it!= m_attachedLocatedObjectList.end(); )
   {
     if((*it)->GetLOType() != LO_TYPE_PHYSICAL)
@@ -105,7 +110,7 @@ void ObjectContainer::PropagateMovement(ServiceLocatedObject*(*copy)(ServiceLoca
     {
       if(copyOfThis == NULL)
         copyOfThis = (ObjectContainer*)(*copy)(this, parent);
-      (*it)->PropagateMovement(copy, del, copyOfThis);
+      (*it)->PropagateMovement(copy, del, updated, copyOfThis);
       it++;
     }
   }

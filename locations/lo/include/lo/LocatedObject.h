@@ -276,7 +276,7 @@ protected:
 	*********************************************************************
 	*
 	********************************************************************/
-        ReturnMatrix CalcNewCov(const DiagonalMatrix& eigenValues, const Matrix& eigenVectors, const Matrix& hom) const;
+  ReturnMatrix CalcNewCov(const DiagonalMatrix& eigenValues, const Matrix& eigenVectors, const Matrix& hom) const;
 	ReturnMatrix TransformSixVec(const ColumnVector& point, const Matrix& hom) const;
 	/********************************************************************/
 	/**	Performing a transformation approximation on the covariance

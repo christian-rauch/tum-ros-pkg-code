@@ -46,6 +46,14 @@ public:
   */
   static ServiceLocatedObject* FServiceLocatedObject(XMLTag* tag);
   /**
+  *  @brief Creates an lookup entry for a pose in the list of names
+  */
+  static void AddMapString(ServiceLocatedObject* pose, std::string mapstring);
+  /**
+  *  @brief Removes the lookup entry for a name
+  */
+  static void RemoveMapString(std::string mapstring);
+  /**
   * @brief Creates a ServiceLocatedObject taking an parent and matrix information
   */
   static ServiceLocatedObject* FServiceLocatedObject(ServiceLocatedObject* pose, Matrix m, Matrix cov, unsigned long type = LO_TYPE_PERCEIVED);

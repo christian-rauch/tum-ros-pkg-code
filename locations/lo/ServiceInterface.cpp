@@ -496,9 +496,9 @@ unsigned long ServiceInterface::SetServiceLocatedObject(jlo::ServiceLocatedObjec
   return (unsigned long)pose->m_uniqueID;
 }
 
-void jlo::ServiceLocatedObject::Update(Matrix m, Matrix cov, ServiceLocatedObject*(* copy)(ServiceLocatedObject*, ServiceLocatedObject*), unsigned long (*del)(ServiceLocatedObject*))
+void jlo::ServiceLocatedObject::Update(Matrix m, Matrix cov, ServiceLocatedObject*(* copy)(ServiceLocatedObject*, ServiceLocatedObject*), unsigned long (*del)(ServiceLocatedObject*), void (*updated)(unsigned long))
 {
-  PropagateMovement(copy, del, NULL);
+  PropagateMovement(copy, del, updated, NULL);
   Set(m, cov);
 }
 
@@ -562,6 +562,8 @@ unsigned long ServiceInterface::FreeServiceLocatedObject(jlo::ServiceLocatedObje
         if(pose->GetReferenceCounter() <= 0)
         {
           /*printf("Release jlo::ServiceLocatedObject id: %d\n", id);*/
+          if(pose->m_mapstring.length() >  0)
+             ServiceInterface::RemoveMapString(pose->m_mapstring);
           delete pose;
           s_ServiceLocatedObjectMap.erase(s_ServiceLocatedObjectMap.find(id));
           pose = NULL;
@@ -675,16 +677,24 @@ ServiceLocatedObject* ServiceInterface::FServiceLocatedObject(XMLTag* tag)
     if(id > jlo::ServiceLocatedObject::s_lastID)
       jlo::ServiceLocatedObject::SetLastID(id-1);
     ServiceLocatedObject* pose = FServiceLocatedObject(fatherRP, m, cov, type);
-    pose->m_mapstring = tag->GetProperty(XML_ATTRIBUTE_NAMEMAPPING);
-    if(pose->m_mapstring.length() != 0)
-      s_ServiceLocatedObjectNameMap[pose->m_mapstring] = pose->m_uniqueID;
-
+    AddMapString(pose, tag->GetProperty(XML_ATTRIBUTE_NAMEMAPPING));
     return pose;
   }
   //TOCHECK return world?
   return FServiceLocatedObjectWorld();
 }
 
+void ServiceInterface::AddMapString(ServiceLocatedObject* pose, std::string mapstring)
+{
+    pose->m_mapstring = mapstring;
+    if(pose->m_mapstring.length() != 0)
+      s_ServiceLocatedObjectNameMap[pose->m_mapstring] = pose->m_uniqueID;
+}
+
+void ServiceInterface::RemoveMapString(std::string mapstring)
+{
+   s_ServiceLocatedObjectNameMap[mapstring] = 0;
+}
 
 ServiceLocatedObject* ServiceInterface::FServiceLocatedObjectCopy(ServiceLocatedObject* obj_to_copy, ServiceLocatedObject* parent_copy)
 {
