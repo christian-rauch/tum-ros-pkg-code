@@ -201,8 +201,8 @@ class PlaneClustersSR
        RelPoseFactory::FreeRelPose(pose);
        Matrix m_tmp = m;
        cloud_in_trans_.points.clear();
-       if(cloud_in.points.size() < 0 || cloud_in.points.size() > 1000000000)
-          throw "Error in pointcloud, failed check 0 < num_points < 1000000000";
+       if(cloud_in.points.size() == 0 || cloud_in.points.size() > 1000000000)
+          throw "Error in pointcloud, failed check 0 =< num_points < 1000000000";
        for(size_t i = 0; i < cloud_in.points.size(); i++)
        {
          ColumnVector v(4);
@@ -504,8 +504,20 @@ void ClusterDetector::SetData(XMLTag* tag)
 
   if(tag != NULL)
   {
-      m_swissranger_jlo_id = tag->GetPropertyInt(XML_ATTRIBUTE_SR4LO, 21);
-      m_ptu_jlo_id = tag->GetPropertyInt(XML_ATTRIBUTE_PTULO, 4);
+      m_swissranger_jlo_id = tag->GetPropertyInt(XML_ATTRIBUTE_SR4LO, 0);
+      if(m_swissranger_jlo_id == 0)
+      {
+        std::string name = tag->GetProperty(XML_ATTRIBUTE_SR4LO, "/sr4");
+        RelPose* pose = RelPoseFactory::GetRelPose(name);
+        m_swissranger_jlo_id =pose->m_uniqueID;
+      }
+      m_ptu_jlo_id = tag->GetPropertyInt(XML_ATTRIBUTE_PTULO, 0);
+      if(m_ptu_jlo_id == 0)
+      {
+        std::string name = tag->GetProperty(XML_ATTRIBUTE_PTULO, "/base_link");
+        RelPose* pose = RelPoseFactory::GetRelPose(name);
+        m_ptu_jlo_id =pose->m_uniqueID;
+      }
   }
 }
 
@@ -689,7 +701,7 @@ std::vector<RelPose*> ClusterDetector::Inner(Sensor* sens, int &numOfObjects, do
          <<0    << 0    << 0    << 0.02 << 0   << 0
          <<0    << 0    << 0    << 0   << 0.02 << 0
          <<0    << 0    << 0    << 0   << 0   << 0.8;
-     RelPose* ptu = RelPoseFactory::FRelPose(14);
+     RelPose* ptu = RelPoseFactory::FRelPose(m_ptu_jlo_id);
      RelPose* pose_temp = RelPoseFactory::FRelPose(ptu, rotmat, cov);
      double temp_qual = min(1.0, max(0.0, fabs((covx*covy*covz)) * 500 ));
      if(x == 0)
