@@ -48,6 +48,9 @@
 #include <OGRE/OgreBillboardSet.h>
 
 #include <ogre_tools/point_cloud.h>
+
+#include <algorithm>
+
 using namespace vision_srvs;
 namespace rviz_shows_cop
 {
@@ -147,7 +150,8 @@ void CopAnswerDisplay::update(float wall_dt, float ros_dt)
 
 
 
-bool CopAnswerDisplay::GetJlo(unsigned long id, unsigned long parent_id, std::vector<double> &mat, std::vector<double> &cov)
+bool CopAnswerDisplay::GetJlo(unsigned long id, unsigned long parent_id,
+    vision_msgs::partial_lo::_pose_type &mat,  vision_msgs::partial_lo::_cov_type &cov)
 {
   srvjlo msg;
   msg.request.command = "framequery";
@@ -173,7 +177,8 @@ bool CopAnswerDisplay::GetJlo(unsigned long id, unsigned long parent_id, std::ve
   return true;
 }
 
-void CopAnswerDisplay::setSceneNodePose(Ogre::SceneNode* scene_node, std::vector<double> mat, Ogre::Quaternion &orientation)
+template<typename T>
+void CopAnswerDisplay::setSceneNodePose(Ogre::SceneNode* scene_node, T mat, Ogre::Quaternion &orientation)
 {
    tf::Stamped<tf::Pose> pose_w(btTransform(btMatrix3x3(mat[0],mat[1],mat[2],
                                                        mat[4],mat[5],mat[6],
@@ -207,7 +212,7 @@ void CopAnswerDisplay::setSceneNodePose(Ogre::SceneNode* scene_node, std::vector
   rot2 = rot * Ogre::Matrix3(mat[0],mat[1],mat[2],mat[4],mat[5],mat[6],mat[8],mat[9],mat[10]);
   orientation.FromRotationMatrix(rot2);
   btScalar yaw_w, pitch_w, roll_w;
-  pose_w.getBasis().getEulerZYX(yaw_w, pitch_w, roll_w);
+  pose_w.getBasis().getEulerYPR(yaw_w, pitch_w, roll_w);
 
   Ogre::Matrix3 orientation_w(1,0,0,0,1,0,0,0,1);
   scene_node->setPosition(position_w);
@@ -238,11 +243,12 @@ void CopAnswerDisplay::processMessage (const vision_msgs::cop_answerConstPtr& ms
   {
 
     Ogre::SceneNode* node = scene_node_->createChildSceneNode();
-    std::vector<double> mat, cov;
+    vision_msgs::partial_lo::_pose_type mat;
+    vision_msgs::partial_lo::_cov_type cov;
 
     if(msg->found_poses[i].position == 1)
     {
-      mat = matid;
+      std::copy(matid.begin(), matid.end(), mat.begin());
     }
     else
     {

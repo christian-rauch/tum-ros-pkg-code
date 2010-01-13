@@ -121,10 +121,9 @@ protected:
 
   bool inited_jlo;
   ros::ServiceClient jlo_client;
-  bool GetJlo(unsigned long id, unsigned long parent_id, std::vector<double> &mat, std::vector<double> &cov);
-  void setSceneNodePose(Ogre::SceneNode* scene_node, std::vector<double> map, Ogre::Quaternion &orientation);
-
-
+  bool GetJlo(unsigned long id, unsigned long parent_id, vision_msgs::partial_lo::_pose_type &mat, vision_msgs::partial_lo::_cov_type &cov);
+  
+  template<typename T> void setSceneNodePose(Ogre::SceneNode* scene_node, T mat, Ogre::Quaternion &orientation);
 };
 
 } // namespace mapping_rviz_plugin
