@@ -41,6 +41,7 @@ namespace cop
     virtual void NotifyNewObject(Signature*, RelPose*){throw "Comm CreateNewPose: Not implemented";};/*{throw "Comm NotifyPoseUpdate: Not implemented";}*/
     virtual RelPose* CreateNewPose(RelPose* /*pose*/, Matrix* /*mat*/, Matrix* /*cov*/){throw "Comm CreateNewPose: Not implemented";}
     virtual RelPose* GetPose(int /*poseId*/){throw "Comm GetPose: Not implemented";}
+    virtual RelPose* GetPose(const std::string /*poseId*/){throw "Comm GetPose: Not implemented";}
     virtual RelPose* GetPoseRelative(int /*poseId*/, int /*parentPoseId*/){throw "Comm GetPoseRelative: Not implemented";}
     virtual void FreePose(int /*poseID*/){}
 

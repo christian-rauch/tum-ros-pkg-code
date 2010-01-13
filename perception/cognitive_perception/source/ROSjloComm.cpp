@@ -27,6 +27,7 @@ using namespace vision_msgs;
 
 #define JLO_IDQUERY "idquery"
 #define JLO_FRAMEQUERY "framequery"
+#define JLO_NAMEQUERY "namequery"
 #define JLO_DELETE "del"
 #define JLO_UPDATE "update"
 
@@ -85,7 +86,7 @@ ROSjloComm::ROSjloComm(std::string nodeName) :
   {
     if(ros::service::waitForService(m_service, 1000))
       break;
-    else 
+    else
     {
       printf("Waiting for Jlo to startup at %s\n", m_service.c_str());
       g_stopall = g_stopall || !node.ok();
@@ -193,6 +194,26 @@ RelPose* ROSjloComm::GetPose(int poseId)
    srvjlo msg;
    msg.request.command = JLO_IDQUERY;
    msg.request.query.id = poseId;
+  if (!GetJloServiceClient().call(msg))
+  {
+    printf("Error in ROSjloComm: Reading of pose information not possible (task: %s with %d)!\n", JLO_IDQUERY, poseId);
+    return NULL;
+  }
+  else if (msg.response.error.length() > 0)
+  {
+    printf("Error from jlo: %s!\n", msg.response.error.c_str());
+    return NULL;
+  }
+  else
+    return GetPoseFromMessage(msg.response.answer, this);
+}
+
+
+RelPose* ROSjloComm::GetPose(const std::string poseId)
+{
+   srvjlo msg;
+   msg.request.command = JLO_NAMEQUERY;
+   msg.request.query.name = poseId;
   if (!GetJloServiceClient().call(msg))
   {
     printf("Error in ROSjloComm: Reading of pose information not possible (task: %s with %d)!\n", JLO_IDQUERY, poseId);

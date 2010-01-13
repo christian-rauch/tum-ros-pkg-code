@@ -61,6 +61,7 @@ namespace cop
     virtual RelPose* CreateNewPose(RelPose* pose, Matrix* mat, Matrix* cov);
 
     virtual RelPose* GetPose(int poseId);
+    virtual RelPose* GetPose(const std::string poseId);
 
     virtual jlo::LocatedObject* GetParent(const jlo::LocatedObject& child);
 

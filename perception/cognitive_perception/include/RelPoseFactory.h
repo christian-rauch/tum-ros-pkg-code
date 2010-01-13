@@ -54,6 +54,8 @@ namespace cop
     static RelPose* FRelPoseIdentityChild(RelPose* parent);
 
     static RelPose* GetRelPose(int id, int parent_if);
+    static RelPose* GetRelPose(std::string name);
+
     static RelPose* FRelPose(int id);
 
     static void DisposeList();

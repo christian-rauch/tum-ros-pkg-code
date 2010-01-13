@@ -94,6 +94,11 @@ RelPose* RelPoseFactory::FRelPose(XMLTag* tag)
   if(tag != NULL && tag->GetName().compare(XML_NODE_RELPOSE) == 0)
   {
     int id = tag->GetPropertyInt(XML_ATTRIBUTE_LOID);
+    if(id == 0)
+    {
+      std::string name = tag->GetProperty(XML_ATTRIBUTE_LOID);
+
+    }
     if(id == ID_WORLD)
     {
       RelPose* world = GetRelPose(id);
@@ -137,6 +142,15 @@ RelPose* RelPoseFactory::GetRelPose(int poseId, int parentPoseId)
 #endif /*NO_LO_SERVICE_AVAILABLE*/
 }
 
+
+RelPose* RelPoseFactory::GetRelPose(std::string name)
+{
+#ifdef NO_LO_SERVICE_AVAILABLE
+  throw "Not yet implemented";
+#else /*NO_LO_SERVICE_AVAILABLE*/
+    return s_loService->GetPose(name);
+#endif /*NO_LO_SERVICE_AVAILABLE*/
+}
 
 #ifdef NO_LO_SERVICE_AVAILABLE
 inline RelPose* RelPoseFactory::GetRelPoseIndex(int index)
