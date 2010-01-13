@@ -86,7 +86,7 @@ RosLoService::RosLoService(const char* nodename, ros::NodeHandle &n, std::string
   string tf_topic;
   n.param<string>( "tf_topic", tf_topic, "/tf" );
   printf("Subscribe \"%s\"\n", tf_topic.c_str());
-  tf_subscription = n.subscribe<tf::tfMessage>( tf_topic, 100, boost::bind(&RosLoService::tf_subscription_callback, this, _1) );
+  tf_subscription = n.subscribe<tf::tfMessage>( tf_topic, 10000, boost::bind(&RosLoService::tf_subscription_callback, this, _1) );
   boost::thread(boost::bind(&RosLoService::UpdateEventHandler, this));
 }
 
@@ -451,12 +451,12 @@ void RosLoService::tf_subscription_callback(const tf::tfMessage::ConstPtr &msg_i
 {
   for (unsigned int i = 0; i < msg_in_->transforms.size(); i++)
   {
-    tf::Stamped<tf::Transform> trans;
+    tf::StampedTransform trans;
     /*Obsolete: TransformStampedMsgToTF, if you get here an error cause the following function is not defined, pls update tf*/
     transformStampedMsgToTF(msg_in_->transforms[i], trans);
-    if( tf_blacklist.find( trans.frame_id_ ) != tf_blacklist.end() )
+    /*if( tf_blacklist.find( trans.frame_id_ ) != tf_blacklist.end() )
         continue;
-
+*/
 
  /*   printf("got matrix:= \n[");
     for(int i = 0; i < 16; i++)
@@ -489,7 +489,7 @@ void RosLoService::tf_subscription_callback(const tf::tfMessage::ConstPtr &msg_i
     if(trans.frame_id_.length() == 0)
     {
       printf("Empty tf\n");
-      return;
+      continue;
     }
     else
     {
@@ -497,11 +497,11 @@ void RosLoService::tf_subscription_callback(const tf::tfMessage::ConstPtr &msg_i
     }
 
     unsigned long id = (long)GetServiceLocatedObjectID(trans.frame_id_);
-    unsigned long parentid = (long)GetServiceLocatedObjectID(trans.parent_id_);
+    unsigned long parentid = (long)GetServiceLocatedObjectID(trans.child_frame_id_);
     if(parentid < ID_WORLD)
     {
       printf("Error reading td: Requested parent does not exist!\n");
-      return;
+      continue;
       /*jlo::ServiceLocatedObject* parent = GetServiceLocatedObject(parentid);
       parent->m_mapstring = trans.parent_id_;*/
     }
@@ -526,15 +526,15 @@ void RosLoService::tf_subscription_callback(const tf::tfMessage::ConstPtr &msg_i
         << 0 << 0 << 0 << 0 << 0 << 0
         << 0 << 0 << 0 << 0 << 0 << 0;
 
-    int type = 1;
+    int type = LO_TYPE_PHYSICAL;
 
     if(id < ID_WORLD)
     {
       jlo::ServiceLocatedObject* parent = GetServiceLocatedObject(parentid);
       if(parent == NULL)
       {
-          printf("Error tf: Requested parent does not exist! (%s -> %ld)\n", trans.parent_id_.c_str(),  parentid);
-          return;
+          printf("Error tf: Requested parent does not exist! (%s -> %ld)\n", trans.child_frame_id_.c_str(),  parentid);
+          continue;
       }
       pose = FServiceLocatedObject(parent, mat, cov, type);
       ServiceInterface::AddMapString(pose, trans.frame_id_);
@@ -552,21 +552,20 @@ void RosLoService::tf_subscription_callback(const tf::tfMessage::ConstPtr &msg_i
       {
           Matrix m = pose->GetMatrix();
           Matrix diff =  mat - m;
-          if((diff.element(0,0) < 0.0001 &&
-             diff.element(0,1) < 0.0001 &&
-             diff.element(0,3) < 0.0001 &&
-              diff.element(0,3) < 0.0001 &&
-              diff.element(1,0) < 0.0001 &&
-              diff.element(1,1) < 0.0001 &&
-              diff.element(1,2) < 0.0001 &&
-              diff.element(1,3) < 0.0001 &&
-              diff.element(2,0) < 0.0001 &&
-              diff.element(2,1) < 0.0001 &&
-              diff.element(2,2) < 0.0001 &&
-              diff.element(2,3) < 0.0001) || pose->m_uniqueID == ID_WORLD)
+          if((diff.element(0,0) < 0.0000 &&
+             diff.element(0,1) < 0.0000 &&
+             diff.element(0,2) < 0.0000 &&
+              diff.element(0,3) < 0.000 &&
+              diff.element(1,0) < 0.00 &&
+              diff.element(1,1) < 0.0000 &&
+              diff.element(1,2) < 0.0000 &&
+              diff.element(1,3) < 0.000 &&
+              diff.element(2,0) < 0.0000 &&
+              diff.element(2,1) < 0.0000 &&
+              diff.element(2,2) < 0.0000 &&
+              diff.element(2,3) < 0.000) || pose->m_uniqueID == ID_WORLD)
           {
-            //printf("no significant change: ignoring tf\n");
-            return;
+            continue;
           }
           pose->Update(mat, cov, ServiceInterface::FServiceLocatedObjectCopy, ServiceInterface::FreeServiceLocatedObject, &RosLoService::UpdateEventNotifier);
       }
@@ -576,8 +575,8 @@ void RosLoService::tf_subscription_callback(const tf::tfMessage::ConstPtr &msg_i
           jlo::ServiceLocatedObject* parent = GetServiceLocatedObject(parentid);
           if(parent == NULL)
           {
-              printf("Error tf: Requested parent does not exist! (%s -> %ld)\n", trans.parent_id_.c_str(), parentid);
-              return;
+              printf("Error tf: Requested parent does not exist! (%s -> %ld)\n", trans.child_frame_id_.c_str(), parentid);
+              continue;
           }
           pose = FServiceLocatedObject(parent, mat, cov, type);
           ServiceInterface::AddMapString(pose, trans.frame_id_);
