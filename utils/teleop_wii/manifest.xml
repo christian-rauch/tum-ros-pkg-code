@@ -1,0 +1,16 @@
+<package>
+  <description brief="teleop_wii">
+     Wiimote teleop control for base control (uses the nunchuk). The hat of
+     the nunchuck controls forward/sideways, roll controls turning. Z is the
+     deadman's control.
+  </description>
+  <author>Ingo Kresse</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <depend package="geometry_msgs"/>
+  <depend package="joy"/>
+  <depend package="roscpp"/>
+<sysdepend os="debian" version="lenny/sid" package="libcwiid1-dev"/>
+</package>
+
+
