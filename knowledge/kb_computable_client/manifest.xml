@@ -1,0 +1,19 @@
+<package>
+  <description brief="kb_computable_client">
+
+     kb_computable_client
+
+     utils for querying external information, e.g. the poses of objects from jlo,
+     from within Prolog
+
+  </description>
+  <author>Moritz Tenorth</author>
+  <license>GPL</license>
+  <review status="unreviewed" notes=""/>
+  <depend package="rosjava"/>
+  <depend package="jlo"/>
+  <depend package="std_msgs"/>
+
+</package>
+
+
