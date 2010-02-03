@@ -1,0 +1,19 @@
+#!/bin/bash
+
+PL_ARGS=$@
+PL_INIT_FILE=$(rospack find rosprolog)/prolog/init.pl
+SCRIPT_FILE=""
+
+if [ -n "$1" ] && [ -n "$(rospack find $1)" ]; then
+    ROS_EXPORT_CP=$(rospack export --lang=java --attrib=classpath $1)
+    export CLASSPATH="$(echo $ROS_EXPORT_CP | sed 's/ /:/g')"
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(rospack find rosjava)/bin
+
+    if [ -f $(rospack find $1)/prolog/init.pl ]; then
+        SCRIPT_FILE="-s $(rospack find $1)/prolog/init.pl"
+    fi
+    PL_ARGS=${@:1}
+fi
+
+exec prolog -f ${PL_INIT_FILE} ${SCRIPT_FILE} ${PL_ARGS}
+
