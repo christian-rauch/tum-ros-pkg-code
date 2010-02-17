@@ -1,0 +1,17 @@
+<package>
+  <description brief="ORO Chatter">ORO Chatter listen to human inputs from
+the web_hri ROS node, and try to answer question/execute commands with the
+Naive Natural Language module of ORO.
+  </description>
+  <author>Séverin Lemaignan</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/oro_chatter</url>
+  <depend package="web_hri"/>
+  <depend package="rospy"/>
+  <depend package="oro_ros"/>
+  <depend package="std_msgs"/>
+
+</package>
+
+

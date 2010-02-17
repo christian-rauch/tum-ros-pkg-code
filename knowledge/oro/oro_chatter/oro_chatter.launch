@@ -1,0 +1,7 @@
+<launch>
+  <!--<include file="$(find oro_ros)/oro_server.launch" />-->
+  <!--Only launch the bridge, not oro-sever itself, in order to use the latest version of oro-server-->
+  <node name="oro_ros" pkg="oro_ros" type="oro_ros_server.py" args="localhost 6969" output="screen" respawn="true"/>
+  <include file="$(find web_hri)/jabber_hri.launch" />
+  <node name="oro_chatter" pkg="oro_chatter" type="oro_chatter.py" output="screen" required="true"/>
+</launch>
