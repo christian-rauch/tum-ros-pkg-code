@@ -1,0 +1,4 @@
+<launch>
+  <node name="oro_server" pkg="oro_server" type="oro-server" args="$(find oro_ontology)/config/oro.conf" required="true" output="screen"/>
+  <node name="oro_ros" pkg="oro_ros" type="oro_ros_server.py" args="localhost 6969" output="screen" respawn="true"/>
+</launch>
