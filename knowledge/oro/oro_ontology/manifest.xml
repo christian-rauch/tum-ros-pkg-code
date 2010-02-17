@@ -1,0 +1,14 @@
+<package>
+  <description brief="oro_ontology">
+
+     oro_ontology
+
+  </description>
+  <author>Severin Lemaignan</author>
+  <license>Creative Commons 3.0 by</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/oro_ontology</url>
+
+</package>
+
+
