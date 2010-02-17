@@ -1,0 +1,7 @@
+build/**
+work/
+etc/
+checkedout
+installed
+patched
+*~

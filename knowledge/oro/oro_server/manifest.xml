@@ -1,0 +1,10 @@
+<package>
+  <description>A Java-based knowledge base for cognitive robotic applications</description>
+  <author>Séverin Lemaignan, LAAS-CNRS/TUM-IAS, 2010</author>
+  <license>CeCiLL</license>
+  <url>http://homepages.laas.fr/slemaign/official/work/oro-server.html</url>
+
+  <depend package="jena"/>
+  <depend package="pellet"/>
+</package>
+
