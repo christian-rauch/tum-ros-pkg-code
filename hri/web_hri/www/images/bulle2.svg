@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="210mm"
+   height="297mm"
+   id="svg2"
+   sodipodi:version="0.32"
+   inkscape:version="0.46"
+   sodipodi:docname="bulle2.svg"
+   inkscape:output_extension="org.inkscape.output.svg.inkscape">
+  <defs
+     id="defs4">
+    <linearGradient
+       id="linearGradient3220">
+      <stop
+         id="stop3222"
+         offset="0"
+         style="stop-color:#729fcf;stop-opacity:1;" />
+      <stop
+         id="stop3224"
+         offset="1"
+         style="stop-color:#ffffe0;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient2426">
+      <stop
+         style="stop-color:#729fcf;stop-opacity:1;"
+         offset="0"
+         id="stop2428" />
+      <stop
+         style="stop-color:#729fcf;stop-opacity:0;"
+         offset="1"
+         id="stop2430" />
+    </linearGradient>
+    <inkscape:perspective
+       sodipodi:type="inkscape:persp3d"
+       inkscape:vp_x="0 : 526.18109 : 1"
+       inkscape:vp_y="0 : 1000 : 0"
+       inkscape:vp_z="744.09448 : 526.18109 : 1"
+       inkscape:persp3d-origin="372.04724 : 350.78739 : 1"
+       id="perspective10" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient3220"
+       id="linearGradient2432"
+       x1="124.28571"
+       y1="319.9155"
+       x2="124.28571"
+       y2="276.81937"
+       gradientUnits="userSpaceOnUse" />
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="5.6"
+     inkscape:cx="145.94718"
+     inkscape:cy="742.72252"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="1280"
+     inkscape:window-height="1003"
+     inkscape:window-x="1280"
+     inkscape:window-y="0" />
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Calque 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <path
+       style="fill:url(#linearGradient2432);fill-opacity:1;fill-rule:nonzero;stroke:#3465a4;stroke-width:2.22803592999999989;stroke-linecap:round;stroke-linejoin:round;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       d="M 131.05931,273.50504 L 121.91643,273.50504 C 116.37643,273.50504 111.37643,275.73504 107.76143,279.35004 C 104.14643,282.96504 101.91643,287.96504 101.91643,293.50504 L 101.91643,303.79076 C 101.91643,309.33076 104.14643,314.33076 107.76143,317.94576 C 111.37643,321.56076 116.37643,323.79076 121.91643,323.79076 L 131.05931,323.79076 C 142.97797,328.38008 155.94023,333.57796 169.14288,331.16005 C 161.50208,323.73101 154.88558,314.26211 151.05931,303.79076 L 151.05931,293.50504 C 151.05931,287.96504 148.82931,282.96504 145.21431,279.35004 C 141.59931,275.73504 136.59931,273.50504 131.05931,273.50504 z"
+       id="rect2383"
+       sodipodi:nodetypes="ccsccscccccsc"
+       inkscape:export-filename="/home/slemaign/work/prog/web/talk_to_robots/images/bulle2.png"
+       inkscape:export-xdpi="124.43"
+       inkscape:export-ydpi="124.43" />
+    <path
+       style="fill:none;fill-opacity:1;fill-rule:nonzero;stroke:#204a87;stroke-width:2.22803592999999989;stroke-linecap:round;stroke-linejoin:round;marker:none;marker-start:none;marker-mid:none;marker-end:none;stroke-miterlimit:4;stroke-dashoffset:0;stroke-opacity:1;visibility:visible;display:inline;overflow:visible;enable-background:accumulate"
+       d="M 121,275.53125 C 109.94807,275.71072 103.37054,285.53022 103.37054,297.74107 C 103.37054,309.58956 106.21181,317.57733 115.78125,320.75 C 119.52627,321.94066 125.47731,321.51783 129.22027,321.71745 C 132.96322,321.91707 130.88105,321.16675 136.64286,324.00893 C 142.40467,326.8511 156.76294,330.824 165.58929,330.07143 C 158.72049,322.34615 151.40697,312.94211 149.0625,302.78125 C 149.84629,293.91761 149.2148,282.8948 140.375,278.125 C 134.64778,274.30846 127.48745,275.75627 121,275.53125 z"
+       id="path2434"
+       sodipodi:nodetypes="czcszcccc"
+       inkscape:export-filename="/home/slemaign/work/prog/web/talk_to_robots/images/bulle2.png"
+       inkscape:export-xdpi="124"
+       inkscape:export-ydpi="124" />
+  </g>
+</svg>

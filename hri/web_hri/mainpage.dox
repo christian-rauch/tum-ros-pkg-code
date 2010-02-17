@@ -1,0 +1,32 @@
+/**
+\mainpage
+\htmlinclude manifest.html
+
+\b WebHri is a web-based interface to chat with a robot through ROS services &amp; topics
+
+
+<h2>PREREQUISITES</2>
+ - A Web server that handle PHP5
+
+<h2>INSTALLATION</h2>
+
+* ROS node:
+
+<pre>
+$rosmake web_hri
+</pre>
+
+* Web-brower interface:
+
+Copy (or link) the content of web_hri/www in your server DocumentRoot.
+
+You may want to adjust the hostname and port server:
+ - modify <tt>web_hri.launch</tt>
+ - modify <tt>index.html</tt> (variable <tt>SERVER</tt> and <tt>PORT</tt>)
+ 
+<h2>TO START IT</h2>
+
+1/ start the web_hri ROS node
+2/ point your webbrowser to the index.html file
+
+
