@@ -27,17 +27,21 @@
 ;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
-;;;; Patch from the sbcl devel mailing list
+;; Patch from the sbcl devel mailing list
 (eval-when (:compile-toplevel :load-toplevel :execute)
   (require 'sb-cltl2))
 
 (in-package :sb-cltl2)
 
-(defvar *null-lexenv* (make-null-lexenv))
+;; Only use patch in SBCL and if AUGMENT-ENVIRONMENT is not defined.
+#+(not #.(cram-utilities:function-bound-feature "AUGMENT-ENVIRONMENT" "SB-CLTL2"))
+(progn
 
-(defun augment-environment
-    (env &key variable symbol-macro function macro declare)
-  "Create a new lexical environment by augmenting ENV with new information.
+  (defvar *null-lexenv* (make-null-lexenv))
+
+  (defun augment-environment
+      (env &key variable symbol-macro function macro declare)
+    "Create a new lexical environment by augmenting ENV with new information.
 
    VARIABLE is a list of symbols to introduce as new variable bindings,
    SYMBOL-MACRO is a list symbol macro bindings of the form (name definition)
@@ -52,68 +56,68 @@
      but (augment-environment (augment-environment env :variable '(x))
                               :declare '((special x)))
      is like (let (x) (locally (declare (special x))) ...) "
-  (collect ((lvars)
-            (clambdas))
-    (unless (or variable symbol-macro function macro declare)
-      (return-from augment-environment env))
+    (collect ((lvars)
+              (clambdas))
+      (unless (or variable symbol-macro function macro declare)
+        (return-from augment-environment env))
 
-    (if (null env)
-        (setq env (make-null-lexenv))
-        (setq env (copy-structure env)))
+      (if (null env)
+          (setq env (make-null-lexenv))
+          (setq env (copy-structure env)))
 
-    ;; a null policy is used to identify a null lexenv
-    (when (sb-c::null-lexenv-p env)
-      (setf (sb-c::lexenv-%policy env) sb-c::*policy*))
+      ;; a null policy is used to identify a null lexenv
+      (when (sb-c::null-lexenv-p env)
+        (setf (sb-c::lexenv-%policy env) sb-c::*policy*))
 
-    (when macro
-      (setf (sb-c::lexenv-funs env)
-            (nconc
-             (loop for (name def) in macro
-                collect (cons name (cons 'sb-sys::macro def)))
-             (sb-c::lexenv-funs env))))
+      (when macro
+        (setf (sb-c::lexenv-funs env)
+              (nconc
+               (loop for (name def) in macro
+                  collect (cons name (cons 'sb-sys::macro def)))
+               (sb-c::lexenv-funs env))))
 
-    (when symbol-macro
-      (setf (sb-c::lexenv-vars env)
-            (nconc
-             (loop for (name def) in symbol-macro
-                collect (cons name (cons 'sb-sys::macro def)))
-             (sb-c::lexenv-vars env))))
+      (when symbol-macro
+        (setf (sb-c::lexenv-vars env)
+              (nconc
+               (loop for (name def) in symbol-macro
+                  collect (cons name (cons 'sb-sys::macro def)))
+               (sb-c::lexenv-vars env))))
 
-    (dolist (name variable)
-      (lvars (sb-c::make-lambda-var :%source-name name)))
+      (dolist (name variable)
+        (lvars (sb-c::make-lambda-var :%source-name name)))
 
-    (dolist (name function)
-      (clambdas
-       (sb-c::make-lambda
-        :lexenv *null-lexenv*
-        :%source-name name
-        :allow-instrumenting nil)))
+      (dolist (name function)
+        (clambdas
+         (sb-c::make-lambda
+          :lexenv *null-lexenv*
+          :%source-name name
+          :allow-instrumenting nil)))
 
-    (when declare
-      ;; process-decls looks in *lexenv* policy to decide what warnings to print
-      (let ((*lexenv* *null-lexenv*))
-        (setq env (sb-c::process-decls
-                   (list `(declare ,@declare))
-                   (lvars) (clambdas) :lexenv env :context nil))))
+      (when declare
+        ;; process-decls looks in *lexenv* policy to decide what warnings to print
+        (let ((*lexenv* *null-lexenv*))
+          (setq env (sb-c::process-decls
+                     (list `(declare ,@declare))
+                     (lvars) (clambdas) :lexenv env :context nil))))
 
-    (when function
-      (setf (sb-c::lexenv-funs env)
-            (nconc
-             (loop for name in function for lambda in (clambdas)
+      (when function
+        (setf (sb-c::lexenv-funs env)
+              (nconc
+               (loop for name in function for lambda in (clambdas)
                   collect (cons name lambda))
-             (sb-c::lexenv-funs env))))
+               (sb-c::lexenv-funs env))))
 
-    (when variable
-      (setf (sb-c::lexenv-vars env)
-            (nconc
-             (loop for name in variable for lvar in (lvars)
-                collect
-                (cons name
-                      ;; if one of the lvars is declared special then process-decls
-                      ;; will set it's specvar.
-                      (if (sb-c::lambda-var-specvar lvar)
-                          (sb-c::lambda-var-specvar lvar)
-                          lvar)))
-             (sb-c::lexenv-vars env))))
+      (when variable
+        (setf (sb-c::lexenv-vars env)
+              (nconc
+               (loop for name in variable for lvar in (lvars)
+                  collect
+                  (cons name
+                        ;; if one of the lvars is declared special then process-decls
+                        ;; will set it's specvar.
+                        (if (sb-c::lambda-var-specvar lvar)
+                            (sb-c::lambda-var-specvar lvar)
+                            lvar)))
+               (sb-c::lexenv-vars env))))
 
-    env))
+      env)))

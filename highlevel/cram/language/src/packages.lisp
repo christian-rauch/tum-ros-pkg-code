@@ -54,10 +54,59 @@
   (:import-from #:alexandria
                 #:rcurry))
 
+(defpackage :cram-execution-trace
+  (:nicknames :cet)
+  (:documentation
+   "The execution trace records plan execution to later analyse what happened
+   during plan execution.")
+  (:use :common-lisp
+        :cl-store
+        :portable-threads
+        :alexandria
+        :cram-utilities)
+  (:export
+   ;; durable-copy.lisp
+   #:durable-copy
+   ;; tracing.lisp
+   #:traced-instance
+   #:timestamp
+   #:traced-id-instance
+   #:id
+   #:append-to-trace
+   #:tracing-instance-mixin
+   #:make-traced-instance
+   #:trace-instance
+   #:traced-value
+   ;; episode-knwoledge.lisp
+   #:throughout
+   #:episode-knowledge
+   #:live-episode-knowledge
+   #:offline-episode-knowledge
+   #:*episode-knowledge*
+   #:get-top-level-episode-knowledge
+   #:set-top-level-episode-knowledge
+   #:episode-knowledge-zero-time
+   #:episode-knowledge-max-time
+   #:episode-knowledge-task-tree
+   #:episode-knowledge-task-list
+   #:episode-knowledge-goal-task-list
+   #:episode-knowledge-fluent-trace-queue
+   #:episode-knowledge-traced-fluent-names
+   #:episode-knowledge-fluent-changes
+   #:episode-knowledge-fluent-durations
+   #:make-episode-knowledge
+   #:reset-episode-knowledge
+   #:save-episode-knowledge
+   #:load-episode-knowledge
+   #:with-episode-knowledge
+   #:with-top-level-episode-knowledge
+   #:with-offline-episode-knowledge
+   ))
+
 ;;;; A few notes on the package setup.
 ;;;
 ;;; Cram, the language, is split up into two packages, CPL-IMPL and
-;;; CPL. Tbe former contains the language implementation whereas the
+;;; CPL. The former contains the language implementation whereas the
 ;;; latter is supposed to be :USEd.
 ;;;
 ;;; There are two notable differences:
@@ -84,10 +133,43 @@
            #:find-plan-node
            #:expand-plan
            ;; fluent.lisp
-           #:make-fluent #:fluent #:value #:wait-for #:pulse #:whenever
-           #:name #:logged-fluent
+           #:fluent
+           #:value
+           #:wait-for
+           #:pulse
+           #:whenever
+           #:name
+           ;; tracing-fluent.lisp
+           #:make-fluent
+           #:set-make-tracing-fluent
+           #:traced-fluent
+           #:traced-value
+           ;; execution-trace
+           #:throughout
+           #:episode-knowledge
+           #:live-episode-knowledge
+           #:offline-episode-knowledge
+           #:*episode-knowledge*
+           #:get-top-level-episode-knowledge
+           #:set-top-level-episode-knowledge
+           #:episode-knowledge-zero-time
+           #:episode-knowledge-max-time
+           #:episode-knowledge-task-tree
+           #:episode-knowledge-task-list
+           #:episode-knowledge-goal-task-list
+           #:episode-knowledge-fluent-trace-queue
+           #:episode-knowledge-traced-fluent-names
+           #:episode-knowledge-fluent-changes
+           #:episode-knowledge-fluent-durations
+           #:make-episode-knowledge
+           #:reset-episode-knowledge
+           #:save-episode-knowledge
+           #:load-episode-knowledge
+           #:with-episode-knowledge
+           #:with-top-level-episode-knowledge
+           #:with-offline-episode-knowledge
            ;; failures.lisp
-           #:fail #:simple-plan-error 
+           #:fail #:simple-plan-error #:rethrown-error
            #:plan-error #:plan-error-message #:plan-error-data
            #:with-failure-handling #:retry
            ;; task.lisp
@@ -96,12 +178,34 @@
            #:suspend-protect #:without-suspension #:with-suspension #:on-suspension
            #:with-termination-handler #:ignore-termination #:without-termination
            ;; task-tree.lisp
-           #:code #:task-tree-node #:with-task-tree-node
-           #:replaceable-function #:task-tree-node-effective-code #:make-task
-           #:sub-task #:task #:clear-tasks #:task-tree-node #:replace-task-code
-           #:flatten-task-tree #:task-tree-node-path #:*task-tree*
-           #:task-tree-node-code #:code-parameters #:code-sexp #:code-function
-           #:code-task #:flatten-task-tree
+           #:code
+           #:code-parameters
+           #:code-sexp
+           #:code-function
+           #:code-task
+           #:task-tree-node
+           #:task-tree-node-p
+           #:task-tree-node-path
+           #:task-tree-node-code
+           #:task-tree-node-parent
+           #:task-tree-node-children
+           #:task-tree-node-effective-code
+           #:with-task-tree-node
+           #:make-task-tree-node
+           #:replaceable-function
+           #:make-task
+           #:sub-task
+           #:task
+           #:clear-tasks
+           #:*task-tree*
+           #:flatten-task-tree
+           #:task-tree-node-parameters
+           #:task-tree-node-status-fluent
+           #:task-tree-node-result
+           #:goal-task-tree-node-p
+           #:goal-task-tree-node-pattern
+           #:goal-task-tree-node-parameter-bindings
+           #:goal-task-tree-node-goal
            ;; base.lisp
            #:top-level #:seq #:par #:tag #:with-tags #:with-task-suspended
            #:pursue #:composite-failure #:try-all #:try-in-order #:tagged
@@ -109,16 +213,7 @@
            ;; plans.lisp
            #:def-top-level-plan #:get-top-level-task-tree #:def-plan
            ;; goals.lisp
-           #:declare-goal #:def-goal #:goal #:register-goal
-           ;; time
-           #:current-timestamp
-           #:set-default-timestamp-function
-           #:set-timestamp-function
-           #:time-value-p
-           ;; logging.lisp
-           #:clear-instance-log #:get-logged-instances #:get-logged-timespan
-           #:logged-instance #:make-logged-instance #:get-min-logged-time
-           #:timestamp #:id #:logged-value))
+           #:declare-goal #:def-goal #:goal #:register-goal))
         (fluent-ops
          '(;; fluent-net.lisp
            #:fl< #:fl> #:fl=  #:fl+ #:fl- #:fl* #:fl/
@@ -129,12 +224,13 @@
 
     `(progn
 
-       (defpackage :cram-implementation
+       (defpackage :cram-language-implementation
          (:nicknames :cpl-impl)
          (:documentation "Internal implementation package of CPL.")
          (:use :common-lisp 
                :portable-threads
                :walker
+               :cram-execution-trace
                :trivial-garbage
                :alexandria)
          (:export ,@cpl-symbols ,@fluent-ops))
@@ -145,7 +241,8 @@
           "Main package of a new planning language similar to RPL, but
            implemented on the basis of macros and the portable-threads
            library")
-         (:use :common-lisp :cram-implementation)
+         (:use :common-lisp
+               :cram-language-implementation)
          (:export ,@cl-symbols 
                   ,@cpl-symbols
                   ;; Wrappers are defined in src/language.lisp.

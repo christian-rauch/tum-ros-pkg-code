@@ -96,19 +96,16 @@
 		    are true.")))
 
 (defmethod initialize-instance :after
-    ((task task) &key (thread-fun nil)
-                      (ignore-no-parent nil)
+    ((task task) &key (ignore-no-parent nil)
                       (run-thread t))
-  (with-slots (name status lexical-environment) task
+  (with-slots (name status lexical-environment thread-fun) task
     (setf status (make-fluent :name (format-gensym "~A-STATUS" name)
                               :value :created))
     (when *save-tasks*
       (as-atomic-operation
         (push task *tasks*)))
     (when (and thread-fun run-thread)
-      (execute task
-               :thread-fun thread-fun
-               :ignore-no-parent ignore-no-parent))))
+      (execute task :ignore-no-parent ignore-no-parent))))
 
 (defmethod print-object ((task task) stream)
   (let ((level *task-pprint-verbosity*))
@@ -156,9 +153,9 @@
       (check-status-transition old-status new-status)
       (setf (value (status task)) new-status))))
 
-(defun task-body (task thread-fun)
+(defun task-body (task)
   (unwind-protect
-       (with-slots (status parent-task constraints lexical-environment) task
+       (with-slots (status parent-task constraints lexical-environment thread-fun) task
          (let ((*current-task* task))
            (declare (special *current-task*))
            (flet ((task-error-handler (condition)
@@ -193,12 +190,8 @@
     (setf (slot-value task 'result) result
           (value (status task)) status)))
 
-(defmethod execute
-    ((task task) &key (thread-fun (slot-value task 'thread-fun) thread-fun?)
-     (ignore-no-parent nil))
-  (assert (not (null thread-fun)))
-  (when thread-fun?
-    (setf (slot-value task 'thread-fun) thread-fun))
+(defmethod execute ((task task) &key (ignore-no-parent nil)) 
+  (assert (not (null (slot-value task 'thread-fun))))
   (without-termination
     (let* ((lock (make-lock))
            (thread-barrier (make-condition-variable :lock lock))
@@ -217,7 +210,7 @@
                               (unless barrier-pulsed
                                 (condition-variable-wait thread-barrier)))
                             (unless (task-dead-p task)
-                              (task-body task thread-fun)
+                              (task-body task)
                               (warn "task body terminated.")))
                        (unless (task-dead-p task)
                          (error "Unhandled exit ~a ~a" task (status task)))))))))
@@ -285,11 +278,17 @@
         result)))
 
 (defmethod register-child ((task task) child)
-  ;; If, at some point in the future, we want to lax this restriction,
-  ;; we must make sure that this operation is properly synchronized
-  ;; (either here, or decide that the caller is responsible for
-  ;; synchronization.)
+  ;; If, at some point in the future, we want to lax this restriction, we must
+  ;; make sure that this operation is properly synchronized (either here, or
+  ;; decide that the caller is responsible for synchronization.)
+  ;;
+  ;; NOTE: #demmeln: How does this ensure thread safety? It ensures that each
+  ;; task may only register childs to itself, but what if another thread
+  ;; traverses the list of children of this thread, while it is modified?
+  ;; (like SUSPEND does)?
   (assert (eq task *current-task*))
+  (when (member child (slot-value task 'child-tasks))
+    (warn "Registring allready registerd child ~s in task ~s" child task))
   (pushnew child (slot-value task 'child-tasks))
   task)
 

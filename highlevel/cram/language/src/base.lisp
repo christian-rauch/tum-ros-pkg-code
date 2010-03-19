@@ -53,7 +53,7 @@
    failed are lexically bound in watcher-body and are lists of all
    running, done and failed tasks. Please note that watcher-body can
    be terminated by a return call."
-  `(with-task
+  `(with-task (:name "WITH-PARALLEL-CHILDS")
      ,@(loop with n = (length child-forms)
              for form in child-forms and i from 1
              collect `(make-instance 'task 
@@ -78,31 +78,34 @@
    finished. All plan macros can only be used within the dynamic
    scope of a top-level form."
   (with-gensyms (task)
-    `(let* ((*task-tree* (or *task-tree* (make-task-tree-node)))
-            (*current-task-tree-node* (or *current-task-tree-node* *task-tree*)))
-       (declare (special *task-tree* *current-task-tree-node*))
-       (when *current-task*
-         (error "top-level calls cannot be nested."))
-       (let ((,task (make-instance 'task
-                      :name ',(gensym "[TOP-LEVEL]-")
-                      :thread-fun (lambda () ,@body)
-                      :ignore-no-parent t)))
-         (with-failure-handling
-             ((plan-error (e)
-                (error e))
-              (error (e)
-                (error e)))
-           (unwind-protect
-                (join-task ,task)
-             (terminate ,task :evaporated)))))))
+    `(let ((*episode-knowledge* (or *episode-knowledge* (make-episode-knowledge))))
+       (declare (special *episode-knowledge*))
+       (reset-episode-knowledge)
+       (let* ((*task-tree* (episode-knowledge-task-tree))
+              (*current-task-tree-node* *task-tree*)
+              (*current-path* (list)))
+         (declare (special *task-tree* *current-task-tree-node* *current-path*))
+         (when *current-task*
+           (error "top-level calls cannot be nested."))
+         (let ((,task (make-instance 'task
+                        :name ',(gensym "[TOP-LEVEL]-")
+                        :thread-fun (lambda () ,@body)
+                        :ignore-no-parent t)))
+           (with-failure-handling
+               ((plan-error (e)
+                  (error e))
+                (error (e)
+                  (error e)))
+             (unwind-protect
+                  (join-task ,task)
+               (terminate ,task :evaporated))))))))
 
-(def-plan-macro with-task (&body body)
+(def-plan-macro with-task ((&key (name "WITH-TASK")) &body body)
   "Executes body in a separate task and joins it."
   (with-gensyms (task)
     `(let ((,task (make-instance 'task
-                    :name ',(gensym "[WITH-TASK]-")
+                    :name ',(gensym (format nil "[~a]-" name))
                     :thread-fun (lambda () ,@body))))
-       (register-child *current-task* ,task)
        (join-task ,task))))
 
 (defmacro seq (&body forms)
@@ -143,21 +146,20 @@
              (push tag-name tags)))
       (walk-with-tag-handler tags-body #'tags-handler lexenv)
       (with-gensyms (current-path)
-        `(with-task
-           (let* ((,current-path *current-path*)
-                  ,@(mapcar (lambda (tag)
-                              `(,tag (task ',tag (cons `(tagged ,',tag) ,current-path))))
-                            tags))
-             (declare (ignorable ,current-path))
-             (macrolet ((:tag (name &body tag-body)
-                          `(execute-task-tree-node
-                            (register-task-code ',tag-body (lambda () ,@tag-body)
-                                                :path (cons `(tagged ,',name) ,',current-path)))))
-               (unwind-protect
-                    ,tags-body
-                 ,@(mapcar (lambda (tag)
-                             `(terminate ,tag :evaporated))
-                           tags)))))))))
+        `(let* ((,current-path *current-path*)
+                ,@(mapcar (lambda (tag)
+                            `(,tag (task ',tag (cons `(tagged ,',tag) ,current-path))))
+                          tags))
+           (declare (ignorable ,current-path))
+           (macrolet ((:tag (name &body tag-body)
+                        `(execute-task-tree-node
+                          (register-task-code ',tag-body (lambda () ,@tag-body)
+                                              :path (cons `(tagged ,',name) ,',current-path)))))
+             (unwind-protect
+                  ,tags-body
+               ,@(mapcar (lambda (tag)
+                           `(terminate ,tag :evaporated))
+                         tags))))))))
 
 (def-plan-macro with-task-suspended (task &body body)
   "Execute body with 'task' being suspended."

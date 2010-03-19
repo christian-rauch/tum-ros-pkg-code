@@ -28,7 +28,7 @@
 ;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
-(in-package :cpl-impl)
+(in-package :cram-utilities)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Thread Safe Queue
@@ -36,13 +36,13 @@
 
 (defclass ts-queue ()
   ((head :initform nil :type list)
-   (tail :initform nil :type cons)
+   (tail :initform nil :type list)
    (lock)
-   (name :initform "" :initarg name :type string
+   (name :initform "" :initarg :name :type string
          :documentation "Name is mainly for debugging locks (whostate in with-lock-held)"))
   (:documentation "Simple thread safe queue implemented as cons list."))
 
-(defmethod initialize-instance :after ((queue ts-queue) &key &allow-other-keys)
+(defmethod initialize-instance :after ((queue ts-queue) &key)
   (with-slots (lock name) queue
     (setf lock (make-recursive-lock :name (format nil "Lock for Thread Safe Queue ~a" name)))))
 

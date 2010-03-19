@@ -28,24 +28,12 @@
 ;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
-(in-package :cpl-impl)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Persistent copying
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(in-package :cl-user)
 
-(defgeneric persistent-copy (obj)
-  (:documentation "Returns a copy of itself which will not change in
-  the future. This is used specifically for logging the value of
-  fluents (as a generic deep-copy is impossible). For mutable objects
-  it should be a deep copy. The default is just returning obj and not
-  copying anything."))
-
-(defmethod persistent-copy (obj)
-  "Default behaviour is to assume immutability and just return the
-  object as is."
-  obj)
-
-(defmethod persistent-copy ((obj list))
-  "For cons cells assume they construct a list and use copy list."
-  (copy-list obj))
+(defpackage :cram-math
+  (:use #:common-lisp #:alexandria)
+  (:nicknames :cma)
+  (:export
+   ;; math
+   #:sample #:sample-discrete))

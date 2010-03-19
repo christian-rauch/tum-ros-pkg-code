@@ -39,24 +39,31 @@
                                 point where beta nodes can connect
                                 to.")))
 
+(defmethod clear-facts ((node alpha-memory-node))
+  (loop for wme in (wme-memory node)
+        do (input node wme :retract)))
+
 (defmethod gc-node ((node alpha-memory-node))
   (when (and (null (wme-memory node))
              (null (slot-value node 'connections)))
     (call-next-method)))
 
-(defmethod input ((node alpha-memory-node) wme operation &key)
-  (let ((wme (typecase wme
-               (alpha-node wme)
-               (list node))))
-    (case operation
-      (:assert
-       (push wme (slot-value node 'wme-memory)))
-      (:retract
-       (assert (wme-memory node) nil "wme-memory already empty. Cannot retract.")
-       (pop-if! (curry #'eq wme) (slot-value node 'wme-memory))
-       (gc-node node))
-      (t
-       (error "Operation not permitted.")))
-    (loop for connection in (slot-value node 'connections)
-       do (input connection wme operation))
-    wme))
+(defmethod input ((node alpha-memory-node) wme operation &key unmatched)
+  (cond (unmatched
+         (call-next-method))
+        (t
+         (let ((wme (typecase wme
+                      (alpha-node wme)
+                      (list node))))
+           (case operation
+             (:assert
+              (push wme (slot-value node 'wme-memory)))
+             (:retract
+              (assert (wme-memory node) nil "wme-memory already empty. Cannot retract.")
+              (pop-if! (curry #'eq wme) (slot-value node 'wme-memory))
+              (gc-node node))
+             (t
+              (error "Operation `~a' unknown." operation)))
+           (loop for connection in (slot-value node 'connections)
+              do (input connection wme operation))
+           wme))))

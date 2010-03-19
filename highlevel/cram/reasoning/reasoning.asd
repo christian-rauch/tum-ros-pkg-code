@@ -35,5 +35,11 @@
                        (:file "beta-join-node")
                        (:file "prolog-node")
                        (:file "productions"))
-                      :serial t))
+                      :serial t)
+             (:file "swank-indentation"))
             :serial t)))
+
+(defmethod asdf:perform ((o asdf:test-op)
+                         (c (eql (asdf:find-system 'cram/reasoning))))
+  (asdf:operate 'asdf:load-op 'cram/reasoning-tests)
+  (asdf:operate 'asdf:test-op 'cram/reasoning-tests))

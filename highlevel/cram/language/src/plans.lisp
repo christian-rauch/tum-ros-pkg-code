@@ -27,55 +27,48 @@
 ;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
-
 (in-package :cpl-impl)
 
-;;; We need to manage the task trees somehow. The idea is to have a
-;;; hash-table containing one task-tree for every top-level
-;;; plan. Otherwise, the task-tree management would become really
-;;; really messy.
+;;; We need to manage the task trees somehow. The idea is to have a hash-table
+;;; containing one task-tree for every top-level plan. Otherwise, the
+;;; task-tree management would become really really messy.
+;;; --> see episode knowledge.
 
-(defvar *top-level-plan-task-trees* (make-hash-table :test 'cl:eq))
-
-;;; Don't have (certain kinds of) surrounding flet/lables/macrolet/symbol-macrolet/let/...
-;;; when using def-top-level-plan or def-plan. They could mess with (with-tags ...) or
-;;; shadow globally defined plans, which would not be picked up by with-tags/expand-plan.
-;;; See the comment before the definition of with-tags for more details.
+;;; Note: Don't have (certain kinds of) surrounding FLET / LABLES / MACROLET /
+;;; SYMBOL-MACROLET / LET / ...  when using DEF-TOP-LEVEL-PLAN or
+;;; DEF-PLAN. They could mess with (WITH-TAGS ...) or shadow globally defined
+;;; plans, which would not be picked up by WITH-TAGS / EXPAND-PLAN.  See the
+;;; comment before the definition of WITH-TAGS for more details.
 
 (defmacro def-top-level-plan (name args &body body)
   "Defines a top-level plan. Every top-level plan has its own
-   task-tree."
-  (setf (gethash name *top-level-plan-task-trees*)
-        (make-task-tree-node))
-  (setf (get name 'plan-type) :top-level-plan)
-  (setf (get name 'plan-lambda-list) args)
-  (setf (get name 'plan-sexp) body)
+   episode-knowledge and task-tree."
   (with-gensyms (call-args)
-    `(defun ,name (&rest ,call-args)
-       (let* ((*task-tree* (gethash ',name *top-level-plan-task-trees*))
-              (*current-task-tree-node* *task-tree*)
-              (*current-path* (list)))
-         (declare (special *task-tree* *current-task-tree-node*
-                           *current-path*))
-         (clear-tasks *task-tree*)
-         (with-task
-           (replaceable-function ,name ,args ,call-args `(top-level ,',name)
-             (with-tags
-               ,@body)))))))
-
-(defun get-top-level-task-tree (name)
-  "Returns the task-tree of the top-level plan."
-  (gethash name *top-level-plan-task-trees*))
+    `(progn
+       (eval-when (:load-toplevel)
+         (set-top-level-episode-knowledge ',name (make-episode-knowledge))
+         (setf (get ',name 'plan-type) :top-level-plan)
+         (setf (get ',name 'plan-lambda-list) ',args)
+         (setf (get ',name 'plan-sexp) ',body))
+       
+       (defun ,name (&rest ,call-args)
+         (with-top-level-episode-knowledge ,name
+           (top-level
+             (replaceable-function ,name ,args ,call-args `(top-level ,',name)
+               (with-tags
+                 ,@body))))))))
 
 (defmacro def-plan (name lambda-list &rest body)
   "Defines a plan. All functions that should appear in the task-tree
    must be defined with def-plan."
-  (setf (get name 'plan-type) :plan)
-  (setf (get name 'plan-lambda-list) lambda-list)
-  (setf (get name 'plan-sexp) body)
   (with-gensyms (call-args)
-    `(defun ,name (&rest ,call-args)
-       (with-task
+    `(progn
+       (eval-when (:load-toplevel)
+         (setf (get ',name 'plan-type) :plan)
+         (setf (get ',name 'plan-lambda-list) ',lambda-list)
+         (setf (get ',name 'plan-sexp) ',body))
+       
+       (defun ,name (&rest ,call-args)
          (replaceable-function ,name ,lambda-list ,call-args (list ',name)
            (with-tags
              ,@body))))))

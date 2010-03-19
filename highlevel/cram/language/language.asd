@@ -15,6 +15,7 @@
                      and the portable-threads library."
 
   :depends-on (portable-threads
+               cl-store
                trivial-garbage
                alexandria
                cram/utilities)
@@ -24,31 +25,36 @@
     :components
     ((:file "packages")
      (:file "utils")
-     (:file "time")
-     (:file "ts-queue")
-     (:file "object-identities")
-     (:file "persistent-copy")
-     (:file "logging")
      (:module "walker"
-              :components (#+sbcl (:file "augment-environment-sbcl-patch")
-                                  ;; TODO: Remove this, when SBCL 1.0.31 hopefully
-                                  ;;       includes sb-cltl2::augment-environment
-                                  (:file "env")
-                                  (:file "env-impl-specific")
-                                  (:file "plan-tree")
-                                  (:file "walker")
-                                  (:file "interface"))
+              :components
+              ((:file "augment-environment-sbcl-patch")
+               (:file "env")
+               (:file "env-impl-specific")
+               (:file "plan-tree")
+               (:file "walker")
+               (:file "interface"))
               :serial t)
      (:file "task")
      (:file "failures")
+     (:file "task-tree")
      (:file "fluent")
      (:file "fluent-net")
-     (:file "task-tree")
      (:file "task.implementation")
+     (:module "execution-trace"
+              :components
+              ((:file "object-identities")
+               (:file "durable-copy")
+               (:file "episode-knowledge")
+               (:file "offline-task")
+               (:file "episode-knowledge-backend")
+               (:file "tracing"))
+              :serial t)
+     (:file "tracing-fluent")
      (:file "base")
      (:file "plans")
      (:file "goals")
-     (:file "language"))
+     (:file "language")
+     (:file "swank-indentation"))
     :serial t)))
 
 (defmethod asdf:perform ((o asdf:test-op)

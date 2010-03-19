@@ -61,3 +61,28 @@
                    (setf ,lst nil))
                (worker ,pred-sym ,lst))))
        ,lst)))
+
+(defun function-bound-feature (name package)
+  "Generate a form suitable for testing with #+."
+  (let* ((name (string name))
+         (package (find-package (string package)))
+         (symbol (and package (find-symbol name package))))
+    (if (and package
+             symbol
+             (fboundp symbol))
+        '(:and)
+        '(:or))))
+
+(defun flip (fun)
+  "Returns a function object that flips the first two parameters and
+   applies the rest of the parameters."
+  (lambda (x y &rest r)
+    (apply fun y x r)))
+
+(defmacro string-case (var &body cases)
+  (once-only (var)
+    `(cond ,@(mapcar (lambda (case-expr)
+                       (destructuring-bind (pat &rest body) case-expr
+                         `((string-equal ,var ,pat)
+                           ,@body)))
+              cases))))

@@ -1,6 +1,5 @@
 ;;;
-;;; Copyright (c) 2009, Lorenz Moesenlechner <moesenle@cs.tum.edu>,
-;;;                     Nikolaus Demmel <demmeln@cs.tum.edu>
+;;; Copyright (c) 2009, Nikolaus Demmel <demmeln@cs.tum.edu>
 ;;; All rights reserved.
 ;;; 
 ;;; Redistribution and use in source and binary forms, with or without
@@ -28,30 +27,6 @@
 ;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
-(in-package :cpl-impl)
+(in-package :cram-test-utilities-tests)
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Object Identities
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defvar *next-identity* 1 "Keeps trac of next free identity for *object-id-hash-table*.")
-
-(defvar *object-id-hash-table*
-  (tg:make-weak-hash-table :weakness :key :test 'cl::eq)
-  "Keeps trac of object identities (eq objects have the same identity).
-   Its a weak hash-table so objects can be gc'd.")
-
-(defun get-next-free-id ()
-  "Get next useable identity for the *object-id-hash-table*."
-  (prog1
-      *next-identity*
-    (incf *next-identity*)))
-
-(defun get-eq-id (obj)
-  "Returns an identity (integer) that is same for two objects if and only if they are eq."
-  (multiple-value-bind (id found?)
-      (gethash obj *object-id-hash-table*)
-    (if found?
-        id
-        (setf (gethash obj *object-id-hash-table*)
-              (get-next-free-id)))))
+(def-suite test-utilities)

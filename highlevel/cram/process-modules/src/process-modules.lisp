@@ -95,8 +95,7 @@
                                        (result (make-fluent :name (intern (concatenate 'string (symbol-name name) "-RESULT"))))
                                        (cancel (make-fluent :name (intern (concatenate 'string (symbol-name name) "-CANCEL"))))
                                        (status (make-fluent :name (intern (concatenate 'string (symbol-name name) "-STATUS"))))
-                                       (caller (make-fluent :name (intern (concatenate 'string (symbol-name name) "-CALLER"))))
-                                       &allow-other-keys)
+                                       (caller (make-fluent :name (intern (concatenate 'string (symbol-name name) "-CALLER")))))
   (setf (slot-value pm 'name) name
         (slot-value pm 'input) input
         (slot-value pm 'feedback) feedback
@@ -149,7 +148,6 @@
 (defmethod pm-execute ((pm process-module) input &key
                        (async nil) (priority 0) (wait-for-free t)
                        (task *current-task*))
-  (format t "pm-execute got input ~a~%" input)
   ;; Note: priorities are unused currently.
   (with-slots (status result caller) pm
     (when (eq (value status) :running)
@@ -198,4 +196,6 @@
      (defclass ,name (process-module) ())
      (setf (gethash ',name *process-modules*) (make-instance ',name :name ',name))
      (defmethod pm-run ((,pm-name ,name))
-       ,@body)))
+
+       (block nil
+         ,@body))))

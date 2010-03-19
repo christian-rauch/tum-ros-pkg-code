@@ -28,6 +28,12 @@
 ;;;
 
 
+;;; Designators describe entities such as objects, locations or
+;;; actions by a set of properties. When the decision is made that two
+;;; designators describe the same entity, they must be equated. They
+;;; get linked to each other and therefore represent the course of the
+;;; entity over time.
+
 (in-package :desig)
 
 (defclass designator ()
@@ -39,9 +45,9 @@
    (parent :reader parent :initarg :parent :initform nil
            :documentation "The parent designator, i.e. the designator
                           used to create this designator, or nil.")
-   (children :accessor children :initform nil
-             :documentation "List of designators this designator is the
-                            parent of.")
+   (successor :reader successor :initform nil
+              :documentation "The successor designator this designator
+                              is parent of.")
    (valid :reader valid :initform nil
           :documentation "Returns true if the designator is valid,
                          i.e. its reference has already been computed.")
@@ -49,9 +55,25 @@
          :documentation "Data this designator describes or nil if the
                         designator was resolved yet.")))
 
-(defgeneric equate (desig-1 desig-2)
-  (:documentation "Returns t if the two designators can be equated,
-                   i.e. if they describe the same object."))
+(defgeneric make-designator (class description &optional parent)
+  (:documentation "Returns a new designator of type `class', matching
+                   `description'. If `parent' is specified, the new
+                   designator is equated to parent."))
+
+(defgeneric equate (parent successor)
+  (:documentation "Equates `successor' with `parent', i.e. makes them
+                   describe the same entity. Returns successor."))
+
+(defgeneric desig-equal (desig-1 desig-2)
+  (:documentation "Returns T if desig-1 and desig-2 describe the same
+                   entity, i.e. if they have been equated before."))
+
+(defgeneric first-desig (desig)
+  (:documentation "Returns the first ancestor of `desig'."))
+
+(defgeneric current-desig (desig)
+  (:documentation "Returns the current, i.e. the youngest designator
+                   that has been equated to `desig'."))
 
 (defgeneric reference (desig)
   (:documentation "Computes and/or returns the lisp object this
@@ -66,24 +88,30 @@
                    ment for dealing with ambiguities in designator
                    descriptions."))
 
-(defgeneric merge-designators (desig-1 desig-2)
-  (:documentation "Returns a new designator with the solutions of
-                   desig-1 and desig-2 merged. The soulutions of
-                   desig-1 come first. Returns nil if the two
-                   designators cannot be merged."))
+(defvar *designator-pprint-description* t
+  "If set to T, DESIGNATOR objects will be pretty printed with their description.")
 
-(defmethod equate (desig-1 desig-2)
-  (equal desig-1 desig-2))
+(defmethod print-object ((object designator) stream)
+  (print-unreadable-object (object stream :type t :identity t)
+    (when *designator-pprint-description*
+      (write (description object) :stream stream))))
 
-(defmethod equate ((desig-1 designator) (desig-2 designator))
-  ;; We can equate two designators if they have the same parent.
-  (labels ((is-child (child parent) 
-             "Returns t if desig-2 is a child of desig-2"
-             (or (eq child parent)
-                 (when parent
-                   (some (curry #'is-child parent) (children child))))))
-    (or (is-child desig-2 desig-1)
-        (is-child desig-1 desig-2))))
+(defmethod equate ((parent designator) (successor designator))
+  (assert (not (desig-equal parent successor)) ()
+          "Cannot equate designators that are already equal.")
+  (let ((youngest-parent (current-desig parent))
+        (first-parent (first-desig parent)))
+    (when (parent successor)
+      (setf (slot-value first-parent 'parent) (parent successor))
+      (setf (slot-value (parent first-parent) 'successor) first-parent))
+    (setf (slot-value successor 'parent) youngest-parent)
+    (setf (slot-value youngest-parent 'successor)
+          successor))
+  successor)
+
+(defmethod desig-equal ((desig-1 designator) (desig-2 designator))
+  (eq (first-desig desig-1)
+      (first-desig desig-2)))
 
 (defmethod reference :after ((desig designator))
   (setf (slot-value desig 'valid) t))
@@ -91,25 +119,26 @@
 (defmacro register-designator-type (type class-name)
   `(pushnew (cons ',type ',class-name) (get 'make-designator :desig-types) :key #'car))
 
-(defun make-designator (type description &optional parent)
-  (let ((desig (make-instance (cdr (assoc type (get 'make-designator :desig-types)))
-                 :description description
-                 :parent parent)))
+(defmethod make-designator ((type symbol) description &optional parent)
+  (make-designator (find-class (cdr (assoc type (get 'make-designator :desig-types))))
+                   description parent))
+
+(defmethod make-designator ((type standard-class) description &optional parent)
+  (let ((desig (make-instance type
+                 :description description)))
     (when parent
-      (push desig (children parent)))
+      (equate parent desig))
     desig))
 
-(defun original-desig (desig)
-  "Returns the original designator, this designator was constructed
-  from. I.e. the root of the designator-tree."
+(defmethod first-desig ((desig designator))
   (if (null (parent desig))
       desig
-      (original-desig (parent desig))))
+      (first-desig (parent desig))))
 
-(defun youngest-children (desig)
-  (when (children desig)
-    (or (mapcan #'youngest-children (children desig))
-        (children desig))))
+(defmethod current-desig ((desig designator))
+  (if (null (successor desig))
+      desig
+      (current-desig (successor desig))))
 
 ;;; TODO: Make with-designators use language features. We need a
 ;;; transparent with-designator macro.

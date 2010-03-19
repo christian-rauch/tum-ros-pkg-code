@@ -8,9 +8,12 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <rosdep name="sbcl"/>
+  <depend package="cffi"/>
   <depend package="alexandria"/>
   <depend package="portable_threads"/>
   <depend package="trivial_garbage"/>  
+  <depend package="gsll"/>
+  <depend package="cl_store"/>
 </package>
 
 

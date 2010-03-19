@@ -35,8 +35,39 @@
   (:nicknames :crs)
   (:import-from #:alexandria
                 #:curry #:rcurry #:compose #:with-gensyms)
-  (:export #:lisp-fun #:lisp-pred #:is-bound
-           #:member #:== #:format #:?_ #:fail
-           #:and #:or #:not #:< #:> #:<= #:>=
-           #:prolog #:def-fact-group #:<- #:def-prolog-handler))
+  (:export #:lisp-fun
+           #:lisp-pred
+           #:bound
+           #:ground
+           #:member
+           #:==
+           #:format
+           #:?_
+           #:fail
+           #:and
+           #:or
+           #:not
+           #:<
+           #:>
+           #:<=
+           #:>=
+           #:unify
+           #:prolog
+           #:def-fact-group
+           #:<-
+           #:def-prolog-handler
+           #:slot-value
+           #:get-slot-value
+           #:instance-of
+           #:once
+           ;; Rete
+           #:clear-alpha-network #:rete-assert #:rete-retract
+           #:with-facts-asserted #:object-id
+           #:rete-holds #:alpha-network-size
+           #:def-production #:register-production
+           #:clear-productions #:remove-production
+           #:with-productions #:remove-production-handler
+           #:register-production-handler
+           #:with-production-handlers
+           #:rete-proof))
 

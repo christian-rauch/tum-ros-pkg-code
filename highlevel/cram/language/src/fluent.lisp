@@ -28,7 +28,6 @@
 ;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
-
 (in-package :cpl-impl)
 
 (defclass fluent ()
@@ -94,13 +93,12 @@
   pending pulses not yet processed by the corresponding thread."))
 
 (defgeneric on-update-hook (fluent)
-  (:documentation "For internal use only: Is called everytime a pulse
-  happens, after pulse-count is incremented, but before
-  changed-condition is signaled and the on-update callbacks are
-  executed. The call happens within while holding the lock for the
-  fluent value (to make sure hooks are called in the same order as
-  pulses are and is intended to be used for logging fluent value
-  changes."))
+  (:documentation "For internal use only: Is called everytime a pulse happens,
+  after pulse-count is incremented, but before changed-condition is signaled
+  and the on-update callbacks are executed. The call happens while holding the
+  lock for the fluent value (to make sure hooks are called in the same order
+  as pulses are). ON-UPDATE-HOOK is intended to be used for tracing fluent
+  value changes."))
 
 (defmethod value (var)
   "Default handler. It seems to be a quite good idea to allow the
@@ -110,7 +108,7 @@
 (defmethod wait-for (var &key &allow-other-keys)
   (or var (error "wait-for called with nil argument.")))
 
-(defmethod initialize-instance :after ((fluent fluent) &key &allow-other-keys)
+(defmethod initialize-instance :after ((fluent fluent) &key)
   (with-slots (name changed-condition value-lock) fluent
     (setf value-lock (make-recursive-lock :name (format nil "~a-lock" name)))
     (setf changed-condition (make-condition-variable :lock value-lock)))
@@ -238,51 +236,3 @@
 (defmacro with-fluent-locked (fluent &body body)
   `(with-unsuspendable-lock (slot-value ,fluent 'value-lock)
      ,@body))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Logging fluent
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defclass logged-fluent (logged-instance)
-  ((name :initarg :name :reader name)
-   (logged-value :initarg :logged-value :reader logged-value)))
-
-;;; Here it is vital that we inherit from logging-instance-mixin
-;;; first, so the "initialize-instance" :after method of
-;;; logging-instance-mixin is called last (after the fluent has been
-;;; fully set up).
-(defclass logging-fluent (logging-instance-mixin fluent)
-  ())
-
-(defmethod print-object ((fluent logging-fluent) stream)
-  (print-unreadable-object (fluent stream :type t :identity t)
-    (format stream "[Logging Fluent]")))
-
-(defmethod make-logged-instance ((fluent logging-fluent))
-  (make-instance 'logged-fluent
-    :name (name fluent)
-    :logged-value (persistent-copy (value fluent))))
-
-;;; This was initially implemented as an :after method to pulse. But with
-;;; that, pulses and the logs might happen in different orders und thus
-;;; get differen timestamps.  on-update-hook is called by pulse while the
-;;; fluents value-lock is held and thus ensures a pulse and the
-;;; corresponding log cannot be intercepted by other
-;;; pulses/value-changes/etc...
-(defmethod on-update-hook ((fluent logging-fluent))
-  (log-instance fluent))
-
-(defvar *make-logging-fluent* nil
-  "Bind to not nil if you want make-fluent to return logging fluents.")
-
-(defun set-make-logging-fluent (logging?)
-  "Pass t to let make-fluent return logging-fluents, nil otherwise"
-  (setf *make-logging-fluent* logging?))
-
-(defun make-fluent (&rest args)
-  "Construct a fluent."
-  (apply #'make-instance
-         (if *make-logging-fluent*
-             'logging-fluent
-             'fluent)
-         args))

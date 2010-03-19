@@ -12,7 +12,8 @@
   :long-description "Provides basic pattern matching, binding
                      handling, and other utilities used by other cram
                      components."
-  :depends-on (alexandria)
+  :depends-on (alexandria
+               portable-threads)
 
   :components
   ((:module "src"
@@ -21,6 +22,13 @@
              (:file "utils")
              (:file "lazy")
              (:file "patmatch")
-             (:file "data-pool"))
+             (:file "data-pool")
+             (:file "clos")
+             (:file "ts-queue")
+             (:file "time"))
             :serial t)))
 
+(defmethod asdf:perform ((o asdf:test-op)
+                         (c (eql (asdf:find-system 'cram/utilities))))
+  (asdf:operate 'asdf:load-op 'cram/utilities-tests)
+  (asdf:operate 'asdf:test-op 'cram/utilities-tests))

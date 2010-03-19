@@ -46,8 +46,9 @@
 (defconstant PL-Q-CATCH_EXCEPTION 8)
 
 (define-foreign-library libpl
-    (:unix (:or "libpl.so.5.6.58" "libpl.so"))
-    (t (:default "libpl")))
+  (:darwin (:or "libpl.dylib" "/opt/local/lib/libpl.dylib"))
+  (:unix (:or "libpl.so.5.6.58" "libpl.so"))
+  (t (:default "libpl")))
 
 (use-foreign-library libpl)
 
@@ -371,3 +372,10 @@
 
 (defcfun "PL_unregister_atom" :void
   (atom atom_t))
+
+(defcfun "PL_thread_self" :int)
+
+(defcfun "PL_thread_attach_engine" :int
+  (attr :pointer))
+
+(defcfun "PL_thread_destroy_engine" :int)

@@ -32,6 +32,10 @@
 
 (defvar *alpha-network* (make-instance 'alpha-node :parent nil :key nil))
 
+(defun clear-alpha-network ()
+  "Clears the alpha-network. All data is lost."
+  (clear-facts *alpha-network*))
+
 (defun make-alpha-node (&rest params &key (class 'alpha-node) key parent &allow-other-keys)
   (labels ((remove-key (key seq)
              (when seq
@@ -40,7 +44,7 @@
                    (cons (car seq) (remove-key key (cdr seq)))))))
     (let ((node (apply #'make-instance class (remove-key :class params))))
       (when parent
-        (setf (gethash key (slot-value parent 'children)) node)))))
+        (setf (gethash (object-id key) (slot-value parent 'children)) node)))))
 
 (defun get-alpha-node (pattern &optional
                        (parent-node *alpha-network*)
@@ -62,13 +66,17 @@
              node)))))
 
 (defun alpha-node-matching-child (node pattern key memory-node?)
-  (or (gethash key (slot-value node 'children))
-      (if memory-node?
-          (make-alpha-node
-           :class 'alpha-memory-node :key key :parent node
-           :pattern (when (consp pattern)
-                      pattern))
-          (make-alpha-node :key key :parent node))))
+  (let ((child (gethash (object-id key) (slot-value node 'children))))
+    (cond ((and child memory-node?)
+           (change-class child (find-class 'alpha-memory-node)))
+          (child child)
+          (memory-node?
+           (make-alpha-node
+                :class 'alpha-memory-node :key key :parent node
+                :pattern (when (consp pattern)
+                           pattern)))
+          (t
+           (make-alpha-node :key key :parent node)))))
 
 (defun alpha-node-wildcard-child (node)
   (gethash '? (slot-value node 'children)))
@@ -82,3 +90,34 @@
 (defun alpha-network-size (&optional (node *alpha-network*))
   (1+ (loop for v being the hash-values in (slot-value node 'children)
          summing (alpha-network-size v))))
+
+(defun rete-holds (fact-pattern &optional
+                   (test #'eql)
+                   (processed fact-pattern)
+                   (node *alpha-network*))
+  "Returns a list of bindings if the fact is known to the network, NIL
+   otherwise."
+  (assert node () "*ALPHA-NODE* unbound.")
+  (labels ((all-memory-nodes (node)
+             (if (typep node 'alpha-memory-node)
+                 (cons node (map-node-children #'all-memory-nodes node))
+                 (map-node-children #'all-memory-nodes node)))
+           (map-node-children (fun node)
+             "Applies `fun' on all children of node and nconcs the
+             results."
+             (loop for child being the hash-values in (slot-value node 'children)
+                appending (funcall fun child))))
+    (destructuring-bind (key . unmatched) processed
+      (let ((child (gethash (if (is-var key) '? (object-id key)) (slot-value node 'children))))
+        (when child
+          (cond ((is-var unmatched)
+                 (lazy-mapcar (compose (curry #'pat-match fact-pattern)
+                                       #'alpha-memory-node-pattern)
+                              (remove-duplicates (reduce #'append (mapcar #'wme-memory (all-memory-nodes child))))))
+                (unmatched
+                 (rete-holds fact-pattern test unmatched child))
+                (t
+                 (lazy-mapcar (compose (rcurry (curry #'pat-match fact-pattern)
+                                               :test test)
+                                       #'alpha-memory-node-pattern)
+                              (wme-memory child)))))))))

@@ -62,6 +62,10 @@
 
 (defvar *productions* (make-hash-table :test 'eq))
 
+(defun clear-productions ()
+  "Clears the beta network. All productions will be lost."
+  (setf *productions* (make-hash-table :test 'eq)))
+
 (defstruct production-definition
   (name nil)
   (var-bindings nil)
@@ -69,29 +73,55 @@
   (node nil)
   (callbacks nil))
 
-(defmacro def-production (name var-bindings &body definition)
-  "Defines a new production. 'name' is the name of the production,
-   'var-bindings' the list of variables that should be passed to the
-   callback when the production gets triggered."
-  `(progn
-     (when (gethash ',name *productions*)
-       (remhash ',name *productions*)
-       (warn ,(format nil "Redefining production '~a'." name)))
-     (setf (gethash ',name *productions*)
-           (make-production-definition :name ',name
-                                       :var-bindings ',var-bindings
-                                       :body ',definition))))
+(defun register-production (name definition)
+  (when (gethash name *productions*)
+    (remove-production name)
+    (alexandria:simple-style-warning "Redefining production `~S'." name))
+  (setf (gethash name *productions*)
+        (make-production-definition :name name
+                                    :var-bindings (vars-in definition)
+                                    :body definition)))
+
+(defun remove-production (name)
+  "Removes a production."
+  (let ((production (gethash name *productions*)))
+    (when production
+      (remhash name *productions*)
+      (gc-node (production-definition-node production)))))
+
+(defmacro def-production (name &body definition)
+  "Defines a new production. `name' is the name of the production.
+   All variables within `definition' are passed to callbacks."
+  `(register-production ',name ',definition))
+
+(defmacro with-productions (productions &body body)
+  "Executes `body' with productions specified. `productions is of the form
+
+  ((name definition)*)
+
+  similar to def-production. Please note that productions have dynamic
+  extent, i.e. redefining a production shadows previously defined
+  productions with the same name."
+  `(let ((*productions* (alexandria:copy-hash-table *productions*)))
+     (unwind-protect
+          (progn
+            (handler-bind ((alexandria:simple-style-warning #'muffle-warning))
+              ,@(loop for (name . definition) in productions
+                   collecting `(register-production ',name ',definition)))
+            ,@body)
+       ,@(loop for (name . production) in productions
+            collecting `(remove-production ',name)))))
 
 (defun production-node-type (definition)
   "Returns the type of definition. It can (currently) be either :prolog or :beta-join.
    It is used to select the correct node type. (In the future, there
-   should also be a :beta-not type.:"
+   should also be a :beta-not type:"
   (cond ((find-prolog-fact definition)
          :prolog)
         (t
          :beta-join)))
 
-(defun create-production-network (production var-bindings callback)
+(defun create-production-network (production callback)
   (labels ((get-definition-variables (definition)
              "Returns the variables of a single definition, with a
              position designator."
@@ -99,6 +129,31 @@
                 for field in definition
                 for i from 0
                 when (is-var field) collecting (cons field i)))
+           (get-local-variable-accessors (accessor-generator variables accessors)
+             "Creates variable accessors for just one set of
+              variables, i.e. only for one wme pattern.  Please note
+              that the wme pattern is not necessary to create the
+              accessors. Instead `acessor-generator' is used. It must
+              be bound to a function that gets the variable index as
+              input and returns a function that gets the caller-index
+              and the token as input and returns the value of the
+              variable and the index.
+               
+              `variables' is the alist of variables with corresponding
+              indices in the pattern. `accessors' is the alist of
+              variable accessors created so far."
+             (cond ((not variables)
+                    accessors)
+                   (t
+                    (destructuring-bind (var . var-index) (car variables)
+                      (get-local-variable-accessors
+                       accessor-generator
+                       (cdr variables)
+                       (if (assoc var accessors)
+                           accessors
+                           (cons
+                            `(,var . ,(funcall accessor-generator var-index))
+                            accessors)))))))
            (get-variable-accessors (production-definition &optional (index 0) (accessors nil))
              "Collects accessor functions to get the value of a
               variable out of a token. The accessor function gets two
@@ -110,13 +165,12 @@
                       (get-variable-accessors
                        (cdr production-definition)
                        (1+ index)
-                       (nconc 
-                        (loop for (var . var-index) in variables
-                           unless (assoc var accessors) collecting (cons var (lambda (caller-index token)
-                                                                               (elt (alpha-memory-node-pattern
-                                                                                     (elt token (- caller-index index)))
-                                                                                    var-index))))
-                        accessors))))))
+                       (get-local-variable-accessors (lambda (var-index)
+                                                       (lambda (caller-index token)
+                                                         (elt (alpha-memory-node-pattern
+                                                               (elt token (- caller-index index)))
+                                                              var-index)))
+                                                     variables accessors))))))
            (get-fact (definition)
              (loop for field in definition
                 if (is-var field) collecting '?
@@ -142,30 +196,114 @@
                                                   finally (return t))))))
                (if (cdr definitions)
                    (build-network (cdr definitions) accessors beta-node (1+ index))
-                   beta-node))))
+                   beta-node)))
+           (call-with-keyword-vars (fun var-bdgs)
+             "Calls `fun' with `vars' as keyword arguments."
+             (apply fun (mapcan (lambda (var-bdg)
+                                  (destructuring-bind (var value) var-bdg
+                                    (let* ((var-param-name (intern (symbol-name var) (find-package :keyword))))
+                                      `(,var-param-name ,value))))
+                                var-bdgs))))
     (let* ((accessors (get-variable-accessors production))
            (last-beta-node (build-network production accessors)))
       (make-production-node
        last-beta-node
        (lambda (token operation)
-         (apply callback operation
-                (loop for var in var-bindings
-                   collecting (let ((var-accessor (cdr (assoc var accessors))))
-                                (unless var-accessor
-                                  (error (format nil "Variable ~a not defined in production-body."
-                                                 var)))
-                                (funcall var-accessor (1- (length token)) token)))))))))
+         (let ((var-bdgs (loop for (var . accessor) in accessors 
+                            collecting `(,var ,(funcall accessor (1- (length token)) token)))))
+           (call-with-keyword-vars (curry callback operation) var-bdgs)))))))
 
 (defun register-production-handler (production-name callback)
+  "Registers a new production handler. A production handler is
+   executed whenever a production holds or stops to hold, i.e. is
+   asserted or retracted.
+
+   Callback is a function with a lambda-list of the form
+
+   (operation &key [VAR]*) 
+
+   where VAR is a variable inside the production.  Please note that
+   &allow-other-keys needs to be used when not all variables inside
+   the production are specified."
   (let ((production (gethash production-name *productions*)))
     (unless production
-      (error "Production unknown."))
+      (error 'simple-error
+             :format-control "Production `~a' unknown."
+             :format-arguments production-name))
     (pushnew callback (production-definition-callbacks production))
     (unless (production-definition-node production)
       (setf (production-definition-node production)
             (create-production-network (production-definition-body production)
-                                       (production-definition-var-bindings production)
                                        (lambda (&rest args)
                                          (loop for callback in (production-definition-callbacks production)
                                             do (apply callback args))))))
     (production-definition-node production)))
+
+(defun remove-production-handler (production-name callback)
+  (let ((production (gethash production-name *productions*)))
+    (unless production
+      (error 'simple-error
+             :format-control "Production `~a' unknown."
+             :format-arguments production-name))
+    (setf (production-definition-callbacks production)
+          (delete callback (production-definition-callbacks production)))))
+
+(defmacro with-production-handlers (handler-definitions &body body)
+  "With WITH-PRODUCTION-HANDLERS it is possible to define handlers for
+   productions in the current lexial scope of
+   `body'. `handler-definitions' is of the form
+
+  ((<production-name> <lambda-list> &body body)*)
+
+  The lambda-list is similar to REGISTER-PRODUCTION-HANDLER."
+  (let ((handler-syms (loop for (name . rest) in handler-definitions
+                         collecting `(,name . ,(gensym (format nil "~S-" name))))))
+    `(flet ,(loop for (name lambda-list . body) in handler-definitions
+               collecting `(,(cdr (assoc name handler-syms)) ,lambda-list
+                             ,@body))
+       (unwind-protect
+            (progn
+              ,@(loop for (name . fun) in handler-syms
+                   collecting `(register-production-handler ,name #',fun))
+              ,@body)
+         ,@(loop for (name . fun) in handler-syms
+              collecting `(remove-production-handler ,name #',fun))))))
+
+;;; Productions are specifications of the form
+;;; (<fact 1>
+;;;  <fact 2>
+;;;  <fact 3> ...)
+;;;
+;;; where a fact is an ordinary list of symbols. It can also contain
+;;; variables which are symbols prefixed with a '?', e.g. ?A.
+;;; Productions are defined with the macro def-production:
+;;;
+;;; (def-production 'stacked-objects
+;;;   (on ?a ?b)
+;;;   (on ?b ?c)
+;;;
+;;; When it is asserted that ?A is on ?B and ?B is on ?C, this
+;;; production holds and all its callbacks are executed. To define a
+;;; callback, the function REGISTER-PRODUCTION-HANDLER is used. The
+;;; callback's lambda list has the form (OPERATION &KEY [VAR]*) with
+;;; VAR being a variable in the production. An example of a handler
+;;; for the stacked-objects production defined above might be the
+;;; following:
+;;;
+;;; (defun assert-implicitly-stacked (op &key ?a ?b ?c)
+;;;   (declare (ignore ?b))
+;;;   (ecase op
+;;;     (:assert (rete-assert `(on ,?a ,?c)))
+;;;     (:retract (rete-retract `(on ,?a ,?c)))))
+;;; (register-production-handler 'stacked-objects #'assert-implicitly-stacked)
+;;;
+;;; It should also be possible to define handlers in the current
+;;; lexical scope with the macro 'WITH-PRODUCTION-HANDLER'. The
+;;; example above would be:
+;;; (with-production-handlers
+;;;     ((stacked-objects (operation &key ?a ?c &ignore-other-keys)
+;;;        (ecase operation
+;;;         (:assert (rete-assert '(on ?a ?c)))
+;;;         (:retract (rete-retract '(on ?a ?c)))))
+;;;   ...)
+

@@ -27,10 +27,9 @@
 ;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
-
 (in-package :cpl-tests)
 
-(def-suite language-base)
+(def-suite language-base :in language)
 
 (in-suite language-base)
 

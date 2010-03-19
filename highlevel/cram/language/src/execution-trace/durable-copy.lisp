@@ -28,31 +28,22 @@
 ;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
-(in-package :cpl-impl)
+(in-package :cram-execution-trace)
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Time
+;;; Durable copying
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defun default-timestamp-function ()
-  "A function that returns the current time in seconds as a float."
-  (float
-   (/ (get-internal-real-time)
-      internal-time-units-per-second)))
 
-(defvar *timestamp-function* #'default-timestamp-function
-  "A function that returns the current time in seconds as a float.")
+(defgeneric durable-copy (obj)
+  (:documentation "Returns a copy of itself which will not change in the
+  future. This is used specifically for traceing the value of fluents (as a
+  generic deep-copy is impossible). For mutable objects it should be a deep
+  copy. The default is just returning obj and not copying anything."))
 
-(defun set-timestamp-function (fn)
-  "Changes the timestamp function used by stamp-time"
-  (setf *timestamp-function* fn))
+(defmethod durable-copy (obj)
+  "Default behaviour is to assume immutability and just return the object as
+  is."  obj)
 
-(defun set-default-timestamp-function ()
-  "Lets stamp-time use the default timestampt function"
-  (setf *timestamp-function* #'default-timestamp-function))
-
-(defun current-timestamp ()
-  "Returns the current time in seconds as a float"
-  (funcall *timestamp-function*))
-
-(defun time-value-p (time)
-  (typep time 'real))
+(defmethod durable-copy ((obj list))
+  "For cons cells assume they construct a list and use copy list."
+  (copy-list obj))

@@ -95,8 +95,8 @@
                                        :initial-value nil)))
                (setf matches (nconc new-tokens matches)))))
          (do-retract ()
-           (with-slots (connections left-tokens matches) node
-             (pop-if! (curry #'eq wme) left-tokens)
+           (with-slots (connections right-tokens matches) node
+             (pop-if! (curry #'eq wme) right-tokens)
              (pop-if! (lambda (match)
                         (when (eq wme (token-wme match))
                           (mapc (rcurry #'propagate match :retract)
@@ -123,8 +123,8 @@
                                        :initial-value nil)))
                (setf matches (nconc new-tokens matches)))))
          (do-retract ()
-           (with-slots (connections right-tokens matches) node
-             (pop-if! (curry #'eq token) right-tokens)
+           (with-slots (connections left-tokens matches) node
+             (pop-if! (curry #'eq token) left-tokens)
              (pop-if! (lambda (match)
                         (when (eq token (token-parent match))
                           (mapc (rcurry #'propagate match :retract)

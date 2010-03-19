@@ -38,4 +38,5 @@
            #:swi-prolog #:pl-query #:pl-query-and #:pl-query-or #:pl-query-not
            #:pl-query-simple #:decode-term
            #:pl-atom #:pl-list #:pl-variable #:pl-integer #:pl-float
-           #:pl-string #:*pl-user-module*))
+           #:pl-string #:*pl-user-module*
+           #:def-swi-predicate))

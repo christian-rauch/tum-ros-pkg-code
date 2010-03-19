@@ -51,3 +51,15 @@
 (defun find-prolog-fact (fact)
   (let ((pl-fact (gethash (car fact) *prolog-facts*)))
     (and pl-fact (eql (length fact) (length pl-fact)))))
+
+(defmacro with-facts-asserted (fact-assertions &body body)
+  "Executes body with facts asserted. `fact-assertions' is a list of
+  facts that are to be asserted. After body finishes, the facts are
+  retracted again."
+  `(unwind-protect
+        (progn
+          ,@(loop for fact in fact-assertions
+               collecting `(rete-assert ,fact))
+          ,@body)
+     ,@(loop for fact in fact-assertions
+          collecting `(rete-retract ,fact))))

@@ -102,6 +102,7 @@
 (define-task-variable *current-task-tree-node* nil)
 
 (defmacro with-task-tree-node ((&key (path-part (error "Path parameter is required."))
+                                     (name "WITH-TASK-TREE-NODE")
                                      sexp lambda-list parameters)
                                &body body)
   "Executes a body under a specific path. Sexp, lambda-list and parameters are optional."
@@ -109,7 +110,7 @@
     `(let* ((*current-path* (cons ,path-part *current-path*))
             (*current-task-tree-node* (ensure-tree-node *current-path*)))
        (declare (special *current-path* *current-task-tree-node*))
-       (let ((,task (make-task :name ',(gensym "[WITH-TASK-TREE-NODE]-")
+       (let ((,task (make-task :name ',(gensym (format nil "[~a]-" name))
                                :sexp ',(or sexp body)
                                :function (lambda ,lambda-list
                                            ,@body)
@@ -128,6 +129,7 @@
    `(replaceable-function ,name ,lambda-list ,@body).
    The 'parameters' parameter contains the values to call the function with."
   `(with-task-tree-node (:path-part ,path-part
+                         :name ,(format nil "REPLACEABLE-FUNCTION-~a" name)
                          :sexp `(replaceable-function ,',name ,',lambda-list . ,',body)
                          :lambda-list ,lambda-list
                          :parameters ,parameters)
@@ -263,9 +265,64 @@
                    function))))
     node))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Task tree utilities
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Note: No error handling at the momment, e.g. no testing if a tasks trees
+;;; CODE slot is NIL or if the CODE slots TASK slot is NIL.
+
 (defun flatten-task-tree (task-tree)
   "Returns a list of all the nodes in the tree."
   (cons task-tree
         (mapcan (compose #'flatten-task-tree #'cdr)
                 (task-tree-node-children task-tree))))
+
+(defun task-tree-node-parameters (task-tree-node)
+  "Return the parameters with which the task was called."
+  (let ((code (task-tree-node-code task-tree-node)))
+    (code-parameters code)))
+
+(defun task-tree-node-status-fluent (task-tree-node)
+  "Return the tasks status fluent."
+  (let ((code (task-tree-node-code task-tree-node)))
+    (status (code-task code))))
+
+(defun task-tree-node-result (task-tree-node)
+  "Return the tasks result."
+  (let ((code (task-tree-node-code task-tree-node)))
+    (result (code-task code))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Goal task tree utilities
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;;; Note: No error handling at the momment, e.g. no testing if a tasks trees
+;;; CODE slot is NIL or if the CODE slots TASK slot is NIL.
+
+(defun goal-task-tree-node-p (task-tree-node)
+  "Returns true if `task-tree-node' is a goal task."
+  (let ((p (task-tree-node-path task-tree-node)))
+    (eq 'goal
+        (and (consp p)
+             (consp (car p))
+             (caar p)))))
+
+(defun goal-task-tree-node-pattern (task-tree-node)
+  (assert (goal-task-tree-node-p task-tree-node))
+  (cadar (task-tree-node-path task-tree-node)))
+
+(defun goal-task-tree-node-parameter-bindings (task-tree-node)
+  (assert (goal-task-tree-node-p task-tree-node))
+  (let ((params (task-tree-node-parameters task-tree-node))
+        (pattern (goal-task-tree-node-pattern task-tree-node)))
+    (mapcar (lambda (var value) (cons var value))
+            (cut:vars-in pattern)
+            params)))
+
+(defun goal-task-tree-node-goal (task-tree-node)
+  (assert (goal-task-tree-node-p task-tree-node))
+  (let ((pattern (goal-task-tree-node-pattern task-tree-node))
+        (bindings (goal-task-tree-node-parameter-bindings task-tree-node)))
+    (cut:substitute-vars pattern bindings)))
 

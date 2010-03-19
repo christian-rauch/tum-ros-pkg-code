@@ -28,7 +28,6 @@
 ;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
-
 (in-package :crs)
 
 (defmacro bin-pred-fact (pred)
@@ -52,3 +51,44 @@
   (<- (format . ?args)
     (lisp-fun symbol-function format ?format-fun)
     (lisp-fun apply ?format-fun t ?args ?_)))
+
+(defun prolog-get-slot-value (obj slot)
+  (slot-value obj slot))
+
+(defun prolog-set-slot-value (obj slot new-value)
+  (setf (slot-value obj slot) new-value))
+
+(def-fact-group lisp-data-structs
+
+  ;; Note: The difference between SLOT-VALUE and GET-SLOT-VALUE is, that the
+  ;; former will SETF the slot, if ?VALUE is bound, while the latter will just
+  ;; check if the slots value and ?VALUE unify.
+  
+  (<- (slot-value ?obj ?slot ?value)
+    (bound ?obj)
+    (bound ?slot)
+    (not (bound ?value))
+    (lisp-fun prolog-get-slot-value ?obj ?slot ?value))
+  (<- (slot-value ?obj ?slot ?value)
+    (bound ?obj)
+    (bound ?slot)
+    (bound ?value)
+    (lisp-fun prolog-set-slot-value ?obj ?slot ?value ?_))
+  
+  (<- (get-slot-value ?obj ?slot ?value)
+    (bound ?obj)
+    (bound ?slot)
+    (lisp-fun prolog-get-slot-value ?obj ?slot ?value))
+
+  (<- (instance-of ?type ?obj)
+    (bound ?type)
+    (not (bound ?obj))
+    (lisp-fun make-instance ?type ?obj))
+  (<- (instance-of ?type ?obj)
+    (not (bound ?type))
+    (bound ?obj)
+    (lisp-fun type-of ?obj ?type))
+  (<- (instance-of ?type ?obj)
+    (bound ?type)
+    (bound ?obj)
+    (lisp-pred typep ?obj ?type)))

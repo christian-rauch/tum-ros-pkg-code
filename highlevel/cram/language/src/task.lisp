@@ -44,7 +44,7 @@
    on a lock.")
 
 ;;; Protocol definition of task
-(defgeneric execute (task &key thread-fun ignore-no-parent)
+(defgeneric execute (task &key ignore-no-parent)
   (:documentation
    "When the task has been instantiated without a thread function or
     the function has not been executed yet, it can be executed with
@@ -300,9 +300,13 @@
 (defvar *task-local-variables* nil)
 (defmacro define-task-variable (name &optional (global-value nil gvp)
                                                (docstring nil docp))
-  "Define `name' as a global and task-local variable with an initial
-value of `global-value', if given. Before the execution of a task, a
-new binding for `name' will be established within the task's thread."
+  "Define `name' as a global and task-local variable with an initial value of
+   `global-value', if given. Before the execution of a task, a new binding for
+   `name' will be established within the task's thread. These thread local
+   variables of the child thread are bound to the values they have in the
+   parent thread at the time of creation of the child thread. In other word
+   task propagate the current values of task-variables to their children, but
+   in each thread the binding is thread local."
   `(progn
      (defvar ,name
        ,@(when gvp  (list global-value))

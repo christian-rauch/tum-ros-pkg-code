@@ -32,13 +32,31 @@
 
 (defclass alpha-node ()
   ((parent :reader alpha-node-parent :initarg :parent)
-   (children :initform (make-hash-table :test 'eq))
+   (children :initform (make-hash-table))
    (key :reader alpha-node-key :initarg :key)))
+
+(defgeneric object-id (obj)
+  (:documentation "Returns an identifier that is used to identify the
+  object. Object ids that are EQL indicate that objects are
+  equal. This can be used to state that two tokens are equal although
+  their references are not EQL.")
+  (:method ((obj t))
+    obj))
+
+(defgeneric clear-facts (node)
+  (:documentation "Retract all facts in order to clear the network."))
+
+(defmethod clear-facts ((node alpha-node))
+  (maphash (lambda (a b)
+             (declare (ignore a))
+             (clear-facts b))
+           (slot-value node 'children)))
 
 (defmethod gc-node ((node alpha-node))
   (when (and (eql (hash-table-count (slot-value node 'children)) 0)
              (not (null (alpha-node-parent node))))
-    (remhash (alpha-node-key node) (slot-value (alpha-node-parent node) 'children))
+    (remhash (object-id (alpha-node-key node))
+             (slot-value (alpha-node-parent node) 'children))
     (gc-node (alpha-node-parent node))))
 
 ;;; It might seem strange that we rebind 'wme' here and pass it to a

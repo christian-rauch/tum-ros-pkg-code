@@ -31,24 +31,41 @@
 (in-package :liswip)
 
 (defvar *pl-user-module* "user")
-(defvar *initialized-threads* nil)
+(defvar *liswip-initialized* nil)
+
+(defvar *processing-query* nil
+  "When T, we are currently processing a query.")
 
 (defvar *xsd-float* "http://www.w3.org/2001/XMLSchema#float")
 (defvar *xsd-int* "http://www.w3.org/2001/XMLSchema#int")
 
 (define-condition prolog-error (simple-error) ())
 
+(defmacro with-prolog-engine (&body body)
+  "Ensrues that a prolog engine is running and evaluates `body'. When
+  a new engine had to be created, destroys it after `body' finished."
+  `(let ((engine-created nil))
+     (assert *liswip-initialized* () "Not initialized yet. Call SWI-INIT first.")
+     (unwind-protect
+          (progn
+            (when (< (pl-thread-self) 0)
+              (setf engine-created t)
+              (pl-thread-attach-engine (null-pointer)))
+            ,@body)
+       (when engine-created
+         (pl-thread-destroy-engine)))))
+
 (defun swi-init (&key
                  (prolog-binary "/usr/bin/swipl")
                  (options (list "--nosignals")))
-  (unless (member sb-thread:*current-thread* *initialized-threads*)
+  (unless *liswip-initialized*
     (let ((argv nil))
       (unwind-protect
           (progn
             (setf argv (foreign-alloc :string :initial-contents (cons prolog-binary options)))
             (pl-initialise (1+ (length options)) argv)
-            (push sb-thread:*current-thread* *initialized-threads*)
             (init-lisp-blobs)
+            (setf *liswip-initialized* t)
             (register-swi-predicates))
         (foreign-free argv)))))
 
@@ -57,9 +74,23 @@
   (cleanup-lisp-blobs))
 
 (defun prologify (s)
-  (string-downcase (substitute #\_ #\- (string s))))
+  (flet ((contains-lower-case-char (symbol)
+           (and 
+            (find-if (lambda (ch)
+                       (let ((lch (char-downcase ch)))
+                         (and (find lch "abcdefghijklmnopqrstuvwxyz")
+                              (eq lch ch))))
+                     (symbol-name symbol))
+            t)))
+    (if (contains-lower-case-char s)
+        (string s)
+        (string-downcase (substitute #\_ #\- (string s))))))
+
+(defun lispify (s)
+  (string-upcase (string s)))
 
 (defun get-term-value (term)
+  (declare (special *lispify*))
   (with-foreign-object (val :pointer)
     (let ((term-type (pl-term-type term)))
       (cond ((eql term-type pl-integer) 
@@ -73,22 +104,35 @@
             ((is-owl-float term)
              (get-owl-type term))
             ((eql term-type pl-term) ;; compound term
-             (if (not (eql (pl-is-list term) 0)) 
-                 (get-terms-from-list term) ;; if term is a prolog list, transform to lisp list
-                 (progn                     ;; other compound terms are returned as string
-                   (pl-get-chars term val 127)
-                   (mem-ref val :string))))
+             (cond ((not (eql (pl-is-list term) 0))
+                    (get-terms-from-list term))
+                   (t
+                    (with-foreign-objects ((name 'atom_t)
+                                           (arity :int))
+                      (pl-get-name-arity term name arity)
+                      (cons (intern (if *lispify*
+                                        (lispify (pl-atom-chars (mem-ref name 'atom_t)))
+                                        (pl-atom-chars (mem-ref name 'atom_t))))
+                            (loop for i from 1 to (mem-ref arity :int)
+                                  with args-term = (pl-new-term-ref)
+                                  collecting (progn
+                                               (pl-get-arg i term args-term)
+                                               (get-term-value args-term))))))))
             ((eql term-type pl-string) 
              (pl-get-chars term val 127)
              (mem-ref val :string))
             ((lisp-object? term)
-             (get-lisp-object term))
+             (get-lisp-object term :gc (not *processing-query*)))
             ((eql term-type pl-atom)
              (pl-get-chars term val 127)
-             (intern (mem-ref val :string)))
+             (intern (if *lispify*
+                         (lispify (mem-ref val :string))
+                         (mem-ref val :string))))
             ((eql term-type pl-variable)
              (pl-get-chars term val 127)
-             (intern (concatenate 'string "?" (mem-ref val :string))))
+             (intern (if *lispify*
+                         (lispify (concatenate 'string "?" (mem-ref val :string)))
+                         (concatenate 'string "?" (mem-ref val :string)))))
             (t
              (pl-get-chars term val 127)
              (mem-ref val :string))))))
@@ -142,7 +186,7 @@
         ((listp val)
          (let* ((functor-terms (pl-query val vars))
                 (functor (car functor-terms))
-                (terms (car (cdr functor-terms))))
+                (terms (cdr functor-terms)))
            (pl-cons-functor-v term functor terms)))
         ((floatp val)
          (pl-put-float term (coerce val 'double-float)))
@@ -162,38 +206,44 @@
          (put-lisp-object term val))))
 
 ;; takes lisp expr, builds prolog expr, calls prolog, and retrieves answer
-(defun swi-prolog (expr &key (prologify t))
+(defun swi-prolog (expr &key (prologify t) (lispify t))
   "Evaluates `expr' in SWI Prolog. If `prologify' is true, converts
    all lispy symbols into prolog. - is replaced by _ and the name is in
    lower case."
-  (let ((fid nil)
-        (qid nil)
-        (*prologify* prologify))
-    (declare (special *prologify*))
-    (unwind-protect
-        (progn
-          (setf fid (pl-open-foreign-frame))
-          (let* ((vars (make-hash-table))
-                 (functor-terms (pl-query expr vars))
-                 (functor (car functor-terms))
-                 (terms (cdr functor-terms))
-                 (pred (pl-pred functor (pl-new-module (pl-new-atom *pl-user-module*)))))
-            (setf qid (pl-open-query (null-pointer) PL-Q-CATCH_EXCEPTION pred terms))
-            (let ((exception (pl-exception qid)))
-              (unless (eql exception 0)
-                (error 'prolog-error
-                       :format-control "Prolog query failed with error ~a."
-                       :format-arguments (get-term-value exception))))
-            (let* ((success nil)
-                   (result (loop until (eql (pl-next-solution qid) 0)
+  (assert (not *processing-query*) ()
+          "Cannot call prolog when already inside a query.")
+  (with-prolog-engine
+    (let ((fid nil)
+          (qid nil)
+          (*prologify* prologify)
+          (*lispify* lispify))
+      (declare (special *prologify* *lispify*))
+      (unwind-protect
+           (progn
+             (setf fid (pl-open-foreign-frame))
+             (let* ((vars (make-hash-table))
+                    (functor-terms (pl-query expr vars))
+                    (functor (car functor-terms))
+                    (terms (cdr functor-terms))
+                    (pred (pl-pred functor (pl-new-module (pl-new-atom *pl-user-module*)))))
+               (setf qid (pl-open-query (null-pointer) PL-Q-CATCH_EXCEPTION pred terms))
+               (let ((exception (pl-exception qid)))
+                 (unless (eql exception 0)
+                   (error 'prolog-error
+                          :format-control "Prolog query failed with error ~a."
+                          :format-arguments (get-term-value exception))))
+               (let* ((success nil)
+                      (result (loop until (eql (let ((*processing-query* t))
+                                                 (pl-next-solution qid))
+                                               0)
                                  collecting (loop for k being the hash-keys of vars using (hash-value v)
-                                                  collecting (cons k (get-term-value v)))
+                                               collecting (cons k (get-term-value v)))
                                  do (setf success t))))
-              (values result success))))
-      (when qid
-        (pl-close-query qid))
-      (when fid
-        (pl-close-foreign-frame fid)))))
+                 (values result success))))
+        (when qid
+          (pl-close-query qid))
+        (when fid
+          (pl-close-foreign-frame fid))))))
   
 ;; parses lisp expression expr and constructs query by using the C interface
 (defun pl-query (expr vars)

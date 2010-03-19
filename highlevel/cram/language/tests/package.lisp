@@ -27,13 +27,16 @@
 ;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
-
 (in-package :cl-user)
 
 (defpackage :cram-language-tests
   (:documentation "Package for the cram-language test-suite")
   (:nicknames :cpl-tests)
-  (:use :cpl :portable-threads :fiveam :alexandria)
+  (:use :cpl
+        :cut
+        :portable-threads
+        :fiveam
+        :alexandria)
   (:import-from #:cram-walker #:make-plan-tree-node)
   (:shadowing-import-from :cpl #:fail))
 

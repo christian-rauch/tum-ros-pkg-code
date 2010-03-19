@@ -27,10 +27,9 @@
 ;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
-
 (in-package :cpl-tests)
 
-(def-suite fluent-tests)
+(def-suite fluent-tests :in language)
 
 (in-suite fluent-tests)
 

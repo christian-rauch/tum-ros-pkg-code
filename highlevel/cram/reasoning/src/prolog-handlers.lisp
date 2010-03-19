@@ -59,24 +59,33 @@
     (list bdgs)))
 
 (def-prolog-handler lisp-fun (bdgs function &rest args)
-  (let ((result (apply (symbol-function function)
-                       (mapcar (rcurry #'var-value bdgs) (butlast args))))
-        (result-var (car (last args))))
-    ;; (format t "result: ~a ~a bdgs: ~a~%" result result-var bdgs)
-    (multiple-value-bind (new-bdgs matched?) (unify result-var result bdgs)
-      (when matched?
-        (list new-bdgs)))))
+  (let ((arguments (butlast args))
+        (result-pat (car (last args))))
+    (let ((result (apply (symbol-function function)
+                         (mapcar (rcurry #'var-value bdgs) arguments))))
+      ;; (format t "result: ~a ~a bdgs: ~a~%" result result-var bdgs)
+      (multiple-value-bind (new-bdgs matched?) (unify result-pat result bdgs)
+        (when matched?
+          (list new-bdgs))))))
 
 (def-prolog-handler lisp-pred (bdgs pred &rest args)
   (when (apply (symbol-function pred)
                (mapcar (rcurry #'var-value bdgs) args))
     (list bdgs)))
 
-(def-prolog-handler is-bound (bdgs var-name)
-  (unless (and (is-var var-name)
-               (is-var (var-value var-name bdgs)))
+(def-prolog-handler bound (bdgs pattern)
+  (when (is-bound pattern bdgs)
+    (list bdgs)))
+
+(def-prolog-handler ground (bdgs pattern)
+  (when (is-ground pattern bdgs)
     (list bdgs)))
 
 (def-prolog-handler fail (bdgs)
   (declare (ignore bdgs))
   nil)
+
+(def-prolog-handler once (bdgs pattern)
+  (let ((result (prolog pattern bdgs)))
+    (when result
+      (list (lazy-car result)))))

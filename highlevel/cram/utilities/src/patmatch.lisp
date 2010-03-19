@@ -28,50 +28,81 @@
 ;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
-
 (in-package :cut)
 
-(defun is-var (var)
-  "Predicate that returns a non-nil value if the symbol is a
-   variable."
-  (and (symbolp var)
-       (eq (elt (symbol-name var) 0)
-           #\?)))
+(defun is-var (pat)
+  "Predicate that returns a non-nil value if the pattern is a variable."
+  (and (symbolp pat)
+       (eql (elt (symbol-name pat) 0)
+            #\?)))
 
-(defun is-unnamed-var (var)
-  "Returns true if the variable is the unnamed variable (?_)"
-  (eq var '?_))
+(defun is-unnamed-var (pat)
+  "Returns true if `pat' is the unnamed variable (?_)."
+  (eq pat '?_))
 
-(defun is-segvar (var)
-  "Predicate that returns a non-nil value if the symbol is a
-   segment-variable."
-  (and (symbolp var)
-       (eq (elt (symbol-name var) 0) #\!)
-       (eq (elt (symbol-name var) 1) #\?)))
+(defun is-segvar (pat)
+  "Predicate that returns a non-nil value if the `pat' is a segment-variable."
+  (and (symbolp pat)
+       (<= 2 (length (symbol-name pat)))
+       (eql (elt (symbol-name pat) 0) #\!)
+       (eql (elt (symbol-name pat) 1) #\?)))
 
 (defun is-segform (form)
-  "Predicates that returns a non-nil value when form is a segform,
-   i.e. its car is a segvar."
+  "Predicates that returns a non-nil value if form is a segform, i.e. its car
+   is a segvar."
   (and (consp form)
        (is-segvar (car form))))
 
 (defun var-name (var)
-  "Always returns the variable name or throws an error (i.e. extracts
-   the variable name from a segform."
+  "Extracts the variable name from a segvar. If `var' is a segvar, VAR-NAME
+   returns a variable in the same package as `var', but with a name without
+   the preceeding '!'. Returns `var' unchanged if `var' is a variable. Throws
+   an error otherwise."
   (cond ((is-var var)
          var)
         ((is-segvar var)
-         (intern (subseq (symbol-name var) 1)))
+         (let ((pkg (symbol-package var))
+               (name (subseq (symbol-name var) 1)))
+           (if pkg (intern name pkg) (make-symbol name)))) 
         (t
          (error "No variable."))))
 
-(defun substitute-vars (form bdgs)
-  (map-tree (rcurry #'var-value bdgs) form))
+(defun gen-var (&optional base)
+  "Returns a newly generated unique var. `base' is an optional string used as
+   a prefix for the variable name, which must start with '?'."
+  (let ((base (or base "?VAR-")))
+    (assert (and (stringp base)
+                 (<= 1 (length base))
+                 (eql (elt base 0) #\?)))
+    (gensym base)))
+
+(defun is-genvar (var)
+  "Returns true if the variable has been generated with gen-var."
+  (assert (is-var var))
+  (not (symbol-package var)))
+
+(defun add-bdg (var val bdgs)
+  "Adds a variable binding to the bindings list. The first return value is the
+   updated bindings and the second return value is non-nil, if binding has
+   been added successfully and nil, if a conflict with a previous binding of
+   the same variable exists."
+  (if (is-unnamed-var var)
+      (values bdgs t)
+      (let ((old-bdg (assoc var bdgs)))
+        (if old-bdg
+            (if (equal (cdr old-bdg) val)
+                (values bdgs t)
+                (values nil nil))
+            (values (cons `(,var . ,val) bdgs) t)))))
+
+(defun substitute-vars (pat bdgs)
+  "Substitues all variables in a pattern `pat' recursively with their
+   bindings."
+  (map-tree (rcurry #'var-value bdgs) pat))
 
 (defun var-value (var binds)
   "Returns the value of a variable. Note: The variable is simplified,
-  i.e. if its value is a variable the value of that variable is
-  returned."
+  i.e. if its value is a variable the value of that variable is returned."
   (if (is-var var)
       (let ((value (assoc var binds)))
         (if (not value)
@@ -79,85 +110,105 @@
             (substitute-vars (cdr value) binds)))
       var))
 
-(defun gen-var (&optional base)
-  "Returns a newly generated unique var."
-  (gensym (or base "?VAR-")))
-
-(defun is-genvar (var)
-  "Returns true if the symbol has been generated with gen-var."
-  (and (symbolp var)
-       (not (symbol-package var))))
-
-(defun add-bdg (var val bdgs)
-  "Adds a variable binding to the bindings list."
-  (if (is-unnamed-var var)
-      (values bdgs t)
-      (let ((old-bdg (assoc var bdgs)))
-        (if old-bdg
-            (and (equal (cdr old-bdg) val)
-                 (values bdgs t))
-            (values (cons `(,var . ,val) bdgs) t)))))
-
 (defun match-segvar (pat seq bdgs continuation)
-  "Matches a segvar. The continuation is a recursively called function
-   that matches the forms after the segform. (TODO: explain better)"
+  "Matches a segvar. The continuation is a recursively called function that
+   matches the forms after the segform. (TODO: explain better)"
   (labels ((collect-segval (&optional (seq seq) (content nil))
              (multiple-value-bind (new-bdgs matched?)
                  (funcall continuation (cdr pat) seq bdgs)
                (if (and (not matched?) seq)
                    (collect-segval (cdr seq) `(,@content ,(car seq)))
-                   (values new-bdgs content)))))
+                   (values matched? new-bdgs content)))))
     (if (endp (cdr pat))
-        (add-bdg (var-name (car pat)) seq bdgs)
-        (multiple-value-bind (new-bdgs content)
+        (if (proper-list-p seq) ;; seg-var is guarantued to be a list if it matches
+            (add-bdg (var-name (car pat)) seq bdgs)
+            (values nil nil))
+        (multiple-value-bind (success? new-bdgs content)
             (collect-segval)
-          (when new-bdgs
-            (add-bdg (var-name (car pat)) content new-bdgs))))))
+          (if success?
+              (add-bdg (var-name (car pat)) content new-bdgs)
+              (values nil nil))))))
 
 (defun pat-match (pat seq &optional (bdgs nil) &rest rest)
   "Match a pattern."
   (unless (listp bdgs)
     (push bdgs rest)
     (setf bdgs nil))
+  (when (or (is-segvar seq) (is-var seq))
+    (error "Found variable ~a on right hand side of pattern match." seq))
   (destructuring-bind (&key (test #'eql)) rest
     (cond ((is-var pat)
            (add-bdg (var-name pat) seq bdgs))
-          ((and (atom pat) (atom seq)
-                (funcall test pat seq))
-           (values bdgs t))
+          ((is-segvar pat)
+           (error "Segvar ~a must be car of a cons-cell." pat))
+          ((and (atom pat) (atom seq))
+           (if (funcall test pat seq)
+               (values bdgs t)
+               (values nil nil)))
           ((is-segform pat)
            (match-segvar pat seq bdgs (rcurry #'pat-match :test test)))
           ((and (consp pat) (consp seq))
            (multiple-value-bind (new-bdgs matched?)
                (pat-match (car pat) (car seq) bdgs :test test)
-             (and matched? (pat-match (cdr pat) (cdr seq) new-bdgs
-                                      :test test)))))))
+             (if matched?
+                 (pat-match (cdr pat) (cdr seq) new-bdgs :test test)
+                 (values nil nil))))
+          (t (values nil nil)))))
 
 (defun pat-match-p (pat seq &optional (bdgs nil) &rest rest)
   "Pattern matching predicate. Does not return bdgs but only T or nil,
   indicating if the pattern matches."
-  (cdr (multiple-value-list (apply #'pat-match pat seq bdgs rest))))
+  (cadr (multiple-value-list (apply #'pat-match pat seq bdgs rest))))
+
+;;; NOTE #demmeln: Some of the following functions do not handle segvars at
+;;; all. Should they?
 
 (defun vars-in (pat)
-  "Returns the variables in pattern."
+  "Returns a list of all variables in pattern (without duplicates)."
   (labels ((worker (&optional (pat pat) (vars nil))
-             (if (null pat)
-                 vars
-                 (worker (cdr pat)
-                         (cond ((listp (car pat))
-                                (worker (car pat) vars))
-                               ((is-var (car pat))
-                                (cons (car pat) vars))
-                               (t
-                                vars))))))
+             (cond ((consp pat)
+                    (worker (cdr pat) (worker (car pat) vars)))
+                   ((and (is-var pat)
+                         (not (member pat vars)))
+                    (cons pat vars))
+                   (t
+                    vars))))
     (worker)))
 
-(defmacro with-vars-bound (pat seq &body body)
-  (with-gensyms (bdgs)
-    `(let ((,bdgs (pat-match ',pat ,seq)))
-       (unless ,bdgs
-         (error "Pattern does not match."))
-       (let ,(mapcar (lambda (var)
-                       `(,var (var-value ',var ,bdgs)))
-                     (vars-in pat))
+(defmacro with-vars-bound (vars bdg &body body)
+  (with-gensyms (g-bdg)
+    `(let ((,g-bdg ,bdg))
+       (let ,(loop for var in vars
+                collecting `(,var (var-value ',var ,g-bdg)))
          ,@body))))
+
+(defmacro with-pat-vars-bound (pat seq &body body)
+  "Evaluates `body' in a context where all the variables in `pat' are bound to
+   their binding resulting from calling PAT-MATCH on `pat' and `seq'. Throws
+   an error, if the pattern match fails. `pat' is not evaluated, whereas `seq'
+   is evaluated."
+  (with-gensyms (bdgs matched? g-seq)
+    `(let ((,g-seq ,seq))
+       (multiple-value-bind (,bdgs ,matched?) (pat-match ',pat ,g-seq)
+         (unless ,matched?
+           (error "Pattern ~a does not match ~a in with-pat-vars-bound."
+                  ',pat ,g-seq))
+         (unless ,bdgs
+           (warn "Pattern ~a does not contain any variables in with-pat-vars-bound"
+                 ',pat))
+         (let ,(mapcar (lambda (var)
+                         `(,var (var-value ',var ,bdgs)))
+                       (vars-in pat))
+           ,@body)))))
+
+(defun is-bound (pat bdgs)
+  "Returns NIL if pat is a variable that is either not bound or bound to an
+   unbound variable, T otherwise."
+  (not (and (is-var pat)
+            (is-var (var-value pat bdgs)))))
+
+(defun is-ground (pat bdgs)
+  "Returns NIL if pat is a pattern with unbound parts, T otherwise. A pattern
+   contains unbound parts, if it contains an unbound variable, or if it
+   contains a variable bound to a pattern with unbound parts."
+  (null (vars-in (substitute-vars pat bdgs))))

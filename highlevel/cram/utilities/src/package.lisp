@@ -28,15 +28,16 @@
 ;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
-
 (in-package :cl-user)
 
 (defpackage :cram-utilities
-  (:use #:common-lisp)
+  (:use #:common-lisp
+        #:portable-threads
+        #:alexandria)
   (:nicknames :cut)
-  (:import-from #:alexandria
-                #:curry #:rcurry #:with-gensyms)
   (:export
+   ;; clos
+   #:hooks
    ;; lazy
    #:delay #:force #:lazy-list #:lazy-list-p
    #:lazy-car #:lazy-cdr #:lazy-mapcar #:lazy-mapcan
@@ -45,10 +46,20 @@
    ;; patmatch
    #:is-var #:is-unnamed-var #:is-segvar #:is-segform #:var-name
    #:substitute-vars #:var-value #:gen-var #:is-genvar #:add-bdg
-   #:pat-match #:pat-match-p #:vars-in #:with-vars-bound
+   #:pat-match #:pat-match-p #:vars-in #:with-pat-vars-bound
+   #:with-vars-bound #:?_ #:!?_ #:is-bound #:is-ground
    #:match-segvar
    ;; data-pool
    #:make-data-pool #:new-pool-value #:pool-value
    #:delete-pool-value
+   ;; math
+   #:sample #:sample-discrete
    ;; utils
-   #:map-tree #:pop-if!))
+   #:map-tree #:pop-if! :function-bound-feature #:flip
+   #:string-case
+   ;; ts-queue
+   #:ts-queue #:make-ts-queue #:ts-queue-clear #:ts-queue->list #:ts-queue-empty?
+   #:ts-enqueue #:ts-dequeue
+   ;; time
+   #:current-timestamp #:set-default-timestamp-function #:set-timestamp-function
+   #:time-value-p))

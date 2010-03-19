@@ -35,9 +35,9 @@
   (:nicknames :desig)
   (:import-from #:alexandria
                 #:curry #:rcurry #:compose #:with-gensyms)
-  (:export #:designator #:description #:parent #:children
-           #:valid #:data
-           #:equate #:reference #:next-solution
-           #:register-designator-type #:make-designator
-           #:original-desig #:youngest-children #:merge-designators
-           #:with-desig-props #:with-designators #:desig-prop-value) )
+  (:export #:designator #:timestamp #:description #:parent #:successor
+           #:valid #:data #:equate #:desig-equal #:reference
+           #:next-solution #:register-designator-type
+           #:make-designator #:first-desig #:current-desig
+           #:with-desig-props #:with-designators
+           #:desig-prop-value #:*designator-pprint-description*) )

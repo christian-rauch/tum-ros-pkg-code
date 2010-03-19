@@ -17,13 +17,15 @@
   ((:module "tests"
             :components ((:file "package")
                          (:file "test-utils")
+                         (:file "suite")
                          (:file "walker")
                          (:file "fluents")
-                         (:file "language-base"))
+                         (:file "language-base")
+                         (:file "execution-trace"))
             :serial t)))
 
 (defmethod asdf:perform ((o asdf:test-op)
                          (c (eql (asdf:find-system 'cram/language-tests))))
   (flet ((symbol (pkg name)
-	   (intern (string name) (find-package pkg))))
-    (funcall (symbol :5am :run!) (symbol :cpl-tests :language-base))))
+           (intern (string name) (find-package pkg))))
+    (funcall (symbol :5am :run!) (symbol :cpl-tests :language))))

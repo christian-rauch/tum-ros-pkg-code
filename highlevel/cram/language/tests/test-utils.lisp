@@ -37,7 +37,7 @@
 
 (defgeneric barrier-wait (barrier &key timeout))
 
-(defmethod initialize-instance :after ((barrier barrier) &key &allow-other-keys)
+(defmethod initialize-instance :after ((barrier barrier) &key)
   (with-slots (lock waitqueue) barrier
     (setf lock (make-lock))
     (setf waitqueue (make-condition-variable :lock lock))))

@@ -66,11 +66,12 @@
   (nconc fact-group `((,fact-pattern . ,fact-body))))
 
 (defmacro def-fact-group (fact-group-name &body facts)
-  `(macrolet ((<- (fact &body fact-code)
-                `(setf fact-group (add-fact fact-group ',fact ',fact-code))))
-     (let ((fact-group (create-fact-group ',fact-group-name)))
-       ,@facts
-       (add-fact-group ',fact-group-name fact-group))))
+  (let ((fact-group (gensym "FACT-GROUP-")))
+    `(macrolet ((<- (fact &body fact-code)
+                  `(setf ,',fact-group (add-fact ,',fact-group ',fact ',fact-code))))
+       (let ((,fact-group (create-fact-group ',fact-group-name)))
+         ,@facts
+         (add-fact-group ',fact-group-name ,fact-group)))))
 
 (defun find-fact-if (predicate)
   "Searches for a fact matching the predicate and returns it. nil

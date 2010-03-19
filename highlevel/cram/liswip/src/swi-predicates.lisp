@@ -52,7 +52,7 @@
            *swi-predicates* :key #'callback-symbol))
 
 (defun register-swi-predicates ()
-  (when (member sb-thread:*current-thread* *initialized-threads*)
+  (when *liswip-initialized*
     (loop for swi-predicate in *swi-predicates*
        unless (registered swi-predicate) do
        (if (module swi-predicate)

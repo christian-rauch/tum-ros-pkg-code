@@ -11,7 +11,7 @@
   :license "BSD"
   :description "CFFI-Based Common Lisp <-> SWI Prolog interface."
 
-  :depends-on (:cffi :cram/utilities :trivial-garbage)
+  :depends-on (:cffi :cram/utilities :trivial-garbage :sb-posix)
 
   :components
   ((:module "src"

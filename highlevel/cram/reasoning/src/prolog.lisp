@@ -28,30 +28,47 @@
 ;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
-
 (in-package :crs)
+
+;;; NOTE: Unify cannot deal with infinite bindigns. For example evaluating
+;;; (var-value '?x (unify '?x '(1 . ?x))) will cause a stack overflow. Now
+;;; occurs check happens.
+
+;;; NOTE: #demmeln: Unify cannot cope with some uses of segvars. Avoid using
+;;; it in prolog/unify (it warns when segvars are used). Also some helper
+;;; functions (filter-bindings, rename-vars, substitue-vars, var-value,
+;;; add-bdg, with-vars-bound, with-pat-vars-bound, vars-in, is-bound,
+;;; is-ground etc) don't implement segvars correctly at the moment.
 
 (defun unify (lhs rhs &optional bdgs)
   "Unifiy two forms."
   (let ((lhs (substitute-vars lhs bdgs))
         (rhs (substitute-vars rhs bdgs)))
-    (cond ((or (and (atom lhs) (atom rhs)
+    (cond ((or (is-segvar lhs) (is-segvar rhs))
+           (error "Found segvar that is not in car of a cons-cell while unifying ~a and ~a"
+                  lhs rhs))
+          ((or (and (atom lhs) (atom rhs)
                     (eql lhs rhs))
-               (and (not lhs) (not rhs)))
+               (is-unnamed-var lhs)
+               (is-unnamed-var rhs))
            (values bdgs t))
           ((is-var lhs)
            (add-bdg lhs rhs bdgs))
           ((is-var rhs)
            (add-bdg rhs lhs bdgs))
           ((is-segform lhs)
+           (warn "Using segvars in unify... This is not implementet properly at the moment.")
            (match-segvar lhs rhs bdgs #'unify))
           ((is-segform rhs)
+           (warn "Using segvars in unify... This is not implementet properly at the moment.")
            (match-segvar rhs lhs bdgs #'unify))
           ((and (consp lhs) (consp rhs))
            (multiple-value-bind (new-bdgs matched?)
                (unify (car lhs) (car rhs) bdgs)
-             (when matched?
-               (unify (cdr lhs) (cdr rhs) new-bdgs)))))))
+             (if matched?
+                 (unify (cdr lhs) (cdr rhs) new-bdgs)
+                 (values nil nil))))
+          (t (values nil nil)))))
 
 (defun prove-one (goal binds)
   (let ((handler (get-prolog-handler (car goal))))
@@ -80,16 +97,9 @@
                        result)))))))
 
 (defun rename-vars (fact-definition)
-  (let* ((replacements nil)
-         (new-fact-header
-          (map-tree (lambda (q)
-                      (if (and (is-var q) (not (is-unnamed-var q)))
-                          (or (cdr (assoc q replacements))
-                              (cdar (push (cons q (gen-var))
-                                          replacements)))
-                          q))
-                    (car fact-definition))))
-    (cons new-fact-header (sublis replacements (cdr fact-definition)))))
+  (sublis (mapcar (lambda (x) (cons x (gen-var (format nil "~a-" x))))
+                  (remove '?_ (vars-in fact-definition)))
+          fact-definition))
 
 (defun filter-bindings (form bdgs &optional initial-bdgs)
   "Removes all bindings from bdgs that are not used in form."
