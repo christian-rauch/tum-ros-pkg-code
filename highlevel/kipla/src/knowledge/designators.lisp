@@ -1,5 +1,5 @@
 ;;;
-;;; Copyright (c) 2010, Lorenz Moesenlechner <moesenle@in.tum.de>
+;;; Copyright (C) 2009 by Nikolaus Demmel <demmeln@cs.tum.edu>
 ;;; All rights reserved.
 ;;; 
 ;;; Redistribution and use in source and binary forms, with or without
@@ -27,12 +27,33 @@
 ;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
-(in-package :kipla)
+(in-package :kipla-reasoning)
 
-(defun run-demo-counter-to-table ()
-  (startup-ros)
-  (pick-and-place-icetea&jug-2))
+(macrolet ((def-desig-accessor (slot &optional (predicate-name nil))
+             (let* ((predicate-name (or predicate-name slot))
+                    (name (format-symbol t "DESIG-~a" predicate-name))
+                    (var (format-symbol t "?~a" predicate-name)))
+               `(<- (,name ?desig ,var)
+                  (bound ?desig)
+                  (get-slot-value ?desig ,slot ,var)))))
+  (def-fact-group designator-accessors
+    ;; DESIG-TIMESTAMP
+    (def-desig-accessor timestamp)
+    ;; DESIG-DESCRIPTION
+    (def-desig-accessor description)
+    ;; DESIG-VALID
+    (def-desig-accessor valid)
+    ;; DESIG-VALUE
+    (def-desig-accessor data value)))
 
-(defun run-demo-table-to-counter ()
-  (startup-ros)
-  (pick-and-place-icetea&jug))
+(def-fact-group designators
+  (<- (desig-prop ?desig (?prop-name ?prop))
+    (bound ?desig)
+    (bound ?prop-name)
+    (lisp-fun desig-prop-value ?desig ?prop-name ?prop)
+    (lisp-pred identity ?prop))
+  
+  (<- (desig-equal ?d1 ?d2)
+    (bound ?d1)
+    (bound ?d2)
+    (lisp-pred desig-equal ?d1 ?d2)))

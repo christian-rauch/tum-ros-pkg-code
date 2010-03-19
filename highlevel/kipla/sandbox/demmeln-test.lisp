@@ -20,16 +20,17 @@
 (sb-ext:restrict-compiler-policy 'debug 2)
 
 #+nil
-(let ((cpl::*task-tree* (gethash 'my-grand-plan cpl::*top-level-plan-task-trees*)))
-         (force-ll (prolog '(holds (task-status ?task ?status) ?t))))
+(force-ll (prolog '(holds (task-status ?task ?status) ?t)))
 
 #+nil
-(let ((cpl::*task-tree* (gethash 'my-grand-plan cpl::*top-level-plan-task-trees*)))
-         (force-ll (prolog '(task-goal ?task-goal ?goal))))
+(force-ll (prolog '(task-goal ?task ?goal)))
 
 (def-plan fix (what)
   (case what
-    (:prolog (/= 0 (random 2)))
+    (:prolog
+     (par (:tag fixing-foo :foo)
+          (:tag fixing-bar :bar))
+     (/= 0 (random 2)))
     (otherwise nil)))
 
 (def-goal (achieve (happy ?person))
@@ -56,12 +57,13 @@
   (with-failure-handling
       ((simple-plan-error (f)                         
          (declare (ignore f))
-         (log-msg :warn "Oh no. Plan failed!")
+         (log-msg :info "Oh no. Plan failed!")
          (return)))
     (achieve '(happy :lenz))))
 
 (defun run-demmeln-test ()
-  (cpl::set-make-logging-fluent t)
+  (setf roslisp::*ros-log-stream* *standard-output*)
+  (cpl-impl::set-make-tracing-fluent t)
   (retract-occasion '(happy :lenz))
-  (top-level (my-grand-plan))
-  (gethash 'my-grand-plan cpl::*top-level-plan-task-trees*))
+  (my-grand-plan)
+  (cet:get-top-level-episode-knowledge 'my-grand-plan))

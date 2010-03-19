@@ -1,18 +1,31 @@
-;;; KiPla - Cognitive kitchen planner and coordinator
-;;; Copyright (C) 2009 by Lorenz Moesenlechner <moesenle@cs.tum.edu>
 ;;;
-;;; This program is free software; you can redistribute it and/or modify
-;;; it under the terms of the GNU General Public License as published by
-;;; the Free Software Foundation; either version 3 of the License, or
-;;; (at your option) any later version.
+;;; Copyright (c) 2010, Lorenz Moesenlechner <moesenle@in.tum.de>
+;;; All rights reserved.
+;;; 
+;;; Redistribution and use in source and binary forms, with or without
+;;; modification, are permitted provided that the following conditions are met:
+;;; 
+;;;     * Redistributions of source code must retain the above copyright
+;;;       notice, this list of conditions and the following disclaimer.
+;;;     * Redistributions in binary form must reproduce the above copyright
+;;;       notice, this list of conditions and the following disclaimer in the
+;;;       documentation and/or other materials provided with the distribution.
+;;;     * Neither the name of Willow Garage, Inc. nor the names of its
+;;;       contributors may be used to endorse or promote products derived from
+;;;       this software without specific prior written permission.
+;;; 
+;;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+;;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+;;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+;;; ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+;;; LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+;;; CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+;;; SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+;;; INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+;;; CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+;;; ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
-;;; This program is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;;; GNU General Public License for more details.
-;;;
-;;; You should have received a copy of the GNU General Public License
-;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (in-package :kipla-reasoning)
 
@@ -51,10 +64,13 @@
 (defun calculate-put-down-end-effector-lo (supporting obj)
   (assert (typep supporting 'location-designator))
   (assert (typep obj 'object-designator))
-  (with-desig-props (at) obj
-    (let ((z-dist (jlo:component-distance (perceived-object-jlo (reference obj)) (reference at) :axis :z))
-          (base->supporting (jlo:frame-query (jlo:make-jlo :name "/base_link") (reference supporting))))
-      (incf (jlo:pose base->supporting 2 3) (+ z-dist 0.01)))))
+  (reference supporting)
+  ;; (with-desig-props (at) obj
+  ;;   (let ((z-dist (jlo:component-distance (perceived-object-pose (reference obj)) (reference at) :axis :z))
+  ;;         (base->supporting (jlo:frame-query (jlo:make-jlo :name "/base_link") (reference supporting))))
+  ;;     (incf (jlo:pose base->supporting 2 3) (+ z-dist 0.01))
+  ;;     base->supporting))
+  )
 
 ;;; Possible trajectory configs:
 ;;; (to grasp)
@@ -79,6 +95,9 @@
 
   (<- (grasp-info ?obj "front" "3pinch" 0.04)
     (desig-prop ?obj (type coke)))
+
+  (<- (grasp-info ?obj "Cluster" "3pinch" 0.04)
+    (desig-prop ?obj (type cluster)))
   
   (<- (action-desig ?desig ?act)
     (manip-desig? ?desig)
@@ -118,12 +137,21 @@
 
   (<- (action-desig ?desig ?act)
     (manip-desig? ?desig)
+    (desig-prop ?desig (to show))
+    (desig-prop ?desig (side ?side))
+    (instance-of trajectory-action ?act)
+    (slot-value ?act side ?side)
+    (slot-value ?act trajectory-type "arm_cart_pose")
+    (slot-value ?act stored-pose-type "show"))
+  
+  (<- (action-desig ?desig ?act)
+    (manip-desig? ?desig)
     (desig-prop ?desig (to lift))
     (desig-prop ?desig (side ?side))
     (instance-of trajectory-action ?act)
     (slot-value ?act side ?side)
     (slot-value ?act trajectory-type "lift")
-    (slot-value ?act grasp-distance 0.20))
+    (slot-value ?act grasp-distance 0.10))
 
   (<- (action-desig ?desig ?act)
     (manip-desig? ?desig)

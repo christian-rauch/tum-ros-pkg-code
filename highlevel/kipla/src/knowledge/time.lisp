@@ -1,55 +1,69 @@
-;;; KiPla - Cognitive kitchen planner and coordinator
-;;; Copyright (C) 2009 by Nikolaus Demmel <demmeln@cs.tum.edu>
 ;;;
-;;; This program is free software; you can redistribute it and/or modify
-;;; it under the terms of the GNU General Public License as published by
-;;; the Free Software Foundation; either version 3 of the License, or
-;;; (at your option) any later version.
+;;; Copyright (c) 2010, Lorenz Moesenlechner <moesenle@in.tum.de>
+;;; All rights reserved.
+;;; 
+;;; Redistribution and use in source and binary forms, with or without
+;;; modification, are permitted provided that the following conditions are met:
+;;; 
+;;;     * Redistributions of source code must retain the above copyright
+;;;       notice, this list of conditions and the following disclaimer.
+;;;     * Redistributions in binary form must reproduce the above copyright
+;;;       notice, this list of conditions and the following disclaimer in the
+;;;       documentation and/or other materials provided with the distribution.
+;;;     * Neither the name of Willow Garage, Inc. nor the names of its
+;;;       contributors may be used to endorse or promote products derived from
+;;;       this software without specific prior written permission.
+;;; 
+;;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+;;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+;;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+;;; ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+;;; LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+;;; CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+;;; SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+;;; INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+;;; CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+;;; ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
-;;; This program is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;;; GNU General Public License for more details.
-;;;
-;;; You should have received a copy of the GNU General Public License
-;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (in-package :kipla-reasoning)
 
 (def-fact-group time
 
-  (<- (is-bound-time ?t)
-    (is-bound ?t)
+  (<- (bound-time ?t)
+    (bound ?t)
     (lisp-pred time-value-p ?t))
 
-  ;; NOTE: (throughout a b) -> including a, including b
-  ;; #demmeln: should it be excluding b?
+  ;; NOTE:
+  ;; (throughout a b) -> including a, excluding b
+  ;; (during a b) -> including a, excluding b
   
   (<- (duration-includes (throughout ?t1 ?t2) (at ?a))
-    (is-bound-time ?t1)
-    (is-bound-time ?t2)
-    (is-bound-time ?a)
-    (and (<= ?t1 ?a) (<= ?a ?t2)))
+    (bound-time ?t1)
+    (bound-time ?t2)
+    (bound-time ?a)
+    (and (<= ?t1 ?a) (< ?a ?t2)))
   
   (<- (duration-includes (throughout ?t1 ?t2) (at ?a))
-    (is-bound-time ?t1)
-    (is-bound-time ?t2)
-    (not (is-bound ?a))
+    (bound-time ?t1)
+    (bound-time ?t2)
+    (not (bound ?a))
     (== ?a ?t1))
 
    (<- (duration-includes (throughout ?t1 ?t2) (throughout ?a ?b))
-    (is-bound-time ?t1)
-    (is-bound-time ?t2)
-    (is-bound-time ?a)
-    (is-bound-time ?b)
-    (and (<= ?t1 ?a) (<= ?a ?b) (<= ?b ?t2)))
+    (bound-time ?t1)
+    (bound-time ?t2)
+    (bound-time ?a)
+    (bound-time ?b)
+    (and (<= ?t1 ?a) (< ?a ?b) (<= ?b ?t2)))
 
    (<- (duration-includes (throughout ?t1 ?t2) (during ?a ?b))
-    (is-bound-time ?t1)
-    (is-bound-time ?t2)
-    (is-bound-time ?a)
-    (is-bound-time ?b)
-    (and (<= ?t1 ?b) (<= ?a ?b) (<= ?a ?t2)))) 
+    (bound-time ?t1)
+    (bound-time ?t2)
+    (bound-time ?a)
+    (bound-time ?b)
+    (and (< ?t1 ?b) (< ?a ?b) (< ?a ?t2)))) 
 
 ;;; An attempt to a more general time handling follows. Turned out not
 ;;; so general and not at all elegant, maybe something emerges in the
@@ -60,65 +74,65 @@
      (== ?x :foo))
   
    (<- (time-includes (throughout ?a ?b) ?t)
-     (is-bound ?a) (is-bound ?b)
+     (bound ?a) (bound ?b)
      (lisp-pred time-value-p ?a)
      (lisp-pred time-value-p ?b)
      (time-includes-throughout-helper ?a ?b ?t))
   
    (<- (time-includes-throughout-helper ?a ?b (throughout ?x ?y))
-     (is-bound ?x) (is-bound ?y)
+     (bound ?x) (bound ?y)
      (lisp-pred time-value-p ?x)
      (lisp-pred time-value-p ?y)
      (lisp-pred <= ?a ?x)
      (lisp-pred <= ?y ?b))
 
    (<- (time-includes-throughout-helper ?a ?b (throughout ?x ?y))
-     (is-bound ?x) (not (is-bound ?y))
+     (bound ?x) (not (bound ?y))
      (lisp-pred time-value-p ?x)
      (lisp-pred <= ?a ?x)
      (== ?b ?y))
 
    (<- (time-includes-throughout-helper ?a ?b (throughout ?x ?y))
-     (not (is-bound ?x)) (is-bound ?y)
+     (not (bound ?x)) (bound ?y)
      (lisp-pred time-value-p ?y)
      (lisp-pred <= ?y ?b)
      (== ?a ?x))
 
    (<- (time-includes-throughout-helper ?a ?b (throughout ?x ?y))
-     (not (is-bound ?x)) (not (is-bound ?y))
+     (not (bound ?x)) (not (bound ?y))
      (== ?b ?y)
      (== ?a ?x))
 
    (<- (time-includes-throughout-helper ?a ?b (during ?x ?y))
-     (is-bound ?x) (is-bound ?y)
+     (bound ?x) (bound ?y)
      (lisp-pred time-value-p ?x)
      (lisp-pred time-value-p ?y)
      (lisp-pred <= ?x ?b)
      (lisp-pred <= ?a ?y))
 
    (<- (time-includes-throughout-helper ?a ?b (during ?x ?y))
-     (is-bound ?x) (not (is-bound ?y))
+     (bound ?x) (not (bound ?y))
      (lisp-pred time-value-p ?x)
      (lisp-pred <= ?x ?b)
      (lisp-fun get-max-time ?y))
 
    (<- (time-includes-throughout-helper ?a ?b (during ?x ?y))
-     (not (is-bound ?x)) (is-bound ?y)
+     (not (bound ?x)) (bound ?y)
      (lisp-pred time-value-p ?y)
      (lisp-pred <= ?a ?y)
      (lisp-fun get-min-time ?x))
 
    (<- (time-includes-throughout-helper ?a ?b (during ?x ?y))
-     (not (is-bound ?x)) (not (is-bound ?y))
+     (not (bound ?x)) (not (bound ?y))
      (lisp-fun get-min-time ?x)
      (lisp-fun get-max-time ?y))
 
    (<- (time-includes-throughout-helper ?a ?b (at ?t))
-     (is-bound ?t)
+     (bound ?t)
      (lisp-pred time-value-p ?t)
      (lisp-pred <= ?a ?t)
      (lisp-pred <= ?t ?b))
 
    (<- (time-includes-throughout-helper ?a ?b (at ?t))
-     (not (is-bound ?t))
+     (not (bound ?t))
      (== ?t ?a)))

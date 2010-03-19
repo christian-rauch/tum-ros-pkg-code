@@ -27,12 +27,15 @@
 ;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
-(in-package :kipla)
+(in-package :kipla-reasoning)
 
-(defun run-demo-counter-to-table ()
-  (startup-ros)
-  (pick-and-place-icetea&jug-2))
+(defclass designator-id-mixin ()
+  ((object-id :initarg :object-id :initform (gensym "OBJ-DESIG-")
+              :reader object-id)))
 
-(defun run-demo-table-to-counter ()
-  (startup-ros)
-  (pick-and-place-icetea&jug))
+(defmethod equate :after ((parent designator-id-mixin) (succ designator-id-mixin))
+  (labels ((doit (curr-d &optional (id (slot-value curr-d 'object-id)))
+             (when curr-d
+               (setf (slot-value curr-d 'object-id) id)
+               (doit (successor curr-d) id))))
+    (doit (first-desig parent))))

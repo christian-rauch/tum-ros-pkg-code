@@ -1,112 +1,184 @@
-;;; KiPla - Cognitive kitchen planner and coordinator
-;;; Copyright (C) 2009 by Lorenz Moesenlechner <moesenle@cs.tum.edu>
 ;;;
-;;; This program is free software; you can redistribute it and/or modify
-;;; it under the terms of the GNU General Public License as published by
-;;; the Free Software Foundation; either version 3 of the License, or
-;;; (at your option) any later version.
+;;; Copyright (c) 2010, Lorenz Moesenlechner <moesenle@in.tum.de>
+;;; All rights reserved.
+;;; 
+;;; Redistribution and use in source and binary forms, with or without
+;;; modification, are permitted provided that the following conditions are met:
+;;; 
+;;;     * Redistributions of source code must retain the above copyright
+;;;       notice, this list of conditions and the following disclaimer.
+;;;     * Redistributions in binary form must reproduce the above copyright
+;;;       notice, this list of conditions and the following disclaimer in the
+;;;       documentation and/or other materials provided with the distribution.
+;;;     * Neither the name of Willow Garage, Inc. nor the names of its
+;;;       contributors may be used to endorse or promote products derived from
+;;;       this software without specific prior written permission.
+;;; 
+;;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+;;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+;;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+;;; ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+;;; LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+;;; CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+;;; SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+;;; INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+;;; CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+;;; ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
-;;; This program is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;;; GNU General Public License for more details.
-;;;
-;;; You should have received a copy of the GNU General Public License
-;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (in-package :kipla)
 
 (define-condition object-not-found (plan-error)
   ((object-desig :initarg :object-desig :initform nil :reader object-not-found-desig)))
 
-(defun cop-search-for-object (query-info)
-  (labels (;; (check-object-in-range (ref-lo lo range)
-           ;;   (format t "check-obj-in-range~%")
-           ;;   (< (jlo:euclidean-distance ref-lo lo) range))
-           (get-anchored-clusters ()
-             (setf (value *cop-output-queue*) nil)
-             (with-designators ((clusters (object '((type cluster) (matches 10)))))
-               (let ((query-info (cop-desig-info-query (resolve-object-desig clusters :cop))))
-                 (setf (cop-desig-query-info-poses query-info)
-                       (list (jlo:make-jlo :name "/RightEyeCalc")))
-                 (cop-query query-info))
-               (wait-for *cop-output-queue*)
-               (let ((cop-reply (pop (value *cop-output-queue*))))
-                 (assert (equal (vision_msgs-msg:error-val cop-reply) ""))
-                 (mapcar (alexandria:compose #'update-belief #'cop-reply->object)
-                         (map 'list #'identity (vision_msgs-msg:found_poses-val cop-reply)))
-                 ;; (mapcar (alexandria:compose #'update-belief #'cop-reply->object)
-                 ;;         (remove-if-not
-                 ;;          (lambda (cop-reply)
-                 ;;            (format t "cop-reply: ~a~%" cop-reply)
-                 ;;            (check-object-in-range "/RightEyeCalc" (vision_msgs-msg:position-val cop-reply)
-                 ;;                                   (gethash :max-object-distance *cop-parameters*)))
-                 ;;          (map 'list #'identity (vision_msgs-msg:found_poses-val cop-reply))))
-                 )))
-           (get-anchored-objs (query-info &optional cluster)
-             (setf (value *cop-output-queue*) nil)
-             (when cluster
-               (setf (cop-desig-query-info-poses query-info)
-                     (list (perceived-object-jlo cluster))))
-             (cop-query query-info)
-             (wait-for *cop-output-queue* :handle-missed-pulses :never)
-             (let ((cop-reply (pop (value *cop-output-queue*))))
-               (when (and cop-reply (equal (vision_msgs-msg:error-val cop-reply) ""))
-                 (mapcar (alexandria:compose (rcurry #'update-belief cluster) #'cop-reply->object)
-                         (map 'list #'identity (vision_msgs-msg:found_poses-val cop-reply))
-                         ;; (remove-if-not (lambda (lo)
-                         ;;                  (check-object-in-range "/RightEyeCalc" lo
-                         ;;                                         (gethash :max-object-distance *cop-parameters*)))
-                         ;;                (map 'list #'identity (vision_msgs-msg:found_poses-val cop-reply)))
-                         )))))
-    (handler-case
-        (cond ((cop-desig-query-info-poses query-info)
-               (car (sort (get-anchored-objs query-info query-info) 
-                          #'> :key #'perceived-object-probability)))
-              (t
-               (car (sort (loop for cluster in (get-anchored-clusters)
-                             appending (get-anchored-objs query-info cluster)) 
-                          #'> :key #'perceived-object-probability))))
-      (error (e)
-        (declare (ignore e))
-        nil))))
+(defgeneric object-search-function (type desig &optional perceived-object)
+  (:documentation "A function that performs a search of an object of a
+                   specific type. `desig' is the designator describing
+                   the object and `perceived-object' contains a
+                   previously found object of the same properties."))
 
-(defun cop-result->designator (desig obj)
-  (let ((new-desig (make-designator 'object (description desig) desig)))
+(defun execute-object-search-function (desig &optional perceived-object)
+  "Executes the matching search function that fits the type property
+   of `desig'. `perceived-object' is an optional instance that
+   previously matched the object."
+  (with-desig-props (type) desig
+    (assert type () "Designator must contain a type.")
+    (object-search-function type desig perceived-object)))
+
+(defun perceived-object->designator (desig obj &optional parent-desig)
+  (let ((new-desig (make-designator 'object
+                                    (merge-desig-descriptions
+                                     (description desig)
+                                     (perceived-object-properties obj)))))
     ;; Todo: Merge the object properties with the desinator's props
     ;; Todo: Use weak references here to make desigs gc-able
-    (cond ((null (perceived-object-desig obj))
-           (setf (perceived-object-desig obj) new-desig))
-          ((not (equate desig (perceived-object-desig obj)))
-           ;; Designators seem to reference the same object but cannot
-           ;; be equated yet. Allign them so that they can be equated
-           ;; in the future.
-           (push (original-desig desig) (children (perceived-object-desig obj)))))
-    (setf (slot-value new-desig 'data)
-          obj)
+    (assert (null (perceived-object-desig obj)) ()
+            "Cannot bind a perceived-object when it's already bound.")
+    (setf (perceived-object-desig obj) new-desig)
+    (setf (slot-value new-desig 'data) obj)
     (setf (slot-value new-desig 'valid) t)
+    (when parent-desig
+      (equate parent-desig new-desig))
+    (assert-desig-binding new-desig obj)
     new-desig))
+
+(defun find-with-parent-desig (desig production-name)
+  "Takes the perceived-object of the parent designator as a bias for
+   perception and equates with the designator if possible. Fails
+   otherwise."
+  (let* ((parent-desig (current-desig desig))
+         (perceived-object (desig-current-perceived-object parent-desig))
+         (perceived-objects nil))
+    (assert perceived-object)
+    (or
+     (crs:with-production-handlers
+         ((production-name (op &key ?perceived-object)
+            (when (eq op :assert)
+              (pushnew ?perceived-object perceived-objects))))
+       ;; We ignore objects that have already been perceived
+       ;; since we got the info we are interested in already
+       ;; (by the desig's reference) Note: Later, when falling
+       ;; back to the default search, this information _is_
+       ;; used, but in FIND-WITH-NEW-DESIG
+       (setf perceived-objects nil)
+       (execute-object-search-function parent-desig perceived-object)
+       (when perceived-objects
+         (list (perceived-object->designator parent-desig
+                                             (car (sort perceived-objects #'>
+                                                        :key #'perceived-object-probability))
+                                             parent-desig))))
+      ;; Ok. No object found so far. We need to use our fallback
+      ;; solution.  It is like searching with a new designator, but we
+      ;; need to asure that the result is not bound to any other
+      ;; designator than ours. We first create a new desig with the same
+      ;; properties as ours, check for the result designator not
+      ;; having any other ancestor and then equating `desig' with the
+      ;; new one.
+      (let* ((tmp-desig (make-designator 'object (description parent-desig)))
+             (result (find-with-new-desig tmp-desig production-name))
+             (matching-result-desig (find-if (curry #'desig-equal parent-desig) result)))
+        (unless matching-result-desig
+          (when perceived-object
+            (setf (slot-value parent-desig 'data) nil)
+            (retract-desig-binding parent-desig perceived-object))
+          (fail 'object-not-found :object-desig parent-desig))
+        matching-result-desig))))
+
+(defun find-with-new-desig (desig production-name)
+  "Takes a parent-less designator. A search is performed a new
+   designator is generated for every object that has been found. If a
+   found object matches a previously found object, the new desingator
+   and the previous one are equated. Please note that although the new
+   designator might be equated to old ones, it is not equated to
+   `desig' yet. This decision must be made by the caller of the
+   process module."
+  (let ((perceived-objects nil)
+        (previous-perceived-objects nil))
+    (crs:with-production-handlers
+        ((production-name (op &key ?perceived-object)
+           (when (eq op :assert)
+             (pushnew ?perceived-object perceived-objects))))
+      ;; If there are matching PERCEIVED-OBJECTS already, registration
+      ;; gets triggered and they are in `perceived-objects'. We want
+      ;; to try these first because perception is much faster if we
+      ;; re-use old perceptions.
+      (when perceived-objects
+        (setf previous-perceived-objects (sort perceived-objects #'>
+                                               :key #'perceived-object-timestamp))
+        (setf perceived-objects nil)
+        (loop for perceived-object in previous-perceived-objects
+              until (execute-object-search-function desig perceived-object)))
+      ;; When not found yet, continue with default search
+      (unless perceived-objects
+        (execute-object-search-function desig nil))
+      (unless perceived-objects
+        (fail 'object-not-found :object-desig desig))
+      ;; Sort perceived objects according to probability
+      (when perceived-objects
+        (let* ((sorted-perceived-objects
+                (sort perceived-objects #'> :key #'perceived-object-probability)))
+          (mapcar (lambda (perceived-object)
+                    ;; We need to remove incompatible objects again
+                    ;; here since perceived objects can be more
+                    ;; detailed than the desig description that we had
+                    ;; initially (and that is used in the rete
+                    ;; production). That means that some previously
+                    ;; perceived objects might be incompatible after
+                    ;; perception.
+                    (let ((matching-object (matching-object
+                                            perceived-object
+                                            (remove-if-not (alexandria:compose
+                                                            (curry #'compatible-properties
+                                                                   (perceived-object-properties perceived-object))
+                                                            #'perceived-object-properties)
+                                                           previous-perceived-objects))))
+                      (cond (matching-object
+                             (setf previous-perceived-objects
+                                   (delete matching-object previous-perceived-objects))
+                             (perceived-object->designator desig perceived-object
+                                                           (perceived-object-desig matching-object)))
+                            (t
+                             (perceived-object->designator desig perceived-object)))))
+                  sorted-perceived-objects))))))
 
 (def-process-module perception (pm)
   ;; This process module receives an instance of cop-desig-info and
   ;; returns a designator. It updates the robot's belief state with
   ;; all information gathered during execution.
-  (let ((input (value (slot-value pm 'input))))
+  (unless (member :perception *kipla-features*)
+    (sleep 0.1)
+    (return nil))
+  (let ((input (current-desig (value (slot-value pm 'input)))))
     (assert (typep input 'object-designator))
-    (let* ((cop-desig-info (resolve-object-desig input :cop))
-           (ptu-poses (cop-desig-location-info-poses (cop-desig-info-location cop-desig-info)))
-           (query-info (cop-desig-info-query cop-desig-info)))
-      (log-msg :info "[Perception process module] looking at poses: ~a~%" ptu-poses)
-      (assert ptu-poses)
-      (clear-object-belief)
-      (when (member :perception *kipla-features*)
-        (loop for ptu-pose in ptu-poses
-           do (progn
-                (look-at ptu-pose)
-                (sleep 2)
-                (let ((result (cop-search-for-object query-info)))
-                  (when result
-                    (log-msg :info "[Perception process module] found an object.")
-                    (return (cop-result->designator (cop-desig-info-designator cop-desig-info)
-                                                    result)))))
-           finally (fail (make-condition 'object-not-found :object-desig input)))))))
+    (let ((productuion-name (gensym "DESIG-PRODUCTION-")))
+      (unwind-protect
+           (progn
+             (crs:register-production productuion-name
+                                      (designator->production input '?perceived-object))
+             (cond (; Designator that has alrady been equated
+                    (parent input)
+                    (find-with-parent-desig input productuion-name))
+                   (t
+                    (find-with-new-desig input productuion-name))))
+        (crs:remove-production productuion-name)))))

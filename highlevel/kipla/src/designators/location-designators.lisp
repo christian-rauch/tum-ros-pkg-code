@@ -1,18 +1,31 @@
-;;; KiPla - Cognitive kitchen planner and coordinator
-;;; Copyright (C) 2009 by Lorenz Moesenlechner <moesenle@cs.tum.edu>
 ;;;
-;;; This program is free software; you can redistribute it and/or modify
-;;; it under the terms of the GNU General Public License as published by
-;;; the Free Software Foundation; either version 3 of the License, or
-;;; (at your option) any later version.
+;;; Copyright (c) 2010, Lorenz Moesenlechner <moesenle@in.tum.de>
+;;; All rights reserved.
+;;; 
+;;; Redistribution and use in source and binary forms, with or without
+;;; modification, are permitted provided that the following conditions are met:
+;;; 
+;;;     * Redistributions of source code must retain the above copyright
+;;;       notice, this list of conditions and the following disclaimer.
+;;;     * Redistributions in binary form must reproduce the above copyright
+;;;       notice, this list of conditions and the following disclaimer in the
+;;;       documentation and/or other materials provided with the distribution.
+;;;     * Neither the name of Willow Garage, Inc. nor the names of its
+;;;       contributors may be used to endorse or promote products derived from
+;;;       this software without specific prior written permission.
+;;; 
+;;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+;;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+;;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+;;; ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+;;; LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+;;; CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+;;; SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+;;; INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+;;; CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+;;; ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
-;;; This program is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;;; GNU General Public License for more details.
-;;;
-;;; You should have received a copy of the GNU General Public License
-;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (in-package :kipla-reasoning)
 
@@ -23,14 +36,32 @@
 ;;; provided to post-process the solutions from reasoning, e.g. to
 ;;; sort according to eucledian distance.
 
-(defclass location-designator (designator) ())
+
+;;; Same locations must not only be equatable but also eq!
+;;; This is necessary to make rete work!
+
+(defvar *location-designators* nil
+  "An alist containing a mapping of desig descriptions to the
+   designator instance.")
+
+(defclass location-designator (designator designator-id-mixin)
+  ())
 (register-designator-type location location-designator)
 
-(defmethod equate ((desig-1 location-designator) (desig-2 location-designator))
-  (or ;; (when (eq (desig-prop-value desig-1 'to) 'see)
-      ;;   (< (jlo:euclidean-distance (reference desig-1) (reference desig-2))
-      ;;      0.10))
-      (call-next-method)))
+(defmethod make-designator :around ((type (eql (find-class 'location-designator)))
+                                    description &optional parent)
+  (declare (ignore parent))
+  (flet ((compare-fun (obj-1 obj-2)
+           (or (equal obj-1 obj-2)
+               (eql (object-id obj-1)
+                    (object-id obj-2)))))
+    (let ((old-desig (cdr (assoc description
+                                 *location-designators*
+                                 :test (rcurry #'tree-equal :test #'compare-fun)))))
+      (or old-desig
+          (let ((desig (call-next-method)))
+            (push (cons description desig) *location-designators*)
+            desig)))))
 
 (defmethod reference ((desig location-designator))
   (unless (slot-value desig 'data)
@@ -38,7 +69,8 @@
           (lazy-mapcar (alexandria:compose #'(lambda (descr)
                                                (etypecase descr
                                                  (string (jlo:make-jlo :name descr))
-                                                 (number (jlo:make-jlo :id descr))))
+                                                 (number (jlo:make-jlo :id descr))
+                                                 (jlo:jlo descr)))
                                            (curry #'var-value '?loc))
                        (prolog `(desig-loc ,desig ?loc)))))
   (or (lazy-car (slot-value desig 'data))
@@ -47,17 +79,9 @@
 (defmethod next-solution ((desig location-designator))
   (with-slots (data) desig
     (when (car (cut:lazy-cdr data))
-      (cond ((children desig)
-             (car (children desig)))
+      (cond ((successor desig)
+             (successor desig))
             (t
              (let ((new-desig (make-designator 'location (description desig) desig)))
                (setf (slot-value new-desig 'data) (cut:lazy-cdr data))
                new-desig))))))
-
-(defmethod merge-designators ((desig-1 location-designator) (desig-2 location-designator))
-  (let ((desig (make-designator 'location (description desig-1))))
-    (setf (slot-value desig 'data)
-          (lazy-append (slot-value desig-1 'data)
-                       (slot-value desig-2 'data)))
-    ;; Todo: link the designators in a parent <-> child relationship to fix equate
-    desig))

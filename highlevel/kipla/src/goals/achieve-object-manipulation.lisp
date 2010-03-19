@@ -1,18 +1,31 @@
-;;; KiPla - Cognitive kitchen planner and coordinator
-;;; Copyright (C) 2009 by Lorenz Moesenlechner <moesenle@cs.tum.edu>
 ;;;
-;;; This program is free software; you can redistribute it and/or modify
-;;; it under the terms of the GNU General Public License as published by
-;;; the Free Software Foundation; either version 3 of the License, or
-;;; (at your option) any later version.
+;;; Copyright (c) 2010, Lorenz Moesenlechner <moesenle@in.tum.de>
+;;; All rights reserved.
+;;; 
+;;; Redistribution and use in source and binary forms, with or without
+;;; modification, are permitted provided that the following conditions are met:
+;;; 
+;;;     * Redistributions of source code must retain the above copyright
+;;;       notice, this list of conditions and the following disclaimer.
+;;;     * Redistributions in binary form must reproduce the above copyright
+;;;       notice, this list of conditions and the following disclaimer in the
+;;;       documentation and/or other materials provided with the distribution.
+;;;     * Neither the name of Willow Garage, Inc. nor the names of its
+;;;       contributors may be used to endorse or promote products derived from
+;;;       this software without specific prior written permission.
+;;; 
+;;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+;;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+;;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+;;; ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+;;; LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+;;; CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+;;; SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+;;; INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+;;; CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+;;; ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
-;;; This program is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;;; GNU General Public License for more details.
-;;;
-;;; You should have received a copy of the GNU General Public License
-;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (in-package :kipla)
 
@@ -21,18 +34,17 @@
 (defun optimized-manipulation-location (side &optional obj)
   (let* ((robot->obj (and obj
                           (jlo:frame-query (jlo:make-jlo :name "/base_link")
-                                           (reference obj)))))
+                                           (perceived-object-pose (reference obj))))))
     (when (or (not obj)
-              (= (aref (vision_msgs-msg:pose-val robot->obj) 7)
-                 0)
-              (> (abs (/ (aref (vision_msgs-msg:pose-val robot->obj) 3)
-                         (aref (vision_msgs-msg:pose-val robot->obj) 7)))
+              (= (jlo:pose robot->obj 1 3) 0.0)
+              (> (abs (/ (jlo:pose robot->obj 0 3)
+                         (jlo:pose robot->obj 1 3)))
                  (tan (ecase side
                         (:right (- (/ (* 30 pi)
                                       180)))
                         (:left (/ (* 30 pi)
                                   180))))))
-      (let ((new-lo (jlo:make-jlo-rpy :parent (jlo:make-jlo :name "/base-link")
+      (let ((new-lo (jlo:make-jlo-rpy :parent (jlo:make-jlo :name "/base_link")
                                       :yaw (ecase side
                                              (:right (/ (* 30 pi)
                                                         180))
@@ -62,12 +74,12 @@
     (incf (jlo:pose new-loc 1 3) offset)
     (make-designator 'location `((jlo ,new-loc)))))
 
-(defun clusters-within-range (loc range)
-  (loop for c in *perceived-objects*
-     when (< (jlo:euclidean-distance (reference loc)
-                                     (perceived-object-jlo c))
-             range)
-     collecting c))
+;; (defun clusters-within-range (loc range)
+;;   (loop for c in *perceived-objects*
+;;      when (< (jlo:euclidean-distance (reference loc)
+;;                                      (perceived-object-pose c))
+;;              range)
+;;      collecting c))
 
 (def-goal (achieve (object-in-hand ?obj ?side))
   (log-msg :info "(achieve (object-in-hand))")
@@ -107,6 +119,7 @@
                    (retry)))))
           (at-location (pick-up-loc)
             (log-msg :info "object-in-hand: trying to grasp object.")
+            (achieve `(looking-at ,(reference (make-designator 'location `((of ,?obj))))))
             (achieve `(arms-at ,open-trajectory))
             (achieve `(arms-at ,grasp-trajectory))
             (achieve `(arms-at ,lift-trajectory))))))
@@ -116,15 +129,15 @@
 
 (def-goal (achieve (object-placed-at ?obj ?loc))
   (log-msg :info "(achieve (object-placed-at))")
-  (setf ?obj (car (youngest-children ?obj)))
-  (let ((object-in-hand-occasion (holds `(object-in-hand ,?obj ?_)))
+  (setf ?obj (current-desig ?obj))
+  (let ((object-in-hand-bdgs (holds `(object-in-hand ,?obj ?side)))
         (alternative-poses-cnt 0)
         (retry-count 0))
-    (assert object-in-hand-occasion ()
+    (assert object-in-hand-bdgs ()
             "The object `~a ~a' needs to be in the hand before being able to place it."
             ?obj (description ?obj))
-    (destructuring-bind (sym obj side) object-in-hand-occasion
-      (declare (ignore sym))
+    (let ((side (var-value '?side (car object-in-hand-bdgs)))
+          (obj (current-desig ?obj)))
       (with-failure-handling
           ((manipulation-failed (f)
              (declare (ignore f))

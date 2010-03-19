@@ -29,10 +29,36 @@
 
 (in-package :kipla)
 
-(defun run-demo-counter-to-table ()
-  (startup-ros)
-  (pick-and-place-icetea&jug-2))
+(defvar *waypoints-file* )
 
-(defun run-demo-table-to-counter ()
-  (startup-ros)
-  (pick-and-place-icetea&jug))
+(defun drive-to-waypoints (waypoints callback)
+  (loop for wp in waypoints
+        for n from 0
+        do (approach-waypoint wp t)
+           (funcall callback n)))
+
+(defun read-waypoints-file (filename)
+  (with-open-file (strm filename :direction :input)
+    (let ((*read-eval* nil))
+      (read strm))))
+
+(defun drive-to-waypoints-main (&optional (waypoints-file (second sb-ext:*posix-argv*)))
+  (unwind-protect
+       (progn
+         (startup-ros)
+         
+         (let ((timeout (get-param "~timeout" 2))
+               (status-topic (get-param "~status_topic" "~status")))
+           (assert (probe-file waypoints-file) ()
+                   "Waypoints file `~a' does not exist. Please call with a
+            valid filename." waypoints-file)
+           (flet ((callback (n)
+                    (publish status-topic (make-instance 'std_msgs-msg:<string> :data (format nil "Waypoint ~a" n)))
+                    (sleep timeout)))
+             (let ((waypoints (mapcar (lambda (descr)
+                                        (apply #'jlo:make-jlo-rpy descr))
+                                      (read-waypoints-file waypoints-file))))
+               (let ((*kipla-features* nil))
+                 (advertise status-topic 'std_msgs-msg:<string>)
+                 (drive-to-waypoints waypoints #'callback))))))
+    (shutdown-ros)))

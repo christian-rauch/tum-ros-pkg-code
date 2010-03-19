@@ -1,103 +1,141 @@
-;;; KiPla - Cognitive kitchen planner and coordinator
+;;;
 ;;; Copyright (C) 2009 by Nikolaus Demmel <demmeln@cs.tum.edu>
+;;; All rights reserved.
+;;; 
+;;; Redistribution and use in source and binary forms, with or without
+;;; modification, are permitted provided that the following conditions are met:
+;;; 
+;;;     * Redistributions of source code must retain the above copyright
+;;;       notice, this list of conditions and the following disclaimer.
+;;;     * Redistributions in binary form must reproduce the above copyright
+;;;       notice, this list of conditions and the following disclaimer in the
+;;;       documentation and/or other materials provided with the distribution.
+;;;     * Neither the name of Willow Garage, Inc. nor the names of its
+;;;       contributors may be used to endorse or promote products derived from
+;;;       this software without specific prior written permission.
+;;; 
+;;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+;;; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+;;; IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+;;; ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+;;; LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+;;; CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+;;; SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+;;; INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+;;; CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+;;; ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
-;;; This program is free software; you can redistribute it and/or modify
-;;; it under the terms of the GNU General Public License as published by
-;;; the Free Software Foundation; either version 3 of the License, or
-;;; (at your option) any later version.
-;;;
-;;; This program is distributed in the hope that it will be useful,
-;;; but WITHOUT ANY WARRANTY; without even the implied warranty of
-;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-;;; GNU General Public License for more details.
-;;;
-;;; You should have received a copy of the GNU General Public License
-;;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (in-package :kipla-reasoning)
 
-;;; #demmeln: not handling code replacements in any way atm.
-;;; #demmeln: some of these defuns should be put in cram/language.
+;;; Note: #demmeln: not handling code replacements in any way atm.
 
-(defun goal-task-p (task-tree-node)
-  (when (typep task-tree-node 'task-tree-node)
-    (let ((p (task-tree-node-path task-tree-node)))
-      ;; assume cpl::goal has been importet in the current package
-      (eq 'goal
-          (and (consp p)
-               (consp (car p))
-               (caar p))))))
+(defun task-status-fluent-name (task-tree-node)
+  (name (task-tree-node-status-fluent task-tree-node)))
 
-;;; Ignore all non goal tasks for high level reasoning
-(defun get-all-goal-tasks ()
-  (remove-if-not #'goal-task-p (flatten-task-tree *task-tree*)))
+(defgeneric extract-task-error (err)
+  (:method ((err plan-error))
+    err)
+  (:method ((err rethrown-error))
+    (rethrown-error err)))
 
-(defun task-parameters (task-tree-node)
-  (code-parameters (task-tree-node-code task-tree-node)))
+(defun task-children (task)
+  (mapcar #'cdr (task-tree-node-children task)))
 
-(defun goal-task-pattern (task-tree-node)
-  (when (goal-task-p task-tree-node)
-    (cadar (task-tree-node-path task-tree-node))))
+;; Note: #demmeln: There is much potential for optimization, e.g. chaching the
+;; task and fluent lists, only checking for correct type if task or fluents
+;; are already bound etc...
 
-(defun goal-task-parameter-bindings (task-tree-node)
-  (when (goal-task-p task-tree-node)
-    (let ((params (task-parameters task-tree-node))
-          (pattern (goal-task-pattern task-tree-node)))
-      (mapcar (lambda (var value) (cons var value))
-              (vars-in pattern)
-              params))))
+(def-fact-group fluents
+  ;; FLUENT
+  (<- (fluent ?fluent)
+    (not (bound ?fluent))
+    (lisp-fun episode-knowledge-traced-fluent-names ?fluents)
+    (member ?fluent ?fluents))
 
-(defun extract-task-goal (task-tree-node)
-  (when (goal-task-p task-tree-node)
-    (substitute-vars (goal-task-pattern task-tree-node)
-                     (goal-task-parameter-bindings task-tree-node))))
+  (<- (fluent ?fluent)
+    ;; bit of a hack to increase performance
+    (bound ?fluent)
+    (lisp-pred symbolp ?fluent))
 
-(defun task-status-fluent (task-tree-node)
-  (let ((code (task-tree-node-code task-tree-node)))
-    (when code
-      (status (code-task code)))))
-
-(defun task-status-changes (task-tree-node)
-  (let ((status-fluent (task-status-fluent task-tree-node)))
-    (when status-fluent
-      (let* ((fluent-name (name status-fluent))
-             (logged-fluents (remove-if-not (lambda (x)
-                                              (and (typep x 'logged-fluent)
-                                                   (eq (name x) fluent-name)))
-                                            (get-logged-instances))))
-        (setf logged-fluents (sort logged-fluents #'< :key #'timestamp))
-        (mapcar (lambda (x)
-                  (cons (logged-value x)
-                        (timestamp x)))
-                logged-fluents)))))
-
-(defun status-changes->status-durations (changes)
-  (multiple-value-bind (min-time max-time)
-      (get-logged-timespan)
-    (declare (ignore min-time))
-    (maplist (lambda (x)
-               (cons (caar x)
-                     `(throughout ,(cdar x)
-                                  ,(if (cdr x)
-                                       (cdadr x)
-                                       max-time))))
-             changes)))
-
-(defun task-status-durations (task-tree-node)
-  (status-changes->status-durations (task-status-changes task-tree-node)))
+  ;; HOLDS FLUENT-VALUE
+  (<- (holds (fluent-value ?fluent ?value) ?t)
+    (fluent ?fluent)
+    (lisp-fun episode-knowledge-fluent-durations ?fluent ?durations)
+    (member (?value . ?duration) ?durations)
+    (duration-includes ?duration ?t)))
 
 (def-fact-group tasks
 
+  ;; TASK
   (<- (task ?task)
-    (lisp-fun get-all-goal-tasks ?tasks)
+    (not (bound ?task))
+    ;; Ignore all non goal tasks for high level reasoning
+    (lisp-fun episode-knowledge-goal-task-list ?tasks)
     (member ?task ?tasks))
 
+  (<- (task ?task)
+    (bound ?task)
+    (lisp-pred task-tree-node-p ?task))
+
+  ;; SUBTASK
+  (<- (subtask ?task ?subtask)
+    (bound ?task)
+    (lisp-fun task-children ?task ?children)
+    (member ?subtask ?children))
+
+  (<- (subtask ?task ?subtask)
+    (not (bound ?task))
+    (bound ?subtask)
+    (lisp-fun task-tree-node-parent ?subtask ?task))
+
+  (<- (subtask ?task ?subtask)
+    (not (bound ?task))
+    (not (bound ?subtask))
+    (task ?task)
+    (subtask ?task ?subtask))
+
+  ;; SUBTASK+
+  (<- (subtask+ ?task ?subtask)
+    (subtask ?task ?subtask))
+
+  (<- (subtask+ ?task ?subtask)
+    (subtask ?task ?tmp)
+    (subtask+ ?tmp ?subtask))
+
+  ;; TASK-STATUS-FLUENT
+  (<- (task-status-fluent ?task ?fluent)
+    (task ?task)
+    (lisp-fun task-status-fluent-name ?task ?fluent))
+
+  ;; TASK-GOAL
   (<- (task-goal ?task ?goal)
     (task ?task)
-    (lisp-fun extract-task-goal ?task ?goal))
+    (lisp-fun goal-task-tree-node-goal ?task ?goal))
 
-  (<- (holds (task-status ?task ?status) ?t)
+  ;; TASK-OUTCOME
+  (<- (task-outcome ?task ?outcome)
+    (member ?outcome (:succeeded :failed :evaporated))
+    (holds (task-status ?task ?outcome) ?_))
+
+  ;; TASK-RESULT
+  (<- (task-result ?task ?result)
     (task ?task)
-    (lisp-fun task-status-durations ?task ?status-durations)
-    (member (?status . ?duration) ?status-durations)
-    (duration-includes ?duration ?t)))
+    (lisp-fun task-tree-node-result ?task ?result))
+
+  ;; TASK-ERROR
+  (<- (task-error ?task ?error)
+    (task-outcome ?task :failed)
+    (task-result ?task ?result)
+    (lisp-fun extract-task-error ?result ?error))
+
+  ;; ERROR-TYPE
+  (<- (error-type ?error ?type)
+    (bound ?error)
+    (lisp-fun type-of ?error ?type))
+
+  ;; HOLDS TASK-STATUS
+  (<- (holds (task-status ?task ?status) ?t)
+    (task-status-fluent ?task ?status-fluent)
+    (holds (fluent-value ?status-fluent ?status) ?t)))
