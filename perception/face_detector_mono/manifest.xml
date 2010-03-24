@@ -1,0 +1,17 @@
+<package>
+  <description brief="face_detector_mono">
+    Detects faces in 2D images using Haar-like features and cascade classifier.
+    Based on facedetect.cpp from openCV.
+  </description>
+  <author>Dejan Pangercic</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/ias_face_detector</url>
+  <depend package="opencv2"/>
+  <depend package="cv_bridge"/>
+  <depend package="image_transport"/>
+  <depend package="sensor_msgs"/>
+  <depend package="yarp2"/>
+</package>
+
+
