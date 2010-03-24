@@ -1,0 +1,6 @@
+<launch>
+  <node pkg="yarp_to_ros_image" type="image_process" name="image_process" output="screen" respawn="false" args="--name /circle" />
+  <node pkg="yarp_to_ros_image" type="connect_tool.sh" name="connect1" output="screen" respawn="false" args="/icub/cam/left /circle"/>
+  <node pkg="yarp2" type="yarpview" name="yarpview" output="screen" respawn="false" args="--name /icub/cam/processed --w 640 --h 580"/>
+  <node pkg="yarp_to_ros_image" type="connect_tool.sh" name="connect2" output="screen" respawn="false" args="/circle /icub/cam/processed"/>
+</launch>

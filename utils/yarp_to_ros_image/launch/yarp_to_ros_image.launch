@@ -1,0 +1,8 @@
+<launch>
+  <node pkg="yarp_to_ros_image" type="yarp_to_ros_image" name="yarp_to_ros_image" output="screen" respawn="false" >
+    <param  name="output_image_topic" type="string" value="yarp_to_ros_image"/>
+    <param  name="port_name" type="string" value="/yarp_to_ros_image"/>
+    <param  name="display" value="false"/>
+    </node>
+  <node pkg="yarp_to_ros_image" type="connect_tool.sh" name="connect1" output="screen" respawn="false" args="/icub/cam/left /yarp_to_ros_image"/>
+</launch>

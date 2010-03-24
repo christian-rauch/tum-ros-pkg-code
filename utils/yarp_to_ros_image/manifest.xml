@@ -1,0 +1,18 @@
+<package>
+  <description brief="yarp_to_ros_image">
+     Converts Yarp to ROS image (through openCV image). 
+     Provides launch files for getting images from:
+     a)cameras on Icub robot and
+     b)simulated camera source.
+  </description>
+  <author>Dejan Pangercic</author>
+  <license>GPL</license>
+  <review status="unreviewed" notes=""/>
+  <depend package="yarp2" />
+  <depend package="opencv2" />
+  <depend package="cv_bridge" />
+  <depend package="image_transport" />
+  <depend package="sensor_msgs" />
+</package>
+
+
