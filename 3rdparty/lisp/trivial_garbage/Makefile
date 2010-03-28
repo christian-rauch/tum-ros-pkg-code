@@ -1,4 +1,6 @@
 
+PACKAGE_DIR=$(shell rospack find trivial_garbage)
+
 all: installed
 
 downloaded:
@@ -7,12 +9,12 @@ downloaded:
 	touch downloaded
 
 installed: downloaded
-	rosrun lisp_asdf_manager register_asdf trivial_garbage trivial-garbage/trivial-garbage.asd
+	mkdir -p asdf
+	ln -s ${PACKAGE_DIR}/trivial-garbage/trivial-garbage.asd ${PACKAGE_DIR}/asdf
 	touch installed
 
 clean:
-	rosrun lisp_asdf_manager unregister_asdf trivial-garbage.asd
-	rm -rf trivial-garbage
+	rm -rf trivial-garbage asdf
 	rm -f downloaded
 	rm -f rospack_nosubdirs
 	rm -f installed
