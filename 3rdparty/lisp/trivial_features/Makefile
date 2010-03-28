@@ -1,4 +1,6 @@
 
+PACKAGE_DIR=$(shell rospack find trivial_features)
+
 all: installed
 
 downloaded:
@@ -7,12 +9,12 @@ downloaded:
 	touch downloaded
 
 installed: downloaded
-	rosrun lisp_asdf_manager register_asdf trivial_features trivial-features/trivial-features.asd
+	mkdir -p asdf
+	ln -s ${PACKAGE_DIR}/trivial-features/trivial-features.asd ${PACKAGE_DIR}/asdf
 	touch installed
 
 clean:
-	rosrun lisp_asdf_manager unregister_asdf trivial-features.asd
-	rm -rf trivial-features
+	rm -rf trivial-features asdf
 	rm -f downloaded
 	rm -f rospack_nosubdirs
 	rm -f installed
