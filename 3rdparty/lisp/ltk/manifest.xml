@@ -6,8 +6,6 @@
   <author>Peter Herth</author>
   <license>lgpl</license>
   <review status="unreviewed" notes=""/>
-
-  <depend package="lisp_asdf_manager"/>
 </package>
 
 
