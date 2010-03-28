@@ -7,7 +7,6 @@
   <license>cffi</license>
   <review status="unreviewed" notes=""/>
 
-  <depend package="lisp_asdf_manager"/>
   <depend package="alexandria"/>
   <depend package="trivial_features"/>
   <depend package="babel"/>
