@@ -37,7 +37,7 @@
 using namespace cop;
 
 
-int Elem::m_LastID = 0;
+ObjectID_t Elem::m_LastID = 0;
 
 
 // Constructors/Destructors
@@ -49,7 +49,7 @@ Elem::Elem ( ) :
 {
 }
 
-Elem::Elem ( int id ) :
+Elem::Elem ( ObjectID_t id ) :
     m_ID(id),
     m_timestamp((unsigned long)time(NULL))
 {

@@ -39,9 +39,12 @@ typedef unsigned char xmlChar;
 typedef struct _xmlNode xmlNode;
 
 #define XML_NODE_STD_VECTOR "std_vector"
+#define XML_NODE_STD_MAP "std_map"
 #define XML_NODE_STD_PAIR "std_pair"
+#define XML_NODE_STD_MAPENTRY "mapentry"
 #define XML_NODE_INT "int"
 #define XML_NODE_DOUBLE "double"
+#define XML_NODE_ULONG "ulong"
 #define XML_NODE_STRING "std_string"
 #define XML_NODE_MATRIX "newmat_Matrix"
 
@@ -75,9 +78,9 @@ namespace cop
 
     /**
     * Constructor, sets the tag name
-    * @param name  the tags name ( <name> </name>)
+    * @param name  the tags name ( \<name\> \</name\>)
     */
-    XMLTag ( std::string Name);
+    XMLTag ( std::string name);
 
     /**
     * Destructor
@@ -193,14 +196,13 @@ namespace cop
   /****************************************************************************/
   /** Tag: creates XMLTags from standard types, like vector pair, int, double, Elem
    ****************************************************************************
-   *	@param T	contains the element that should be saved in the tag
+   *	@param vector	contains the element that should be saved in the tag
    *	@param name defines the name of the node,
    *				there are standard names for every implemented tag
    *****************************************************************************
    * \remarks pairs and vectors of any supported Type T are allowed, too
    *
    *****************************************************************************/
-
     template<typename T> static XMLTag* Tag(std::vector<T> vector, std::string name = "")
     {
       XMLTag* tag = new XMLTag(name.compare("") == 0 ? XML_NODE_STD_VECTOR : name);
@@ -218,6 +220,21 @@ namespace cop
   #endif
       return tag;
     }
+
+ template<typename T1, typename T2> static XMLTag* Tag(std::map< T1, T2 > map, std::string name = "")
+    {
+      XMLTag* tag = new XMLTag(name.compare("") == 0 ? XML_NODE_STD_MAP : name);
+      typename std::map< T1, T2 >::iterator iter;
+      for(iter = map.begin(); iter != map.end(); iter++)
+      {
+        XMLTag* childTag = new XMLTag(XML_NODE_STD_MAPENTRY);
+        childTag->AddChild(XMLTag::Tag((*iter).first));
+        childTag->AddChild(XMLTag::Tag((*iter).second));
+        tag->AddChild(childTag);
+      }
+      return tag;
+    }
+
     template<typename T1, typename T2> static XMLTag* Tag(std::pair<T1, T2> p, std::string name = "")
     {
       XMLTag* tag = new XMLTag(name.compare("") == 0 ? XML_NODE_STD_PAIR : name);
@@ -233,10 +250,12 @@ namespace cop
 
 
     static XMLTag* Tag(int n, std::string name = "");
+    static XMLTag* Tag(long n, std::string name = "");
+    static XMLTag* Tag(unsigned long n, std::string name = "");
     static XMLTag* Tag(double d, std::string name = "");
     static XMLTag* Tag(std::string value, std::string name = "");
     static XMLTag* Tag(Elem* elem, std::string name = "");
-    static XMLTag* Tag(Algorithm<double>* alg, std::string name = "");
+    static XMLTag* Tag(Algorithm<ImprovedPose>* alg, std::string name = "");
     static XMLTag* Tag(Algorithm<std::vector<Signature*> >* alg, std::string name = "");
     static XMLTag* Tag(Algorithm<std::vector<RelPose* > >* alg, std::string name = "");
     static XMLTag* Tag(Algorithm<Descriptor*>* alg, std::string name = "");
@@ -251,10 +270,10 @@ namespace cop
    * Supported Types are for example: vector, pair, double, int, string, Matrix
    *									Elem, Algorithm, Camera
    *
-   * @param     tag			the tag that was read from a file or created with a Tag function
-   * @param		T*			a pointer that specifies the wished class (necessary for resolving the template)
+   * @param   tag		the tag that was read from a file or created with a Tag function
+   * @param		t			a pointer that specifies the wished class (necessary for resolving the template)
    *
-   * @throws char* with an error message in case of failure
+   * @throw char* with an error message in case of failure
    *****************************************************************************
    *
    *
@@ -290,6 +309,39 @@ namespace cop
     };
 
     template<typename T1, typename T2>
+     static std::map<T1, T2> Load(XMLTag* tag, std::map<T1, T2>* map)
+    {
+      std::map<T1, T2> mapTemp;
+      if(tag != NULL)
+      {
+        for(unsigned int i = 0; i < tag->CountChildren(); i++)
+        {
+          XMLTag* mapentry =  tag->GetChild(i);
+          if(mapentry == NULL)
+            continue;
+          try
+          {
+            T1 key;
+            key = Load(mapentry->GetChild(0), (T1*)NULL);
+            mapTemp[key] = Load(mapentry->GetChild(1), (T2*)NULL);
+          }
+          catch(char const* text)
+          {
+            printf("Error reading a map: %s\n", text);
+            /* Do nothing, try to get the others*/
+          }
+          catch(...)
+          {
+            printf("Error reading a map.\n");
+            /* Do nothing, try to get the others*/
+          }
+        }
+      }
+      return mapTemp;
+    };
+
+
+    template<typename T1, typename T2>
     static std::pair<T1, T2> Load(XMLTag* tag, std::pair<T1, T2>*  )
     {
       std::pair<T1, T2> p;
@@ -312,6 +364,13 @@ namespace cop
       if(tag == NULL)
         return 0;
       return  tag->GetCDataInt();
+    };
+
+    static int Load(XMLTag* tag, unsigned long* )
+    {
+      if(tag == NULL)
+        return 0;
+      return  tag->GetCDataUlong();
     };
 
     static double Load(XMLTag* tag,double *)
@@ -342,12 +401,12 @@ namespace cop
       return (Algorithm<std::vector<RelPose*> >*)LocateAlgorithm::LocAlgFactory(tag);
     };
 
-    static Algorithm<double>* Load(XMLTag* tag, Algorithm<double>** )
+    static Algorithm<ImprovedPose>* Load(XMLTag* tag, Algorithm<ImprovedPose>** )
     {
 
       if(tag == NULL)
         return NULL;
-      return (Algorithm<double>*)ProveAlgorithm::ProveAlgFactory(tag);
+      return (Algorithm<ImprovedPose>*)ProveAlgorithm::ProveAlgFactory(tag);
     };
 
     static Algorithm<Descriptor*>* Load(XMLTag* tag, Algorithm<Descriptor*>** )
@@ -424,6 +483,7 @@ namespace cop
    *
    *****************************************************************************/
     void AddProperty(const std::string &name, const unsigned long &value);
+    void AddProperty(const std::string &name, const long &value);
   /****************************************************************************/
   /** AddProperty: adds a property as an attribute to the current tag
    ****************************************************************************
@@ -471,6 +531,8 @@ namespace cop
    *
    *****************************************************************************/
     void SetCData(const int &value);
+    void SetCData(const long &value);
+    void SetCData(const unsigned long &value);
   /****************************************************************************/
   /** SetCData: sets the current content of the tag
    ****************************************************************************
@@ -504,10 +566,7 @@ namespace cop
   /** GetCData*: returns the current content
    ****************************************************************************
    *
-   * returns the current content
-   *
-   *
-   * @param		the content or empty("", 0, 0.0)
+   * @return the current content
    *
    *
    *****************************************************************************
@@ -515,6 +574,7 @@ namespace cop
    *
    *****************************************************************************/
     int			GetCDataInt() const;
+    unsigned long GetCDataUlong() const;
     double		GetCDataDouble() const;
     std::string GetCDataST() const;
 
@@ -635,9 +695,9 @@ namespace cop
    *
    * returns a child tag
    *
-   * @param position/name   descriptor for the child
+   * @param position descriptor for the child
    *
-   * @param		a  child tag
+   * @return	a child tag
    *
    *
    *****************************************************************************
@@ -652,7 +712,7 @@ namespace cop
   /** GetName: returns the name of a tag
    ****************************************************************************
    *
-   *  The name of the tag (<name></name>)
+   *  The name of the tag (\<name\>\</name\>)
    *
    *
    *
@@ -661,6 +721,7 @@ namespace cop
    *
    *****************************************************************************/
     std::string& GetName(){return m_name;}
+    void SetName(std::string name){m_name = name;}
 
     //static public Methods
     static unsigned int OldTag()
@@ -709,5 +770,8 @@ namespace cop
     xmlDoc                               *m_doc;
     xmlChar                              *m_xmlbuff;
   };
+
 }
+
+
 #endif // XMLTAG_H

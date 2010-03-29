@@ -65,7 +65,10 @@ using namespace cop;
 int main(int argc, char* argv[])
 {
 #ifndef USE_YARP_COMM
-    ros::init(argc, argv, "cop");
+    std::string nodename = "cop";
+    if(argc > 2)
+      nodename = argv[2];
+    ros::init(argc, argv, nodename);
 #endif
     try
     {
@@ -81,7 +84,7 @@ int main(int argc, char* argv[])
         /*Blob* blob = new Blob(235, 255, 0, 35, 0, 40, 750, 5000, 0.4, 0.095, 0.05);*/
 
         printf("Init start:\n");
-        cop_world copWorld(config);
+        cop_world copWorld(config, nodename);
         /*XMLTag tag(XML_NODE_CAMERADRIVER);
         tag.AddProperty(XML_ATTRIBUTE_GRABBERNAME, "DirectShow");
         tag.AddProperty(XML_ATTRIBUTE_EXTERNALTRIGGER, "false");
@@ -108,7 +111,7 @@ int main(int argc, char* argv[])
 #else
         if(copWorld.s_visFinder->CountAlgorithms() == 0)
            printf("Warning: no algorithm loaded\n");
-        copWorld.StartNodeSubscription((char*)"/tracking/in");
+        copWorld.StartNodeSubscription((char*)"in");
 
         printf("Returned successfully\n");
 #endif
@@ -121,20 +124,17 @@ int main(int argc, char* argv[])
         }
       }
     }
-#ifdef HALCONIMG
-    catch(Halcon::HException ex)
-    {
-        printf("Error in cop_main: %s\n", ex.message);
-    }
-#endif /*HALCONIMG*/
     catch(char* text)
     {
       printf("Error in cop_main: %s\n", text);
+      return 1;
+
     }
-    catch(...)
-    {
-      printf("Unhabdled Exception: stopping program\n");
-    }
+    //catch(...)
+    //{
+    //  printf("Unhandled Exception: stopping program\n");
+    //  return 1;
+    //}
     printf("exiting %s\n", argv[0]);
     return 0;
 }

@@ -29,6 +29,8 @@
 #define XML_NODE_ALGTYPE "AlgType"
 #define XML_NODE_AVGTIME "AvgTime"
 
+#define XML_NODE_OBJECTEVALMAP "ObjEvalMap"
+
 
 #define ALGORITHMTYPE_LOCATE            0x000
 #define ALGORITHMTYPE_TRACK             0x100
@@ -42,6 +44,9 @@
 
 #define ALGORITHMTYPE_STARTATTEND       0x1600
 #define ALGORITHMTYPE_STOPATTEND        0x3200
+
+
+#define ALGORITHMTYPE_LOOKUP            0x6400
 
 #define ALGORITHMSPEC_ONETARGET         0
 #define ALGORITHMSPEC_SEVERALTARGET     1
@@ -64,19 +69,36 @@ namespace cop
       if(alg == NULL)
         printf("Empty Algorithm\n");
     }
-      /**
-      * Constructor Algorithm Eval
-      * @param tag Contains data to load the Evaluation Algorithm.
-      * @throws char* with an error message in case of failure
-      */
+    /******************************************************************************
+    * Constructor Algorithm Eval                                                 */
+    /******************************************************************************
+    * @param tag Contains data to load the Evaluation Algorithm.
+    * Evaluates a tag of the following structure:
+    * Parent XML_NODE_ALGORITHMEVAL:
+    *          Child index0: Algorithm<T>      containt any Algorithm  that is loadable by the plugin to load a specific algorithm type
+    *          XML_NODE_ALGTYPE                one of ALGORITHMTYPE_LOCATE, ALGORITHMTYPE_REFINE and ALGORITHMTYPE_RPOVE (+ALGORITHMSPEC_SEVERALTARGET|ALGORITHMTYPE_TRACK)
+    *          XML_NODE_EVAL                   double value representing the overall Method score
+    *          XML_NODE_AVGTIME                double value representing the average running time of the Method
+    *          XML_NODE_OBJECTEVALMAP[optional] map of int -> double, ulong pair representing specific object<->method relation
+    *
+    * @throw char* with an error message in case of failure
+    *******************************************************************************/
     AlgorithmEval(XMLTag* tag);
-
+    /******************************************************************************
+    * Save                                                                       */
+    /******************************************************************************
+    *  @brief Saves all elemens to a serializeable XMLTag
+    *  @param name [optional]
+    *  @remarks return value must be deleted
+    *******************************************************************************/
     XMLTag* Save(std::string name = "");
 
     Algorithm<T>*	m_algorithm;
-    int				m_algorithmType;
+    int				  m_algorithmType;
     double			m_eval;
     double			m_avgRunTime;
+    std::map<ObjectID_t, std::pair<double, int> > m_objectEval;
+
   };
 }
 #endif /*ALGORITHMEVAL_H*/

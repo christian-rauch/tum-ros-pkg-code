@@ -31,7 +31,7 @@
 #include <vector>
 
 #include "ImageInputSystem.h"
-
+#include "PerceptionPrimitive.h"
 
 namespace cop
 {
@@ -42,15 +42,10 @@ namespace cop
   class TrackAlgorithm
   {
   public:
-
-    // Constructors/Destructors
-    //
-
-
     /**
      * Constructor
      */
-    TrackAlgorithm (Signature& sig, Algorithm<std::vector<RelPose*> > *alg, ImageInputSystem& imageSys);
+    TrackAlgorithm (PerceptionPrimitive& prim, Algorithm<std::vector<RelPose*> > *alg, ImageInputSystem& imageSys);
 
     /**
      * Empty Destructor
@@ -74,7 +69,7 @@ namespace cop
     /**
     *    The object that should be tracked
     */
-    Signature& m_curObject;
+    PerceptionPrimitive& m_curPrim;
     /**
     *    Reference to the sensor system
     */

@@ -49,7 +49,8 @@ LocateAlgorithm* LocateAlgorithm::LocAlgFactory(XMLTag* tag)
   catch(pluginlib::PluginlibException& ex)
   {
   //handle the class failing to load
-    printf("The plugin failed to load for some reason. Error: %s\n", ex.what());
+    printf("LocateAlgorithm: The plugin failed to load for some reason. Error: %s\n", ex.what());
+    printf("LocateAlgorithm: Tag failed: %s\n", tag->GetName().c_str());
   }
 	return alg;
 }

@@ -26,9 +26,7 @@
 #define READING_H
 
 #include <string>
-
-#define NO_TYPE 0
-#define HALCONIMAGE 1
+#include <map>
 
 /**
   * class Reading
@@ -38,11 +36,19 @@
 #define XML_ATTRIBUTE_FILENAME "FileName"
 #define XML_ATTRIBUTE_IMGTYPE "ImgType"
 
+enum ReadingType_t
+{
+  ReadingType_HalconImage,
+  ReadingType_IplImage,
+  ReadingType_PointCloud
+};
 
 namespace cop
 {
   class XMLTag;
   class RelPose;
+  class ReadingConverter;
+
   /******************************************************************
   *           class Reading                                         */
   /** ****************************************************************
@@ -61,7 +67,7 @@ namespace cop
     /**
      * Empty Constructor
      */
-    Reading (int type) :
+    Reading (ReadingType_t type) :
         m_readingType(type),
         m_usageCount(0),
         m_timestamp((unsigned long)time(NULL)),
@@ -112,7 +118,7 @@ namespace cop
     /**
      *   Type of the image in memory
      */
-    int GetType() const{return m_readingType;}
+    ReadingType_t GetType() const{return m_readingType;}
     /**
     *  Set pose stamp of this image
     */
@@ -125,6 +131,8 @@ namespace cop
         return m_relPose;
     }
 
+    Reading* ConvertTo(ReadingType_t type);
+
     /**
     *  Time stamp of this image
     */
@@ -135,10 +143,27 @@ namespace cop
 
 
   public:
-      int m_readingType;
+      static std::map<std::pair<ReadingType_t, ReadingType_t> , ReadingConverter*> s_conv;
+      ReadingType_t m_readingType;
       int m_usageCount;
       unsigned long m_timestamp;
       RelPose* m_relPose;
   };
+
+  /******************************************************************
+  *           class ReadingConverter                                */
+  /** ****************************************************************
+  *   @brief Interface to Allows conversion from one reading type
+  *          to another
+  *******************************************************************/
+  class ReadingConverter
+  {
+  public:
+    static ReadingConverter* ReadingConverterFactory(std::string name);
+    virtual Reading* Convert(Reading* in) = 0;
+    virtual ReadingType_t TypeIn() = 0;
+    virtual ReadingType_t TypeOut() = 0;
+  };
+
 }
 #endif // READING_H

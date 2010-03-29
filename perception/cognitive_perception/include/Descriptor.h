@@ -100,7 +100,7 @@ namespace cop
     * @brief Puts a result to a descriptor to set its quality.
     * @param eval a value from 0.0 (bad) to 1.0 (good)
     *************************************************************************/
-    void Evaluate(double eval){m_qualityMeasure = eval  + m_qualityMeasure / 2; } //TOCHECK: how to combine and TODO if(m_qualityMeasure == 0.0) delete this;
+    virtual void Evaluate(double eval, double weight){m_qualityMeasure = (eval  + m_qualityMeasure * weight) / (1+weight); } //TOCHECK: how to combine and TODO if(m_qualityMeasure == 0.0) delete this;
 
     /***********************************************************************
     * Show                                                     */

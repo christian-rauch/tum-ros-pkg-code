@@ -20,7 +20,7 @@
                         VisFinder.cpp - Copyright klank
 
 
-**************************************************************************/
+L**************************************************************************/
 
 #include "VisFinder.h"
 #include "XMLTag.h"
@@ -93,8 +93,9 @@ XMLTag* VisFinder::Save()
 }
 
 
-bool VisFinder::GetPlaneClusterCall(PossibleLocations_t *cluster_ids, RelPose* pose, Signature& sig, const std::vector<Sensor*> &sensors)
+bool VisFinder::GetPlaneClusterCall(PossibleLocations_t *cluster_ids, RelPose* pose, PerceptionPrimitive& visPrim, const std::vector<Sensor*> &sensors)
 {
+  Signature &sig = *visPrim.GetSignature();
   LocateAlgorithm* det = (LocateAlgorithm*)m_selLocate.BestAlgorithm(123, sig, sensors);
   if(det == NULL)
     return false;
@@ -141,9 +142,10 @@ bool comp_qual (const Results_t &t1, const Results_t &t2)
      * @param  Object
      * @param  numOfObjects
      */
-SignatureLocations_t VisFinder::Locate (PossibleLocations_t* lastKnownPoses, Signature& object, int &numOfObjects)
+SignatureLocations_t VisFinder::Locate (PossibleLocations_t* lastKnownPoses, PerceptionPrimitive& visPrim, int &numOfObjects)
 {
         std::vector<Sensor*> cameras;
+        Signature& object = *visPrim.GetSignature();
         double qualityMeasure = 0.0;
         Algorithm<std::vector<RelPose*> >* alg_fail = NULL;
         SignatureLocations_t ret;
@@ -158,7 +160,7 @@ SignatureLocations_t VisFinder::Locate (PossibleLocations_t* lastKnownPoses, Sig
           std::vector<Sensor*> allsensors = m_imageSys.GetAllSensors();
           if(allsensors.size() > 0 && allsensors[0] != NULL)
           {
-            if(!GetPlaneClusterCall(lastKnownPoses, allsensors[0]->GetRelPose(), object, allsensors))
+            if(!GetPlaneClusterCall(lastKnownPoses, allsensors[0]->GetRelPose(), visPrim, allsensors))
             {
               numOfObjects = 0;
               printf("No search position specified: 0 Results, no search\n");
@@ -176,7 +178,7 @@ SignatureLocations_t VisFinder::Locate (PossibleLocations_t* lastKnownPoses, Sig
             if(lastKnownPoses == NULL)
             {
               printf("VisFinder: Errorn in pose information\n");
-               continue;
+              continue;
             }
             try
             {
@@ -216,7 +218,7 @@ SignatureLocations_t VisFinder::Locate (PossibleLocations_t* lastKnownPoses, Sig
                   {
                     Results_t res_tmp;
                     res_tmp.pose = *it_poses;
-                    res_tmp.quality = qualityMeasure;
+                    res_tmp.quality = it_poses == r.begin() ? qualityMeasure : (*it_poses)->m_qualityMeasure;
                     res_tmp.camera = cameras[0];/*TODO fix! BestAlgorithm?!?*/
                     res_tmp.alg = alg;
                     all_matches.push_back(res_tmp);
@@ -236,80 +238,49 @@ SignatureLocations_t VisFinder::Locate (PossibleLocations_t* lastKnownPoses, Sig
         std::sort(all_matches.begin(), all_matches.end(), comp_qual);
         if(all_matches.size() > 0 && numOfObjects > 0)
         {
-
           for(unsigned int i = 0; i < all_matches.size(); i++)
           {
-            RelPose* pose = all_matches[i].pose;
             if(i == 0)
             {
-              object.SetPose(pose);
-
-              pose->m_qualityMeasure = all_matches[i].quality;
-              ret.push_back(std::pair<RelPose*, Signature*>(pose, &object));
-              if(pose->m_qualityMeasure > 0.70)
-                 m_visLearner.RefineObject (object);
-#ifdef BOOST_THREAD
-              m_sigdb.AddAndShowSignatureAsync(&object, all_matches[i].camera);
-#else
-              try
-              {
-                if(all_matches[i].camera->IsCamera())
-                  object.Show((Camera*)all_matches[i].camera);
-              }
-              catch(char* error)
-              {
-                printf("Error in Display: %s\n", error);
-              }
-              m_sigdb.AddSignature(&object);
-#endif
-              numOfObjects = 1;
-              /*TODO*/
-              m_selLocate.EvalAlgorithm(all_matches[i].alg, pose->m_qualityMeasure, ((double)((t1 - t0).total_milliseconds()) /  1000.0) , &object);
+              numOfObjects = 0;
             }
-            else
+            RelPose* pose = all_matches[i].pose;
+            if(numOfObjects >= maxObjToAdd)
             {
-              if(numOfObjects >= maxObjToAdd)
-              {
-                break;
-              }
-              Signature* sig = (Signature*)(object.Duplicate(false));
-#ifdef BOOST_THREAD
-#ifdef BOOST_1_35
-              m_selLocate.EvalAlgorithm(all_matches[i].alg, pose->m_qualityMeasure, 10/*(double)(t1 - t0)*/, &object);
-#else
-              //m_selLocate.EvalAlgorithm(all_matches[i].alg, pose->m_qualityMeasure, (double)((1000000000 * (t1.sec - t0.sec))+(t1.nsec - t0.nsec)), sig);
-#endif
-#endif
-              sig->SetPose(pose);
-
-
-              /*pose->m_qualityMeasure = qualityMeasure;*/
-              ret.push_back(std::pair<RelPose*, Signature*>(pose, sig));
-#ifdef BOOST_THREAD
-              m_sigdb.AddAndShowSignatureAsync(sig, all_matches[i].camera);
-#else
-              try
-              {
-                if(all_matches[i].camera->IsCamera())
-                  sig->Show(all_matches[i].camera);
-              }
-              catch(char* error)
-              {
-                printf("Error in Display: %s\n", error);
-              }
-              m_sigdb.AddSignature(sig);
-#endif
-              numOfObjects++;
-              /*if(qualityMeasure > 0.70)
-                 m_visLearner.RefineObject(sig);*/
+              RelPoseFactory::FreeRelPose(pose);
+              continue;
             }
+            Signature* sig = (Signature*)(object.Duplicate(false));
+            sig->SetLastPerceptionPrimitive(visPrim.GetID());
+            visPrim.AddResult(sig->m_ID);
+            m_selLocate.EvalAlgorithm(all_matches[i].alg, pose->m_qualityMeasure, ((double)((t1 - t0).total_milliseconds()) /  1000.0), &object);
+            sig->SetPose(pose);
+
+
+            /*pose->m_qualityMeasure = qualityMeasure;*/
+            ret.push_back(std::pair<RelPose*, Signature*>(pose, sig));
+#ifdef BOOST_THREAD
+            m_sigdb.AddAndShowSignatureAsync(sig, all_matches[i].camera);
+#else
+            try
+            {
+              if(all_matches[i].camera->IsCamera())
+                sig->Show(all_matches[i].camera);
+            }
+            catch(char* error)
+            {
+              printf("Error in Display: %s\n", error);
+            }
+            m_sigdb.AddSignature(sig);
+#endif
+            numOfObjects++;
+            /*if(qualityMeasure > 0.70)
+               m_visLearner.RefineObject(sig);*/
           }
         }
         else
         {
-#ifdef BOOST_THREAD
-            m_selLocate.EvalAlgorithm(alg_fail, qualityMeasure, 10/*(double)(t1 - t0)*/, &object);
-#endif
+           m_selLocate.EvalAlgorithm(alg_fail, qualityMeasure,((double)((t1 - t0).total_milliseconds()) /  1000.0), &object);
 #ifdef BOOST_THREAD
            m_sigdb.AddAndShowSignatureAsync(&object, NULL);
 #else
@@ -324,25 +295,26 @@ SignatureLocations_t VisFinder::Locate (PossibleLocations_t* lastKnownPoses, Sig
  * @param Object
  * @param poseEstimation
  */
-void VisFinder::StartTrack  ( Signature& object, RelPose* poseEstimation)
+void VisFinder::StartTrack  ( PerceptionPrimitive& visPrim, RelPose* poseEstimation)
 {
     try
     {
-        std::vector<Sensor*> cameras = m_imageSys.GetBestSensor(*poseEstimation);
-        int locatertype = ALGORITHMTYPE_TRACK;
-        locatertype = ALGORITHMSPEC_SEVERALTARGET; /** TODO: Check how to include Locating and special Tracking algorithms*/
-        Algorithm<std::vector<RelPose*> > * alg = m_selLocate.BestAlgorithm(locatertype, object, cameras);
-        if(alg != NULL)
-        {
-          if(poseEstimation != NULL)
-            object.SetPose(poseEstimation);
-          TrackAlgorithm*  tracking = new TrackAlgorithm(object, alg, m_imageSys);
-          m_runningTracks[object.m_ID] = tracking;
-        }
-        else
-        {
-          printf("No Algorithm for Tracking of object %d found\n", object.m_ID);
-        }
+      Signature& object = *visPrim.GetSignature();
+      std::vector<Sensor*> cameras = m_imageSys.GetBestSensor(*poseEstimation);
+      int locatertype = ALGORITHMTYPE_TRACK;
+      locatertype = ALGORITHMSPEC_SEVERALTARGET; /** TODO: Check how to include Locating and special Tracking algorithms*/
+      Algorithm<std::vector<RelPose*> > * alg = m_selLocate.BestAlgorithm(locatertype, object, cameras);
+      if(alg != NULL)
+      {
+        if(poseEstimation != NULL)
+          object.SetPose(poseEstimation);
+        TrackAlgorithm*  tracking = new TrackAlgorithm(visPrim, alg, m_imageSys);
+        m_runningTracks[object.m_ID] = tracking;
+      }
+      else
+      {
+        printf("No Algorithm for Tracking of object %ld found\n", object.m_ID);
+      }
     }
     catch(...)
     {
@@ -381,7 +353,7 @@ RelPose* VisFinder::RelTwoObjects (const RelPose &Pose, Signature& Obj1, Signatu
 *	AddAlgorithm
 *	@param alg
 */
-    void VisFinder::AddAlgorithm(Algorithm<std::vector<RelPose*> >* alg)
+void VisFinder::AddAlgorithm(Algorithm<std::vector<RelPose*> >* alg)
 {
     m_selLocate.AddAlgorithm(alg, ALGORITHMSPEC_ONETARGET, 1.0, 0.0);
 }

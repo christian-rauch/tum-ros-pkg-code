@@ -127,11 +127,16 @@ VisLearner::~VisLearner ( )
           printf("Alg selected: %s\n", refalg->GetName().c_str());
           try
           {
-					  double d = provalg->Perform(cam, sig->m_relPose, *sig, numOfObjects, qualityMeasure);
+					  ImprovedPose res = provalg->Perform(cam, sig->m_relPose, *sig, numOfObjects, qualityMeasure);
+					  if(res.first != NULL)
+					  {
+              res.first->m_qualityMeasure = res.second;
+					  }
+					  sig->SetPose(res.first);
 #ifdef _DEBUG
-					  printf("Evaluation results in: %f\n", d);
+					  printf("Evaluation results in: %f\n", res.second);
 #endif /*_DEBUG*/
-				  	if(d > 0.5)
+				  	if(res.second > 0.5)
 					  {
 #ifdef _DEBUG
 						  printf("This is good!\n");
@@ -179,7 +184,7 @@ void VisLearner::AddAlgorithm(Algorithm<Descriptor*>* alg)
 {
 	m_refinements.AddAlgorithm(alg, ELEM, 1.0, 0.0);
 }
-void VisLearner::AddAlgorithm(Algorithm<double>* alg)
+void VisLearner::AddAlgorithm(Algorithm<ImprovedPose>* alg)
 {
 	m_checks.AddAlgorithm(alg, ELEM, 1.0, 0.0);
 }
@@ -187,12 +192,13 @@ void VisLearner::AddAlgorithm(Algorithm<double>* alg)
 /**
  * @return SignatureLocations_t
  * @param  lastKnownPoses
- * @param  object
+ * @param  sig
  * @param  numOfObjects
  */
-SignatureLocations_t VisLearner::RefineObject (PossibleLocations_t* lastKnownPoses, Signature& sig, int &numOfObjects)
+SignatureLocations_t VisLearner::RefineObject (PossibleLocations_t* lastKnownPoses, PerceptionPrimitive &visPrim, int &numOfObjects)
 {
   SignatureLocations_t ret_vec;
+  Signature& sig = *visPrim.GetSignature();
   TaskID type = 0x100;
   PossibleLocations_t::const_iterator it = (*lastKnownPoses).begin();
   std::vector<Sensor*> sensors;
@@ -216,8 +222,34 @@ SignatureLocations_t VisLearner::RefineObject (PossibleLocations_t* lastKnownPos
         {
           double qualityMeasure;
           Descriptor* d = refalg->Perform(sensors, lastKnownPose, sig, numOfObjects, qualityMeasure);
-          sig.SetElem(d);
-          lastKnownPose->m_qualityMeasure = qualityMeasure;
+          /*sensors[0]->Show(-1);*/
+          if(d != NULL)
+          {
+            d->SetLastPerceptionPrimitive(visPrim.GetID());
+            visPrim.AddResult(d->m_ID);
+            sig.SetElem(d);
+            /*d->Show(lastKnownPose, sensors[0] );*/
+            lastKnownPose->m_qualityMeasure = qualityMeasure;
+
+            /** We found at least one alg, so try  again, and look if there are more actions possible*/
+            refalg = (RefineAlgorithm*)m_refinements.BestAlgorithm(type, sig, sensors);
+            while(refalg != NULL)
+            {
+              Descriptor* dadd = refalg->Perform(sensors, lastKnownPose, sig, numOfObjects, qualityMeasure);
+              if(dadd != NULL)
+              {
+                dadd->SetLastPerceptionPrimitive(visPrim.GetID());
+                visPrim.AddResult(dadd->m_ID);
+                sig.SetElem(dadd);
+
+                /*dadd->Show(lastKnownPose, sensors[0] );*/
+              }
+              else
+                break;
+              refalg = (RefineAlgorithm*)m_refinements.BestAlgorithm(type, sig, sensors);
+            }
+          }
+
           ret_vec.push_back(std::pair<RelPose*, Signature*>(lastKnownPose, &sig));
         }
         catch(char const* error_text)
@@ -225,44 +257,64 @@ SignatureLocations_t VisLearner::RefineObject (PossibleLocations_t* lastKnownPos
           printf("Refinement failed due to: %s\n", error_text);
         }
     }
-    else
-    {
-      ProveAlgorithm* provalg = (ProveAlgorithm*)m_checks.BestAlgorithm(type, sig, sensors);
-      if(provalg != NULL)
-      {
-        printf("Alg selected: %s\n", refalg->GetName().c_str());
-        try
-        {
-          double qualityMeasure;
-          double d = provalg->Perform(sensors, lastKnownPose, sig, numOfObjects, qualityMeasure);
-  #ifdef _DEBUG
-          printf("Evaluation results in: %f\n", d);
-  #endif /*_DEBUG*/
-          if(d > 0.5)
-          {
-  #ifdef _DEBUG
-            printf("This is good!\n");
-  #endif /*_DEBUG*/
-          }
-         }
-         catch(char const* error_text)
-         {
-  #ifdef _DEBUG
-           printf("Evaluation failed due to: %s\n", error_text);
-  #endif /*_DEBUG*/
-         }
-      }
-    }
   }
-	return ret_vec;
+  return ret_vec;
 }
 
 
+SignatureLocations_t VisLearner::ProoveObject (PossibleLocations_t* lastKnownPoses, PerceptionPrimitive &visPrim, int &numOfObjects)
+{
+  SignatureLocations_t ret_vec;
+  Signature& sig = *visPrim.GetSignature();
+  TaskID type = 0x100;
+  PossibleLocations_t::const_iterator it = (*lastKnownPoses).begin();
+  std::vector<Sensor*> sensors;
+  for(;it!=(*lastKnownPoses).end(); it++)
+  {
+    RelPose* lastKnownPose = (*it).first;
+    try
+    {
+      sensors = m_imageSys.GetBestSensor(*lastKnownPose);
+    }
+    catch(const char* text)
+    {
+      printf ("Error selecting a camera: %s\n", text);
+      continue;
+    }
+    ProveAlgorithm* provalg = (ProveAlgorithm*)m_checks.BestAlgorithm(type, sig, sensors);
+    if(provalg != NULL)
+    {
+      printf("Alg selected: %s\n", provalg->GetName().c_str());
+      try
+      {
+        double qualityMeasure;
+       ImprovedPose ipose = provalg->Perform(sensors, lastKnownPose, sig, numOfObjects, qualityMeasure);
+        /** TODO, set evaluation*/
+        #ifdef _DEBUG
+        printf("Evaluation results in: %f\n", ipose.second);
+        #endif /*_DEBUG*/
+        if(ipose.second > 0.5)
+        {
+        #ifdef _DEBUG
+          printf("This is good!\n");
+        #endif /*_DEBUG*/
+        }
+        ret_vec.push_back(std::pair<RelPose*, Signature*>(lastKnownPose, &sig));
+      }
+      catch(char const* error_text)
+      {
+#ifdef _DEBUG
+         printf("Evaluation failed due to: %s\n", error_text);
+#endif /*_DEBUG*/
+      }
+    }
+  }
+  return ret_vec;
+}
+
 /**
  * @return double
- * @param  ObjectWith3dShapeModel
- * @param  EstimatedPose
- * @param  index
+ * @param  sig
  */
 double VisLearner::RefineObject (Signature& sig)
 {
@@ -301,11 +353,11 @@ Signature* VisLearner::GetObjectSignature (int index )
 
 #ifndef WIN32
 #include "AlgorithmSelector.hpp"
-template class AlgorithmSelector<Descriptor*>;
-template class AlgorithmSelector<double>;
+template class AlgorithmSelector<Descriptor* >;
+template class AlgorithmSelector<double >;
 #else
 #include "AlgorithmSelector.hpp"
-template class AlgorithmSelector<Descriptor*>;
-template AlgorithmSelector<double>;
+template AlgorithmSelector<Descriptor* >;
+template AlgorithmSelector<double >;
 #endif
 

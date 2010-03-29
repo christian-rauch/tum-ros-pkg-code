@@ -31,10 +31,10 @@
 
 #include "AlgorithmSelector.h"
 #include "RelPoseFactory.h"
-#include "Image.h"
 #include "AttentionManager.h"
 #include "VisLearner.h"
 #include "TrackAlgorithm.h"
+#include "PerceptionPrimitive.h"
 
 #define XML_NODE_VISFINDER "VisualFinder"
 
@@ -59,9 +59,9 @@ namespace cop
      * @param db reference the the signature database used for looking up model information
      * @param manager Attention Manager, not specified
      * @param visLearner reference to the model improver can be triggered by the visual finder
-  #ifdef LOGFILE
+      #ifdef LOGFILE
      * @param log the central logfile
-  #endif
+     #endif
      */
     VisFinder ( XMLTag*  configFile, ImageInputSystem& imageSystem, SignatureDB& db, AttentionManager& manager, VisLearner&	visLearner
   #ifdef LOGFILE
@@ -81,12 +81,12 @@ namespace cop
     *	Locate
     *	@brief locates the class or object that is specified by object, updates its signature if it succeeds,
     *			sets the numOfObjects, returns a SignatureLocations_t.
-    *	@return a list of position, sorted by score
     *	@param  lastKnownPoses a list of possible positions and the a-prioi probabilitiers for the object beeing at this position
     *	@param  object         the signature that will be searched for
     *	@param  numOfObjects
+    *	@return a list of position, sorted by score
     */
-    virtual SignatureLocations_t Locate (PossibleLocations_t* lastKnownPoses, Signature& object, int &numOfObjects);
+    virtual SignatureLocations_t Locate (PossibleLocations_t* lastKnownPoses, PerceptionPrimitive& object, int &numOfObjects);
 
     /**
     *  Checks if there is a the possibility to create search spaces, if there are no given
@@ -94,14 +94,14 @@ namespace cop
     *  @param obj     type of this could be relevant
     *  @param sensors list of available sensors, should contain a 3D sensor
     */
-    bool GetPlaneClusterCall(PossibleLocations_t* poses, RelPose*, Signature& obj, const std::vector<Sensor*> &sensors);
+    bool GetPlaneClusterCall(PossibleLocations_t* poses, RelPose*, PerceptionPrimitive& obj, const std::vector<Sensor*> &sensors);
 
     /**
      *   Starts a thread tracks the object specified with object
-     *   @param  object contains a trackable signature
+     *   @param  object contains a trackable signature and the vision primitive id
      *   @param pose  intial guess of the pose of the trackable object
      */
-    virtual void StartTrack (Signature& object, RelPose* pose);
+    virtual void StartTrack (PerceptionPrimitive& object, RelPose* pose);
     /**
      *  Stops the thread that tracks the object specified with object
      *  @param  object contains a trackable signature
@@ -111,11 +111,12 @@ namespace cop
 
     /**
      *  Not yet finished, concept not yet integrated
+     * @param  pose
+     * @param  sig1
+     * @param  sig2
+     *
      * @return RelPose
-     * @param  CurImage
-     * @param  Pose
-     * @param  Obj1
-     * @param  Obj2
+     *
      */
     virtual RelPose* RelTwoObjects (const RelPose& pose, Signature& sig1, Signature& sig2);
     /**

@@ -50,6 +50,7 @@ ROSBUILD_ADD_LIBRARY(cop
 ./source/File.cpp     
 ./source/Reading.cpp
 ./source/Sensor.cpp
+./source/PerceptionPrimitive.cpp
 )
 
 set(DEBUG TRUE CACHE BOOL TRUE)

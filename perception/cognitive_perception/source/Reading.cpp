@@ -22,11 +22,7 @@
 **************************************************************************/
 
 #include "Reading.h"
-#ifdef HALCONIMG
-#include "cpp/HalconCpp.h"
-#endif
 #include "XMLTag.h"
-#include "Image.h"
 #include <sstream>
 
 #include <pluginlib/class_loader.h>
@@ -36,7 +32,14 @@ using namespace cop;
 
 Reading::~Reading()
 {
-  RelPoseFactory::FreeRelPose(m_relPose);
+  try
+  {
+    RelPoseFactory::FreeRelPose(m_relPose);
+  }
+  catch(const char* text)
+  {
+    printf("Error while freeing pose of an image: %s\n", text);
+  }
 }
 
 pluginlib::ClassLoader<Reading> s_reading_loader("cognitive_perception", "Reading");
@@ -64,4 +67,35 @@ Reading* Reading::ReadingFactory( XMLTag* tag)
 void Reading::SetPose(RelPose* parent)
 {
     m_relPose = RelPoseFactory::FRelPoseIdentityChild(parent);
+}
+
+std::map<std::pair<ReadingType_t, ReadingType_t> , ReadingConverter*> Reading::s_conv;
+
+Reading* Reading::ConvertTo(ReadingType_t type)
+{
+  std::pair<ReadingType_t, ReadingType_t> prr(GetType(), type);
+  if(s_conv.find(prr) != s_conv.end())
+  {
+    return s_conv[prr]->Convert(this);
+  }
+  return NULL;
+}
+
+
+pluginlib::ClassLoader<ReadingConverter> s_reading_conv_loader("cognitive_perception", "ReadingConverter");
+
+ReadingConverter* ReadingConverter::ReadingConverterFactory(std::string name)
+{
+  ReadingConverter* reading = NULL;
+  try
+  {
+    reading = s_reading_conv_loader.createClassInstance(name);
+  }
+  catch(pluginlib::PluginlibException& ex)
+  {
+  //handle the class failing to load
+    printf("The plugin failed to load for some reason. Error: %s\n", ex.what());
+    printf("Tag failed: %s\n", name.c_str());
+  }
+   return reading;
 }

@@ -91,12 +91,9 @@ AttentionManager::~AttentionManager ( )
 //
 
 
-void AttentionManager::SetObjectToAttend (Signature* prototype, RelPose* pointOfInterest, Comm* comm)
+void AttentionManager::SetObjectToAttend (PerceptionPrimitive* prototype, PossibleLocations_t* pointOfInterest, Comm* comm)
 {
-  AttendedObjects obj;
-  obj.comm = comm;
-  obj.pose = pointOfInterest;
-  obj.sig = prototype;
+  AttendedObjects obj(prototype, pointOfInterest, comm);
   m_attendedObjectPrototypes.push_back(obj);
 }
 
@@ -114,47 +111,62 @@ void AttentionManager::StopAttend(Comm* comm)
   }
 }
 
+void AttentionManager::PerformAttentionAlg( std::vector<Sensor*> &sensors, RelPose* pose, Signature* sig, AttendedObjects& objProto)
+{
+  AttentionAlgorithm* refalg = (AttentionAlgorithm*)m_attendants.BestAlgorithm(0, *sig, sensors);
+  int numOfObjects = 0;
+  double qualityMeasure = 0.0;
+  if(refalg != NULL)
+  {
+    printf("Alg selected: %s\n", refalg->GetName().c_str());
+    try
+    {
+
+
+      std::vector<Signature*> results = refalg->Perform(sensors, pose, *sig, numOfObjects, qualityMeasure);
+      for(size_t j = 0; j < results.size(); j++)
+      {
+         objProto.comm->NotifyNewObject(results[j], results[j]->m_relPose);
+#ifdef BOOST_THREAD
+         m_sigDB.AddAndShowSignatureAsync(results[j], sensors[0]);
+#else
+         m_sigDB.AddSignature(results[j]);
+#endif
+      }
+    }
+    catch(char const* error_text)
+    {
+      printf("Error in Attention System: %s\n", error_text);
+
+    }
+  }
+}
+
 void AttentionManager::threadfunc()
 {
 	while(m_Attending && !g_stopall)
 	{
-
     for(size_t i = 0 ; i < m_attendedObjectPrototypes .size(); i++)
     {
-      Signature* sig = m_attendedObjectPrototypes[i].sig;
-      RelPose* area = m_attendedObjectPrototypes[i].pose;
+      Signature* sig = m_attendedObjectPrototypes[i].proto->GetSignature();
+      PossibleLocations_t* area = m_attendedObjectPrototypes[i].poses;
       std::vector<Sensor*> sensors;
-      if(area != NULL)
-        sensors = m_imginsys.GetBestSensor(*area);
-      else
-        sensors = m_imginsys.GetAllSensors();
 
-
-      AttentionAlgorithm* refalg = (AttentionAlgorithm*)m_attendants.BestAlgorithm(0, *sig, sensors);
-
-      if(refalg != NULL)
+      if(area->size() != 0)
       {
-          printf("Alg selected: %s\n", refalg->GetName().c_str());
-          try
-          {
-            int numOfObjects = 0;
-            double qualityMeasure = 0.0;
-            std::vector<Signature*> results = refalg->Perform(sensors, area, *sig, numOfObjects, qualityMeasure);
-            for(size_t j = 0; j < results.size(); j++)
-            {
-               m_attendedObjectPrototypes[i].comm->NotifyNewObject(results[j], results[j]->m_relPose);
-#ifdef BOOST_THREAD
-               m_sigDB.AddAndShowSignatureAsync(results[j], sensors[0]);
-#else
-               m_sigDB.AddSignature(results[j]);
-#endif
-            }
-          }
-          catch(char const* error_text)
-          {
-            printf("Error in Attention System: %s\n", error_text);
+        PossibleLocations_t::const_iterator iter = area->begin();
+        for( ;iter != area->end(); iter++)
+        {
+          RelPose* pose = (*iter).first;
+          sensors = m_imginsys.GetBestSensor(*pose);
+          PerformAttentionAlg(sensors, pose, sig, m_attendedObjectPrototypes[i]);
 
-          }
+        }
+      }
+      else
+      {
+        sensors = m_imginsys.GetAllSensors();
+        PerformAttentionAlg(sensors, NULL, sig, m_attendedObjectPrototypes[i]);
       }
     }
     Sleeping(10);

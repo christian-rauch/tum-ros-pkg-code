@@ -34,6 +34,7 @@
 #include "AlgorithmSelector.h"
 #include "RelPose.h"
 #include "Comm.h"
+#include "PerceptionPrimitive.h"
 
 #ifdef BOOST_THREAD
 #include "boost/thread.hpp"
@@ -48,15 +49,22 @@ namespace cop
   class SignatureDB;
   class ImageInputSystem;
 
-  typedef struct
+  class AttendedObjects
   {
-    Signature* sig;
-    RelPose* pose;
+  public:
+    AttendedObjects(PerceptionPrimitive* proto_in, PossibleLocations_t* poses_in, Comm* comm_in) : proto(proto_in), poses(poses_in), comm(comm_in) {}
+    PerceptionPrimitive* proto;
+    PossibleLocations_t* poses;
     Comm* comm;
-  } AttendedObjects;
+  };
   /**
     * class AttentionManager
     *	@brief tries to detect constantly new objects in the visible area
+    *
+    *
+    * Nodename: XML_NODE_ATTENTIONMANAGER "AttentionManager"  Manages passive mechanims for attention handling
+    *
+    * Properties: XML_NODE_ATTENTIONALGORITHMS "Attendants"   Contains the list of methods that will be called cyclicly this node is of type AlgorithmSelector<std::vector<Signature*> > which means that it contains a list of \see AttetionAlgorithm
     *
     */
   class AttentionManager
@@ -78,13 +86,15 @@ namespace cop
 
     XMLTag* Save();
     /**
-     * @param  attentionLevel
-     */
+    *  SetAttentionLevel
+    * @param attentionLevel
+    * @param visfinder
+    */
     void SetAttentionLevel (double attentionLevel, VisFinder* visfinder);
-    void SetObjectToAttend (Signature* prototype, RelPose* pointOfInterest, Comm* comm);
+    void SetObjectToAttend (PerceptionPrimitive* prototype, PossibleLocations_t* pointOfInterest, Comm* comm);
     void StopAttend (Comm* comm);
 
-
+    void PerformAttentionAlg( std::vector<Sensor*> &sensors, RelPose* pose, Signature* sig, AttendedObjects& objProto);
     void threadfunc();
   #ifdef BOOST_THREAD
     boost::thread* m_learningThread;

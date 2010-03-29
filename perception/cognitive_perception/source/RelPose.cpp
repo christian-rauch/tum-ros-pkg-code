@@ -39,11 +39,11 @@ m_qualityMeasure(0.0)
 {
 
 }
-RelPose::RelPose(jlo::LazyLocatedObjectLoader* loader, int id, int parentID, Matrix m, Matrix cov) :
+RelPose::RelPose(jlo::LazyLocatedObjectLoader* loader, int id, int parentID, Matrix m, Matrix cov, std::string name) :
 jlo::LocatedObject(loader, id, parentID, m, cov),
 m_qualityMeasure(0.0)
 {
-
+  m_mapstring = name;
 }
 
 RelPose::RelPose(jlo::LocatedObject& pose) :
@@ -87,8 +87,10 @@ m_qualityMeasure(0.0)
 XMLTag* RelPose::Save()
 {
   XMLTag* ret = new XMLTag(XML_NODE_RELPOSE);
-
-  ret->AddProperty(XML_ATTRIBUTE_LOID, m_uniqueID);
+  if(m_mapstring.length() > 0)
+    ret->AddProperty(XML_ATTRIBUTE_LOID, m_mapstring);
+  else
+    ret->AddProperty(XML_ATTRIBUTE_LOID, m_uniqueID);
 
   return ret;
 }
@@ -111,7 +113,11 @@ XMLTag* RelPose::SaveComplete()
 {
   XMLTag* ret = new XMLTag(XML_NODE_RELPOSE);
 
-  ret->AddProperty(XML_ATTRIBUTE_LOID, m_uniqueID);
+  if(m_mapstring.length() > 0)
+    ret->AddProperty(XML_ATTRIBUTE_LOID, m_mapstring);
+  else
+    ret->AddProperty(XML_ATTRIBUTE_LOID, m_uniqueID);
+
   if(m_uniqueID != ID_WORLD)
     ret->AddProperty(XML_ATTRIBUTE_LOIDFATHER, m_parentID);
   ret->AddChild(XMLTag::Tag(GetMatrix(0), XML_NODE_MATRIX));

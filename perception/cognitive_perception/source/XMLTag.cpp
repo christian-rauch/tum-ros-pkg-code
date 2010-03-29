@@ -57,6 +57,21 @@ XMLTag* XMLTag::Tag(int n, std::string name)
     return tag;
 }
 
+
+XMLTag* XMLTag::Tag(long n, std::string name)
+{
+    XMLTag* tag = new XMLTag(name.compare("") == 0 ? XML_NODE_INT : name);
+    tag->SetCData(n);
+    return tag;
+}
+
+XMLTag* XMLTag::Tag(unsigned long n, std::string name)
+{
+    XMLTag* tag = new XMLTag(name.compare("") == 0 ? XML_NODE_ULONG : name);
+    tag->SetCData(n);
+    return tag;
+}
+
 XMLTag* XMLTag::Tag(double d, std::string name)
 {
     XMLTag* tag = new XMLTag(name.compare("") == 0 ? XML_NODE_DOUBLE : name);
@@ -77,7 +92,7 @@ XMLTag* XMLTag::Tag(Elem* e, std::string name)
 }
 
 
-XMLTag* XMLTag::Tag(Algorithm<double>* alg, std::string name)
+XMLTag* XMLTag::Tag(Algorithm<ImprovedPose>* alg, std::string name)
 {
     if(alg == NULL)
         return NULL;
@@ -343,6 +358,14 @@ XMLTag::~XMLTag ( )
         Touch();
     }
 
+    void XMLTag::AddProperty(const std::string& name, const long &value)
+    {
+        char intBuf[MAXINTLONGSIZE];
+        sprintf_s(intBuf, MAXINTLONGSIZE, "%ld", value);
+        m_properties[name] = intBuf;
+        Touch();
+    }
+
 #define MAXINTSIZE 20
     void XMLTag::AddProperty(const std::string& name, const int &value)
     {
@@ -373,6 +396,12 @@ XMLTag::~XMLTag ( )
     {
         return atoi(m_cData.c_str());
     }
+
+    unsigned long XMLTag::GetCDataUlong() const
+    {
+        return atol(m_cData.c_str());
+    }
+
     double XMLTag::GetCDataDouble() const
     {
         return atof(m_cData.c_str());
@@ -389,6 +418,23 @@ XMLTag::~XMLTag ( )
         m_cData = intBuf;
         Touch();
     }
+
+    void XMLTag::SetCData(const unsigned long &value)
+    {
+        char intBuf[MAXINTSIZE];
+        sprintf_s(intBuf,MAXINTSIZE, "%ld", value);
+        m_cData = intBuf;
+        Touch();
+    }
+
+    void XMLTag::SetCData(const long &value)
+    {
+        char intBuf[MAXINTSIZE];
+        sprintf_s(intBuf,MAXINTSIZE, "%ld", value);
+        m_cData = intBuf;
+        Touch();
+    }
+
 
     void XMLTag::SetCData(const std::string& value)
     {
@@ -538,7 +584,6 @@ XMLTag::~XMLTag ( )
     {
         m_lastChanged = (unsigned long)time(NULL);
     }
-
 
 
 

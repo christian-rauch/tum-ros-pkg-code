@@ -35,7 +35,6 @@ using namespace cop;
 Class::Class ( ) :
 Elem()
 {
-  printf("Creating Empty Class\n");
 }
 
 Class::Class(std::string name, int id) :

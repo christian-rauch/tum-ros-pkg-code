@@ -30,17 +30,21 @@
 #include <vector>
 
 #include "XMLTag.h"
+#include "PerceptionPrimitive.h"
 #ifndef XML_NODE_SIGNATURE
 #define XML_NODE_SIGNATURE "Signature"
 #endif
 
 #define XML_NODE_SIGNATUREDB "SignatureDB"
 
+#define PROP_DECAY       0.01
+#define STARTING_WEIGHT  0.25
+
 namespace cop
 {
   /**
     * class SignatureDB
-    * @the database that contains all object and class relations and models of the vision system
+    * @brief the database that contains all object and class relations and models of the vision system
     */
   class SignatureDB
   {
@@ -52,7 +56,7 @@ namespace cop
 
     /**
     * Empty Constructor
-      *   @throws char* with an error message in case of failure
+      *   @throw char* with an error message in case of failure
     */
     SignatureDB ( XMLTag* config );
 
@@ -93,11 +97,11 @@ namespace cop
     * @remarks throws on error a char* Exception
     *
     *******************************************************************************/
-    Class* GetClassByID(int id);
+    Class* GetClassByID(ObjectID_t id);
     /**
     *	Direct request for an class
     */
-    Signature* GetSignatureByClass(int ClassID, int index = 0);
+    Signature* GetSignatureByClass(ObjectID_t ClassID, int index = 0);
     Signature* GetSignatureByClass(std::string className, int index = 0){return GetSignatureByClass(CheckClass(className), index);}
 
     /*******************************************************************************
@@ -109,10 +113,40 @@ namespace cop
     * @return           returns the Signature of a new instance of an object
     *                   having all class labels, returns NULL if the classes
     *                   do not exist and could not be derived
-    * @remarks throws char* on error
+    * @throw char* on error
     *******************************************************************************/
-    Signature* GetSignature(std::vector<int> class_ids);
+    Signature* GetSignature(std::vector<ObjectID_t> class_ids);
 
+    /*******************************************************************************
+    *   CreateNewPerceptionPrimitive                                                              */
+    /*******************************************************************************
+    *
+    * @param sig       a signature the will be changed by the signature
+    *
+    * @return           creates a new PerceptionPrimitive changinf the signature
+    * @throw char* on error
+    *******************************************************************************/
+    PerceptionPrimitive& CreateNewPerceptionPrimitive(Signature* sig);
+    /*******************************************************************************
+    *   EvaluatePerceptionPrimitive                                                              */
+    /*******************************************************************************
+    *
+    * @param id       a signature the will be changed by the signature
+    * @param value    The value that should be back propagated
+    * @throw char* on error
+    *******************************************************************************/
+    void EvaluatePerceptionPrimitive(PerceptionPrimitiveID_t id, double value, double weight = STARTING_WEIGHT);
+    /*******************************************************************************
+    *   CompleteSignature                                                              */
+    /*******************************************************************************
+    * @brief            Add all classes (if they are already existing
+                        descriptors for those classes) to a signature
+    * @param sig_max    the signature that receives all classes.
+    * @param class_ids  a list of ids that specify classes in the database
+    *
+    * @throw char* on error
+    *******************************************************************************/
+    void CompleteSignature(Signature* sig_max, std::vector<ObjectID_t> class_ids);
     /*******************************************************************************
     *   FindCreateDescriptor                                                      */
     /*******************************************************************************
@@ -123,13 +157,13 @@ namespace cop
     *                   does not exist and could not be derived
     * @remarks throws char* on error
     *******************************************************************************/
-    Elem* FindCreateDescriptor(int class_id);
+    Elem* FindCreateDescriptor(ObjectID_t class_id);
 
     // Public attributes
     //
 
-    std::string CheckClass(int id);
-    int CheckClass(std::string name);
+    std::string CheckClass(ObjectID_t id);
+    ObjectID_t CheckClass(std::string name);
 
     // Public attribute accessor methods
     //
@@ -173,15 +207,16 @@ namespace cop
     XMLTag* m_index;
 
 
-    std::vector<int> m_ids;
-    std::vector<std::pair<std::string, int> > m_classes;
+    std::vector<ObjectID_t> m_ids;
+    std::vector<std::pair<std::string, ObjectID_t> > m_classes;
 
     std::vector<std::pair<Signature*, int> > m_currentlyActiveSignatures;
     std::map<int, int> m_activeMap;
+    std::map<PerceptionPrimitiveID_t, PerceptionPrimitive*> m_ppMap;
     /**
     *	Helping function to get the first element connected with a class
     */
-    int GetElemIdByClass(int ClassID, int index = 0);
+    int GetElemIdByClass(ObjectID_t ClassID, int index = 0);
 
   };
 }

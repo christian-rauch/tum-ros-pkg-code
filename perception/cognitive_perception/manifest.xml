@@ -9,6 +9,7 @@
   <license>GPL</license>
   <depend package="roscpp" />
   <depend package="vision_srvs" />
+  <depend package="sensor_msgs" />  
   <depend package="lo" />
   <depend package="pluginlib" />
   <export>

@@ -61,9 +61,11 @@ namespace cop
      *  Perform
      *  @brief  the function that is called to execute this current algorithm
      *  @param   sensors    list of available sensors for attending
-     *  @param   PointOfInterest   Position that can restict the  search
-     *  @param   area              Description of the object to search for
+     *  @param   pose          Position that can restict the  search
+     *  @param   prototype              Description of the object to search for
      *  @param   numOfObjects      number of objects that should be found and on return that were found
+     *  @param   qualityMeasure  Takes threshold limiting results quality and receives resulting quality
+     *  @return a list of objects which should be attended
      */
     virtual std::vector<Signature*> Perform(std::vector<Sensor*> sensors, RelPose* pose, Signature& prototype, int &numOfObjects, double& qualityMeasure) = 0;//{throw "Perform for AttentionAlgorithm not implemented\n";}
 

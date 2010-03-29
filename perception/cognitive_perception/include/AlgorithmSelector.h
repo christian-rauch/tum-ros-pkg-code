@@ -91,7 +91,6 @@ namespace cop
     */
     int AddAlgorithm(Algorithm<T>* alg, int nType, double dEval, double dTime);
 
-
     /**
     *	Save
     *	@return a XMLTag* that saves the evaluation of the algorithms and the algorithms themselves

@@ -45,7 +45,7 @@ Descriptor::Descriptor():
 	m_class(NULL),
 	m_imgLastMatchReading(NULL),
 	m_poseLastMatchReading(NULL),
-	m_qualityMeasure(0.0)
+	m_qualityMeasure(1.0)
 {
 }
 

@@ -22,6 +22,11 @@
 #include <vision_srvs/srvjlo.h>
 #include "ROSjloComm.h"
 
+#include <boost/thread/mutex.hpp>
+boost::mutex s_serviceCall;
+boost::mutex s_notDeletedList;
+
+
 using namespace vision_srvs;
 using namespace vision_msgs;
 
@@ -31,6 +36,7 @@ using namespace vision_msgs;
 #define JLO_DELETE "del"
 #define JLO_UPDATE "update"
 
+std::set<unsigned long> not_deleted_jlos;
 
 using namespace cop;
 
@@ -73,7 +79,7 @@ RelPose* GetPoseFromMessage(partial_lo& msg, jlo::LazyLocatedObjectLoader* loade
       << msg.cov[18] << msg.cov[19] << msg.cov[20] << msg.cov[21] << msg.cov[22] << msg.cov[23]
       << msg.cov[24] << msg.cov[25] << msg.cov[25] << msg.cov[26] << msg.cov[27] << msg.cov[29]
       << msg.cov[30] << msg.cov[31] << msg.cov[32] << msg.cov[33] << msg.cov[34] << msg.cov[35];
-  return new RelPose(loader,msg.id, msg.parent_id, m, cov);
+  return new RelPose(loader,msg.id, msg.parent_id, m, cov, msg.name);
 }
 
 extern volatile bool g_stopall;
@@ -90,6 +96,8 @@ ROSjloComm::ROSjloComm(std::string nodeName) :
     {
       printf("Waiting for Jlo to startup at %s\n", m_service.c_str());
       g_stopall = g_stopall || !node.ok();
+      ros::Rate rate(0.5);
+      rate.sleep();
     }
   }
   m_client = node.serviceClient<srvjlo>(this->m_service, true);
@@ -99,11 +107,16 @@ ROSjloComm::ROSjloComm(std::string nodeName) :
 
 ROSjloComm::~ROSjloComm()
 {
+  boost::mutex::scoped_lock lock(s_notDeletedList);
+  std::set<unsigned long>::iterator iter = not_deleted_jlos.begin();
+  for(;iter != not_deleted_jlos.end(); iter++)
+    FreePose((*iter));
 }
 
-ros::ServiceClient ROSjloComm::GetJloServiceClient()
+bool ROSjloComm::GetJloServiceClient(srvjlo &msg)
 {
   ros::NodeHandle node;
+  bool rv;
   while(!m_client.isValid())
   {
     if(g_stopall)
@@ -111,7 +124,26 @@ ros::ServiceClient ROSjloComm::GetJloServiceClient()
     ros::service::waitForService(m_service, 0);
     m_client = node.serviceClient<srvjlo>(this->m_service, true);
   }
-  return m_client;
+  {
+    boost::mutex::scoped_lock lock(s_serviceCall);
+    rv = m_client.call(msg);
+  }
+  boost::mutex::scoped_lock lock(s_notDeletedList);
+  if(msg.request.command.compare(JLO_DELETE) == 0)
+  {
+    std::set<unsigned long>::iterator iter = not_deleted_jlos.find(msg.request.query.id);
+    if(iter != not_deleted_jlos.end())
+      not_deleted_jlos.erase(iter);
+  }
+  else
+  {
+    std::set<unsigned long>::iterator iter = not_deleted_jlos.find(msg.request.query.id);
+    if(iter == not_deleted_jlos.end())
+      not_deleted_jlos.insert(msg.response.answer.id);
+  }
+  if(not_deleted_jlos.size() % 100 == 0)
+    ROS_WARN("cop knows %ld poses", not_deleted_jlos.size());
+  return rv;
 }
 
 void ROSjloComm::NotifyPoseUpdate(RelPose* pose, bool sendObjectRelation)
@@ -119,7 +151,7 @@ void ROSjloComm::NotifyPoseUpdate(RelPose* pose, bool sendObjectRelation)
   srvjlo msg;
   msg.request.command = JLO_UPDATE;
   PutPoseIntoAMessage(msg.request.query, pose);
-  if (!GetJloServiceClient().call(msg))
+  if (!GetJloServiceClient(msg))
   {
     printf("Notify Pose Update: Error in ROSjloComm: Update of pose information not psossible !\n");
   }
@@ -158,7 +190,7 @@ RelPose* ROSjloComm::CreateNewPose(RelPose* pose, Matrix* mat, Matrix* cov)
         msg.request.query.cov[r * width + c] = cov->element(r,c);
     }
   }
-  if (!GetJloServiceClient().call(msg))
+  if (!GetJloServiceClient(msg))
   {
     printf("Create New Pose: Error in ROSjloComm: Update of pose information not psossible!\n");
     printf("Debug out of srvjl::request :\n");
@@ -194,7 +226,7 @@ RelPose* ROSjloComm::GetPose(int poseId)
    srvjlo msg;
    msg.request.command = JLO_IDQUERY;
    msg.request.query.id = poseId;
-  if (!GetJloServiceClient().call(msg))
+  if (!GetJloServiceClient(msg))
   {
     printf("Error in ROSjloComm: Reading of pose information not possible (task: %s with %d)!\n", JLO_IDQUERY, poseId);
     return NULL;
@@ -209,23 +241,37 @@ RelPose* ROSjloComm::GetPose(int poseId)
 }
 
 
-RelPose* ROSjloComm::GetPose(const std::string poseId)
+RelPose* ROSjloComm::GetPose(const std::string poseId, bool wait)
 {
-   srvjlo msg;
-   msg.request.command = JLO_NAMEQUERY;
-   msg.request.query.name = poseId;
-  if (!GetJloServiceClient().call(msg))
+  srvjlo msg;
+  msg.request.command = JLO_NAMEQUERY;
+  msg.request.query.name = poseId;
+  RelPose* returnval = NULL;
+  while(wait)
   {
-    printf("Error in ROSjloComm: Reading of pose information not possible (task: %s with %d)!\n", JLO_IDQUERY, poseId);
-    return NULL;
+    if (!GetJloServiceClient(msg))
+    {
+      printf("Error in ROSjloComm: Reading of pose information not possible (task: %s with %s)!\n", JLO_IDQUERY, poseId.c_str());
+      return returnval; /*Error in service, break always*/
+    }
+    else if (msg.response.error.length() > 0)
+    {
+      printf("Error from jlo: %s!\n", msg.response.error.c_str());
+      ROS_INFO("Cop reports: an Error happened in NameQuery for: %s!\n", poseId.c_str());
+    }
+    else
+      returnval = GetPoseFromMessage(msg.response.answer, this);
+    if(returnval == NULL)
+    {
+      if(g_stopall)
+        throw "ROSjloComm::ROSjloComm: Error happened in NameQuery";
+      ros::Rate rate(0.5);
+      rate.sleep();
+    }
+    else
+     break;
   }
-  else if (msg.response.error.length() > 0)
-  {
-    printf("Error from jlo: %s!\n", msg.response.error.c_str());
-    return NULL;
-  }
-  else
-    return GetPoseFromMessage(msg.response.answer, this);
+  return returnval;
 }
 
 jlo::LocatedObject* ROSjloComm::GetParent(const jlo::LocatedObject& child)
@@ -241,7 +287,7 @@ RelPose* ROSjloComm::GetPoseRelative(int poseId, int parentPoseId)
   msg.request.command  = JLO_FRAMEQUERY;
   msg.request.query.id = poseId;
   msg.request.query.parent_id = parentPoseId;
-  if (!GetJloServiceClient().call(msg))
+  if (!GetJloServiceClient(msg))
   {
     printf("Error in ROSjloComm: Reading of pose information not possible!\n");
     return NULL;
@@ -263,7 +309,7 @@ void ROSjloComm::FreePose(int poseId)
   msg.request.query.id = poseId;
   if(poseId == ID_WORLD)
     return;
-  if (!GetJloServiceClient().call(msg))
+  if (!GetJloServiceClient(msg))
   {
     printf("Error in ROSjloComm: Deleting of pose information not psossible!\n");
   }

@@ -40,7 +40,7 @@ int AlgorithmSelector<T>::InsertInList(AlgorithmEval<T> eval)
 }
 
 template <typename T>
-std::vector<AlgorithmEval<T> > AlgorithmSelector<T>::GetAlgorithmList(std::vector<AlgorithmEval<T> >*)
+std::vector<AlgorithmEval<T> > AlgorithmSelector<T>::GetAlgorithmList(std::vector<AlgorithmEval<T> >* )
 {
   return m_algorithmlist;
 }
@@ -58,31 +58,41 @@ Algorithm<T>* AlgorithmSelector<T>::BestAlgorithm(int type, const Signature &sig
   Algorithm<T>* selAlgorithm = NULL;
   double maxEval = -1.0;
   typename std::vector< AlgorithmEval<T> > mv = GetAlgorithmList(&mv);
-  printf("TEst\n");
   for(typename std::vector< class AlgorithmEval<T> >::const_iterator iter = mv.begin();
     iter != mv.end(); iter++)
   {
-    if(CheckTypeCompatibility((*iter).m_algorithmType, type) && (*iter).m_eval >= maxEval)
+    double sig_compatibility = (*iter).m_algorithm->CheckSignature(sig, sensors);
+    if(CheckTypeCompatibility((*iter).m_algorithmType, type) && sig_compatibility > 0.0)
     {
-      double sig_compatibility = (*iter).m_algorithm->CheckSignature(sig, sensors);
-      if(sig_compatibility > 0.0)
+      double earlierExperiences = 0.5;
+      std::map<ObjectID_t, std::pair<double, int> >::const_iterator it_obj= (*iter).m_objectEval.find(sig.m_ID);
+      if(it_obj != (*iter).m_objectEval.end())
       {
-        maxEval = (*iter).m_eval * sig_compatibility;
+        earlierExperiences = (*it_obj).second.first / (*it_obj).second.second;
+      }
+      double currEval = (*iter).m_eval * sig_compatibility * earlierExperiences;
+      if(currEval > maxEval)
+      {
+
+        maxEval = currEval;
         selAlgorithm = (*iter).m_algorithm;
+#ifdef _DEBUG
+        printf("The algorithm %s has a good probability for the signature (%f)\n", (*iter).m_algorithm->GetName().c_str(), maxEval);
+#endif
       }
       else
       {
 #ifdef _DEBUG
-        printf("The algorithm %s has a signature compatibility of %f (which is too low)\n", (*iter).m_algorithm->GetName().c_str(), sig_compatibility);
+        printf("The algorithm %s is  worse than others (%f < %f)\n", (*iter).m_algorithm->GetName().c_str(), currEval, maxEval);
 #endif
       }
     }
-#ifdef _DEBUG
     else
     {
-      printf("The algorithm %s is either not compatible with type %d or it is worse than others (%f < %f)\n", (*iter).m_algorithm->GetName().c_str(), type,(*iter).m_eval, maxEval);
-    }
+#ifdef _DEBUG
+      printf("The algorithm %s and the signature have a compatibility of %f (which might be too low) or is not compatible with type %d \n", (*iter).m_algorithm->GetName().c_str(), sig_compatibility, type);
 #endif
+    }
   }
   return selAlgorithm;
 }
@@ -101,6 +111,18 @@ void AlgorithmSelector<T>::EvalAlgorithm(Algorithm<T>* alg, double eval, double 
 #endif
       (*iter).m_eval = ((*iter).m_eval + eval) / 2;    //TODO eval rel situation and object...
       (*iter).m_avgRunTime = ((*iter).m_avgRunTime + time) / 2;
+
+
+      if((*iter).m_objectEval.find(relatedElem->m_ID) != (*iter).m_objectEval.end())
+      {
+        (*iter).m_objectEval[relatedElem->m_ID].first += eval;
+        (*iter).m_objectEval[relatedElem->m_ID].second ++;
+      }
+      else
+      {
+        (*iter).m_objectEval[relatedElem->m_ID].first = eval;
+        (*iter).m_objectEval[relatedElem->m_ID].second  = 1;
+      }
 #ifdef LOGFILE
       m_logfile.Log(alg->GetName(), GetName(), time / 100000000 , eval, relatedElem);
 #endif /*LOGFILE*/

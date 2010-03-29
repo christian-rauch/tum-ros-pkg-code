@@ -52,7 +52,7 @@ void LogFile::ReportError(std::string action_name,  std::string caller, long tim
 {
 
    printf("The action %s reported problems: %s\n", action_name.c_str(), problemDescription.c_str());
-   printf("  Caller: %s, Elem involved: %d (Type: %s)\n", caller.c_str(), relatedElem->m_ID, relatedElem->GetNodeName().c_str());
+   printf("  Caller: %s, Elem involved: %ld (Type: %s)\n", caller.c_str(), relatedElem->m_ID, relatedElem->GetNodeName().c_str());
    printf("  Time Information: %ld Risk: %f\n", timestamp, risk);
 }
 
@@ -71,8 +71,9 @@ void LogFile::Log(std::string action_name,  std::string caller, double duration_
 void LogFile::LogThread(std::string action_name,  std::string caller, double duration_s, double success, Elem* relatedElem)
 #endif
 {
-    FILE* file = NULL;
-    XMLTag* tag = NULL;
+   FILE* file = NULL;
+   XMLTag* tag = NULL;
+   printf("Lock for logfile");
    BOOST(s_mutexLogFile.lock());
     try
     {
@@ -115,6 +116,7 @@ void LogFile::LogThread(std::string action_name,  std::string caller, double dur
       printf("LogFile::Log: Unexpected Error in logging\n");
     }
     delete tag;
+    printf("Unlock for logfile\n");
   BOOST(s_mutexLogFile.unlock());
 #ifdef _DEBUG
   printf("Leaving temporary logging thread.\n");

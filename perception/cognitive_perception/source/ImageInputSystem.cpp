@@ -24,33 +24,16 @@
 #include "ImageInputSystem.h"
 #include "XMLTag.h"
 
-#ifdef HALCONIMG
-#include <cpp/HalconCpp.h>
-#endif
-#ifdef BOOST_THREAD
+
     /*printf("Sleeping\n");*/
 void Sleeping(long ms)
  {
-#ifdef BOOST_1_35
-  BOOST(boost::system_time t);
-#else
   boost::xtime t;
-#endif
-
-#ifdef BOOST_1_35
-  BOOST(t = get_system_time());
-  BOOST(t += boost::posix_time::seconds((double)ms / 1000));
-#else
   boost::xtime_get(&t, boost::TIME_UTC);
   t.nsec += ms * 1000000;  //TODO Check
-#endif
-    boost::thread::sleep(t);
+  boost::thread::sleep(t);
  }
-#else
-void Sleeping(long ms)
-{
-}
-#endif
+
 using namespace cop;
 
 
@@ -61,9 +44,6 @@ ImageInputSystem::ImageInputSystem (XMLTag* configFile)
 {
   if(configFile != NULL && configFile->CountChildren() > 0)
   {
-#ifdef HALCONIMG
-    Halcon::close_all_framegrabbers();
-#endif
     m_cameras = XMLTag::Load(configFile->GetChild(0), &m_cameras);
     for(std::vector<Sensor*>::const_iterator it = m_cameras.begin();
       it != m_cameras.end(); it++)
@@ -75,9 +55,24 @@ ImageInputSystem::ImageInputSystem (XMLTag* configFile)
      }
     printf("Loaded %ld Cameras\n", m_cameras.size());
   }
+  m_stConverterNames = configFile->GetProperty(XML_ATTIBUTE_READINGCONVERTER, "");
+  if(m_stConverterNames.length() > 0)
+  {
+    ReadingConverter* reading = ReadingConverter::ReadingConverterFactory(m_stConverterNames);
+    Reading::s_conv[std::pair<ReadingType_t, ReadingType_t>(reading->TypeIn(), reading->TypeOut())] = reading;
+  }
 }
 
-ImageInputSystem::~ImageInputSystem ( ) { }
+ImageInputSystem::~ImageInputSystem ( )
+{
+  std::map<std::pair<ReadingType_t, ReadingType_t>, ReadingConverter*>::iterator iter = Reading::s_conv.begin();
+  for(;iter != Reading::s_conv.end(); )
+  {
+    delete (*iter).second;
+    Reading::s_conv.erase(iter);
+    iter = Reading::s_conv.begin();
+  }
+}
 
 
 void ImageInputSystem::AddSensor(Sensor* sensor)
@@ -114,12 +109,11 @@ XMLTag* ImageInputSystem::Save()
  */
 std::vector<Sensor*> ImageInputSystem::GetBestSensor (RelPose &pose)
 {
-  printf("ImageInputSystem::GetBestSensor (%ld)\n", m_cameras.size());
+  printf("ImageInputSystem::GetBestSensor (num: %ld)\n", m_cameras.size());
 	size_t nSize = m_cameras.size();
   std::vector<Sensor*> sensors_seeing;
 	for(unsigned int i = 0; i < nSize; i++)
 	{
-	  printf("Can Camera %d(%p) see pose?\n", i, m_cameras[i]);
 	  if(m_cameras[i] == NULL)
       continue;
 		if(m_cameras[i]->CanSee(pose))//TODO: choose best

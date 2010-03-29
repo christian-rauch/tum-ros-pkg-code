@@ -32,18 +32,21 @@ AlgorithmEval<T>::AlgorithmEval(XMLTag* tag)
         m_algorithmType = XMLTag::Load(nodealgType, &m_algorithmType);
         m_eval = XMLTag::Load(tag->GetChild(XML_NODE_EVAL), &m_eval);
         m_avgRunTime = XMLTag::Load(tag->GetChild(XML_NODE_AVGTIME), &m_avgRunTime);
-
-    m_algorithm = XMLTag::Load(tag->GetChild(0), &m_algorithm);
+        m_algorithm = XMLTag::Load(tag->GetChild(0), &m_algorithm);
     }
     else
     {
-    std::pair < Algorithm<std::vector<RelPose*> >*, std::pair<int, std::pair< double , double > > > loader;
+        std::pair < Algorithm<std::vector<RelPose*> >*, std::pair<int, std::pair< double , double > > > loader;
         loader = XMLTag::Load(tag, &loader);
         m_algorithm = (Algorithm<T>*)loader.first;
         m_algorithmType = loader.second.first;
         m_eval = loader.second.second.first;
         m_avgRunTime = loader.second.second.second;
     }
+
+    XMLTag* nodeMap = tag->GetChild(XML_NODE_OBJECTEVALMAP);
+    if(nodeMap != NULL)
+      m_objectEval = XMLTag::Load(nodeMap, &m_objectEval);
     if(m_algorithm == NULL)
     {
       printf("AlgorithmEval::AlgorithmEval XMLFile contains an unknown Algorithm: %s\n", tag->GetChild(0)->GetName().c_str());
@@ -59,6 +62,7 @@ XMLTag* AlgorithmEval<T>::Save(std::string name)
     tag->AddChild(XMLTag::Tag(m_algorithmType, XML_NODE_ALGTYPE));
     tag->AddChild(XMLTag::Tag(m_eval, XML_NODE_EVAL));
     tag->AddChild(XMLTag::Tag(m_avgRunTime, XML_NODE_AVGTIME));
+    tag->AddChild(XMLTag::Tag(m_objectEval, XML_NODE_OBJECTEVALMAP));
     return tag;
 }
 
@@ -66,10 +70,12 @@ XMLTag* AlgorithmEval<T>::Save(std::string name)
 template class AlgorithmEval<std::vector<Signature* > >;
 template class AlgorithmEval<std::vector<RelPose* > >;
 template class AlgorithmEval<Descriptor*>;
+template class AlgorithmEval<ImprovedPose>;
 template class AlgorithmEval<double>;
 #else
 template AlgorithmEval<std::vector<Signature* > >;
 template AlgorithmEval<std::vector<RelPose* > >;
 template AlgorithmEval<Descriptor*>;
+template AlgorithmEval<ImprovedPose>;
 template AlgorithmEval<double>;
 #endif

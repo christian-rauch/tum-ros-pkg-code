@@ -22,7 +22,7 @@
 *	
 *
 **/
-#include <halcon.h>
+#include <Halcon.h>
 
 
 

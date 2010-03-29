@@ -53,16 +53,22 @@ pluginlib::ClassLoader<Sensor> s_sens_loader("cognitive_perception", "Sensor");
 Sensor* Sensor::SensorFactory(XMLTag* tag)
 {
   Sensor* sens = NULL;
-
   try
   {
     sens = s_sens_loader.createClassInstance(tag->GetName());
-    sens->SetData(tag);
-    if(sens->Start())
-      printf("Sensor of type %s started\n", sens->GetName().c_str());
+    if(sens != NULL)
+    {
+      printf("Calling sens (%p)->SetData(%s)\n", sens, sens->GetName().c_str());
+      sens->SetData(tag);
+      if(sens->Start())
+        printf("Sensor of type %s started\n", sens->GetName().c_str());
+      else
+        printf("Error: Sensor of type %s did NOT start\n", sens->GetName().c_str());
+    }
     else
-      printf("Error: Sensor of type %s did NOT start\n", sens->GetName().c_str());
-
+    {
+      printf("A sensor was not loaded :(\n");
+    }
   }
   catch(pluginlib::PluginlibException& ex)
   {
@@ -75,12 +81,22 @@ Sensor* Sensor::SensorFactory(XMLTag* tag)
 	return sens;
 }
 
+void Sensor::WaitForNewData()
+{
+ lock lk(m_mutexImageList);
+ printf("Waiting for new data");
+ m_newDataArrived.wait(lk);
+ printf("Got new data\n");
+}
+
 
 bool Sensor::DeleteReading()
 {
   bool ret = false;
 //  static int count_occ = 0;
-  BOOST(m_mutexImageList.lock());
+  lock lk(m_mutexImageList);
+  try
+  {
   if(m_images.size() == 0)
     return true;
   if((*m_images.begin())->m_usageCount == 0)
@@ -100,10 +116,14 @@ bool Sensor::DeleteReading()
       m_images.erase(m_images.begin());
       m_deletedOffset++;
       ret = true;
+
     }
   }
-  BOOST(m_mutexImageList.unlock());
-
+  }
+  catch(...)
+  {
+    printf("Error deleting Reading in Sensor::DeleteReading\n");
+  }
   return ret;
 }
 
@@ -118,6 +138,10 @@ void Sensor::SetData(XMLTag* tag)
     if(pose_elem != NULL)
     {
       m_relPose = RelPoseFactory::FRelPose(pose_elem);
+      if(m_relPose == NULL)
+        printf("Error loading RelPose of Camera\n");
+      else
+        printf("Camera Located at %ld (%s)\n", m_relPose->m_uniqueID, m_relPose->m_mapstring.c_str());
     }
     else
     {
@@ -135,28 +159,54 @@ void Sensor::SaveTo(XMLTag* tag)
 
 Reading* Sensor::GetReading_Lock(size_t index)
 {
-  BOOST(m_mutexImageList.lock());
+  Reading* ret = NULL;
+  lock lk(m_mutexImageList);
 
   if(index >= m_images.size())
   {
     printf("Camera skew asked %ldth frame which does not exist, will return %ld\n", index, m_images.size() - 1 );
     index = m_images.size() -1;
+    if( m_images.size() == 0)
+    {
+      throw "Sensor broken\n";
+    }
   }
-  m_images[index]->Hold();
-  m_images[index]->SetPose(m_relPose);
-  BOOST(m_mutexImageList.unlock());
-
-  return m_images[index];
+  ret = m_images[index];
+  ret->Hold();
+  ret->SetPose(m_relPose);
+  return ret;
 }
 
 void Sensor::PushBack(Reading* img)
 {
-  BOOST(m_mutexImageList.lock());
+  lock lk(m_mutexImageList);
   m_images.push_back(img);
   m_FrameCount++;
-  BOOST(m_mutexImageList.unlock());
+  m_newDataArrived.notify_all();
 }
+#ifdef USE_YARP_COMM
+/*
+template <class SensorType, class MessageType>
+void SensorNetworkRelay<SensorType, MessageType>::SetData(XMLTag* tag)
+{
+  SensorType::SetData(tag);
+  m_stTopic = tag->GetProperty(XML_ATTRIBUTE_TOPICNAME);
+  m_rate = tag->GetPropertyInt(XML_ATTRIBUTE_RATE);
+  ros::NodeHandle nh;
+  m_pub = nh.advertise<MessageType>(m_stTopic, 5);
+}
+*/
+/**
+*  Save all necessry Properties
 
-
-
-//#endif
+template <class SensorType, class MessageType>
+XMLTag* SensorNetworkRelay<SensorType, MessageType>::Save()
+{
+  XMLTag* tag = SensorType::Save();
+  tag->SetName(GetName());
+  tag->AddProperty(XML_ATTRIBUTE_TOPICNAME, m_stTopic);
+  tag->AddProperty(XML_ATTRIBUTE_RATE, m_rate);
+  return tag;
+}
+*/
+#endif

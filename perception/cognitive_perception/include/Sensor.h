@@ -24,25 +24,30 @@
 #define SENSOR_H
 
 #include <vector>
+#include <cstdio>
 #include "Reading.h"
 
 
-#ifdef BOOST_THREAD
 #include <boost/thread.hpp>
+#include <boost/thread/condition.hpp>
 using namespace boost;
-#else
-#endif
 
 #define XML_NODE_SENSOR "Sensor"
 #define XML_PROPERTY_SENSORNAME "SensorName"
 
+
+#define XML_NODE_SENSORRELAY "SensorRelay"
+#define XML_ATTRIBUTE_TOPICNAME "TopicName"
+#define XML_ATTRIBUTE_SENSORTYPE "SensorType"
+#define XML_ATTRIBUTE_MESSAGTYPE "MessageType"
+#define XML_ATTRIBUTE_RATE  "Rate"
 
 namespace cop
 {
   class RelPose;
   class XMLTag;
   /**
-  *   Class Camera
+  *   Class Sensor
   *   @brief Provides an interface for camera usage
   */
   class Sensor
@@ -85,22 +90,22 @@ namespace cop
       virtual std::string GetName() const {return XML_NODE_SENSOR;};
       /**
       *  Show
-      *  @param Frame frame number, to specify an temporal offset or a specific file
+      *  @param frame number, to specify an temporal offset or a specific file
       *  @brief should display the sensors currenbt reading, if wanted
       */
       virtual void Show(const long frame = -1){}
       /**
       * GetReading
-      * @param Frame frame number, to specify an offset or a specific file
-      * @throws char* with an error message in case of failure
+      * @param frame frame number, to specify an offset or a specific file
+      * @throw char* with an error message in case of failure
       */
-      virtual Reading*	GetReading(const long &Frame = -1) = 0;
+      virtual Reading*	GetReading(const long &frame = -1) = 0;
       /**
       * CanSee
       * Checks if a pose is inside the view of this sensor
       * @param pose pose that has to be looked at
       */
-      virtual bool CanSee (RelPose &pose) const {return false;}
+      virtual bool CanSee(RelPose &pose) const {return false;}
       /**
       *    Start
       *   @brief overwrite to start up the data reading, is called at least once after creation
@@ -126,7 +131,7 @@ namespace cop
       * GetSensorID
       * This contains optinally an identifier for the sensor (Loaded from)
       */
-      std::string GetSensorID(){return m_stSensorName;}
+      std::string GetSensorID() const{return m_stSensorName;}
 
       /**
       * m_stSensorName
@@ -139,15 +144,34 @@ namespace cop
       */
       virtual void SetSensorList(std::vector<Sensor*>){};
 
-
+      /**
+      *  GetUnformatedCalibrationValues
+      *  @return a pair of a fomrat string describing the content and a list of doubles
+      */
+      virtual std::pair<std::string, std::vector<double> > GetUnformatedCalibrationValues(){return std::pair<std::string, std::vector<double> >();}
       /**
       * DeleteReading
       *  @brief removes entries of the reading buffer, this function will not release still references functions (@see cop::Reading::Free)
       *
       */
       virtual bool DeleteReading();
+
+      /**
+      *  GetShowLock()
+      */
+      virtual void GetShowLock(){printf("Lock Sensor Show %s\n", m_stSensorName.c_str()); m_mutexShow.lock();}
+      /**
+      *  ReleaseShowLock()
+      */
+      virtual void ReleaseShowLock(){printf("UnLock Sensor Show %s\n", m_stSensorName.c_str()); m_mutexShow.unlock();}
+
+      /**
+      *
+      *  @brief Wait the condition variable m_mutexImageList
+      */
+      virtual void WaitForNewData();
   protected:
-     void PushBack(Reading* img);
+     virtual void PushBack(Reading* img);
      Reading* GetReading_Lock(size_t index);
      virtual void SetData(XMLTag* tag);
 
@@ -160,10 +184,175 @@ namespace cop
       unsigned long m_max_cameraImages;
       std::string m_stSensorName;
 
-  #ifdef BOOST_THREAD
+      typedef boost::mutex::scoped_lock lock;
       boost::mutex m_mutexImageList;
-  #else
-  #endif
+      boost::mutex m_mutexShow;
+      boost::condition m_newDataArrived;
   };
+}
+#ifndef USE_YARP_COMM
+#include <ros/ros.h>
+#include <sensor_msgs/CameraInfo.h>
+
+namespace cop
+{
+  template<class SensorType, class MessageType>
+  class SensorNetworkRelay : public SensorType
+  {
+  public:
+      /***
+      *   @brief Constructor with pose, initializes parameters
+      */
+    SensorNetworkRelay() : SensorType()
+    {m_rateCounter = 0;m_bCameraInfo=false;};
+      /***
+      *   @brief Constructor with pose, initializes parameters, sets the sensors pose
+      */
+      /**
+      *   The destructor is virtual
+      */
+      virtual ~SensorNetworkRelay()
+      {
+        /*SensorType::~SensorType();*/
+      };
+      /***
+      *  @brief
+      *  @param tag data, containing the class to load
+
+      virtual void SetData(XMLTag* tag); */
+      /**
+      *  Get Type of the camera by its Name
+      */
+      virtual std::string GetName() const {throw "Error in SensorNetworkRelay::GetName(): This function has to be overwritten";};
+
+      virtual MessageType ConvertData(Reading* img) = 0;
+  protected:
+     virtual void PushBack(Reading* img)
+     {
+       try
+       {
+         if(m_rateCounter++ >  m_rate)
+         {
+            m_rateCounter = 0;
+            MessageType temp = ConvertData(img);
+            m_pub.publish(temp);
+            if(m_bCameraInfo)
+            {
+              m_cameraInfoMessage.header = temp.header;
+              m_pubCamInfo.publish(m_cameraInfoMessage);
+            }
+         }
+       }
+       catch(const char* text)
+       {
+         printf("Error converting Data in SensorRelay::PushBack\n");
+       }
+       catch(...)
+       {
+         printf("Error publishing data in SensorRelay::PushBack\n");
+       }
+       Sensor::PushBack(img);
+     }
+
+  protected:
+     std::string m_stTopic;
+     ros::Publisher m_pub;
+     bool m_bCameraInfo;
+     ros::Publisher m_pubCamInfo;
+     sensor_msgs::CameraInfo m_cameraInfoMessage;
+     int m_rate;
+     int m_rateCounter;
+  };
+#endif /*USE_YARP_COMM*/
+
+  class MinimalCalibration
+  {
+  public:
+    MinimalCalibration(){};
+    double focal_length;
+    double pix_size_x;
+    double pix_size_y;
+    double proj_center_x;
+    double proj_center_y;
+  };
+
+template<typename TypeReading, typename DataType> class ScopedImage
+{
+public:
+  ScopedImage(std::vector<Sensor*> sensors, ReadingType_t type) :
+   selected_sensor(ExtractSensor(sensors, type)),
+   original(ExtractOriginal(selected_sensor, type)),
+   sensor_pose_at_capture_time(original->GetPose()),   
+   converted(original->GetType() != type),
+   copy(converted ? (TypeReading*)original->ConvertTo(type) : NULL),
+   image(converted ? (copy->m_image) : ((TypeReading*)original)->m_image)
+  {
+    if(copy == NULL)
+      throw "ScopedImage: No conversion to the requested type is available";
+    std::pair<std::string,  std::vector<double> > calib_temp = selected_sensor->GetUnformatedCalibrationValues();
+
+    calib.focal_length = calib_temp.second[0];
+    calib.pix_size_x = calib_temp.second[1];
+    calib.pix_size_y = calib_temp.second[2];
+    calib.proj_center_x = calib_temp.second[3];
+    calib.proj_center_y = calib_temp.second[4];
+    
+  }
+  
+  ~ScopedImage()
+  {
+    if(converted)
+    {
+      delete copy;
+    }
+    original->Free();
+  }
+
+  static Sensor* ExtractSensor(std::vector<Sensor*> sensors, ReadingType_t type)
+  {
+    for(size_t i = 0; i < sensors.size(); i++)
+    {
+      std::pair<std::string,  std::vector<double> > calib_temp = sensors[i]->GetUnformatedCalibrationValues();
+      // TODO: sensors[i]->IsCamera()  => sensors[i]->ReadingType() == type 
+      
+      if(((sensors[i]->IsCamera() && !(type == ReadingType_PointCloud)) || 
+          (!sensors[i]->IsCamera() && (type == ReadingType_PointCloud))) && 
+         (calib_temp.first.compare("RECTHALCONCALIB")) == 0 && 
+         (calib_temp.second.size() == 5) )
+      {
+        printf("Got another  sensor that givces the necessary data\n");
+        return sensors[i];
+      }
+    }
+    return NULL;    
+  }
+
+
+  static Reading* ExtractOriginal(Sensor* sensor, ReadingType_t type)
+  {
+    if(sensor == NULL)
+      throw "ScopedImage: No sensors fullfills this algorithm requirements";
+    return sensor->GetReading(-1);
+  }
+
+  
+  DataType& operator* () const
+  {
+    return image;
+  }
+  MinimalCalibration calib;
+  Sensor* selected_sensor;
+private:
+  Reading* original;
+public:
+  RelPose* sensor_pose_at_capture_time;
+private:
+  bool converted;
+  TypeReading* copy;
+  DataType& image;
+
+};
+
+
 }
 #endif /*CAMERA_H*/

@@ -41,6 +41,9 @@ namespace cop
   /**
     * class Class
     * @brief Class represents high level descriptions of objects in the signature database, it is part of the Elem hirarchy
+    *
+    *  Nodename:   XML_NODE_CLASS "Class"                Saves the semantic connection with highlevel for Descriptor and Signature \n
+    *  Attributes: XML_ATTRIBUTE_CLASSNAME "ClassName"   The actual value that could be queried by highlevel
     */
   class Class : public Elem
   {
@@ -67,12 +70,12 @@ namespace cop
 
     void SetName(std::string name);
 
-    std::string GetName(){return m_name;}
+     std::string GetName(){return m_name;}
       /**
       *   GetType
       *   @brief returns the element specialisation
       */
-      virtual int GetType(){return CLASS;}
+      virtual ElemType_t GetType(){return CLASS;}
     // Static Public attributes
     //
 

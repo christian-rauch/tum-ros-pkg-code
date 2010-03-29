@@ -38,7 +38,6 @@ RefineAlgorithm* RefineAlgorithm::RefineAlgFactory(XMLTag* tag)
 {
 	std::string name = tag->GetName();
 	RefineAlgorithm*  alg = NULL;
-
   try
   {
     alg = s_ref_alg_loader.createClassInstance(name);
@@ -47,8 +46,8 @@ RefineAlgorithm* RefineAlgorithm::RefineAlgFactory(XMLTag* tag)
   catch(pluginlib::PluginlibException& ex)
   {
   //handle the class failing to load
-    printf("The plugin failed to load for some reason. Error: %s\n", ex.what());
-    printf("Tag failed: %s\n", tag->GetName().c_str());
+    printf("RefineAlgorithm: The plugin failed to load for some reason. Error: %s\n", ex.what());
+    printf("RefineAlgorithm: Tag failed: %s\n", tag->GetName().c_str());
   }
 	return alg;
 }

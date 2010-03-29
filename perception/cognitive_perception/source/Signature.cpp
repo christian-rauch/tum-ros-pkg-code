@@ -114,24 +114,44 @@ void Signature::SetData ( XMLTag* tag )
 
 Signature::~Signature ( )
 {
-  printf("\n\nDeleting Signature\n\n");
   BOOST(m_mutexElems.lock());
-
-  for(std::vector<Elem*>::const_iterator iter = m_elems.begin();
-    iter != m_elems.end(); iter++)
+  try
   {
-    delete (*iter);
+    for(std::vector<Elem*>::const_iterator iter = m_elems.begin();
+      iter != m_elems.end(); iter++)
+    {
+      delete (*iter);
+    }
+    m_elems.clear();
   }
-  m_elems.clear();
+  catch(const char * text)
+  {
+    printf("Error deleting Elem of Signature: %s\n", text);
+  }
+  catch(...)
+  {
+    printf("Error deleting Elem of Signature\n");
+  }
   BOOST(m_mutexElems.unlock());
 
   BOOST(m_mutexClasses.lock());
-  for(std::vector<Class*>::const_iterator iter = m_class.begin();
-    iter != m_class.end(); iter++)
+  try
   {
-    delete (*iter);
+    for(std::vector<Class*>::const_iterator iter = m_class.begin();
+      iter != m_class.end(); iter++)
+    {
+      delete (*iter);
+    }
+    m_class.clear();
+      }
+  catch(const char * text)
+  {
+    printf("Error deleting Class of Signature: %s\n", text);
   }
-  m_class.clear();
+  catch(...)
+  {
+    printf("Error deleting Class of Signature\n");
+  }
   BOOST(m_mutexClasses.unlock());
 
 }
@@ -142,7 +162,6 @@ Signature::~Signature ( )
 
 Class* Signature::GetClass(int index)
 {
-  DEBUG(printf("GetClass: %p\n", this));
   BOOST(m_mutexClasses.lock());
   Class* ret  = NULL;
   if((signed)m_class.size() > index)
@@ -170,7 +189,11 @@ void Signature::Show(Sensor* cam)
   try
   {
     if(cam!= NULL)
+    {
       cam->Show();
+      cam->GetShowLock();
+
+    }
   }
   catch(const char* text)
   {
@@ -180,17 +203,22 @@ void Signature::Show(Sensor* cam)
   {
     printf("Display of sensor data failed\n");
   }
-  DEBUG(printf("Entering Showing of signature %d\n", m_ID));
+
+  DEBUG(printf("Entering Showing of signature %ld\n", m_ID));
   for(unsigned int i = 0; i < CountElems(); i++)
   {
     try
     {
-      ((Descriptor*)GetElement(i,0))->Show(m_relPose, cam);
+      ((Descriptor*)GetElement(i,ELEM))->Show(m_relPose, cam);
     }
     catch(...)
     {
       printf("Showing of elem %d failed ... \n", i);
     }
+  }
+  if(cam!= NULL)
+  {
+    cam->ReleaseShowLock();
   }
 }
 
@@ -233,7 +261,7 @@ void Signature::SaveTo(XMLTag* tag)
  * @param  index
  * @param  type
  */
- Elem* Signature::GetElement (const int &index, const int &type ) const
+ Elem* Signature::GetElement (const int &index, const ElemType_t &type ) const
  {
   Elem* elem = NULL;
 
@@ -272,11 +300,9 @@ long Signature::SetElem (Elem* elemToSet )
 {
   if(elemToSet != NULL)
   {
-  BOOST(m_mutexElems.lock());
-
+    BOOST(m_mutexElems.lock());
     m_elems.push_back(elemToSet);
-  BOOST(m_mutexElems.unlock());
-
+    BOOST(m_mutexElems.unlock());
     int type = elemToSet->GetType();
     if(type > ELEM && type < SIGNATURE)
     {

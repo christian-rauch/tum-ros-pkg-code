@@ -26,14 +26,23 @@
 
 namespace cop
 {
+  /**
+  *	typedefs:
+  */
+  typedef std::pair<RelPose*, Probability_1D_t> ImprovedPose;
+
+    /**
+    * class ProveAlgorithm
+    *	@brief gives a verification of an earlier measurement
+    */
   class ProveAlgorithm :
-    public Algorithm<double>
+    public Algorithm<ImprovedPose>
   {
   public:
     ProveAlgorithm(void);
     ~ProveAlgorithm(void);
 
-    virtual double Perform(std::vector<Sensor*> sensors, RelPose* pose, Signature& Object, int &numOfObjects, double& qualityMeasure) = 0;//{throw "Perform for LocateAlgorithm not implemented\n";}
+    virtual ImprovedPose Perform(std::vector<Sensor*> sensors, RelPose* pose, Signature& Object, int &numOfObjects, double& qualityMeasure) = 0;//{throw "Perform for LocateAlgorithm not implemented\n";}
 
     double CheckSignature(const Signature& object, const std::vector<Sensor*> &sensors) = 0;
 

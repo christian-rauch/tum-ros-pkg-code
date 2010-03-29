@@ -147,6 +147,13 @@ SignatureDB::~SignatureDB ( )
 {
 	delete m_dbStarter;
 	delete m_index;
+  std::map<PerceptionPrimitiveID_t, PerceptionPrimitive*>::iterator iter = m_ppMap.begin();
+  for(; iter != m_ppMap.end(); )
+	{
+    delete (*iter).second;
+    m_ppMap.erase(iter);
+    iter = m_ppMap.begin();
+	}
 }
 
 //
@@ -156,7 +163,13 @@ SignatureDB::~SignatureDB ( )
 void SignatureDB::AddAndShowSignatureAsync(Signature* sig, Sensor* sens)
 {
   boost::thread(boost::bind(&SignatureDB::AddSignature, this, sig));
-  boost::thread(boost::bind(&Signature::Show, sig, sens));
+#ifdef WIN32
+#else
+  char* value =  getenv ("DISPLAY");
+  printf("Read Env Display: %s\n", value);
+  if(value && strlen(value) > 0)
+    boost::thread(boost::bind(&Signature::Show, sig, sens));
+#endif
 }
 #endif
 
@@ -280,60 +293,9 @@ void SignatureDB::AddClass(std::string stname, int id)
      printf("Already defined class id %d: %s\n", id, CheckClass(id).c_str());
 }
 
-Signature* SignatureDB::GetSignature(std::vector<int> class_ids)
+void SignatureDB::CompleteSignature(Signature* sig_max, std::vector<ObjectID_t> class_ids)
 {
   size_t size = class_ids.size();
-  int score_max = 0, score_temp = 0;
-  Signature* sig_max = NULL;
-  int index = -1;
-  printf("Entering Get Signature\n");
-  for(unsigned int i = 0 ; i < size; i++)
-  {
-    Signature* sig = NULL;
-    int offset = 0;
-    /** Get a signature for the given class*/
-    while((sig = GetSignatureByClass(class_ids[i], offset++)) != NULL)
-    {
-      /** Check this signature for containing more of the given classes*/
-      for(unsigned int j = 0; j < sig->CountClasses(); j++)
-      {
-        for(unsigned int k = 0 ; k < size; k++)
-        {
-          if(k == i)
-          {
-            score_temp++;
-            continue;
-          }
-          if(sig->GetClass(j) != NULL && class_ids[k] == sig->GetClass(j)->m_ID)
-          {
-            score_temp++;
-            break;
-          }
-        }
-      }
-      /** Keep the best signature*/
-      if(score_temp > score_max)
-      {
-        score_max = score_temp;
-        index = i;
-        if(sig_max != NULL)
-          FreeActiveSignature(sig_max);
-        /** Copy the best*/
-        sig_max = (Signature*)sig;
-      }
-      else
-        FreeActiveSignature(sig);
-    }
-    score_temp = 0;
-  }
-  /** if there was no signature, put all classes to a new sig*/
- if(sig_max != NULL)
-    printf("Signature selected: %p: id: %d\n", sig_max, sig_max->m_ID);
-
-  if(sig_max == NULL && size != 0)
-  {
-    sig_max = new Signature();
-  }
   if(sig_max != NULL)
   {
     for(unsigned int k = 0 ; k < size; k++)
@@ -357,7 +319,8 @@ Signature* SignatureDB::GetSignature(std::vector<int> class_ids)
             sig_max->SetElem(elem);
           else
           {
-            printf("No descriptor could be found or creted for class %d (=%s)\n", class_ids[k], CheckClass(class_ids[k]).c_str());
+            printf("No descriptor could be found or creted for class %ld (=%s)\n", class_ids[k], CheckClass(class_ids[k]).c_str());
+            sig_max->SetClass(GetClassByID(class_ids[k]));
           }
         }
         catch(char const* text)
@@ -367,11 +330,74 @@ Signature* SignatureDB::GetSignature(std::vector<int> class_ids)
       }
     }
   }
+}
+
+Signature* SignatureDB::GetSignature(std::vector<ObjectID_t> class_ids)
+{
+  size_t size = class_ids.size();
+  int score_max = 0, score_temp = 100;
+  Signature* sig_max = NULL;
+  int index = -1;
+  printf("Entering Get Signature\n");
+  for(unsigned int i = 0 ; i < size; i++)
+  {
+    Signature* sig = NULL;
+    int offset = 0;
+    /** Get a signature for the given class*/
+    while((sig = GetSignatureByClass(class_ids[i], offset++)) != NULL)
+    {
+      /** Check this signature for containing more of the given classes*/
+      for(unsigned int j = 0; j < sig->CountClasses(); j++)
+      {
+        bool bFoundThis = false;
+        for(unsigned int k = 0 ; k < size; k++)
+        {
+          if(k == i)
+          {
+            score_temp++;
+            continue;
+          }
+          if(sig->GetClass(j) != NULL && class_ids[k] == sig->GetClass(j)->m_ID)
+          {
+            score_temp++;
+            bFoundThis = true;
+            break;
+          }
+        }
+        if(!bFoundThis)
+        {
+          score_temp--;
+        }
+      }
+      /** Keep the best signature*/
+      if(score_temp > score_max)
+      {
+        score_max = score_temp;
+        index = i;
+        if(sig_max != NULL)
+          FreeActiveSignature(sig_max);
+        /** Copy the best*/
+        sig_max = (Signature*)sig;
+      }
+      else
+        FreeActiveSignature(sig);
+    }
+    score_temp = 0;
+  }
+  /** if there was no signature, put all classes to a new sig*/
+ if(sig_max != NULL)
+    printf("Signature selected: %p: id: %ld\n", sig_max, sig_max->m_ID);
+
+  if(sig_max == NULL && size != 0)
+  {
+    sig_max = new Signature();
+  }
+  CompleteSignature(sig_max, class_ids);
   /** Returning the best*/
   return sig_max;
 }
 
-Elem* SignatureDB::FindCreateDescriptor(int class_id)
+Elem* SignatureDB::FindCreateDescriptor(ObjectID_t class_id)
 {
   Elem* result = NULL;
   Signature* sample = GetSignatureByClass(class_id);
@@ -383,7 +409,11 @@ Elem* SignatureDB::FindCreateDescriptor(int class_id)
     {
       for(size_t i = 0; i < sample->CountElems(); i++)
       {
-        Descriptor* descr = (Descriptor*)sample->GetElement(i, -1);
+        Descriptor* descr = (Descriptor*)sample->GetElement(i, ELEM);
+        if(descr == NULL)
+          continue;
+        if(descr->GetClass() == NULL)
+         continue;
         if(descr->GetClass()->m_ID == class_id)
         {
           cands.push_back(descr);
@@ -420,7 +450,7 @@ void SignatureDB::FreeActiveSignature(Signature* sig)
 }
 
 
-Class* SignatureDB::GetClassByID(int id)
+Class* SignatureDB::GetClassByID(ObjectID_t id)
 {
   std::string st = CheckClass(id);
   if(st == "")
@@ -429,9 +459,9 @@ Class* SignatureDB::GetClassByID(int id)
 }
 
 
-int SignatureDB::CheckClass(std::string name)
+ObjectID_t SignatureDB::CheckClass(std::string name)
 {
-	std::vector<std::pair<std::string, int> > ::const_iterator it;
+	std::vector<std::pair<std::string, ObjectID_t> > ::const_iterator it;
 	for(it = m_classes.begin(); it != m_classes.end(); it++)
 	{
 		/*cerr<<(*it).first<<endl;*/
@@ -442,9 +472,9 @@ int SignatureDB::CheckClass(std::string name)
 	return -1;
 }
 
-std::string SignatureDB::CheckClass(int id_c)
+std::string SignatureDB::CheckClass(ObjectID_t id_c)
 {
-	std::vector<std::pair<std::string, int> > ::const_iterator it;
+	std::vector<std::pair<std::string,ObjectID_t> > ::const_iterator it;
 	for(it = m_classes.begin(); it != m_classes.end(); it++)
 	{
 		if((*it).second == id_c)
@@ -453,9 +483,9 @@ std::string SignatureDB::CheckClass(int id_c)
 	return "";
 }
 
-int SignatureDB::GetElemIdByClass(int ClassID, int index)
+int SignatureDB::GetElemIdByClass(ObjectID_t ClassID, int index)
 {
-	int id  = -1;
+	ObjectID_t id  = -1;
 	int count = 0;
 	for(unsigned int indizes = 0; indizes< m_index->CountChildren(); indizes++)
 	{
@@ -483,9 +513,9 @@ int SignatureDB::GetElemIdByClass(int ClassID, int index)
 	return id;
 }
 
-Signature* SignatureDB::GetSignatureByClass(int ClassID, int index)
+Signature* SignatureDB::GetSignatureByClass(ObjectID_t ClassID, int index)
 {
-	int id = GetElemIdByClass(ClassID, index);
+	ObjectID_t id = GetElemIdByClass(ClassID, index);
 	if(id == -1)
 		return NULL;
 	return GetSignatureByID(id);
@@ -570,7 +600,7 @@ void SignatureDB::UpdateIDList()
 						//TODO check if it exists already
 						sub_index->AddChild((XMLTag*)new Class2ID(cl->m_ID, id));
 						AddClass(cl->GetName(), cl->m_ID);
-						printf("Added Class %s / %d\n", cl->GetName().c_str(), cl->m_ID);
+						printf("Added Class %s / %ld\n", cl->GetName().c_str(), cl->m_ID);
 					}
 				}
 			}
@@ -578,7 +608,62 @@ void SignatureDB::UpdateIDList()
 		}
 	}
 }
-// Other methods
-//
 
+PerceptionPrimitive& SignatureDB::CreateNewPerceptionPrimitive(Signature* sig)
+{
+  PerceptionPrimitive* pp = new PerceptionPrimitive(sig);
+  m_ppMap[pp->GetID()] = pp;
+  return *pp;
+}
+
+
+void SignatureDB::EvaluatePerceptionPrimitive(PerceptionPrimitiveID_t id, double value, double weight)
+{
+  if(m_ppMap.find(id) != m_ppMap.end())
+  {
+    PerceptionPrimitive *pp =  m_ppMap[id];
+    for(size_t i = 0; i < pp->m_signatures.size(); i++)
+    {
+       for(size_t j = 0; j < pp->m_signatures[i]->CountElems(); j++)
+       {
+         Elem* elem = pp->m_signatures[i]->GetElement(j, ELEM);
+         elem->Evaluate(value, weight);
+         if(weight > PROP_DECAY)
+         {
+           PerceptionPrimitiveID_t id_inner = elem->GetLastPerceptionPrimitive();
+           EvaluatePerceptionPrimitive(id_inner, value, weight / 2);
+         }
+       }
+    }
+    for(size_t i = 0; i < pp->m_results.size(); i++)
+    {
+      int index;
+      if(CheckClass(pp->m_results[i]).length() != 0 && Check(pp->m_results[i], index))
+      {
+        Signature* sig = GetSignatureByID(pp->m_results[i]);
+        for(size_t j = 0; j < sig->CountElems(); j++)
+        {
+          Elem* elem = sig->GetElement(j, ELEM);
+          elem->Evaluate(value, weight);
+          if(weight > PROP_DECAY)
+          {
+            PerceptionPrimitiveID_t id_inner = elem->GetLastPerceptionPrimitive();
+            EvaluatePerceptionPrimitive(id_inner, value, weight / 2);
+          }
+        }
+      }
+    }
+    pp->SetEvaluated();
+  }
+  std::map<PerceptionPrimitiveID_t, PerceptionPrimitive*>::iterator iter = m_ppMap.begin();
+  for(; iter != m_ppMap.end(); iter++)
+	{
+	  if((*iter).second->GetCurrState() == PP_DELETABLE)
+	  {
+      delete (*iter).second;
+      m_ppMap.erase(iter);
+      iter = m_ppMap.begin();
+	  }
+	}
+}
 

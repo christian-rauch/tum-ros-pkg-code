@@ -30,10 +30,13 @@
 #include "Class.h"
 #include "Object.h"
 
-#ifdef BOOST_THREAD
+  /**
+   typedefs
+  */
+    typedef double Probability_1D_t; /* < Type for storing Probability of a location to occur*/
+
 #include <boost/thread.hpp>
-#else
-#endif
+
 #ifndef XML_NODE_SIGNATURE
 #define XML_NODE_SIGNATURE "Signature"
 #define XML_NODE_SIGNATURE_VEC "SignatureVector"
@@ -82,7 +85,7 @@ namespace cop
     * @param  index
     * @param  type
     */
-    Elem* GetElement (const int &id, const int &type ) const;
+    Elem* GetElement (const int &id, const ElemType_t &type ) const;
 
     size_t CountClasses() const {return m_class.size();}
     size_t CountElems() const {return m_elems.size();}
@@ -97,13 +100,13 @@ namespace cop
     long SetElem (Elem* elemToSet );
     long SetClass ( Class* classToSet);
     void Show(Sensor* cam);
-      virtual int GetType(){return SIGNATURE;}
+    virtual ElemType_t GetType(){return SIGNATURE;}
   protected:
     virtual void SaveTo(XMLTag* tag);
     /**
     *   SetData
     *   @param tag
-    *   @throws char* with an error message in case of failure
+    *   @throw char* with an error message in case of failure
     */
     virtual void SetData(XMLTag* tag);
 
@@ -116,10 +119,8 @@ namespace cop
     std::vector<Elem*> m_elems;
     std::vector<Class*> m_class;
     void initAttributes ( ) ;
-  #ifdef BOOST_THREAD
     boost::mutex m_mutexElems;
     boost::mutex m_mutexClasses;
-  #endif
   };
 }
 #endif // SIGNATURE_H

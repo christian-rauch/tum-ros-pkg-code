@@ -32,6 +32,7 @@
 #include "Statistics.h"
 #include "RefineAlgorithm.h"
 #include "AlgorithmSelector.h"
+#include "PerceptionPrimitive.h"
 #ifdef BOOST_THREAD
 #include "boost/thread.hpp"
 #else
@@ -89,15 +90,22 @@ namespace cop
     * @brief tries to gather information of the given Signature
     * @return the signature and similar signatures with their locations
     * @param lastKnownPoses a list of estimated location to start with, can be empty
-    * @param object        the object that should be refined
+    * @param visPrim        the object that should be refined
     * @param numOfObjects  maximal number of similar objects to be returned, will be overwritten on return
     */
-    SignatureLocations_t RefineObject (PossibleLocations_t* lastKnownPoses, Signature& object, int &numOfObjects);
-
-
+    SignatureLocations_t RefineObject (PossibleLocations_t* lastKnownPoses, PerceptionPrimitive &visPrim, int &numOfObjects);
+    /**
+    * ProoveObject
+    * @brief tries to validate information of the given Signature
+    * @return the signature and similar signatures with their locations
+    * @param lastKnownPoses a list of estimated location to start with, can be empty
+    * @param visPrim        the object that should be refined
+    * @param numOfObjects  maximal number of similar objects to be returned, will be overwritten on return
+    */
+    SignatureLocations_t ProoveObject(PossibleLocations_t* lastKnownPoses, PerceptionPrimitive &visPrim, int &numOfObjects);
 
     void AddAlgorithm(Algorithm<Descriptor*>*);
-    void AddAlgorithm(Algorithm<double>*);
+    void AddAlgorithm(Algorithm<ImprovedPose >*);
 
     /**
      * @return Signature*
@@ -117,8 +125,8 @@ namespace cop
 
 
     std::vector<std::pair<TaskID, Signature*> > m_taskList;
-    AlgorithmSelector<Descriptor*>	m_refinements;
-    AlgorithmSelector<double>		m_checks;
+    AlgorithmSelector<Descriptor* >	m_refinements;
+    AlgorithmSelector<ImprovedPose>	m_checks;
   #ifdef BOOST_THREAD
     boost::thread* m_learningThread;
   #else

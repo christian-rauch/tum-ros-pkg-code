@@ -33,13 +33,16 @@
 #include "Sensor.h"
 
 #define XML_NODE_IMAGEINPUTSYSTEM "ImageInputSystem"
-
+#define XML_ATTIBUTE_READINGCONVERTER "ReadingConverter"
 
 namespace cop
 {
   /**
     * class ImageInputSystem
     * @brief manages different cameras and the camera selection
+    *
+    * Nodename: XML_NODE_IMAGEINPUTSYSTEM "ImageInputSystem"
+    * Attribute: XML_ATTIBUTE_READINGCONVERTER  "ReadingConverter" TODO: Support several
     */
   class ImageInputSystem
   {
@@ -68,18 +71,15 @@ namespace cop
     Sensor* GetSensor(unsigned int index){if(index < m_cameras.size())return m_cameras[index];else return NULL;}
 
     /**
-     * GetBestCamera
+     * GetBestSensor
      *  @brief Selected depening on the position that should be observed a camera and returns it.
      *	@return Camera
      *	@param  pose the pose that should be observed
-     *  @param camera index will be returned
-     *  @param offset specify this if the first camera is not good
-     *	@param  camera retrieves the selected camera
      *   @throws char* with an error message in case of failure
      */
-
     std::vector<Sensor*> GetBestSensor(RelPose &pose);
     std::vector<Sensor*> GetAllSensors() const {return m_cameras;};
+    std::string m_stConverterNames;
   private:
     std::vector<Sensor*> m_cameras;
   };

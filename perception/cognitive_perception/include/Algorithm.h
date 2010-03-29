@@ -34,6 +34,7 @@
 
 namespace cop
 {
+
   /**
     * class Algorithm
     *	@brief interface for all algorithms that can be executed by the AlgorithmSelector
@@ -91,10 +92,10 @@ namespace cop
     *	Show: show the algorithm results in a camera
     */
     virtual void Show(Sensor* ){};
-      /**
-      *
-      */
-      virtual std::string GetName(){return "Algorithm";}
+    /**
+    *
+    */
+    virtual std::string GetName(){return "Algorithm";}
     /**
     *	Save
     *	@brief saves the algorithms name and a parameter set

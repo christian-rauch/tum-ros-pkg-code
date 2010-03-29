@@ -97,7 +97,7 @@ RelPose* RelPoseFactory::FRelPose(XMLTag* tag)
     if(id == 0)
     {
       std::string name = tag->GetProperty(XML_ATTRIBUTE_LOID);
-
+      return GetRelPose(name);
     }
     if(id == ID_WORLD)
     {
@@ -190,6 +190,12 @@ RelPose* RelPoseFactory::FRelPoseIdentityChild(RelPose* parent)
 #else /*NO_LO_SERVICE_AVAILABLE*/
   IdentityMatrix m(4);
   Matrix cov(6,6);
+  cov << 0.0<< 0.0<< 0.0<< 0.0<< 0.0<< 0.0<<
+         0.0<< 0.0<< 0.0<< 0.0<< 0.0<< 0.0<<
+         0.0<< 0.0<< 0.0<< 0.0<< 0.0<< 0.0<<
+         0.0<< 0.0<< 0.0<< 0.0<< 0.0<< 0.0<<
+         0.0<< 0.0<< 0.0<< 0.0<< 0.0<< 0.0<<
+         0.0<< 0.0<< 0.0<< 0.0<< 0.0<< 0.0;
   return RelPoseFactory::FRelPose(parent, m, cov);
 #endif /*NO_LO_SERVICE_AVAILABLE*/
 }
@@ -272,6 +278,6 @@ void RelPoseFactory::FreeRelPose(RelPose* pose)
   }
   if(pose != NULL && id != ID_WORLD)
   {
-    /**delete pose;*/
+    delete pose;
   }
 }

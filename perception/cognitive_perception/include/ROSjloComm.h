@@ -25,6 +25,7 @@
 #include "Comm.h"
 
 #include <ros/ros.h>
+#include <vision_srvs/srvjlo.h>
 
 namespace cop
 {
@@ -60,8 +61,25 @@ namespace cop
     ******************************************************************************************/
     virtual RelPose* CreateNewPose(RelPose* pose, Matrix* mat, Matrix* cov);
 
+    /*****************************************************************************************
+    *  GetPose                                                                              */
+    /*****************************************************************************************
+    *  @param   poseId The lo-id of the position to get
+    *  @remarks return NULL if the id does not exist
+    ******************************************************************************************/
     virtual RelPose* GetPose(int poseId);
-    virtual RelPose* GetPose(const std::string poseId);
+    /*****************************************************************************************
+    *  GetPose                                                                              */
+    /*****************************************************************************************
+    *  @param   poseId The name of a lo of the position to get
+    *  @param   wait   specifies wether this function should block if the name does no exist.
+    *
+    *  Getting names from jlo could depend on other system to come up,
+    *  so waiting might be a good idea in some situations.
+    *
+    *  @remarks if wait = false the function returns NULL if the name does does not exist
+    ******************************************************************************************/
+    virtual RelPose* GetPose(const std::string poseId, bool wait = true);
 
     virtual jlo::LocatedObject* GetParent(const jlo::LocatedObject& child);
 
@@ -71,7 +89,7 @@ namespace cop
 
   private:
     ROSjloComm& operator=(ROSjloComm&){throw "Error";}
-    ros::ServiceClient GetJloServiceClient();
+    bool GetJloServiceClient(vision_srvs::srvjlo &msg);
 
 
     /**

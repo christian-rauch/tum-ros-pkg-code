@@ -177,7 +177,7 @@ namespace cop
   *                 XML_NODE_VISLEARNER
   *                 XML_NODE_VISFINDER
   *********************************************************************/
-    cop_world(XMLTag* config) :
+    cop_world(XMLTag* config, std::string nodename = "cop") :
       s_inputSystem(NULL),
       s_sigDb(NULL),
       s_attManager(NULL),
@@ -209,7 +209,7 @@ namespace cop
         RelPoseFactory::s_loService = new YarpRpcComm(loPortName);
   #else
         /*OR Setup the ros interface for lo service*/
-        s_node = new ros::NodeHandle();
+        s_node = new ros::NodeHandle(nodename);
         std::string loPortName = STD_LO_RPC_PORT_INTERNAL;
         if(config->GetChild(XML_NODE_RELPOSELIST) != NULL)
         {

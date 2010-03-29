@@ -43,6 +43,12 @@ namespace cop
   /**
     * class Elem
     * @brief basic class for all entries in the SignatureDB
+    *
+    * Nodename: XML_NODE_ELEMENT "Elem" Prototype for Descriptor, Class and Signature
+    * Properties:
+    *       XML_PROPERTY_ELEMID "ElemID"  a unique id, same id means same semantic
+    *
+    *
     */
   class Elem
   {
@@ -54,7 +60,7 @@ namespace cop
     /**
     * Constructor that restores an certain element
     */
-    Elem ( int id );
+    Elem ( ObjectID_t id );
 
     /**
      * Empty Destructor
@@ -63,10 +69,10 @@ namespace cop
 
     // Static Public attributes
     //
-    static int m_LastID;
+    static ObjectID_t m_LastID;
     // Public attributes
     //
-    int m_ID;
+    ObjectID_t m_ID;
     /**
     *   Save the current element, the function will call SaveTo().
     *   @param full_pose if set to true poses will not be saved as jlo reference but as a matrix
@@ -91,12 +97,19 @@ namespace cop
     /**
     *   Returns the type which is used for checkign for certain descriptor types, should be overwritten by any derivative of Elem
     */
-    virtual int GetType() const {return ELEM;}
+    virtual ElemType_t GetType() const {return ELEM;}
     /**
     *   Shows the current Element relative to the given Camera
     */
     virtual void Show(Sensor* ){};
-
+    /**
+    *   Set the vision primitive that created this elem
+    */
+    virtual void SetLastPerceptionPrimitive(PerceptionPrimitiveID_t id){m_creator = id;}
+    /**
+    *   Get the vision primitive that created this elem
+    */
+    virtual PerceptionPrimitiveID_t GetLastPerceptionPrimitive(){return m_creator;}
     /**
     *	Age of the newest information carried by this element
     */
@@ -105,6 +118,15 @@ namespace cop
       return m_timestamp;
     }
     void Touch();
+
+    /***********************************************************************
+    * Evaluate                                                     */
+    /************************************************************************
+    * @brief Puts a result to a descriptor to set its quality.
+    * @param eval a value from 0.0 (bad) to 1.0 (good)
+    *************************************************************************/
+    virtual void Evaluate(double eval, double weight){}
+
 
   protected:
     /**
@@ -120,6 +142,7 @@ namespace cop
   private:
 
    unsigned long m_timestamp;
+   PerceptionPrimitiveID_t m_creator;
 
   };
 }

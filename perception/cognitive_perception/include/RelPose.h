@@ -56,10 +56,11 @@ namespace cop
     *     Constructor for a Locate Object Reference (see lo, jlo)
     *       Construction should be done using the static functions of RelPoseFactory
     */
-    RelPose(jlo::LazyLocatedObjectLoader* loader, int id, int parentID, Matrix m, Matrix cov);
+    RelPose(jlo::LazyLocatedObjectLoader* loader, int id, int parentID, Matrix m, Matrix cov, std::string name = "");
 
      /** Temporary variable for holding the algorithmic success used to generate this lo*/
      double m_qualityMeasure;
+     std::string m_mapstring;
 
   private:
     RelPose(jlo::LazyLocatedObjectLoader* );
