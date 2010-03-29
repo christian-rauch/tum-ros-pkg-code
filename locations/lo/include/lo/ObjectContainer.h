@@ -57,7 +57,7 @@ public:
 						sigmaRoll,  sigmaPitch ,  sigmaYaw),
 		m_semaStatic(true)
 	{
-
+            referenceCounter = 1;
 	}
 
 
@@ -74,6 +74,7 @@ public:
 		ServiceLocatedObject(locatedObject, matrix, covariance),
 		m_semaStatic(true)
 	{
+	    referenceCounter = 1;
 	}
 
 /********************************************************************/
@@ -117,12 +118,6 @@ protected:
   virtual bool NeedCopy ();
 public:
 
-/********************************************************************/
-/**      DecreaseReferenceCounter
-********************************************************************
-*
-********************************************************************/
- virtual void DecreaseReferenceCounter(){}
 
   /**
   *   The list of located objects that depend on this object container.

@@ -5,7 +5,7 @@ set(IN_ROS_SERVICE TRUE CACHE BOOL "Disable ROS")
 IF (IN_ROS_SERVICE )
 cmake_minimum_required(VERSION 2.4.6)
 include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
-rospack(lo )
+rosbuild_init()
 ENDIF (IN_ROS_SERVICE )
 set(CREATE_YARP_SERVICE FALSE CACHE BOOL "Do you want to create a the yarp service")
 

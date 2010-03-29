@@ -62,6 +62,7 @@ void ObjectContainer::RemoveAttachedObject(ServiceLocatedObject* lo)
      if((*it)->m_uniqueID == lo->m_uniqueID)
      {
        it = m_attachedLocatedObjectList.erase(it);
+       DecreaseReferenceCounter();
      }
      else
        it++;

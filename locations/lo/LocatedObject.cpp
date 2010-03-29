@@ -480,7 +480,7 @@ ReturnMatrix LocatedObject::GetCovarianceMatrix (const unsigned long &id_to_stop
 //      cout << "Unscented Transform from "<<m_uniqueID <<" to "<< id_to_stop <<"\n";
         try
         {
-                m = cov2 + UnscentedTrans(cov1, n2, n);
+                m = cov1 + UnscentedTrans(cov2, n, n2);
         }
         catch(...)
         {
@@ -526,7 +526,7 @@ ReturnMatrix LocatedObject::GetCovarianceMatrix (LocatedObject &obj_to_stop )
      n = obj_to_stop.GetInvMatrix(id);
      n2 = GetMatrix(id);
      /*cout << "Unscented Transform from "<< m_uniqueID <<" to "<< obj_to_stop.m_uniqueID <<"\n";*/
-     cov1 = cov2 + UnscentedTrans(cov1, n2, n);
+     cov1 = cov1 + UnscentedTrans(cov2, n, n2);
   }
   cov1.release();
   return cov1;

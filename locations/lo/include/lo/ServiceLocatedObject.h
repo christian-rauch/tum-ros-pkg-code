@@ -581,14 +581,14 @@ public:
 *       \remarks if such an object is of type LO_TYPE_PHYSICAL
 *                  it will stay attached even if
 ********************************************************************/
-  virtual void AddAttachedObject(ServiceLocatedObject* lo){}
+  virtual void AddAttachedObject(ServiceLocatedObject* lo){IncreaseReferenceCounter();}
 
 /********************************************************************/
 /**     RemoveAttachedObject
 *********************************************************************
 *       \brief Removes an object from the list of dependant objects
 ********************************************************************/
-  virtual void RemoveAttachedObject(ServiceLocatedObject* lo){}
+  virtual void RemoveAttachedObject(ServiceLocatedObject* lo){DecreaseReferenceCounter();}
 /********************************************************************/
 /**     Move this
 *********************************************************************
@@ -628,9 +628,10 @@ public:
  */
   std::string m_mapstring;
 
+protected:
+  unsigned long referenceCounter;
 private:
   friend class ServiceInterface;
-  unsigned long referenceCounter;
   static unsigned long s_lastID;
 };
 /**

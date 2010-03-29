@@ -563,10 +563,32 @@ unsigned long ServiceInterface::FreeServiceLocatedObject(jlo::ServiceLocatedObje
         {
           /*printf("Release jlo::ServiceLocatedObject id: %d\n", id);*/
           if(pose->m_mapstring.length() >  0)
+          {
+             printf("Deleting named object: %s (id: %ld)\n", pose->m_mapstring.c_str(), id);
              ServiceInterface::RemoveMapString(pose->m_mapstring);
+          }
+          /**
+            free also the parent, if and only if they are movement artefacts
+          **/
+          jlo::ServiceLocatedObject* parent = GetServiceLocatedObject(pose->m_parentID);
+          if(parent != NULL)
+          {
+            ((ObjectContainer*)parent)->RemoveAttachedObject(pose);
+          }
           delete pose;
           s_ServiceLocatedObjectMap.erase(s_ServiceLocatedObjectMap.find(id));
           pose = NULL;
+          if(parent != NULL)
+          {
+            if(parent->GetReferenceCounter() <= 0)
+            {
+              FreeServiceLocatedObject(parent);
+            }
+            else
+            {
+               printf("Not deleting a parent of %ld cause it is still in use: %ld\n", id, parent->m_uniqueID);
+            }
+          }
           /*s_ServiceLocatedObjects.erase(iter);*/
         }
         /*break;*/
@@ -696,13 +718,16 @@ void ServiceInterface::RemoveMapString(std::string mapstring)
    s_ServiceLocatedObjectNameMap[mapstring] = 0;
 }
 
+/***
+  Copy is always an Perceived Object
+*/
 ServiceLocatedObject* ServiceInterface::FServiceLocatedObjectCopy(ServiceLocatedObject* obj_to_copy, ServiceLocatedObject* parent_copy)
 {
   ServiceLocatedObject* ret = NULL;
   if(parent_copy == NULL)
-   ret = FServiceLocatedObject(obj_to_copy->m_relation, obj_to_copy->GetMatrix(), obj_to_copy->GetCovarianceMatrix(), obj_to_copy->GetLOType());
+    ret = FServiceLocatedObject(obj_to_copy->m_relation, obj_to_copy->GetMatrix(), obj_to_copy->GetCovarianceMatrix(), obj_to_copy->GetLOType());
   else
-   ret = FServiceLocatedObject(parent_copy, obj_to_copy->GetMatrix(), obj_to_copy->GetCovarianceMatrix(), obj_to_copy->GetLOType());
+    ret = FServiceLocatedObject(parent_copy, obj_to_copy->GetMatrix(), obj_to_copy->GetCovarianceMatrix(), obj_to_copy->GetLOType());
   return ret;
 }
 
@@ -770,15 +795,15 @@ ServiceLocatedObject* ServiceInterface::FServiceLocatedObject(ServiceLocatedObje
 
 void ServiceInterface::LoadList(XMLTag* tag)
 {
-	if(tag != NULL)
-	{
-		int num = tag->GetPropertyInt(XML_PROPERTY_NUM);
-		for(int i = 0; i< num; i++)
-		{
-			FServiceLocatedObject(tag->GetChild(i));
-			/*TODO build map here*/
-		}
-	}
+  if(tag != NULL)
+  {
+    int num = tag->GetPropertyInt(XML_PROPERTY_NUM);
+    for(int i = 0; i< num; i++)
+    {
+      FServiceLocatedObject(tag->GetChild(i));
+      /*TODO build map here*/
+    }
+  }
 }
 
 ServiceLocatedObject* ServiceInterface::GetServiceLocatedObject(unsigned long id)
