@@ -5,6 +5,12 @@
       in cop.
     </description>
   </class>
+  <class name="SegmentPrototype" type="cop::SegmentPrototype"
+  base_class_type="Descriptor">
+    <description>
+      plugin representing cluster and handles
+    </description>
+  </class>
     <class name="ClusterDetector" type="cop::ClusterDetector"
     base_class_type="LocateAlgorithm">
     <description>

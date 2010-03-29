@@ -6,8 +6,6 @@
   <license>GPL</license>
   <depend package="pluginlib"/>
   <depend package="cognitive_perception"/>
-  <depend package="sensor_msgs" />
-  <depend package="tabletop_msgs" />
   <depend package="point_cloud_mapping" />
   <depend package="eigen" />
   <export>

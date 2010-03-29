@@ -1,6 +1,7 @@
 #include "pluginlib/class_list_macros.h"
 
 #define BOOST_THREAD
+
 #include "Sensor.h"
 #include "XMLTag.h"
 
@@ -10,6 +11,7 @@
 
 #include "SwissRangerReading.h"
 #include "ClusterDetector.h"
+#include "SegmentPrototype.h"
 
 class SwissRangerRemoteSensor : public cop::Sensor
 {
@@ -54,8 +56,8 @@ public:
       {
         while(m_grabbing && ((signed)m_images.size() < (Frame - m_deletedOffset + 1) || m_images.size() == 0))
         {
-          printf("waiting for the camera to start grabbing\n");
-          sleep(0.01);
+          printf("waiting for the camera %s to start grabbing\n", GetSensorID().c_str());
+          sleep(0.2);
         }
         printf("Got a new image: %d\n", (int)m_images.size());
       }
@@ -148,4 +150,6 @@ private:
 PLUGINLIB_REGISTER_CLASS(SwissRangerRemoteSensor, SwissRangerRemoteSensor, cop::Sensor)
 /** Cluster Detector Plugin */
 PLUGINLIB_REGISTER_CLASS(ClusterDetector, cop::ClusterDetector, cop::LocateAlgorithm)
+/** Cluster Descriptor Plugin */
+PLUGINLIB_REGISTER_CLASS(SegmentPrototype, cop::SegmentPrototype, cop::Descriptor)
 

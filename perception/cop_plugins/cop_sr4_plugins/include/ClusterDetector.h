@@ -20,11 +20,13 @@
 #define CLUSTERDETECTOR_H
 
 #define XML_NODE_CLUSTERDETECTOR "ClusterDetector"
+
 #include "LocateAlgorithm.h"
 class PlaneClusterResult;
 
 namespace cop
 {
+  class SegmentPrototype;
 
   class ClusterDetector : public LocateAlgorithm
   {
@@ -36,7 +38,7 @@ namespace cop
 
     std::vector<RelPose*> Perform(std::vector<Sensor*> sensors, RelPose* pose, Signature& object, int &numOfObjects, double& qualityMeasure);
 
-    std::vector<RelPose*> Inner(Sensor* sens, int &numOfObjects, double& qualityMeasure);
+    std::vector<RelPose*> Inner(Sensor* sens, SegmentPrototype* proto, int &numOfObjects, double& qualityMeasure);
 
     double CheckSignature(const Signature& object, const std::vector<Sensor*> &sensors);
 

@@ -2,20 +2,18 @@
 #define XML_NODE_SWISSRANGER   "SwissRangerRemoteSensor"
 #define XML_PROPERTY_TOPIC     "Topic"
 
-#define PCD_READING_TYPE 2
-
 #include <sensor_msgs/PointCloud.h>
 class SwissRangerReading : public cop::Reading
 {
 public:
   SwissRangerReading(const sensor_msgs::PointCloudConstPtr& pcdcloud) :
-      Reading(PCD_READING_TYPE)
+      Reading(ReadingType_PointCloud)
   {
       m_pcd = (*pcdcloud);
   }
 
   SwissRangerReading() :
-      Reading(PCD_READING_TYPE)
+      Reading(ReadingType_PointCloud)
   {
   }
 

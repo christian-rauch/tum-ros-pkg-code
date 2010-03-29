@@ -43,13 +43,14 @@
  * $Id: plane_clusters.cpp 17089 2009-06-15 18:52:12Z veedee $
  *
  */
+#define BOOST_THREAD
 
 #include "ClusterDetector.h"
+#include "SegmentPrototype.h"
 #include "XMLTag.h"
 #include "SwissRangerReading.h"
+#include "BoostUtils.h"
 
-/*Tabletop messages*/
-#include <tabletop_msgs/ObjectOnTable.h>
 
 // Sample Consensus
 #include <point_cloud_mapping/sample_consensus/sac.h>
@@ -102,12 +103,22 @@ bool
   class PlaneClusterResult
   {
     public:
+    class ObjectOnTable
+    {
+
+     public:
+      geometry_msgs::Point32 min_bound;
+      geometry_msgs::Point32  max_bound;
+      geometry_msgs::Point32 center;
+    };
+
+    public:
     double a;
     double b;
     double c;
     double d;
     geometry_msgs::Point32 pcenter;
-    std::vector<tabletop_msgs::ObjectOnTable> oclusters;
+    std::vector<ObjectOnTable> oclusters;
   };
 
 
@@ -143,6 +154,8 @@ class PlaneClustersSR
 
 
     int downsample_factor_;
+
+    boost::mutex m_mutexUsage;
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     PlaneClustersSR (XMLTag* tag)
     {
@@ -193,12 +206,27 @@ class PlaneClustersSR
     }
 
 
-    void cloud_trans (int swissranger_jlo_id, int ptu_base_jlo_id,  Point32& viewpoint_cloud, const PointCloud& cloud_in)
+    void cloud_trans (unsigned long swissranger_jlo_id, unsigned long ptu_base_jlo_id,  Point32& viewpoint_cloud, const PointCloud& cloud_in)
     {
-       printf("cloud_trans\n");
        RelPose* pose = RelPoseFactory::GetRelPose(swissranger_jlo_id, ptu_base_jlo_id);
+
+       if(pose == NULL)
+       {
+          RelPose* pose1 = RelPoseFactory::GetRelPose("/sr4");
+          RelPose* pose2 = RelPoseFactory::GetRelPose("/base_link");
+          if(pose1 && pose2)
+          {
+            pose = RelPoseFactory::GetRelPose(pose1->m_uniqueID, pose2->m_uniqueID);
+          }
+          if(pose == NULL)
+           throw "Cloud trans not possible: Location not clear";
+       }
        Matrix m = pose->GetMatrix();
-       RelPoseFactory::FreeRelPose(pose);
+       if(pose->m_parentID != ptu_base_jlo_id)
+       {
+          RelPoseFactory::FreeRelPose(pose);
+       }
+
        Matrix m_tmp = m;
        cloud_in_trans_.points.clear();
        if(cloud_in.points.size() == 0 || cloud_in.points.size() > 1000000000)
@@ -214,7 +242,6 @@ class PlaneClustersSR
          pt.z = a.element(2);
          cloud_in_trans_.points.push_back(pt);
        }
-       printf("Added %ld(/%ld) points\n", cloud_in_trans_.points.size(), cloud_in.points.size());
        cloud_in_trans_.channels.clear();
        for(size_t channels = 0 ; channels < cloud_in.channels.size(); channels++)
        {
@@ -226,12 +253,10 @@ class PlaneClustersSR
            cloud_in_trans_.channels[channels].values.push_back(
            cloud_in.channels[channels].values[points]);
          }
-         printf("Added %ld channel infos\n", cloud_in_trans_.channels[channels].values.size());
        }
        ColumnVector vp(4);
        vp <<  viewpoint_cloud.x <<  viewpoint_cloud.y << viewpoint_cloud.z << 1;
        ColumnVector ap = m_tmp*vp;
-       printf("PCD transformed\n");
        viewpoint_cloud.x = ap.element(0);
        viewpoint_cloud.y = ap.element(1);
        viewpoint_cloud.z = ap.element(2);
@@ -241,17 +266,34 @@ class PlaneClustersSR
     bool
       plane_clusters_service (PlaneClusterResult &resp, int swissranger_jlo_id, int ptu_base_jlo_id, const PointCloud& cloud)
     {
-      /*ROS_INFO ("Service request initiated.");
-      updateParametersFromServer ();*/
-      printf("!\n");
-      Point32 vp;
-      vp.x = vp.y = vp.z = 0.0;
-      cloud_trans(swissranger_jlo_id, ptu_base_jlo_id, vp, cloud);
-      if(!detectTable (cloud_in_trans_, resp, vp))
-        return false;
+      printf("plane_clusters_service::lock!\n");
+      m_mutexUsage.lock();
+      try
+      {
+        /*ROS_INFO ("Service request initiated.");
+        updateParametersFromServer ();*/
+        printf("!\n");
+        Point32 vp;
+        vp.x = vp.y = vp.z = 0.0;
+        cloud_trans(swissranger_jlo_id, ptu_base_jlo_id, vp, cloud);
+        if(!detectTable (cloud_in_trans_, resp, vp))
+        {
+          printf("plane_clusters_service::unlock!\n");
 
-      ROS_INFO ("Service request terminated.");
-      return (true);
+          m_mutexUsage.unlock();
+          return false;
+        }
+        ROS_INFO ("Service request terminated.");
+       printf("plane_clusters_service::lock!\n");
+        m_mutexUsage.unlock();
+        return (true);
+      }
+      catch(const char text)
+      {
+       printf("plane_clusters_service::lock!\n");
+       m_mutexUsage.unlock();
+        throw text;
+      }
     }
 
 
@@ -331,7 +373,7 @@ class PlaneClustersSR
       //cloud_geometry::getPointCloud (cloud_filtered, inliers, cloud_annotated_);              // full version
       /*cloud_table_pub_.publish (cloud_annotated_);*/
 #endif
-      ROS_INFO ("Results estimated in %g seconds.", (ros::Time::now () - ts).toSec ());
+      ROS_INFO ("Results estimated in %g xseconds.", (ros::Time::now () - ts).toSec ());
       // Copy the plane parameters back in the response
       resp.a = coeff[0]; resp.b = coeff[1]; resp.c = coeff[2]; resp.d = coeff[3];
       cloud_geometry::nearest::computeCentroid (cloud_filtered, inliers, resp.pcenter);
@@ -509,14 +551,21 @@ void ClusterDetector::SetData(XMLTag* tag)
       {
         std::string name = tag->GetProperty(XML_ATTRIBUTE_SR4LO, "/sr4");
         RelPose* pose = RelPoseFactory::GetRelPose(name);
-        m_swissranger_jlo_id =pose->m_uniqueID;
+        if(pose == NULL)
+          m_swissranger_jlo_id = 1;
+        else
+          m_swissranger_jlo_id =pose->m_uniqueID;
+
       }
       m_ptu_jlo_id = tag->GetPropertyInt(XML_ATTRIBUTE_PTULO, 0);
       if(m_ptu_jlo_id == 0)
       {
         std::string name = tag->GetProperty(XML_ATTRIBUTE_PTULO, "/base_link");
         RelPose* pose = RelPoseFactory::GetRelPose(name);
-        m_ptu_jlo_id =pose->m_uniqueID;
+        if(pose == NULL)
+          m_ptu_jlo_id = 1;
+        else
+          m_ptu_jlo_id =pose->m_uniqueID;
       }
   }
 }
@@ -532,14 +581,14 @@ std::vector<RelPose*> ClusterDetector::Perform(std::vector<Sensor*> sensors, Rel
 {
   std::vector<RelPose*> results;
     //Calibration* calib = &cam[0]->m_calibration;
-
+  SegmentPrototype* proto = (SegmentPrototype*)object.GetElement(0, DESCRIPTOR_SEGMPROTO);
   for(std::vector<Sensor*>::const_iterator it = sensors.begin(); it != sensors.end(); it++)
   {
     if((*it)->GetName().compare(XML_NODE_SWISSRANGER) == 0)
     {
       try
       {
-        results = Inner(*it, numOfObjects, qualityMeasure);
+        results = Inner(*it, proto, numOfObjects, qualityMeasure);
       }
       catch (const char* text )
       {
@@ -581,7 +630,9 @@ bool ClusterDetector::CallStaticPlaneClusterExtractor(Sensor* sensor, PlaneClust
   SwissRangerReading* reading = (SwissRangerReading*)sensor->GetReading(-1);
   try
   {
-  return s_planeCluster->plane_clusters_service(*response, m_swissranger_jlo_id, m_ptu_jlo_id, reading->m_pcd);
+    bool b =  s_planeCluster->plane_clusters_service(*response, m_swissranger_jlo_id, m_ptu_jlo_id, reading->m_pcd);
+    reading->Free();
+    return b;
   }
   catch(const char* text)
   {
@@ -590,11 +641,16 @@ bool ClusterDetector::CallStaticPlaneClusterExtractor(Sensor* sensor, PlaneClust
   return false;
 }
 
-std::vector<RelPose*> ClusterDetector::Inner(Sensor* sens, int &numOfObjects, double& qualityMeasure)
+std::vector<RelPose*> ClusterDetector::Inner(Sensor* sens, SegmentPrototype* obj_descr, int &numOfObjects, double& qualityMeasure)
 {
   std::vector<RelPose*> results;
   PlaneClusterResult response;
   qualityMeasure = 0.0;
+  unsigned long ref_frame = m_ptu_jlo_id;
+
+  if(obj_descr != NULL)
+    ref_frame = obj_descr->m_frameID;
+
   if(!CallStaticPlaneClusterExtractor(sens, &response, m_swissranger_jlo_id, m_ptu_jlo_id))
   {
     return results;
@@ -605,7 +661,7 @@ std::vector<RelPose*> ClusterDetector::Inner(Sensor* sens, int &numOfObjects, do
   double c = response.c;
   double s = response.d;
   geometry_msgs::Point32 &pcenter = response.pcenter;
-  std::vector<tabletop_msgs::ObjectOnTable> &vec = response.oclusters;
+  std::vector<PlaneClusterResult::ObjectOnTable> &vec = response.oclusters;
   printf("Got plane equation %f x + %f y + %f z + %f = 0\n", a,b,c,s);
    /*Norm v1*/
   normalize(a,b,c);
@@ -642,7 +698,7 @@ std::vector<RelPose*> ClusterDetector::Inner(Sensor* sens, int &numOfObjects, do
   if(vec.size() == 0)
   {
     printf("No Clusters found, adding a meaningless cluster");
-     tabletop_msgs::ObjectOnTable on;
+     PlaneClusterResult::ObjectOnTable on;
      on.center.x = pcenter.x;
      on.center.y = pcenter.y;
      on.center.z = pcenter.z;
@@ -658,6 +714,8 @@ std::vector<RelPose*> ClusterDetector::Inner(Sensor* sens, int &numOfObjects, do
   }
   printf("Creating a pose for every cluster\n");
   double prob = 1.0;
+  RelPose* ptu = RelPoseFactory::FRelPose(m_ptu_jlo_id);
+
   for(size_t x = 0; x < vec.size(); x++)
   {
     prob = prob * 0.9;
@@ -669,27 +727,13 @@ std::vector<RelPose*> ClusterDetector::Inner(Sensor* sens, int &numOfObjects, do
     double covx;
     double covy;
     printf("Comparing: x %f with y %f\n", fabs(max_bound.x - min_bound.x), fabs(max_bound.y - min_bound.y) + 0.04);
-    if(fabs(max_bound.x - min_bound.x) > fabs(max_bound.y - min_bound.y) + 0.04)
-    {
-       rotmat << d << g << a << center.x
+    rotmat << d << g << a << center.x
            << e << h << b << center.y
            << f << i << c << center.z
            << 0 << 0 << 0 << 1;
-       covx = max(fabs(center.x - max_bound.x), fabs(center.x - min_bound.x)) ;
-       covy = max(fabs(center.y - max_bound.y), fabs(center.y - min_bound.y)) ;
+    covx = max(fabs(center.x - max_bound.x), fabs(center.x - min_bound.x)) ;
+    covy = max(fabs(center.y - max_bound.y), fabs(center.y - min_bound.y)) ;
 
-
-    }
-    else
-    {
-         rotmat <<-g <<d  << a << center.x
-            << -h << e << b << center.y
-            << -i << f << c << center.z
-            << 0 << 0 << 0 << 1;
-         covy = max(fabs(center.x - max_bound.x), fabs(center.x - min_bound.x)) ;
-         covx = max(fabs(center.y - max_bound.y), fabs(center.y - min_bound.y)) ;
-
-    }
     cout << "Matrix from plane_clusters:" << rotmat << endl;
     Matrix cov (6,6);
 
@@ -701,17 +745,17 @@ std::vector<RelPose*> ClusterDetector::Inner(Sensor* sens, int &numOfObjects, do
          <<0    << 0    << 0    << 0.02 << 0   << 0
          <<0    << 0    << 0    << 0   << 0.02 << 0
          <<0    << 0    << 0    << 0   << 0   << 0.8;
-     RelPose* ptu = RelPoseFactory::FRelPose(m_ptu_jlo_id);
      RelPose* pose_temp = RelPoseFactory::FRelPose(ptu, rotmat, cov);
      double temp_qual = min(1.0, max(0.0, fabs((covx*covy*covz)) * 500 ));
      if(x == 0)
         qualityMeasure =temp_qual;
-    pose_temp->m_qualityMeasure = temp_qual;
+
      if(pose_temp == NULL)
        continue;
+     pose_temp->m_qualityMeasure = temp_qual;
      results.push_back(pose_temp);
-     printf("Pushed back a cluster\n");
   }
+  RelPoseFactory::FreeRelPose(ptu);
   return results;
 }
 
@@ -720,7 +764,12 @@ double ClusterDetector::CheckSignature(const Signature& object, const std::vecto
   for(std::vector<Sensor*>::const_iterator it = sensors.begin(); it != sensors.end(); it++)
   {
     if((*it)->GetName().compare(XML_NODE_SWISSRANGER) == 0)
-      return 0.1;
+    {
+      if(object.GetElement(0, DESCRIPTOR_SEGMPROTO) != NULL )
+        return 0.1;
+      else
+        return 0.01;
+    }
   }
   return 0.0;
 }
