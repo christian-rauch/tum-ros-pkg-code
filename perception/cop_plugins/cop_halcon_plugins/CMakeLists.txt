@@ -41,6 +41,9 @@ ROSBUILD_ADD_LIBRARY(VisionPlugins
 ./src/Camera.cpp
 ./src/PRAShapeVsPointDescr.cpp	./src/RFAColorByShape.cpp
 ./src/RFAPointDescrByShape.cpp 	./src/DeformShapeModel.cpp
+
+./src/RFADeformByCluster.cpp
+
 ./src/PointDescrModel.cpp
 ./src/DeformShapeBased.cpp
 ./src/SearchParams3d.cpp   
@@ -52,7 +55,6 @@ ROSBUILD_ADD_LIBRARY(VisionPlugins
 ./src/SupportingPlaneDescriptor.cpp
 ./src/ShapeModelDownloader.cpp   
 ./src/SimulatedLocate.cpp
-./src/NetworkCamera.cpp  
 ./src/CheckColorClass.cpp
 ./src/dxfwriter.cpp
 ./src/TwoInOneAlg.cpp

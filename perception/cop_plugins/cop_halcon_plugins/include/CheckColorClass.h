@@ -36,9 +36,7 @@ namespace cop
     // Public attribute accessor methods
     //
     std::vector<RelPose*> Perform(std::vector<Sensor*> sensors, RelPose* pose, Signature& Object, int &numOfObjects, double& qualityMeasure);
-  #ifdef HALCONIMG
-    void Inner(Halcon::Hobject* img, Halcon::Hobject* region, std::string &color, double& qualityMeasure);
-  #endif
+    void Inner(Halcon::Hobject* img, Halcon::Hobject* region, std::string &color, std::map<std::string, double> &hist);
     virtual double CheckSignature(const Signature& object, const std::vector<Sensor*> &sensors);
 
     virtual std::string GetName(){return XML_NODE_CHECKCOLORCLASS;}

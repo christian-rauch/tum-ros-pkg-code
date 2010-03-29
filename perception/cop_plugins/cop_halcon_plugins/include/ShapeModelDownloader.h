@@ -20,20 +20,31 @@
 #define SHAPEMODELDOWNLOADER
 
 #include "SignatureDB.h"
-
+#define XML_NODE_SHAPEMODELDOWNLOADER "ShapeModelDownloader"
 namespace cop
 {
   class Signature;
 
-  class ShapeModelDownloader
+  class ShapeModelDownloader : 
+    public RefineAlgorithm 
   {
   public:
-      ShapeModelDownloader(SignatureDB* sigDB);
-      ~ShapeModelDownloader(void);
+    ShapeModelDownloader();
+    ~ShapeModelDownloader(void);
+    /*************************************************************************
+    * FindModels                                                            */
+    /*************************************************************************
+    *  @brief  Download CAD models from google sketchup
+    *  @param searchString String that will be used in Google
+    *************************************************************************/
+    Descriptor* FindModels(std::string searchString);
+    virtual Descriptor* Perform(std::vector<Sensor*> sensors, RelPose* pose, Signature& Object, int &numOfObjects, double& qualityMeasure);
 
-      Elem* FindModels(std::string searchString);
-  private:
-      SignatureDB* m_sigDB;
+    double CheckSignature(const Signature& object, const std::vector<Sensor*> &sensors);
+
+    virtual XMLTag* Save();
+
+    virtual std::string GetName(){return XML_NODE_SHAPEMODELDOWNLOADER;}
   };
 }
 #endif

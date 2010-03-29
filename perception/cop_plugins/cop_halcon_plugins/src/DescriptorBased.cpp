@@ -28,12 +28,12 @@
 #include "Camera.h"
 #include "ShapeModel.h"
 
-#ifdef HALCONIMG
+
 #include "cpp/HalconCpp.h"
 #include "HCPPdescriptor3d.h"
 //#include "HCPPplanar_pose_estimation.h" /*< Removed cause code is very closed source*/
 using namespace Halcon;
-#endif
+
 
 using namespace cop;
 
@@ -42,22 +42,17 @@ using namespace cop;
 //
 
 DescriptorBased::DescriptorBased () :
-	LocateAlgorithm ()
-#ifdef HALCONIMG
-	,
+	LocateAlgorithm (),
 	m_row(NULL),
 	m_col(NULL)
-#endif
+
 	{
 }
 
 DescriptorBased::DescriptorBased (XMLTag* tag) :
-	LocateAlgorithm ()
-#ifdef HALCONIMG
-	,
+	LocateAlgorithm (),
 	m_row(NULL),
 	m_col(NULL)
-#endif
 {
 }
 
@@ -201,7 +196,7 @@ Signature& object, int &numOfObjects, double& qualityMeasure)
 	}
 	return result;
 }
-#ifdef HALCONIMG
+
 std::vector<RelPose*> DescriptorBased::Inner(Image* img,RelPose* camPose, Calibration* calib, RelPose* lastKnownPose, Signature& object, int &numOfObjects, double& qualityMeasure)
 {
   std::vector<RelPose*> result;
@@ -280,7 +275,7 @@ std::vector<RelPose*> DescriptorBased::Inner(Image* img,RelPose* camPose, Calibr
 	}
 	return result;
 }
-#endif
+
 
 double DescriptorBased::CheckSignature(Signature& Object)
 {
@@ -292,7 +287,7 @@ double DescriptorBased::CheckSignature(Signature& Object)
 
 void DescriptorBased::Show(Camera* cam)
 {
-#ifdef HALCONIMG
+
 	try
 	{
 	if(m_row != NULL && m_col != NULL)
@@ -309,6 +304,6 @@ void DescriptorBased::Show(Camera* cam)
 	{
 		printf("Showing not possible: %s\n", ex.message);
 	}
-#endif
+
 }
 #endif /*DESCRIPTOR_AVAILABLE*/

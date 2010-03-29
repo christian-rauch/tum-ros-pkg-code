@@ -45,7 +45,7 @@ namespace cop
     virtual void Show(RelPose* pose, Sensor* cam);
 
     virtual std::string GetNodeName() const{return XML_NODE_CALTAB;}
-    virtual int GetType() const{return DESCRIPTOR_CALTAB;}
+    virtual ElemType_t GetType() const{return DESCRIPTOR_CALTAB;}
   protected:
     virtual void SetData(XMLTag* tag);
   public:

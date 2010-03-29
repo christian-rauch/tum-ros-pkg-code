@@ -112,7 +112,6 @@ void RelPoseHTuple::Print(RelPose* pose_in)
     printf("%f, ", pose[i].D());
   }
   printf("%d\n", pose[pose.Num() -1].I());
-
 }
 #endif
 void RelPoseHTuple::GetHommat(RelPose* pose, Halcon::HTuple* hommat, int poseRel)

@@ -18,23 +18,23 @@
 
 #ifndef DEFORMSHAPEMODEL_H
 #define DEFORMSHAPEMODEL_H
-#ifdef DEFORMSHAPE_AVAILABLE
+/*#ifdef DEFORMSHAPE_AVAILABLE*/
 
 #include "Descriptor.h"
 
 #define XML_NODE_DEFORMSHAPEMODEL "DeformShapeModel"
 
-#ifdef HALCONIMG
 namespace Halcon
 {
 	class HTuple;
 	class Hobject;
 }
-#endif
+
 namespace cop
 {
   class Signature;
   class Camera;
+  class Image;
   /********************************************************************
   *   class DeformShapeModel                                          */
   /********************************************************************
@@ -46,21 +46,20 @@ namespace cop
   {
 
   public:
-    DeformShapeModel(Class* classref, Signature* sig);
+    DeformShapeModel(Class* classref);
 
     DeformShapeModel();
 
     ~DeformShapeModel(void);
 
-    virtual int GetType()const{return DESCRIPTOR_DEFORMSHAPE;}
+    virtual ElemType_t GetType()const{return DESCRIPTOR_DEFORMSHAPE;}
     virtual std::string GetNodeName() const {return XML_NODE_DEFORMSHAPEMODEL;}
 
 
     long GetDeformShapeHandle(){return m_handle;}
     /*First match, needed for tracking*/
-  #ifdef HALCONIMG
-    double DefineDeformShapeModel(Halcon::Hobject* img, Halcon::Hobject* region, Camera* cam, RelPose* pose);
-  #endif
+    double DefineDeformShapeModel(Image* img, Halcon::Hobject* region, Camera* cam, RelPose* pose);
+
 
     /***********************************************************************
     * ShapeModel::Show                                                     */
@@ -80,7 +79,10 @@ namespace cop
   private:
     long m_handle;
     std::string m_filename;
+    bool m_bWritten;
+    Halcon::Hobject* m_regionTemp;
+    bool m_autoLearned;
   };
 }
-#endif /*DEFORMSHAPE_AVAILABLE*/
+/*#endif *//*DEFORMSHAPE_AVAILABLE*/
 #endif

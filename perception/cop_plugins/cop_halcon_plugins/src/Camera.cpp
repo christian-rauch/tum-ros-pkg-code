@@ -32,11 +32,9 @@
 
 
 #include "XMLTag.h"
-#ifdef HALCONIMG
 #include "cpp/HalconCpp.h"
 
 using namespace Halcon;
-#endif
 
 #ifdef BOOST_THREAD
 #include <boost/thread/mutex.hpp>
@@ -47,16 +45,13 @@ using namespace Halcon;
 
 using namespace cop;
 
-
 // Constructors/Destructors
 //
 
 Camera* Camera::GetFirstCamera(const std::vector<Sensor*> &sensors)
 {
-  printf("Enter (%ld sensors)\n", sensors.size());
   for(std::vector<Sensor*>::const_iterator it = sensors.begin(); it != sensors.end(); it++)
   {
-    printf("Checking %s for beeing Camera = %s\n", (*it)->GetName().c_str(), (*it)->IsCamera() ? "true" : "false");
     if((*it)->IsCamera())
     {
       return (Camera*)(*it);
@@ -69,16 +64,13 @@ Camera* Camera::GetFirstCamera(const std::vector<Sensor*> &sensors)
 
 Calibration::~Calibration()
 {
-#ifdef HALCONIMG
   if(m_radialDistortionHandling)
   {
     delete m_radialDistMap;
     delete m_camdist;
   }
-#endif
 }
 
-#ifdef HALCONIMG
 HTuple Calibration::CamParam() const
 {
   if(m_radialDistortionHandling)
@@ -169,7 +161,7 @@ HTuple Calibration::CamMatrix()
   }
   throw "Not yet implemented";
 }
-#endif
+
 Calibration::Calibration(XMLTag* tag) :
   m_radialDistortionHandling(false)
 {
@@ -189,7 +181,6 @@ Calibration::Calibration(XMLTag* tag) :
     if(m_calibrationmatrix[1] != 0.0)
     {
       printf("Radial Distortion Handling necessary!\n");
-#ifdef HALCONIMG
       Halcon::HTuple param = this->CamParam();
       m_radialDistortionHandling = true;
       m_radialDistMap = new Hobject();
@@ -197,13 +188,11 @@ Calibration::Calibration(XMLTag* tag) :
       Halcon::change_radial_distortion_cam_par("fixed", param, 0.0, m_camdist);
       Halcon::gen_radial_distortion_map(m_radialDistMap, param, *m_camdist, "bilinear");
                         m_radialDistortionHandling = true;
-#endif
     }
     }
   }
 }
 
-#ifdef HALCONIMG
 void Calibration::SetCamParam(HTuple& param)
 {
   m_calibrationmatrix.clear();
@@ -223,7 +212,6 @@ void Calibration::SetCamParam(HTuple& param)
   m_width = param[param.Num() - 2].I();
   m_height = param[param.Num() - 1].I();
 }
-#endif
 
 void Calibration::SaveTo(XMLTag* tag)
 {
@@ -235,47 +223,12 @@ void Calibration::SaveTo(XMLTag* tag)
 
 Camera::~Camera()
 {
-#ifdef HALCONIMG
   delete m_win;
-#endif /*HALCONIMG*/
-}
-
-
-bool Camera::DeleteImg()
-{
-  bool ret = false;
-//  static int count_occ = 0;
-  BOOST(m_mutexImageList.lock());
-
-  if((*m_images.begin())->m_usageCount == 0)
-  {
-    delete (*m_images.begin());
-    m_images.erase(m_images.begin());
-    m_deletedOffset++;
-    ret = true;
-  }
-  else
-  {
-    m_temp_images.push_back(*m_images.begin());
-    m_images.erase(m_images.begin());
-    if((*m_images.begin())->m_usageCount == 0)
-    {
-      delete (*m_images.begin());
-      m_images.erase(m_images.begin());
-      m_deletedOffset++;
-      ret = true;
-    }
-  }
-
-  BOOST(m_mutexImageList.unlock());
-
-  return ret;
 }
 
 
 void Camera::ReadCamParam(std::string filename)
 {
-#ifdef HALCONIMG
   HTuple t;
   try
   {
@@ -286,7 +239,6 @@ void Camera::ReadCamParam(std::string filename)
   {
     printf("Error reading Camera Param File: %s\n", ex.message);
   }
-#endif
 }
 
 void Camera::SaveTo(XMLTag* tag)
@@ -303,15 +255,12 @@ void Camera::SetData(XMLTag* tag)
 {
   Sensor::SetData(tag);
   m_calibration = Calibration(tag);
-#ifdef HALCONIMG
   m_win = (NULL);
-#endif
   if(m_relPose== NULL)
     m_relPose = RelPoseFactory::FRelPoseWorld();
 };
 
 
-#ifdef HALCONIMG
 Halcon::HWindow* Camera::GetWindow()
 {
   if(m_win == NULL)
@@ -328,11 +277,9 @@ void Camera::DeleteWindow()
 {
   delete m_win; m_win = NULL;
 }
-#endif
 
 void Camera::WriteToFile(std::string fileName, const long& Frame)
 {
-#ifdef HALCONIMG
   printf("Write to %s\n", fileName.c_str());
   Image* img = GetImage(Frame);
   if(img != NULL)
@@ -350,25 +297,81 @@ void Camera::WriteToFile(std::string fileName, const long& Frame)
       Halcon::write_image(*obj, "jpg", 0, fileName.c_str());
     img->Free();
   }
+}
+
+std::pair<std::string, std::vector<double> > Camera::GetUnformatedCalibrationValues()
+{
+  std::pair<std::string, std::vector<double> > ret;
+  ret.first = "RECTHALCONCALIB";
+  Halcon::HTuple tup = m_calibration.CamParam();
+  ret.second.push_back( tup[0].D());
+  ret.second.push_back( tup[2].D());
+  ret.second.push_back( tup[3].D());
+  ret.second.push_back( tup[4].D());
+  ret.second.push_back( tup[5].D());
+  return ret;
+}
+
+
+bool  Camera::CanSee (RelPose &pose) const
+{
+  if(m_relPose == NULL)
+     return false;
+#ifdef _DEBUG
+  printf("Can a camera %s at Pose %ld See %ld\n",GetSensorID().c_str(),  m_relPose->m_uniqueID, pose.m_uniqueID);
 #endif
+  if(pose.m_uniqueID == m_relPose->m_uniqueID) /*lazy people just search in front of the camera, allow it*/
+    return true;
+  RelPose* pose_rel = RelPoseFactory::GetRelPose(pose.m_uniqueID, m_relPose->m_uniqueID);
+  Matrix m = pose_rel->GetMatrix();
+  RelPoseFactory::FreeRelPose(pose_rel);
+  double x = m.element(0,3);
+  double y = m.element(1,3);
+  double z = m.element(2,3);
+  if(z > 0.0)
+  {
+
+    try
+    {
+      Halcon::HTuple R, C;
+      Halcon::project_3d_point(x,y,z, m_calibration.CamParam(), &R , &C);
+      if(R >= 0 && R < m_calibration.m_height
+        && C >= 0 && C < m_calibration.m_width)
+        return true;
+    }
+    catch(Halcon::HException ex)
+    {
+      printf("Error: %s\n", ex.message);
+    }
+  }
+  //TODO what when the position can be in the image, but not in the center?
+#ifdef _DEBUG
+  printf("A Camera can not see pose (rel to camera): %f %f %f\n", x,y,z);
+#endif
+  return false;
 }
 
 void Camera::Show(const long frame)
 {
-#ifdef HALCONIMG
   try
   {
+    printf("Try to show Camera %s\n", GetSensorID().c_str());
     if(m_win == NULL)
+    {
       GetWindow();
+      printf("Opened Window\n");
+    }
     Image* img = GetImage(frame);
     if(img != NULL)
     {
+      printf("Got image\n");
+
       Halcon::Hobject* obj = img->GetHImage();
       Halcon::HTuple p,t,height, width, chan;
       Halcon::get_image_pointer1(*obj, &p,&t,&width, &height);
 
       //printf("Showing with: height %d width %d\n", height[0].I(), width[0].I());//
-      m_win->SetWindowExtents(20,10,(width[0].I()/4 ) + 10, (height[0].I()/4 ) + 20);
+      m_win->SetWindowExtents(20,10,(width[0].I() ) + 10, (height[0].I()) + 20);
       m_win->SetPart(0,0,height, width);
       //TODO Check if this is not colored!
       if(img->GetType() == YUV_IMAGE)
@@ -386,7 +389,10 @@ void Camera::Show(const long frame)
         Halcon::disp_obj(img1, m_win->WindowHandle());
       }
       else
+      {
+        printf("Try to show normal image\n");
         Halcon::disp_obj(*obj, m_win->WindowHandle());
+      }
       img->Free();
     }
     else{
@@ -401,7 +407,6 @@ void Camera::Show(const long frame)
   {
      printf("Showing not possible! Unknown Exception\n");
   }
-#endif
 }
 
 

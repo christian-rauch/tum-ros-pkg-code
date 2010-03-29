@@ -19,8 +19,8 @@
 #ifndef ROIGENERATOR_H
 #define ROIGENERATOR_H
 
-#include "RegionOI.h"
 #include "Camera.h"
+#include "RegionOI.h"
 
 namespace cop
 {
@@ -36,9 +36,7 @@ namespace cop
     virtual RegionOI GetROI(Camera* cam)
     {
       RegionOI region;
-  #ifdef HalconImg
       Halcon::gen_rectangle1(&region.m_reg, 0,0,cam->m_calibration.m_width, cam->m_calibration.m_width);
-  #endif
       return region;
     }
 

@@ -19,7 +19,6 @@
 // Functions, used to determine longitude, latitude and radius from pose uncertainties (covariance).
 #ifndef SEARCHPARAMS_H
 #define SEARCHPARAMS_H
-#ifdef HALCONIMG
 #include "cpp/HalconCpp.h"
 #include "RelPose.h"
 using namespace Halcon;
@@ -67,8 +66,7 @@ namespace cop
   * maximum values for longitude, latitude and radius. These values correspond
   *  to the extents of the viewpoint search space around the MEAN(!) pose.
   ********************************************************************************/
-  HTuple GetExtents(const Matrix& ExtremePosesTransp, const HTuple& MeanPose, double *gravPoint, Calibration* calib, RegionOI* &r);
+  HTuple GetExtents(const Matrix& ExtremePosesTransp, const HTuple& MeanPose, double *gravPoint, Calibration* calib, RegionOI* r);
 }
-#endif /*HALCONIMG*/
 
 #endif /*SEARCHPARAMS_H*/

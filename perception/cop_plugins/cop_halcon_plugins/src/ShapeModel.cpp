@@ -27,18 +27,15 @@
 #include "DxfWriter.h"
 #include "RelPoseHTuple.h"
 
-#ifdef HALCONIMG
+
 #include "cpp/HalconCpp.h"
 #include "SearchParams3d.h"
-#endif
 
 
-#ifdef BOOST_THREAD
+
 #include "boost/date_time/posix_time/posix_time.hpp"
 #define BOOST(A) A
-#else
-#define BOOST(A) ;
-#endif
+
 
 // Constructors/Destructors
 //
@@ -235,7 +232,7 @@ ShapeModelParamSet::ShapeModelParamSet(Calibration* calib, double lgmi, double l
 
 ShapeModel::ShapeModel (Class* classref ) :
   Descriptor(classref),
-  m_initializationLEvel(1.0),
+  m_initializationLevel(1.0),
   m_curIndex(-1),
   m_initialized(false),
   m_showNow(true)
@@ -243,7 +240,7 @@ ShapeModel::ShapeModel (Class* classref ) :
 }
 
 ShapeModel::ShapeModel () :
-  m_initializationLEvel(0.0),
+  m_initializationLevel(0.0),
   m_curIndex(-1),
   m_initialized(false),
   m_showNow(false)
@@ -253,7 +250,7 @@ ShapeModel::ShapeModel () :
 void ShapeModel::SetData (XMLTag* tag)
 {
   Descriptor::SetData(tag);
-  m_initializationLEvel = 1.0;
+  m_initializationLevel = 1.0;
   m_curIndex = -1;
   m_initialized = false;
   m_showNow = true;
@@ -262,7 +259,7 @@ void ShapeModel::SetData (XMLTag* tag)
   bool deleteTold = false;
   if(tag != NULL)
   {
-    m_initializationLEvel = tag->GetPropertyDouble(XML_ATTRIBUTE_INITIALIZATIONLEVEL, 1.0);
+    m_initializationLevel = tag->GetPropertyDouble(XML_ATTRIBUTE_INITIALIZATIONLEVEL, 1.0);
     XMLTag* conf = tag->GetChild(XML_NODE_SHAPEMODEL_INTERN_CONFIG);
     Calibration* calib = NULL;
     if(conf != NULL)
@@ -292,7 +289,6 @@ void ShapeModel::SetData (XMLTag* tag)
     }
 
     XMLTag* tag_l_ps = tag->GetChild(XML_NODE_SHAPEPARAM_LIST);
-    printf("Loaded tag %s: %p with length %d\n", XML_NODE_SHAPEPARAM_LIST,  tag_l_ps,  tag_l_ps != NULL ?  tag_l_ps->CountChildren() : 0);
     if(tag_l_ps != NULL)
     {
       const unsigned int &num = tag_l_ps->CountChildren();
@@ -301,7 +297,6 @@ void ShapeModel::SetData (XMLTag* tag)
         try
         {
           XMLTag* child = tag_l_ps->GetChild(XML_NODE_SHAPEPARAM_ENTRY, i);
-          printf("Loaded tag %s: %p with length %d\n", XML_NODE_SHAPEPARAM_ENTRY,  child,  child != NULL ?child->CountChildren() : 0);
           if(child == NULL)
             break;
           std::string temp; /*Hack cause ShapeModelParamSet can not be loaeded by XMLTag (lazy TODO)**/
@@ -313,7 +308,6 @@ void ShapeModel::SetData (XMLTag* tag)
                                         calib, deleteTold),
                                 temp,
                                 btest);
-           printf("With filename %s\n", temp.c_str());
            deleteTold = false;
         }
         catch(...)
@@ -345,7 +339,7 @@ void ShapeModel::SetData (XMLTag* tag)
   }
 }
 
-#ifdef HALCONIMG
+
 void ShapeModel::WriteShapeModelThreaded(long shapeModelId, const char* name)
 {
   try
@@ -358,7 +352,7 @@ void ShapeModel::WriteShapeModelThreaded(long shapeModelId, const char* name)
       printf("ShapeModel (Writer Thread): %s\n", ex.message);
   }
 }
-#endif
+
 
 long ShapeModel::GetShapeModel(double &scale)
 {
@@ -367,7 +361,7 @@ long ShapeModel::GetShapeModel(double &scale)
   {
     printf("Model existing as file: %s\n", m_shapeParams_file[m_curIndex].second.second ? "yes" : "no");
   }
-  if(m_initializationLEvel < 0.1)
+  if(m_initializationLevel < 0.1)
   {
       return -1;
   }
@@ -379,7 +373,6 @@ long ShapeModel::GetShapeModel(double &scale)
   }
   else if (m_curIndex != -1 && !m_shapeParams_file[m_curIndex].second.second)
   {
-#ifdef HALCONIMG
     try
     {
       Halcon::HTuple obj, num, empty;
@@ -439,40 +432,28 @@ long ShapeModel::GetShapeModel(double &scale)
       printf("ShapeModel: %s\n", ex.message);
       throw "Object Model File could not be found";
     }
-#endif /*HALCONIMG*/
   }
   else
   {
     if(m_curIndex == -1 || m_curIndex > (signed)m_shapeParams_file.size())
       throw "Shape Model could not be loaded, cause of missing initialization";
     scale = m_shapeParams_file[m_curIndex].first->m_scale;
-#ifdef HALCONIMG
+
     try
     {
-#ifdef BOOST_1_35
-                  BOOST(boost::system_time t0);
-                  BOOST(boost::system_time t1);
-                   BOOST(t0 = boost::get_system_time());
-#else
+
                   BOOST(boost::xtime t0);
                   BOOST(boost::xtime t1);
                    BOOST(boost::xtime_get(&t0, boost::TIME_UTC));
-#endif
+
               Halcon::read_shape_model_3d(GenShapeModelFileName(m_shapeParams_file[m_curIndex].second.first,
                                           m_curIndex).c_str(), &m_ShapeModelID);
 
-#ifdef BOOST_1_35
-                    BOOST(t1 = get_system_time());
-                    BOOST(boost::posix_time::time_duration td = t1 - t0);
-                    BOOST(printf("Model load time: %s\n", boost::posix_time::to_simple_string(td).c_str()));
 
-#ifdef _DEBUG
-/*                    std::cout << "Calc time: " << t1- t0 << std::endl;*/
-#endif/* _DEBUG*/
-#else /*BOOST_1_35*/
+
                     BOOST(boost::xtime_get(&t1, boost::TIME_UTC));
                     BOOST(printf("Nodel load time: %lds %ldms\n", t1.sec - t0.sec, (t1.nsec - t0.nsec) / 1000000));
-#endif  /*BOOST_1_35*/
+
       m_initialized = true;
     }
     catch(Halcon::HException )
@@ -522,11 +503,8 @@ long ShapeModel::GetShapeModel(double &scale)
 
         try
         {
-#ifdef BOOST_THREAD
+
             boost::thread(boost::bind(&ShapeModel::WriteShapeModelThreaded, this, m_ShapeModelID, (const char*)GenShapeModelFileName(stFilename, m_curIndex).c_str()));
-#else
-            Halcon::write_shape_model_3d(m_ShapeModelID , GenShapeModelFileName(stFilename, m_curIndex).c_str());
-#endif
             m_shapeParams_file[m_curIndex].second.second = true;
         }
         catch( Halcon::HException ex )
@@ -542,7 +520,6 @@ long ShapeModel::GetShapeModel(double &scale)
         throw "Object Model File could not be found";
       }
     }
-#endif /*HALCONIMG*/
   }
   return m_ShapeModelID;
 }
@@ -590,7 +567,6 @@ double ShapeModel::IntersectWithSupportingPlane(RelPose* planePose, RelPose* mat
   printf("Distance descrpancy to supporting plane: %f\n", diffZmatch);
   /*Object too close => diffZMatch < 0 */
   /*Object too far away => diffZMatch > 0 */
-#ifdef HALCONIMG
   try
   {
     Halcon::HTuple hommat, hommat_old,hommat_inv,hommat_pose, qx, qy, qz, r, c, campar, X, Y, hommat_new;
@@ -613,7 +589,7 @@ double ShapeModel::IntersectWithSupportingPlane(RelPose* planePose, RelPose* mat
                    sqrt((hommat_old[3].D()*hommat_old[3].D())+(hommat_old[7].D()*hommat_old[7].D())*(hommat_old[11].D()*hommat_old[11].D()));
     sm->m_measure *= scale;
     printf("Scaling adapted to: %f\n", sm->m_measure);
-    m_initializationLEvel += 0.1;
+    m_initializationLevel += 0.1;
     hommat[3] = hommat[3].D() * scale;
     hommat[7] = hommat[7].D() * scale;
     hommat[11] = hommat[11].D() * scale;
@@ -637,7 +613,6 @@ double ShapeModel::IntersectWithSupportingPlane(RelPose* planePose, RelPose* mat
   {
     printf("Error: in Intersect with plane\n");
   }
-#endif
   return eval;
 }
 
@@ -647,7 +622,7 @@ void ShapeModel::SaveTo(XMLTag* tag)
 {
   Descriptor::SaveTo(tag);
 
-  tag->AddProperty(XML_ATTRIBUTE_INITIALIZATIONLEVEL, m_initializationLEvel);
+  tag->AddProperty(XML_ATTRIBUTE_INITIALIZATIONLEVEL, m_initializationLevel);
 
   XMLTag* tag_spl = new XMLTag(XML_NODE_SHAPEPARAM_LIST);
   for(unsigned int i = 0; i < m_shapeParams_file.size(); i++)
@@ -663,7 +638,6 @@ void ShapeModel::SaveTo(XMLTag* tag)
 
 void ShapeModel::Show(RelPose* pose, Sensor* camin)
 {
-#ifdef HALCONIMG
   if(camin != NULL && camin->IsCamera())
   {
      Camera* cam = (Camera*)camin;
@@ -680,15 +654,15 @@ void ShapeModel::Show(RelPose* pose, Sensor* camin)
          Halcon::Hobject xld = GetContour(*pose, cam);
          Halcon::disp_xld(xld, handle);
         //ShapeModelParamSet* pm = GetParamSet();
-         ShowRegion(cam);
+         /*ShowRegion(cam);*/
      }
   }
-#endif /*HALCONIMG*/
+
 }
 
 void ShapeModel::ShowRegion(Camera* cam)
 {
-#ifdef HALCONIMG
+
     Halcon::HTuple winhandle = 600;
     if( cam != NULL)
     {
@@ -702,22 +676,22 @@ void ShapeModel::ShowRegion(Camera* cam)
     Halcon::set_color(winhandle, "red");
     if(pm->m_region != NULL)
       Halcon::disp_region(pm->m_region->m_reg, winhandle);
-#endif /*HALCONIMG*/
+
 }
 
 ShapeModel::~ShapeModel ( )
 {
-#ifdef HALCONIMG
+
   if(m_initialized)
     Halcon::clear_shape_model_3d(m_ShapeModelID);
-#endif  /*HALCONIMG*/
+
   for(unsigned int i = 0; i < m_shapeParams_file.size(); i++)
     delete m_shapeParams_file[i].first;
 }
 
 bool ShapeModel::PoseToRange(RelPose* pose, ShapeModelParamSet &pm, double* gravPoint, Calibration* calib)
 {
-#ifdef HALCONIMG
+
   Halcon::HTuple pose_s(7,0.0), extents;
   bool cov = true;
   Matrix m,ExtremePoses;
@@ -777,15 +751,17 @@ bool ShapeModel::PoseToRange(RelPose* pose, ShapeModelParamSet &pm, double* grav
   if(cov)
   {
     ExtremePoses = GetExtremePoses(m);
+    if(pm.m_region == NULL)
+      pm.m_region = new RegionOI();
     extents=GetExtents(ExtremePoses.t(), pose_s, gravPoint, calib, pm.m_region);
 
     double MeanDist = sqrt(pose_s[0].D()*pose_s[0].D()+pose_s[1].D()*pose_s[1].D()+pose_s[2].D()*pose_s[2].D());
     pm.m_distMin = MeanDist+extents[5].D();
     pm.m_distMax = MeanDist+extents[2].D();
-    pm.m_latitudeMin = extents[4].D() *M_PI;
-    pm.m_latitudeMax = extents[1].D() *M_PI;
-    pm.m_longitudeMin = extents[3].D() *M_PI;
-    pm.m_longitudeMax = extents[0].D() *M_PI;
+    pm.m_latitudeMin = extents[4].D() *1.8*M_PI;
+    pm.m_latitudeMax = extents[1].D() *1.8*M_PI;
+    pm.m_longitudeMin = extents[3].D() *1.8*M_PI;
+    pm.m_longitudeMax = extents[0].D() *1.8*M_PI;
 
     pm.m_camRollMin = -M_PI / 4.0;
     pm.m_camRollMax = M_PI / 4.0;
@@ -812,7 +788,6 @@ bool ShapeModel::PoseToRange(RelPose* pose, ShapeModelParamSet &pm, double* grav
       pm.m_camRollMax = M_PI / 2;
       return false;
   }
-#endif  /*HALCONIMG*/
   return true;
 }
 
@@ -895,7 +870,7 @@ double* ShapeModelParamSet::GetGravPoint(std::string st)
 {
   if(!m_gravPointInited)
   {
-#ifdef HALCONIMG
+
     Halcon::HObjectModel3D dxf;
     Halcon::HTuple t1, t2, gravPoint;
     Halcon::HTuple measure (m_measure);  //wie centimeter
@@ -916,7 +891,7 @@ double* ShapeModelParamSet::GetGravPoint(std::string st)
      throw "No Filename";
     }
     m_gravPointInited = true;
-#endif  /*HALCONIMG*/
+
   }
   return m_gravFinal;
 }
@@ -1042,7 +1017,6 @@ bool AdaptRegion(RegionOI* reg, RelPose* pose, Calibration* calib)
 {
     if(reg != NULL)
     {
-#ifdef HALCONIMG
         Halcon::HTuple area, ro, co,r,c, hom,tup;
         RelPoseHTuple::GetPose(pose, &tup, 0);
         Halcon::Hobject temp;
@@ -1051,7 +1025,6 @@ bool AdaptRegion(RegionOI* reg, RelPose* pose, Calibration* calib)
         Halcon::hom_mat2d_identity(&hom);
         Halcon::hom_mat2d_translate(hom, r - ro, c - co, &hom);
         Halcon::affine_trans_region(reg->m_reg, &reg->m_reg, hom, "none");
-#endif
     }
     return false;
 }
@@ -1067,21 +1040,20 @@ bool ShapeModel::SetShapeModelParamSet(RelPose* pose, Calibration* calib, double
     for(unsigned int i = 0; i < num; i++)
     {
       ShapeModelParamSet* shapeParams = m_shapeParams_file[i].first;
-      if(m_initializationLEvel < 0.1)
+      if(m_initializationLevel < 0.1)
       {
         printf("EvalScaling (%p, %p, %s, %p)", shapeParams, calib, m_shapeParams_file[i].second.first.c_str(), pose);
           EvalScaling(shapeParams, calib, m_shapeParams_file[i].second.first, pose);
-          m_initializationLEvel += 0.1;
+          m_initializationLevel += 0.1;
       }
       std::string st = m_shapeParams_file[i].second.first;
       //bool shapeModelSaved = m_shapeParams_file[i].second.second;
       double *gravPoint = shapeParams->GetGravPoint(st);
       if(st.compare(stChecked) != 0 && i == 0)
       {
-#ifdef HALCONIMG
+
 #ifdef _DEBUG
         RelPoseHTuple::Print(pose);
-#endif
 #endif
         bReturn = PoseToRange(pose, *pm, gravPoint, calib);
       }
@@ -1114,9 +1086,9 @@ bool ShapeModel::SetShapeModelParamSet(RelPose* pose, Calibration* calib, double
         if((unsigned)m_curIndex != i && m_initialized)
         {
           printf("This model was not initialized\n");
-#ifdef HALCONIMG
+
           Halcon::clear_shape_model_3d(m_ShapeModelID);
-#endif
+
           m_initialized = false;
         }
         else if(!m_initialized)
@@ -1169,7 +1141,7 @@ bool ShapeModel::SetShapeModelParamSet(RelPose* pose, Calibration* calib, double
 }
 
 
-#ifdef HALCONIMG
+
 Halcon::Hobject ShapeModel::GetContour(RelPose& rpose, Camera* cam)
 {
   Halcon::HTuple camparam;
@@ -1197,32 +1169,30 @@ Halcon::Hobject ShapeModel::GetContour(RelPose& rpose, Camera* cam)
    RelPoseHTuple::GetPose(&rpose, &pose);
   //printf("Pose: %f,%f,%f /%f,%f,%f // %d\n", pose[0].D(), pose[1].D(), pose[2].D(), pose[3].D(), pose[4].D(), pose[5].D(), pose[6].I());
   long shape = GetShapeModel(scale);
-  if(shape == -1)
-    throw "Shape Model not yet initialized";
-  if(pose[2].D() != 0)
+  if(shape != -1)
   {
-    //printf("Projecting Model\n");
-    try
+    if(pose[2].D() != 0)
     {
+    //printf("Projecting Model\n");
+      try
+      {
         printf("Contour at pose\n");
         RelPoseHTuple::Print(&rpose);
       /*Testing if scale is needed here, or not! or if a trick is needed*/
        project_shape_model_3d(&obj, shape, camparam ,pose, "true", 0.35);
        return obj;
-    }
-    catch(Halcon::HException ex)
-    {
-      printf("Error: %s\n", ex.message);
-      gen_empty_obj (&obj);
-      return obj;
+      }
+      catch(Halcon::HException ex)
+      {
+        printf("Error: %s\n", ex.message);
+        gen_empty_obj (&obj);
+        return obj;
+      }
     }
   }
-  else
-  {
-    gen_empty_obj (&obj);
-    return obj;
-  }
+  gen_empty_obj (&obj);
+  return obj;
 }
-#endif
+
 
 

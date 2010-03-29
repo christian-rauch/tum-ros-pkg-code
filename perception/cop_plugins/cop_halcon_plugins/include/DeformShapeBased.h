@@ -18,7 +18,7 @@
 
 #ifndef DEFORMSHAPEBASED_H
 #define DEFORMSHAPEBASED_H
-#ifdef DEFORMSHAPE_AVAILABLE
+/*#ifdef DEFORMSHAPE_AVAILABLE*/
 
 #include "LocateAlgorithm.h"
 #include "Camera.h"
@@ -46,6 +46,11 @@ namespace cop
       Destructor
     */
     ~DeformShapeBased(void);
+
+    /**
+    *
+    */
+    void SetData(XMLTag* tag);
     /**
       Action function, prepares images
     */
@@ -59,6 +64,8 @@ namespace cop
     */
     virtual double CheckSignature(const Signature& object, const std::vector<Sensor*> &sensors);
 
+    virtual std::string GetName(){return XML_NODE_DEFORMSHAPEBASEDALG;}
+
     /**
       Save the parameters or any
     */
@@ -66,5 +73,5 @@ namespace cop
 
   };
 }
-#endif /*DEFORMSHAPE_AVAILABLE*/
+/*#endif*/ /*DEFORMSHAPE_AVAILABLE*/
 #endif /*DEFORMSHAPEBASED_H*/

@@ -16,9 +16,10 @@
  */
 
 
-#include "SearchParams3d.h"
+
 #include "Camera.h"
 #include "RegionOI.h"
+#include "SearchParams3d.h"
 //#include "cpp/HObjectModel3D.h"
 //#include "cpp/HalconCpp.h"
 using namespace cop;
@@ -66,7 +67,7 @@ ReturnMatrix cop::GetExtremePoses(const Matrix& cov)
   }
   return m;
 }
-#ifdef HALCONIMG
+
 
 void cop::GetVPFromPose(const HTuple& Pose, HTuple *ViewPoint, double *ObjGravPoint)
 {
@@ -97,18 +98,17 @@ void cop::GetVPFromPose(const HTuple& Pose, HTuple *ViewPoint, double *ObjGravPo
   tuple_concat((const HTuple)*ViewPoint, (const HTuple)Rad, ViewPoint);
 }
 
-HTuple cop::GetExtents(const Matrix& ExtremePosesTransp, const HTuple& MeanPose, double* gravPoint, Calibration* calib, RegionOI* &r)
+HTuple cop::GetExtents(const Matrix& ExtremePosesTransp, const HTuple& MeanPose, double* gravPoint, Calibration* calib, RegionOI* r)
 {
-  HTuple ViewPoint(3,0.0), SSpaceMax(3,0.0), SSpaceMin(3,0.0), Contrib(3,0.0), MeanVPoint(3,0.0);
+  HTuple ViewPoint(3,0.0), SSpaceMax(3,0.0), SSpaceMin(3,0.0), Contrib(3,0.0), MeanVPoint(3,0.0), hommat, hommatExtreme;
   HTuple Row, Col, CamParam = calib->CamParam();
 
   HTuple Pose(7,0.0);
   GetVPFromPose(MeanPose, &MeanVPoint, gravPoint);
+  pose_to_hom_mat3d(MeanPose, &hommat);
 
-  if(r == NULL)
-    r = new RegionOI();
 #ifdef _DEBUG
-  cerr<< "ExtremePosesTrasp: "<<endl<<ExtremePosesTransp<<endl;
+ /* cerr<< "ExtremePosesTrasp: "<<endl<<ExtremePosesTransp<<endl;*/
 #endif
   Halcon::set_system("clip_region", "false");
   for(int vp=0; vp<12;vp++)
@@ -117,7 +117,10 @@ HTuple cop::GetExtents(const Matrix& ExtremePosesTransp, const HTuple& MeanPose,
       {
           Pose[p] = ExtremePosesTransp.element(vp, p);
       }
-      Pose+=MeanPose;
+      pose_to_hom_mat3d(Pose, &hommatExtreme);
+      hom_mat3d_compose(hommat, hommatExtreme, &hommatExtreme);
+      hom_mat3d_to_pose(hommatExtreme, &Pose);
+
       try
       {
         project_3d_point(Pose[0].D(),Pose[1].D(),Pose[2].D(),CamParam, &Row, &Col);
@@ -146,4 +149,5 @@ HTuple cop::GetExtents(const Matrix& ExtremePosesTransp, const HTuple& MeanPose,
   tuple_concat(SSpaceMax, SSpaceMin, &SSpaceMax);
   return SSpaceMax;
 }
-#endif
+
+

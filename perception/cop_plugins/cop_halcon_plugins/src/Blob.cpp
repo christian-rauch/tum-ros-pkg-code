@@ -21,9 +21,7 @@
 #include "Camera.h"
 #include "RelPoseHTuple.h"
 
-#ifdef HALCONIMG
 #include <cpp/HalconCpp.h>
-#endif
 
 #define XML_ATTRIBUTE_REDTHRESMIN   "RedThresMin"
 #define XML_ATTRIBUTE_REDTHRESMAX   "RedThresMax"
@@ -108,7 +106,6 @@ void Blob::Show(RelPose* pose, Sensor* camin)
     if(pose != NULL && camin != NULL&& camin->IsCamera())
     {
       Camera* cam = (Camera*)camin;
-#ifdef HALCONIMG
       Halcon::HWindow* hwin = cam->GetWindow();
       hwin->SetColor("green");
       Halcon::HTuple pose_ht;
@@ -117,7 +114,6 @@ void Blob::Show(RelPose* pose, Sensor* camin)
       Halcon::HTuple r,c;
       Halcon::project_3d_point(pose_ht[0],pose_ht[1],pose_ht[2], camparam, &r,&c);
       Halcon::disp_cross(hwin->WindowHandle(), r, c, 15, 0);
-#endif /*HALCONIMG*/
     }
 }
 

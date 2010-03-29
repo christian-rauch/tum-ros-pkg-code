@@ -37,7 +37,7 @@ PRAShapeVsPointDescr::~PRAShapeVsPointDescr(void)
 {
 }
 
-double PRAShapeVsPointDescr::Perform(std::vector<Sensor*> cam, RelPose* pose, Signature& sig, int &numOfObjects, double& qualityMeasure)
+ImprovedPose PRAShapeVsPointDescr::Perform(std::vector<Sensor*> cam, RelPose* pose, Signature& sig, int &numOfObjects, double& qualityMeasure)
 {
 #ifdef DESCRIPTOR_AVAILABLE
 	PointDescrModel* p1 =  (PointDescrModel*)sig.GetElement(0,DESCRIPTOR_FEATURE);
@@ -91,7 +91,7 @@ double PRAShapeVsPointDescr::Perform(std::vector<Sensor*> cam, RelPose* pose, Si
 		    pose2 = db.Inner(img, RelPoseFactory::FRelPose(pose1->m_parentID), calib, pose, sig, numOfObjects, qualityMeasure);
         }
 	}
-#ifdef HALCONIMG
+
 #ifdef _DEBUG
   if(pose1 != NULL && pose2.size() > 0)
   {
@@ -99,7 +99,7 @@ double PRAShapeVsPointDescr::Perform(std::vector<Sensor*> cam, RelPose* pose, Si
 	  pose2[0]->Print();
   }
 #endif
-#endif
+
   if(pose1 != NULL && pose2.size() > 0)
   {
 	  double ret = pose1->CompareLo(*pose2[0]);
@@ -107,10 +107,10 @@ double PRAShapeVsPointDescr::Perform(std::vector<Sensor*> cam, RelPose* pose, Si
 
 	  p1->Evaluate(ret);
 	  p2->Evaluate(ret);
-	  return ret;
+	  return ImprovedPose(p1, ret);
   }
 #endif
-  return 0.0;
+  return ImprovedPose(NULL, 0.0);
 }
 
 double PRAShapeVsPointDescr::CheckSignature(const Signature& sig, const std::vector<Sensor*> &sensors)

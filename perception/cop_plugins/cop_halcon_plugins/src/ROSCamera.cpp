@@ -19,16 +19,14 @@
 #include "ROSCamera.h"
 #include "XMLTag.h"
 
-#ifdef HALCONIMG
-#include "cpp/HalconCpp.h"
-#endif
 
-#ifdef BOOST_THREAD
+#include "cpp/HalconCpp.h"
+
+
+
 #include "boost/bind.hpp"
 #define BOOST(A) A
-#else
-#define BOOST(A)
-#endif
+
 
 #define XML_ATTRIBUTE_CALIBFILE       "CalibFileName"
 #define XML_ATTRIBUTE_TOPICNAME  "TopicName"
@@ -93,36 +91,23 @@ void ROSCOPCamera::SetData( XMLTag* ConfigFile)
 ROSCOPCamera::~ROSCOPCamera()
 {
 }
-ros::Subscriber sibs;
+
 bool ROSCOPCamera::Start()
 {
   ros::NodeHandle node;
-  sibs = node.subscribe(m_stImageTopic, 1, &ROSCOPCamera::ImageCallback, this);
+  printf("Subscribing sensor %s at topic %s\n", GetSensorID().c_str(), m_stImageTopic.c_str());
+  m_subsciber = node.subscribe(m_stImageTopic, 1, &ROSCOPCamera::ImageCallback, this);
   m_grabbing = true;
   return true;
 }
 
 bool ROSCOPCamera::Stop()
 {
-
-#ifdef BOOST_THREAD
-        printf("Sleeping a while and ");
-#ifdef BOOST_1_35
-         BOOST(boost::system_time t);
-#else
-        boost::xtime t;
-#endif
-
-#ifdef BOOST_1_35
-        BOOST(t = get_system_time());
-        BOOST(t += boost::posix_time::seconds(1));
-#else
-        boost::xtime_get(&t, boost::TIME_UTC);
-        t.sec += 1;
-#endif
-
-        boost::thread::sleep(t);
-#endif
+  printf("Sleeping a while and ");
+  boost::xtime t;
+  boost::xtime_get(&t, boost::TIME_UTC);
+  t.sec += 1;
+  boost::thread::sleep(t);
   m_grabbing = false;
   return true;
 }
@@ -139,26 +124,13 @@ Reading* ROSCOPCamera::GetReading(const long &Frame)
     {
       while(m_grabbing && ((signed)m_images.size() < (Frame - m_deletedOffset + 1) || m_images.size() == 0))
       {
-#ifdef BOOST_THREAD
-        printf("Sleeping a while and ");
-#ifdef BOOST_1_35
-         BOOST(boost::system_time t);
-#else
-        boost::xtime t;
-#endif
+        BOOST(printf("Sleeping a while and "));
+        BOOST(boost::xtime t);
+        BOOST(boost::xtime_get(&t, boost::TIME_UTC));
+        BOOST(t.sec += 1);
+        BOOST(boost::thread::sleep(t));
 
-#ifdef BOOST_1_35
-        BOOST(t = get_system_time());
-        BOOST(t += boost::posix_time::seconds(1));
-#else
-        boost::xtime_get(&t, boost::TIME_UTC);
-        t.sec += 1;
-#endif
-
-        boost::thread::sleep(t);
-#else
-#endif
-        printf("waiting for the camera to start grabbing\n");
+        printf("waiting for %s to start grabbing(Grabbing: %s, NumImages: %ld)\n", GetSensorID().c_str(), m_grabbing ? "true" : false, m_images.size());
       }
       printf("Got a new image: %d\n", (int)m_images.size());
     }
@@ -191,7 +163,6 @@ XMLTag* ROSCOPCamera::Save()
   return tag;
 }
 
-#ifdef HALCONIMG
 void ReadImage(const sensor_msgs::ImageConstPtr& m, Halcon::Hobject* obj)
 {
   int height = m->height;
@@ -242,14 +213,14 @@ void ReadImage(const sensor_msgs::ImageConstPtr& m, Halcon::Hobject* obj)
   }
 
 }
-#endif
+
 
   void ROSCOPCamera::ImageCallback(const sensor_msgs::ImageConstPtr& msg)
   {
-#ifdef HALCONIMG
-    Halcon::Hobject *obj = new Halcon::Hobject();
-    ReadImage(msg, obj);
 
+    Halcon::Hobject *obj = new Halcon::Hobject();
+    printf("In callback of sensor %s\n", GetSensorID().c_str());
+    ReadImage(msg, obj);
     if(false && m_calibration.m_radialDistortionHandling)
     {
 
@@ -258,13 +229,12 @@ void ReadImage(const sensor_msgs::ImageConstPtr& m, Halcon::Hobject* obj)
       if(width[0].I() == m_calibration.m_width)
         Halcon::map_image(*obj, *m_calibration.m_radialDistMap, obj);
     }
-
     Image* img = new Image(obj, RGB_IMAGE);
     PushBack(img);
-#endif /*HALCONIMG*/
+
     while(m_images.size() > 3)
     {
-      if(DeleteImg())
+      if(DeleteReading())
         continue;
       else
       {

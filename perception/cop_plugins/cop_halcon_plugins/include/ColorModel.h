@@ -37,7 +37,7 @@ namespace cop
     ColorModel();
     ~ColorModel(void);
 
-    virtual int GetType()const{return DESCRIPTOR_COLOR;}
+    virtual ElemType_t GetType()const{return DESCRIPTOR_COLOR;}
     virtual std::string GetNodeName() const {return XML_NODE_COLORMODEL;}
 
     virtual double Compare(std::vector<double>);

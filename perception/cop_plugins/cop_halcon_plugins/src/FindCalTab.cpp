@@ -28,10 +28,10 @@
 #include "HalconCalib.h"
 #endif
 
-#ifdef HALCONIMG
+
 #include "cpp/HalconCpp.h"
 using namespace Halcon;
-#endif
+
 
 using namespace cop;
 
@@ -52,6 +52,7 @@ XMLTag* FindCalTab::Save()
 {
   return new XMLTag(XML_NODE_FINDCALTAB);
 }
+
 std::vector<RelPose*> FindCalTab::Perform(std::vector<Sensor*> sensors, RelPose* lastKnownPose, Signature& object, int &numOfObjects, double& qualityMeasure)
 {
   std::vector<RelPose*> result;
@@ -60,6 +61,8 @@ std::vector<RelPose*> FindCalTab::Perform(std::vector<Sensor*> sensors, RelPose*
   {
     Calibration* calib = &(cam->m_calibration);
     Image* img = cam->GetImage(-1);
+    /** TODO: TOREMOVE **/
+    /*cam->Show();*/
     RelPose* camPose = cam->m_relPose;
     if(img != NULL && camPose != NULL)
       result = Inner(img, camPose, calib, lastKnownPose,  object, numOfObjects, qualityMeasure);
@@ -78,8 +81,7 @@ double FindCalTab::CheckSignature(const Signature& object, const std::vector<Sen
 std::vector<RelPose*> FindCalTab::Inner(Image* img, RelPose* camPose,Calibration* calib,RelPose* lastKnownPose, CalTab* cm, int &numOfObjects, double& qualityMeasure)
 {
   std::vector<RelPose*> result;
-#ifdef HALCONIMG
-  if(img->GetType() == HALCONIMAGE)
+  if(img->GetType() == ReadingType_HalconImage)
   {
     HTuple    x, y, z;    // calibration table parameter
     HTuple    Row, Col;     // detected marker image positions
@@ -123,7 +125,6 @@ std::vector<RelPose*> FindCalTab::Inner(Image* img, RelPose* camPose,Calibration
     img->Free();
     return result;
   }
-#endif
   img->Free();
   numOfObjects = 0;
   qualityMeasure = 0.6;
@@ -133,7 +134,7 @@ std::vector<RelPose*> FindCalTab::Inner(Image* img, RelPose* camPose,Calibration
 std::vector<RelPose*> FindCalTab::Inner(Image* img, RelPose* camPose,Calibration* calib,RelPose* lastKnownPose, Signature& object, int &numOfObjects, double& qualityMeasure)
 {
   std::vector<RelPose*> result;
-#ifdef HALCONIMG
+
 #ifdef NATIVE_COP_CALIB
   if(img->GetType() == HALCONIMAGE)
   {
@@ -191,41 +192,41 @@ std::vector<RelPose*> FindCalTab::Inner(Image* img, RelPose* camPose,Calibration
   }
 #else
 
-  if(img->GetType() == HALCONIMAGE)
+  if(img->GetType() == ReadingType_HalconImage)
   {
     HTuple    x, y, z;    // calibration table parameter
     HTuple    Row, Col;     // detected marker image positions
     HTuple    StartPose;      // estimated start pose
     HTuple    FinalPose;      // calibrated external pose
     HTuple    Errors;
-      try
-      {
+    try
+    {
       HTuple campar_start = calib->CamParam();
       HTuple campar_final;
       CalTab* cm = (CalTab*)(object.GetElement(0, DESCRIPTOR_CALTAB ));
 
       caltab_points(cm->m_stCalTabDescriptionFile.c_str(), &x,&y,&z);
-
-      if(!FindCaltab(campar_start, *(img->GetHImage()), cm->m_stCalTabDescriptionFile.c_str(),
-	                Row, Col,  StartPose, cm))
-        {
-          img->Free();
-          numOfObjects = 0;
-          qualityMeasure = 0.0;
-          return result;
-        }
-        printf("StartPose: %f %f %f\n", StartPose[0].D(),  StartPose[1].D(), StartPose[2].D());
-       camera_calibration(x, y, z, Row, Col, campar_start, StartPose, "pose", &campar_final, &FinalPose, &Errors);
-        printf("FinalPose: %f %f %f\n", FinalPose[0].D(),  FinalPose[1].D(), FinalPose[2].D());
+      Hobject img_eq, *obj = img->GetHImage();
+      equ_histo_image(*obj, &img_eq);
+      if(!FindCaltab(campar_start, img_eq, cm->m_stCalTabDescriptionFile.c_str(),
+                Row, Col,  StartPose, cm))
+      {
+        img->Free();
+        numOfObjects = 0;
+        qualityMeasure = 0.0;
+        return result;
       }
-      catch(HException ex)
-        {
-          img->Free();
-          numOfObjects = 0;
-          qualityMeasure = 0.0;
-          return result;
-        }
-
+      printf("StartPose: %f %f %f\n", StartPose[0].D(),  StartPose[1].D(), StartPose[2].D());
+      camera_calibration(x, y, z, Row, Col, campar_start, StartPose, "pose", &campar_final, &FinalPose, &Errors);
+      printf("FinalPose: %f %f %f\n", FinalPose[0].D(),  FinalPose[1].D(), FinalPose[2].D());
+    }
+    catch(HException ex)
+    {
+      img->Free();
+      numOfObjects = 0;
+      qualityMeasure = 0.0;
+      return result;
+    }
     HTuple cov(6, 0.02);
     cov[2] = 0.4;
     cov[3] = 0.4;
@@ -248,7 +249,6 @@ std::vector<RelPose*> FindCalTab::Inner(Image* img, RelPose* camPose,Calibration
     return result;
   }
 #endif /* NATIVE_COP_CALIB*/
-#endif /*HALCONIMG*/
   img->Free();
   numOfObjects = 0;
   qualityMeasure = 0.6;

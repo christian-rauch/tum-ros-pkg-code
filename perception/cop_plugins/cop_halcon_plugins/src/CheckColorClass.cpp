@@ -16,8 +16,9 @@
  */
 
 
-#include "CheckColorClass.h"
 #include "ColorClass.h"
+#include "CheckColorClass.h"
+
 
 
 
@@ -25,7 +26,6 @@
 #define XML_ATTRIBUTE_MLPPATH "mlpPath"
 
 
-#ifdef HALCONIMG
 
 #include <cpp/HalconCpp.h>
 
@@ -37,14 +37,12 @@ using namespace cop;
 void classify_colors_score (Halcon::Hobject Image, Halcon::Hobject Region, Halcon::Hobject *ClassRegions,
     Halcon::HTuple MLPHandle, Halcon::HTuple Colors, Halcon::HTuple *Color, Halcon::HTuple *Score);
 void read_color_mlp (Halcon::HTuple Path, Halcon::HTuple *MLPHandle, Halcon::HTuple *Colors);
-#endif
 
 CheckColorClass::CheckColorClass(std::string path) :
   m_stPath(path),
   m_MLPHandle(-1)
 {
-#ifdef HALCONIMG
-  printf("CheckColorClass\n");
+
   Halcon::HTuple mlp;
   try
   {
@@ -55,12 +53,9 @@ CheckColorClass::CheckColorClass(std::string path) :
     printf("Error in loading mlp: %s\n", ex.message);
     throw "Error loading mlp";
   }
-  printf("MLPHandle: %d\n", mlp[0].I());
   m_MLPHandle = mlp[0].I();
-  #endif
 }
 
-#ifdef HALCONIMG
 
 void classify_colors_score (Halcon::Hobject Image, Halcon::Hobject Region, Halcon::Hobject *ClassRegions,
     Halcon::HTuple MLPHandle, Halcon::HTuple Colors, Halcon::HTuple *Color, Halcon::HTuple *Score)
@@ -93,8 +88,8 @@ void classify_colors_score (Halcon::Hobject Image, Halcon::Hobject Region, Halco
   if(Sum[0].I() == 0)
     (*Score) = 0.0;
   else
-    (*Score) = (HTuple(Area[HTuple(Indices[Number-1])]).Real())/(Sum.Real());
-  (*Color) = Colors[HTuple(Indices[Number-1])];
+    (*Score) = (HTuple(Area).Real())/(Sum.Real());
+  (*Color) = Colors;
   return;
 }
 
@@ -119,7 +114,7 @@ void read_color_mlp (Halcon::HTuple Path, Halcon::HTuple *MLPHandle, Halcon::HTu
   }
   return;
 }
-#endif
+
 CheckColorClass::CheckColorClass()
 {
 }
@@ -131,7 +126,6 @@ void CheckColorClass::SetData(XMLTag* tag)
   Halcon::HTuple mlp;
   try
   {
-    printf("\n\nLoading  %s \n\n", m_stPath.c_str());
     read_color_mlp(m_stPath.c_str(), &mlp,  &m_Colors);
   }
   catch(Halcon::HException ex)
@@ -139,18 +133,17 @@ void CheckColorClass::SetData(XMLTag* tag)
     printf("Error in loading mlp: %s\n", ex.message);
     throw "Error loading mlp";
   }
-  printf("Ready\n");
   m_MLPHandle = mlp[0].I();
 }
 
 
 CheckColorClass::~CheckColorClass(void)
 {
-#ifdef HALCONIMG
+
 
   using namespace Halcon;
   clear_all_class_mlp();
-#endif
+
 }
 
 
@@ -160,30 +153,42 @@ XMLTag* CheckColorClass::Save()
   tag->AddProperty(XML_ATTRIBUTE_MLPPATH, m_stPath);
   return tag;
 }
-#ifdef HALCONIMG
-void CheckColorClass::Inner(Hobject *img, Hobject *region, std::string &color, double& qualityMeasure)
+
+void CheckColorClass::Inner(Halcon::Hobject *img, Halcon::Hobject *region, std::string &color, std::map<std::string, double> &histo_cmp)
 {
-      Halcon::Hobject ClassRegions;
-      Halcon::HTuple Color, Score;
-      try
+  Halcon::Hobject ClassRegions;
+  Halcon::HTuple Color, Score;
+  try
+  {
+    classify_colors_score(*img, *region, &ClassRegions, m_MLPHandle, m_Colors, &Color, &Score);
+    double max_score = -1.0;
+    if(Score.Num() > 1)
+    {
+      for(int i = 0; i < Score.Num(); i++)
       {
-        printf("Colors[0]:=%s\n", m_Colors[0].S());
-        classify_colors_score(*img, *region, &ClassRegions, m_MLPHandle, m_Colors, &Color, &Score);
-        qualityMeasure = Score[0].D();
-        color = Color[0].S();
+        histo_cmp[Color[i].S()] = Score[i].D();
+        if(max_score < Score[i].D())
+        {
+          max_score = Score[i].D();
+          color = Color[i].S();
+        }
       }
-      catch(Halcon::HException ex)
-      {
-        printf("Error in CheckColorClass::Inner: %s\n", ex.message);
-      }
-      printf("Class result %s\n", Color[0].S());
+    }
+
+
+  }
+  catch(Halcon::HException ex)
+  {
+    printf("Error in CheckColorClass::Inner: %s\n", ex.message);
+    color = "";
+  }
 }
-#endif
+
 // Public attribute accessor methods
 //
 std::vector<RelPose*> CheckColorClass::Perform(std::vector<Sensor*> sensors, RelPose* pose, Signature& object, int &numOfObjects, double& qualityMeasure)
 {
-#ifdef HALCONIMG
+
   int i = 0;
   std::vector<ColorClass*> possibleColors;
   std::vector<RelPose*> results;
@@ -204,24 +209,31 @@ std::vector<RelPose*> CheckColorClass::Perform(std::vector<Sensor*> sensors, Rel
   {
     Halcon::HTuple Color;
     Halcon::HTuple Score;
+    bool added_pose = false;
     Image* img = cam->GetImage(-1);
-    RegionOI* region = ColorClass::GetRegion(pose, cam->m_relPose->m_uniqueID, &(cam->m_calibration));
-    if(img != NULL && region != NULL && img->GetType() == HALCONIMAGE)
+    RegionOI* region = new RegionOI(pose, cam->m_relPose->m_uniqueID, &(cam->m_calibration));
+    if(img != NULL && region != NULL && img->GetType() == ReadingType_HalconImage)
     {
       Halcon::Hobject* obj = img->GetHImage();
       Halcon::Hobject& reg = region->GetRegion();
       std::string st;
-      Inner(obj, &reg, st, qualityMeasure);
-
-      for(unsigned int iterc = 0; iterc < possibleColors.size(); iterc++)
+      std::map<std::string, double> hist;
+      Inner(obj, &reg, st, hist);
+      for(size_t i = 0; i < possibleColors.size(); i++)
       {
-        ColorClass* cl = possibleColors[iterc];
-        printf("Color %s with %f\n", st.c_str(), qualityMeasure);
-        if(cl->IsClass(st))
+        ColorClass* cl = (ColorClass*)possibleColors[i];
+        double d  = cl->IsClass(hist);
+        printf("The proposed pose %ld has a Color Compatibility of %f with %s(threshold is %f)\n", pose->m_uniqueID, d, cl->GetMainColorName().c_str(), qualityMeasure);
+        if(d > qualityMeasure)
         {
           numOfObjects = 1;
-          results.push_back(pose);
-          break;
+          pose->m_qualityMeasure = d;
+          qualityMeasure = d;
+          if(!added_pose)
+          {
+            results.push_back(pose);
+            added_pose = true;
+          }
         }
       }
     }
@@ -229,17 +241,23 @@ std::vector<RelPose*> CheckColorClass::Perform(std::vector<Sensor*> sensors, Rel
     {
       printf("Error: %p %p\n",img, region);
     }
+    img->Free();
     delete region;
   }
-
   return results;
-#endif
+
 }
 
 double CheckColorClass::CheckSignature(const Signature& object, const std::vector<Sensor*> &sensors)
 {
-    if(object.GetElement(0,DESCRIPTOR_COLORCLASS) != NULL)
-      return 1.0;
-    else
-      return 0.0;
+  if(object.GetElement(0, DESCRIPTOR_COLORCLASS) != NULL)
+  {
+   if(Camera::GetFirstCamera(sensors) != NULL)
+    return 1.0;
+  else
+    return 0.0;
+
+  }
+  else
+    return 0.0;
 }

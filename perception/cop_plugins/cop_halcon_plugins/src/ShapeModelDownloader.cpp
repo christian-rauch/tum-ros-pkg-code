@@ -21,11 +21,11 @@
 #include "DxfWriter.h"
 #include "DxfReader.h"
 #include "Signature.h"
+#include "Class.h"
 using namespace cop;
 
 
-ShapeModelDownloader::ShapeModelDownloader(SignatureDB* sigDB) :
-    m_sigDB(sigDB)
+ShapeModelDownloader::ShapeModelDownloader()
 {
 }
 
@@ -428,7 +428,7 @@ std::vector<std::string> LoadFiles(int offset, std::string searchstring, std::st
     return ret;
 }
 
-Elem*  ShapeModelDownloader::FindModels(std::string searchString)
+Descriptor*  ShapeModelDownloader::FindModels(std::string searchString)
 {
   ShapeModel* sm = NULL;
   s_counter = 0;
@@ -439,18 +439,11 @@ Elem*  ShapeModelDownloader::FindModels(std::string searchString)
     std::vector<std::string> tmp =  LoadFiles(12, searchString,searchString);
     count_files.insert(count_files.end(), tmp.begin(), tmp.end());
   }
-  if(m_sigDB == NULL)
-    return NULL;
-  int classId = m_sigDB->CheckClass(searchString);
   Class* cl = NULL;
-  if(classId == -1)
-  {
-      cl = new Class();
-      cl->SetName(searchString);
-      m_sigDB->AddClass(searchString, cl->m_ID);
-  }
-  else
-      cl = new Class(searchString, classId);
+  cl = new Class();
+  std::stringstream sttemp;
+  sttemp << searchString << "_CAD";
+  cl->SetName(sttemp.str());
 
   for(size_t i = 0; i< count_files.size(); i++)
   {
@@ -514,17 +507,48 @@ Elem*  ShapeModelDownloader::FindModels(std::string searchString)
         printf("Cl accesl worked\n");
     }
     sm = new ShapeModel(new Class(cl->GetName(), cl->m_ID));
-    sm->m_initializationLEvel = 0.0;
+    sm->m_initializationLevel = 0.0;
     if(sm == NULL)
-      printf("SM NULL?!??\n");
+      printf("ShapeModel == NULL?!??\n");
     else{
         sm->Save();
-        printf("sm accesl worked\n");
+        printf("sm accesss worked\n");
     }
     ShapeModelParamSet* pm = new ShapeModelParamSet(NULL,0.0,0.0,0.0); /**TODO: Add Calib*/
     sm->SetShapeModelParamSet(pm, modelname, false);
   }
   return sm;
 }
+std::string FindOpenClass(Signature& object)
+{
+  for(unsigned int i = 0; i < object.CountClasses(); i++)
+  {
+    Class* cl = object.GetClass(i);
+    if(object.GetClass(i)->GetName().compare("Cluster") != 0)
+      return cl->GetName();
+  }
+  return  "";
+}
 
+Descriptor* ShapeModelDownloader::Perform(std::vector<Sensor*> sensors, RelPose* pose, Signature& object, int &numOfObjects, double& qualityMeasure)
+{
+  return FindModels(FindOpenClass(object));
+}
 
+double ShapeModelDownloader::CheckSignature(const Signature& object, const std::vector<Sensor*> &sensors)
+{
+  if(object.CountClasses() > object.CountElems() + 1)
+  {
+     printf("ShapeModelDownloader::CheckSignature: enough classes\n");
+    if(object.GetElement(0, DESCRIPTOR_SHAPE) != NULL)
+      return 0.0;
+    return 1.0;
+  }
+  return 0.0;
+}
+
+XMLTag* ShapeModelDownloader::Save()
+{
+  XMLTag* tag = new XMLTag(XML_NODE_SHAPEMODELDOWNLOADER);
+  return tag;
+}

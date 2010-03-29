@@ -239,7 +239,7 @@ std::vector<RelPose*> SupportingPlaneDetector::Inner(Image* img, RelPose* campos
 }
 double SupportingPlaneDetector::CheckSignature(const Signature& object, const std::vector<Sensor*> &sensors)
 {
-    SupportingPlaneDescriptor* plane = (SupportingPlaneDescriptor*)object.GetElement(DESCRIPTOR_PLANE, 0);
+    SupportingPlaneDescriptor* plane = (SupportingPlaneDescriptor*)object.GetElement(0, DESCRIPTOR_PLANE);
     if(plane != NULL)
         return 1.0;
     else

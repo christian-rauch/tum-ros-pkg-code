@@ -25,12 +25,18 @@
 #ifndef IMAGE_H
 #define IMAGE_H
 
-#include <string>
 #ifdef OPENCV_USED
-#include "cv.h"
-#include "highgui.h"
+//#include "cv.h"
+//#include "highgui.h"
+#include <ros/ros.h>
+#include <ros/node_handle.h>
+#include "sensor_msgs/Image.h"
+#include "cv_bridge/CvBridge.h"
+#include "opencv/cv.h"
+#include "opencv/highgui.h"
 #endif /*OPENCV_USED*/
 
+#include <string>
 #include "Reading.h"
 
 /**
@@ -49,12 +55,11 @@
 #define XML_ATTRIBUTE_FILENAME "FileName"
 #define XML_ATTRIBUTE_IMGTYPE "ImgType"
 
-#ifdef HALCONIMG
 namespace Halcon
 {
     class Hobject;
 }
-#endif
+
 namespace cop
 {
   class XMLTag;
@@ -86,9 +91,7 @@ namespace cop
      */
       Image ();
 
-  #ifdef HALCONIMG
       Image ( Halcon::Hobject* img,int type, RelPose* pose = NULL);
-  #endif
     /**
      * Empty Destructor
      *   @throws char* with an error message in case of failure
@@ -119,7 +122,6 @@ namespace cop
     int GetColorSpace() const {return m_type;}
 
 
-#ifdef HALCONIMG
     /**
      *   Get the Halcon image representation
      */
@@ -128,7 +130,6 @@ namespace cop
      *   Get the Halcon image representation of a zoom of the image
      */
     Halcon::Hobject* ZoomImage(int width, int height);
-#endif
   #ifdef OPENCV_USED
     /**
      *   Get an opencv image
@@ -139,16 +140,12 @@ namespace cop
   protected:
 
 
-  private:
-
-    // Static Private attributes
-    //
-  #ifdef HALCONIMG
+  public:
       Halcon::Hobject* m_image;
-  #endif
   public:
       int m_type;
 
+      static void RegisterImageConverter();
 
 
   };

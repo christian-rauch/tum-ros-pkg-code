@@ -31,9 +31,9 @@ namespace cop
       SupportingPlaneDescriptor();
       virtual ~SupportingPlaneDescriptor(void);
 
-    virtual std::string GetNodeName() const {return XML_NODE_PLANE_DESCR;}
+      virtual std::string GetNodeName() const {return XML_NODE_PLANE_DESCR;}
 
-    virtual int GetType() const {return DESCRIPTOR_PLANE;}
+      virtual ElemType_t GetType() const {return DESCRIPTOR_PLANE;}
 
       virtual void Show(RelPose*, Sensor* );
       Elem*& GetMarker(){return m_marker;}

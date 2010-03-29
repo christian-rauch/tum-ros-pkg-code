@@ -50,7 +50,7 @@ namespace cop
 
     ~PointDescrModel(void);
 
-    virtual int GetType() const{return DESCRIPTOR_FEATURE;}
+    virtual ElemType_t GetType() const{return DESCRIPTOR_FEATURE;}
     virtual std::string GetNodeName() const{return XML_NODE_POINTDESCRMODEL;}
 
     /**
@@ -60,9 +60,7 @@ namespace cop
     Calibration* GetCurCalibration();
 
     void SaveTo(XMLTag* tag);
-  #ifdef HALCONIMG
     Halcon::Hobject GetContour(RelPose& pose, Camera* cam= NULL);
-  #endif
     RelPose* GetRelPose() const {return m_objectPose;}
   private:
     int m_DescriptoHandel;

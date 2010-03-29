@@ -23,9 +23,7 @@
 
 #include "RelPoseHTuple.h"
 
-#ifdef HALCONIMG
 #include <cpp/HalconCpp.h>
-#endif
 
 using namespace cop;
 
@@ -46,7 +44,6 @@ BlobLocalizer::~BlobLocalizer(void)
 }
 
 
-#ifdef HALCONIMG
 bool LocalizeBlob(Halcon::Hobject Image, Blob* blob, Calibration* calib, RelPose* poseIn, Halcon::HTuple* Pose, Halcon::HTuple* Quality)
 {
   using namespace Halcon;
@@ -171,8 +168,6 @@ std::vector<RelPose*> BlobLocalizer::Inner(Image* img, RelPose* camPose,Calibrat
   Blob* blob = (Blob*)object.GetElement(0,DESCRIPTOR_BLOB);
   try
   {
-#ifdef HALCONIMG
-
     Halcon::HTuple FinalPose, Quality;
     try
     {
@@ -205,7 +200,6 @@ std::vector<RelPose*> BlobLocalizer::Inner(Image* img, RelPose* camPose,Calibrat
         result.push_back(RelPoseHTuple::FRelPose(FinalPose, cov,  camPose));
         cerr<<"In const. 3"<<endl;
     }
-#endif
     numOfObjects = 1;
     img->Free();
   }
@@ -217,7 +211,3 @@ std::vector<RelPose*> BlobLocalizer::Inner(Image* img, RelPose* camPose,Calibrat
   return result;
 
 }
-
-
-
-#endif /*HALCONIMG*/

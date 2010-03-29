@@ -31,13 +31,11 @@
 
 
 
-#ifdef HALCONIMG
 namespace Halcon
 {
     class HWindow;
     class HTuple;
 }
-#endif
 
 #define XML_NODE_CALIBRATION "CalibMatrix"
 #define XML_NODE_WIDTH "Width"
@@ -60,7 +58,6 @@ namespace cop
       int m_width;
       int m_height;
       bool m_radialDistortionHandling;
-  #ifdef HALCONIMG
       void SetCamParam(Halcon::HTuple& t);
       /**
       * CamParam
@@ -75,9 +72,6 @@ namespace cop
       * @throw char* with an error message in case of failure
       */
       Halcon::HTuple CamParam(int width, int height);
-
-      virtual bool CanSee(RelPose* pose) const {return true;}
-
 
       /**
       * CamParam
@@ -94,7 +88,6 @@ namespace cop
 
       Halcon::HTuple* m_camdist;
       Halcon::Hobject* m_radialDistMap;
-  #endif
       void SaveTo(XMLTag* tag);
       //TODO usw
   };
@@ -111,9 +104,7 @@ namespace cop
       */
       Camera(RelPose* pose) :
          Sensor(pose)
-  #ifdef HALCONIMG
          ,m_win(NULL)
-  #endif
       {}
       /**
       *   The destructor is virtual
@@ -150,6 +141,14 @@ namespace cop
 
       Image* GetImage(const long &Frame){return (Image*)GetReading(Frame);}
 
+      virtual bool CanSee(RelPose& pose) const;
+
+
+      /**
+      *  GetUnformatedCalibrationValues
+      *  @return a pair of a fomrat string describing the content and a list of doubles
+      */
+      virtual std::pair<std::string, std::vector<double> > GetUnformatedCalibrationValues();
 
       /**
       *   @brief select first camera
@@ -163,22 +162,17 @@ namespace cop
 
       virtual bool	Start()				= 0;
       virtual bool	Stop()				= 0;
-  //#ifdef HALCONIMG
       virtual void ReadCamParam(std::string filename = "");
-  //#endif
 
-  #ifdef HALCONIMG
       virtual Halcon::HWindow* GetWindow();
       virtual void DeleteWindow();
       Halcon::HWindow* m_win;
-  #endif
       RelPose*		m_relPose;
       virtual void Show(const long frame = -1);
       virtual void WriteToFile(std::string fileName, const long& Frame = -1);
       virtual XMLTag* Save() = 0;
      bool IsCamera() const {return true;}
-  protected:
-     bool DeleteImg();
+
   };
 }
 #endif /*CAMERA_H*/

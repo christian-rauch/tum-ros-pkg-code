@@ -27,105 +27,54 @@ ColorClass.h - Copyright klank
 #define COLORCLASS_H
 #include "Descriptor.h"
 #include "XMLTag.h"
-#include "RegionOI.h"
-#include "SearchParams3d.h"
 #include "Camera.h"
+#include "RegionOI.h"
 #include "RelPoseHTuple.h"
-
 
 #define XML_NODE_COLORCLASS "ColorClass"
 #define XML_ATTRIBUTE_COLORNAME "ColorName"
+#define XML_ATTRIBUTE_CLUSTERHISTO "ClusterHisto"
 namespace cop
 {
   class ColorClass : public Descriptor
   {
   public:
-    ColorClass(Class* cl, std::string colorName) : Descriptor(cl), m_stColorName(colorName)
+    ColorClass(Class* cl, std::string colorName, std::map<std::string, double> histo) : Descriptor(cl), m_stColorName(colorName), m_histo(histo)
     {};
 
 
     ColorClass(){};
 
-
-    static RegionOI* GetRegion(RelPose* pose, int cam_pose_id, Calibration* calib)
+    double IsClass(const std::map<std::string, double> &histo) const
     {
-      RegionOI* region = new RegionOI();
-  #ifdef HALCONIMG
-      Halcon::HTuple pose_s(7,0.0), extents;
-      bool cov = true;
-      Matrix m,ExtremePoses;
-      double gravPoint[3];
-      gravPoint[0] = 0.0;
-      gravPoint[1] = 0.0;
-      gravPoint[2] = 0.0;
-  #ifdef _DEBUG
-      printf("ColorClass:Calculating new Search Ranges\n");
-  #endif /*_DEBUG*/
-      try
+      double result = 0.0;
+      int count = 0;
+      std::map<std::string, double>::const_iterator iter_in = histo.begin();
+      for(; iter_in != histo.end(); iter_in++)
       {
-        if(pose->m_uniqueID != ID_WORLD)
+        std::map<std::string, double>::const_iterator iter_self = m_histo.find((*iter_in).first);
+        if(iter_self != m_histo.end())
         {
-          Matrix dings = pose->GetMatrix(cam_pose_id);
-          if(dings.element(0,0) >= 0.9999 &&
-             dings.element(1,1) >= 0.9999 &&
-             dings.element(2,2) >= 0.9999 &&
-             fabs(dings.element(0,3)) <= 0.00001 &&
-             fabs(dings.element(1,3)) <= 0.00001 &&
-             fabs(dings.element(2,3)) <= 0.00001)
-          {
-            printf("Identity transform, no sense to calc search spaces.\n");
-            cov = false;
-          }
-          else
-          {
-            m = pose->GetCovarianceMatrix();
-            double d = m.trace();
-            if (d == 0.0)
-            {
-              printf("ColorClass::GetRegion: Ignoring covariances with trace = 0\n");
-              return false;
-            }
-            else
-            {
-              m = pose->GetCovarianceMatrix();
-            }
-          }
-          }
-          else
-            cov = false;
-       }
-       catch(...)
-       {
-         cov = false;
-       }
-       if(cov == true)
-       {
-         try
-         {
-           RelPoseHTuple::GetPose(pose, &pose_s, cam_pose_id);
-           ExtremePoses = GetExtremePoses(m);
-           extents=GetExtents(ExtremePoses.t(), pose_s, gravPoint, calib, region);
-           printf("Assigned new region of size: %d\n", region->GetSize());
-         }
-         catch(...)
-         {
-           printf("Error in ColorClass GetRegion!\n");
+          double val1 = (*iter_self).second;
+          double val2 = (*iter_in).second;
+          result += (val1 - val2)*(val1 - val2);
+          count++;
+        }
 
-         }
-       }
-  #endif /*HALCONIMG*/
-       return region;
-    }
+      }
+      if(count != 0)
+        result = 1.0 - sqrt(result) / count;
+      else
+        result = 0.0;
 
-    bool IsClass(std::string colorname)
-    {
-       printf("Compare %s with %s\n", m_stColorName.c_str(), colorname.c_str());
-       return (m_stColorName.compare(colorname) == 0);
+      return result;
+
     }
     void SaveTo(XMLTag* tag)
     {
       Descriptor::SaveTo(tag);
       tag->AddProperty(XML_ATTRIBUTE_COLORNAME, m_stColorName);
+      tag->AddChild(XMLTag::Tag(m_histo, XML_ATTRIBUTE_CLUSTERHISTO));
     }
 
      virtual void Show(RelPose* pose, Sensor* camin)
@@ -146,15 +95,50 @@ namespace cop
     }
 
     virtual std::string GetNodeName() const{return XML_NODE_COLORCLASS;}
-    virtual int GetType() const{return DESCRIPTOR_COLORCLASS;}
+    virtual ElemType_t GetType() const{return DESCRIPTOR_COLORCLASS;}
+    std::string GetMainColorName(){return m_stColorName;}
   private:
     void SetData(XMLTag* tag)
     {
       Descriptor::SetData(tag);
       m_stColorName = tag->GetProperty(XML_ATTRIBUTE_COLORNAME);
-    };
+      XMLTag* histo = tag->GetChild(XML_ATTRIBUTE_CLUSTERHISTO);
+      if(histo != NULL)
+      {
+         m_histo = XMLTag::Load(histo, &m_histo);
+      }
+      else /** backwards compatibility*/
+      {
+        m_histo["red"] = 0.0;
+        m_histo["green"] = 0.0;
+        m_histo["blue"] = 0.0;
+        m_histo["white"] = 0.0;
+        m_histo["black"] = 0.0;
+        if(m_stColorName.compare("red") == 0)
+        {
+            m_histo["red"] = 1.0;
+        }
+        else if (m_stColorName.compare("green") == 0)
+        {
+          m_histo["green"] = 1.0;
+        }
+        else if (m_stColorName.compare("blue") == 0)
+        {
+          m_histo["blue"] = 1.0;
+        }
+        else if (m_stColorName.compare("white") == 0)
+        {
+          m_histo["white"] = 1.0;
+        }
+        else if (m_stColorName.compare("black") == 0)
+        {
+          m_histo["black"] = 1.0;
+        }
+      }
 
+    };
     std::string m_stColorName;
+    std::map<std::string, double> m_histo;
   };
 }
 #endif /*COLORCLASS_H*/

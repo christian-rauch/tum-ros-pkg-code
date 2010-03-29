@@ -80,10 +80,8 @@ public:
 
 
 	private:
-#ifdef HALCONIMG
 		Halcon::HTuple* m_row;
 		Halcon::HTuple* m_col;
-#endif
 	};
 
 #endif /*DESCRIPTOR_AVAILABLE*/

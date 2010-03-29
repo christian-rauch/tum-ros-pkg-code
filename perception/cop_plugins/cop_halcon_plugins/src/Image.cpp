@@ -21,16 +21,16 @@
 
 **************************************************************************/
 
+#include "IplImageReading.h"
+
 #include "Image.h"
-#ifdef HALCONIMG
+
 #include "cpp/HalconCpp.h"
-#endif
+
 #include "XMLTag.h"
 #include <sstream>
 
-#ifdef OPENCV_USED
-#include "himage2iplimage.h"
-#endif /*OPENCV_USED*/
+//#include "IplImageReading.h"
 
 using namespace cop;
 
@@ -40,35 +40,29 @@ using namespace cop;
 //
 
 Image::Image (int type)  :
-  Reading(HALCONIMAGE),
-#ifdef HALCONIMG
+  Reading(ReadingType_HalconImage),
  m_image(NULL),
-#endif
   m_type(type)
 {
 }
 
 Image::Image ()  :
-  Reading(HALCONIMAGE),
-#ifdef HALCONIMG
+  Reading(ReadingType_HalconImage),
  m_image(NULL),
-#endif
   m_type(GRAY_IMAGE)
 {
 }
 
 Image::Image ( const Image& img) :
-   Reading(HALCONIMAGE),
-#ifdef HALCONIMG
+   Reading(ReadingType_HalconImage),
    m_image(img.m_image),
-#endif
    m_type(img.m_type)
 {
 };
 
 #ifdef HALCONIMG
 Image::Image ( Halcon::Hobject* img, int type, RelPose* pose) :
-    Reading(HALCONIMAGE),
+    Reading(ReadingType_HalconImage),
     m_image(img),
     m_type(type)
 {
@@ -78,20 +72,17 @@ Image::Image ( Halcon::Hobject* img, int type, RelPose* pose) :
 
 Image::~Image ( )
 {
-#ifdef HALCONIMG
     if(m_usageCount > 0)
         throw "deleting error";
     if(m_image!= NULL)
         delete m_image;
-#endif
 }
 
 void Image::SetData(XMLTag* tag)
 {
-  Reading::m_readingType = HALCONIMAGE;
+  Reading::m_readingType = ReadingType_HalconImage;
   m_type = (GRAY_IMAGE);
 
-#ifdef HALCONIMG
     std::string stFileName = tag->GetProperty(XML_ATTRIBUTE_FILENAME);
 
     if(stFileName.length() == 0)
@@ -111,44 +102,17 @@ void Image::SetData(XMLTag* tag)
     Halcon::count_obj(*m_image, &num);
     m_type = tag->GetPropertyInt(XML_ATTRIBUTE_IMGTYPE, num == 1 ? GRAY_IMAGE : RGB_IMAGE);
 
-#endif
 }
 
 //
 // Methods
 //
-#ifdef HALCONIMG
 Halcon::Hobject* Image::GetHImage() const
 {
     //Halcon::HTuple a,b,c,d;
     //Halcon::get_image_pointer1(*m_image, &a,&b,&c,&d);
     return m_image;
 }
-#ifdef OPENCV_USED
-IplImage* Image::GetIplImage()
-{
-    Hlong img[3], *img2[3], width, height;
-    IplImage* ret = NULL;
-    Hlong channels = 0;
-    char type[20];
-    Halcon::count_channels(*m_image, &channels);
-    Herror err;
-    if(channels == 3)
-        err = Halcon::get_image_pointer3(*m_image, &img[0], &img[1], &img[2],type ,&width, &height);
-    else
-        err = Halcon::get_image_pointer1(*m_image, &img[0],type ,&width, &height);
-    if(err == 2)
-    {
-        img2[0] = (Hlong*)img[0];
-        img2[1] = (Hlong*)img[1];
-        img2[2] = (Hlong*)img[2];
-        ret = HImage2IplImage(img2 , channels, width, height,1 );
-    }
-    return ret;
-}
-#endif
-
-#endif
 
 
 XMLTag* Image::Save()
@@ -158,9 +122,7 @@ XMLTag* Image::Save()
     os << "img" << tag->date() << ".png";
     try
     {
-#ifdef HALCONIMG
         Halcon::write_image(*m_image, "png", 0, os.str().c_str());
-#endif
         tag->AddProperty(XML_ATTRIBUTE_FILENAME, os.str());
         tag->AddProperty(XML_ATTRIBUTE_IMGTYPE, m_type);
     }
@@ -177,15 +139,81 @@ void Image::Delete(XMLTag* tag)
 }
 Reading* Image::Clone()
 {
-#ifdef HALCONIMG
+
     Halcon::Hobject* obj = new Halcon::Hobject();
     Halcon::copy_image(*m_image, obj);
     Image* img = new Image(obj, m_type);
     return img;
-#else
-    return NULL;
-#endif
 }
 
 
+namespace cop
+{
+  class Image2IplImage : public ReadingConverter
+  {
+      Reading* Convert(Reading* in)
+      {
+        printf("Conmversion Requested from Hobject to cv::Mat\n");
+        Hlong img[3], width, height;
+        Hlong channels = 0;
+        char type[20];
+        Halcon::count_channels(*((Image*)in)->GetHImage(), &channels);
+        Herror err;
+        if(channels == 3)
+        {
+          printf("Its a 3 Channel image\n");
+          err = Halcon::get_image_pointer3(*((Image*)in)->GetHImage(), &img[0], &img[1], &img[2],type ,&width, &height);
+          printf("Request a matrix of type CV_8UC3\n");
+          cv::Mat mat((int)height, (int)width, CV_8UC3);
+          unsigned char* pin1 = ((unsigned char*)img[0]);
+          unsigned char* pin2 = ((unsigned char*)img[1]);
+          unsigned char* pin3 = ((unsigned char*)img[2]);
+          unsigned char* pout = ((unsigned char*)mat.data);
+          for(long i = 0; i < width*height; i++)
+          {
+            pout[i *  3]     = pin1[i];
+            pout[i *  3 + 1] = pin2[i];
+            pout[i *  3 + 2] = pin3[i];
+          }
+          return new IplImageReading(mat);
 
+        }
+        else
+        {
+          cv::Mat mat((int)height, (int)width, CV_8UC1);
+          err = Halcon::get_image_pointer1(*((Image*)in)->GetHImage(), &img[0],type ,&width, &height);
+          unsigned char* pout = ((unsigned char*)mat.data);
+          unsigned char* pin1 = ((unsigned char*)img[0]);
+          for(long i = 0; i < width*height; i++)
+          {
+            pout[i] = pin1[i];
+          }
+          return new IplImageReading(mat);
+        }
+      }
+      ReadingType_t TypeIn(){return ReadingType_HalconImage;}
+      ReadingType_t TypeOut(){return ReadingType_IplImage;}
+  };
+  class IplImage2Image : public ReadingConverter
+  {
+      Reading* Convert(Reading* in)
+      {
+        int type = RGB_IMAGE;
+        Image* img = new Image(type);
+        img->m_image = new Halcon::Hobject();
+        IplImageReading* reading_conv = (IplImageReading*)in;
+        Halcon::gen_image_interleaved(img->m_image, (Hlong)reading_conv->m_image.data, "rgb", 
+                       reading_conv->m_image.cols, reading_conv->m_image.rows, 0, "byte", 0, 0,  0, 0, -1, 0);
+        return img;
+      }
+      ReadingType_t TypeOut(){return ReadingType_HalconImage;}
+      ReadingType_t TypeIn(){return ReadingType_IplImage;}
+  };
+
+
+}
+void Image::RegisterImageConverter()
+{
+  Reading::s_conv[std::pair<ReadingType_t, ReadingType_t>(ReadingType_HalconImage, ReadingType_IplImage)] = new Image2IplImage();
+  Reading::s_conv[std::pair<ReadingType_t, ReadingType_t>(ReadingType_IplImage, ReadingType_HalconImage)] = new IplImage2Image();
+}

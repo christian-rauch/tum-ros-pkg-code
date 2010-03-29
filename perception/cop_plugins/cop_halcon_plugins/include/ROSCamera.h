@@ -66,6 +66,7 @@ namespace cop
       std::string m_stCalibName;
       std::string m_stImageTopic;
       bool m_grabbing;
+      ros::Subscriber m_subsciber;
 
   };
 }

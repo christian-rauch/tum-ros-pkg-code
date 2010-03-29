@@ -81,7 +81,6 @@ namespace cop
       * @throws char* with an error message in case of failure
       */
       virtual Reading*  GetReading(const long &Frame);
-      virtual bool  CanSee(RelPose &pose) const;
 
       virtual bool  Start();
       virtual bool  Stop();
@@ -128,6 +127,22 @@ namespace cop
   #else
   #endif
 
+  };
+}
+#include <sensor_msgs/Image.h>
+
+
+namespace cop
+{
+#define XML_NODE_NAME "CameraDriverRelay"
+  class CameraDriverRelay : public SensorNetworkRelay<CameraDriver, sensor_msgs::Image>
+  {
+  public:
+    CameraDriverRelay() {};
+    virtual std::string GetName() const {return XML_NODE_NAME;}
+    sensor_msgs::Image ConvertData (Reading* img);
+    virtual XMLTag* Save();
+    virtual void SetData(XMLTag* tag);
   };
 }
 #endif // CAMERADRIVER_H

@@ -22,8 +22,11 @@
 #include "Camera.h"
 
 using namespace cop;
+RFAColorByShape::RFAColorByShape()
+{
+}
 
-RFAColorByShape::RFAColorByShape(XMLTag* tag)
+void RFAColorByShape::SetData(XMLTag* tag)
 {
   XMLTag* child = tag->GetChild(XML_NODE_CHECKCOLORCLASS);
   if(child == NULL)
@@ -50,13 +53,12 @@ Descriptor* RFAColorByShape::Perform(std::vector<Sensor*> sensors, RelPose* pose
     if(cam->CanSee(*pose))
     {
       Image* img = cam->GetImage(-1);
-      RegionOI* region = ColorClass::GetRegion(pose, cam->m_relPose->m_uniqueID, &(cam->m_calibration));
+      std::map<std::string, double> hist;
+      RegionOI* region = new RegionOI(pose, cam->m_relPose->m_uniqueID, &(cam->m_calibration));
       std::string stColor;
 	  /*(Hobject *img, Hobject *region, std::string &color, double& qualityMeasure)*/
-#ifdef HALCONIMG
-      m_checkColor->Inner(img->GetHImage() , &region->GetRegion(), stColor, qualityMeasure);
-#endif
-      cm = new ColorClass(new Class(stColor, Elem::m_LastID), stColor);
+      m_checkColor->Inner(img->GetHImage() , &region->GetRegion(), stColor, hist);
+      cm = new ColorClass(new Class(stColor, Elem::m_LastID), stColor, hist);
      /* Halcon::Hobject xld = sm->GetContour(*sig->m_relPose);
       int num = 0;
       Halcon::count_obj(xld, (Hlong*)&num);
@@ -86,7 +88,10 @@ Descriptor* RFAColorByShape::Perform(std::vector<Sensor*> sensors, RelPose* pose
 
 double RFAColorByShape::CheckSignature(const Signature& sig, const  std::vector<Sensor*> &sens)
 {
-	return 1.0;
+  if(sig.GetElement(0,DESCRIPTOR_COLORCLASS) == NULL)
+    return 1.0;
+  else
+    return -0.0;
 }
 
 XMLTag* RFAColorByShape::Save()

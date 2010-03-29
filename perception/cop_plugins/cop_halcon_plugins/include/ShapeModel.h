@@ -25,21 +25,19 @@
 #define SHAPEMODEL_H
 #include "Descriptor.h"
 #include "XMLTag.h"
-#include "RegionOI.h"
 #include "Camera.h"
+#include "RegionOI.h"
 #include <sstream>
 
 #include "MeshProcessing.h"
 
 #define NAME_EXTENT_FROM_DXF_TO_SHAPE "gen.sm3"
 
-#ifdef HALCONIMG
 
 namespace Halcon
 {
   class HShapeModel3D;
 }
-#endif
 
 #define XML_NODE_SHAPEMODEL "ShapeModel"
 #define XML_NODE_SHAPEPARAM_LIST "ShapeParamList"
@@ -156,7 +154,7 @@ namespace cop
     bool SetShapeModelParamSet(RelPose* pose, Calibration* calib, double prob = 0.8);
 
     virtual std::string GetNodeName() const{return XML_NODE_SHAPEMODEL;}
-    virtual int GetType() const{return DESCRIPTOR_SHAPE;}
+    virtual ElemType_t GetType() const{return DESCRIPTOR_SHAPE;}
 
     /**
     *     Get the last loaded shape model id
@@ -199,15 +197,13 @@ namespace cop
     static void CalcMeshCenterBox(const Mesh_t &mesh, double &x, double &y, double &z, double &height,double &width, double &depth);
     void EvalScaling( ShapeModelParamSet* sm,  Calibration* calib, std::string stFileName, RelPose* pose);
 
-    double m_initializationLEvel;
+    double m_initializationLevel;
   protected:
     virtual void SetData(XMLTag* tag);
-  #ifdef HALCONIMG
   public:
     Halcon::Hobject GetContour(RelPose& rpose, Camera* cam =NULL);
   private:
     void WriteShapeModelThreaded(Hlong shapeModelId, const char* name);
-  #endif
 
     std::string GenShapeModelFileName(std::string stFileNameDxf, int index)
     {

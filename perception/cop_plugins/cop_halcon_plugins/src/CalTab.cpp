@@ -32,9 +32,7 @@
 #define XML_ATTRIBUTE_INIT_DIAM "Diam"
 
 
-#ifdef HALCONIMG
 #include <cpp/HalconCpp.h>
-#endif
 
 using namespace cop;
 
@@ -88,13 +86,11 @@ void CalTab::Show(RelPose* pose, Sensor* cam_in)
     if(pose != NULL && cam_in != NULL && cam_in->IsCamera())
     {
       Camera* cam = (Camera*)cam_in;
-#ifdef HALCONIMG
       Halcon::HWindow* hwin = (cam)->GetWindow();
       hwin->SetColor("red");
       Halcon::HTuple pose_ht;
       RelPoseHTuple::GetPose(pose, &pose_ht);
       Halcon::disp_caltab(hwin->WindowHandle(), m_stCalTabDescriptionFile.c_str(), cam->m_calibration.CamParam(), pose_ht, 1);
-#endif /*HALCONIMG*/
     }
 }
 

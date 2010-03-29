@@ -19,12 +19,12 @@
 
 #include "PointDescrModel.h"
 
-#ifdef HALCONIMG
+
 #include <cpp/HalconCpp.h>
 #include <HCPPdescriptor3d.h>
 
 //#include "HCPPplanar_pose_estimation.h" /*< Removed cause code is very closed source*/
-#endif
+
 
 #ifndef DXFLIB
 #include "DxfReader.h"
@@ -42,7 +42,7 @@ PointDescrModel::PointDescrModel(XMLTag* tag) :
   std::string filename = m_Config->GetProperty(XML_ATTRIBUTE_POINTDESCRFILE);
   if(filename.length() > 0)
   {
-#ifdef HALCONIMG
+
     try
     {
       Halcon::read_descriptor_model_3d(filename.c_str(),(Hlong*)&m_DescriptoHandel);
@@ -51,7 +51,7 @@ PointDescrModel::PointDescrModel(XMLTag* tag) :
     {
       printf("DecriptorModel: File not found\n");
     }
-#endif
+
   }
 }
 
@@ -225,10 +225,10 @@ PointDescrModel::PointDescrModel(DXFReader* dxf, Signature* sig) :
 
 PointDescrModel::~PointDescrModel(void)
 {
-#ifdef HALCONIMG
+
   if(m_DescriptoHandel != -1)
     Halcon::clear_descriptor_model_3d(m_DescriptoHandel);
-#endif
+
 }
 
 Calibration* PointDescrModel::GetCurCalibration()
@@ -239,12 +239,12 @@ Calibration* PointDescrModel::GetCurCalibration()
   return calib;
 }
 
-#ifdef HALCONIMG
+
 Halcon::Hobject PointDescrModel::GetContour(RelPose& pose, Camera* cam)
 {
   return Halcon::Hobject();
 }
-#endif
+
 
 void PointDescrModel::SaveTo(XMLTag* tag)
 {

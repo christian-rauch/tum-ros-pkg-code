@@ -16,7 +16,10 @@
  */
 
 
+#include "Camera.h"
 #include "RegionOI.h"
+#include "RelPoseHTuple.h"
+#include "SearchParams3d.h"
 #include <sstream>
 
 
@@ -25,14 +28,12 @@ using namespace cop;
 
 RegionOI::RegionOI()
 {
-#ifdef HALCONIMG
   Halcon::gen_empty_region(&m_reg);
-#endif
 }
 
 RegionOI::RegionOI(RegionRuns row_colStart_colEnd)
 {
-#ifdef HALCONIMG
+
   HTuple r, cs, ce;
   RegionRuns::const_iterator it = row_colStart_colEnd.begin();
   for (;it != row_colStart_colEnd.end(); it++)
@@ -42,44 +43,107 @@ RegionOI::RegionOI(RegionRuns row_colStart_colEnd)
     ce = ce.Concat((*it).second.second);
   }
   Halcon::gen_region_runs(&m_reg,r, cs, ce);
-#else /*HALCONIMG*/
-#endif /*HALCONIMG*/
+
+}
+
+RegionOI::RegionOI(RelPose* pose, int cam_pose_id, Calibration* calib)
+{
+
+  Halcon::HTuple pose_s(7,0.0), extents;
+  bool cov = true;
+  Matrix m,ExtremePoses;
+  double gravPoint[3];
+  gravPoint[0] = 0.0;
+  gravPoint[1] = 0.0;
+  gravPoint[2] = 0.0;
+#ifdef _DEBUG
+  printf("RegionOI: Calculating new Search Region\n");
+#endif /*_DEBUG*/
+  try
+  {
+    if(pose->m_uniqueID != ID_WORLD)
+    {
+      Matrix dings = pose->GetMatrix(cam_pose_id);
+      if(dings.element(0,0) >= 0.9999 &&
+         dings.element(1,1) >= 0.9999 &&
+         dings.element(2,2) >= 0.9999 &&
+         fabs(dings.element(0,3)) <= 0.00001 &&
+         fabs(dings.element(1,3)) <= 0.00001 &&
+         fabs(dings.element(2,3)) <= 0.00001)
+      {
+        printf("Identity transform, no sense to calc search spaces.\n");
+        cov = false;
+      }
+      else
+      {
+        m = pose->GetCovarianceMatrix();
+        double d = m.trace();
+        if (d == 0.0)
+        {
+          printf("ColorClass::GetRegion: Ignoring covariances with trace = 0\n");
+          throw "ColorClass::GetRegion: Ignoring covariances with trace = 0\n";
+        }
+        else
+        {
+          m = pose->GetCovarianceMatrix();
+        }
+      }
+      }
+      else
+        cov = false;
+   }
+   catch(...)
+   {
+     cov = false;
+   }
+   if(cov == true)
+   {
+     try
+     {
+       RelPoseHTuple::GetPose(pose, &pose_s, cam_pose_id);
+       ExtremePoses = GetExtremePoses(m);
+       extents=GetExtents(ExtremePoses.t(), pose_s, gravPoint, calib, this);
+       printf("Assigned new region of size: %d\n", GetSize());
+     }
+     catch(...)
+     {
+       printf("Error in ColorClass GetRegion!\n");
+
+     }
+   }
+
 }
 
 RegionOI::RegionOI(std::string stFilename)
 {
-#ifdef HALCONIMG
+
   Halcon::read_region(&m_reg,stFilename.c_str());
-#else /*HALCONIMG*/
-#endif /*HALCONIMG*/
+
 }
 
 int RegionOI::GetSize()
 {
-#ifdef HALCONIMG
+
   HTuple area, row, column;
   Halcon::area_center(m_reg, &area, &row, &column);
   return area[0].I();
-#else /*HALCONIMG*/
-  return 0;
-#endif /*HALCONIMG*/
+
 }
 
 void RegionOI::AddPoint(double Row, double Column)
 {
-#ifdef HALCONIMG
+
   Halcon::HTuple r, c;
   Halcon::get_region_points(m_reg, &r, &c);
   tuple_concat(r, Row, &r);
   tuple_concat(c, Column, &c);
   Halcon::gen_region_points(&m_reg, r, c);
-#else /*HALCONIMG*/
-#endif /*HALCONIMG*/
+
 }
 
 void RegionOI::TransitiveHull()
 {
-#ifdef HALCONIMG
+
   Halcon::Hobject reg_struct_cross;
   Halcon::HTuple r_s(5, 1);
   Halcon::HTuple c_s(5,1);
@@ -95,8 +159,7 @@ void RegionOI::TransitiveHull()
   printf("Area of a new Region: %d\n", area[0].I());
   if(area < 500)
      Halcon::dilation_circle(m_reg, &m_reg, 100);
-#else /*HALCONIMG*/
-#endif /*HALCONIMG*/
+
 }
 
 static unsigned int s_regionCounter = 0;
@@ -107,7 +170,7 @@ XMLTag* RegionOI::Save(std::string tagName)
   std::ostringstream stFileNameBuf;
   stFileNameBuf << "Region" << s_regionCounter++ << "_" << (unsigned long)time(NULL) << ".dat";
   std::string stFileName(stFileNameBuf.str());
-#ifdef HALCONIMG
+
   try
   {
     Halcon::write_region(m_reg, stFileName.c_str());
@@ -131,12 +194,10 @@ XMLTag* RegionOI::Save(std::string tagName)
     row_colStart_colEnd.push_back(r_cs_ce);
   }
   ret = XMLTag::Tag(row_colStart_colEnd, (tagName.length() > 0) ? tagName : XML_NODE_ROI);*/
-//#else /*HALCONIMG*/
-  #endif /*HALCONIMG*/
+
   return ret;
 }
 
-#ifdef HALCONIMG
 Halcon::Hobject& RegionOI::GetRegion(double scale)
 {
  if(scale == 1.0)
@@ -155,4 +216,4 @@ Halcon::Hobject& RegionOI::GetRegion(double scale)
     return m_regZoomTmp;
   }
 }
-#endif
+

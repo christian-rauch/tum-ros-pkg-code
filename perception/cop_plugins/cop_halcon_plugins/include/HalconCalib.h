@@ -18,18 +18,14 @@
 
 #ifndef HALCON_CALIB
 #define HALCON_CALIB
-#ifdef ROK_DEJANSTUFF
-#include <sys/time.h>
-#endif /*ROK_DEJANSTUFF*/
 
-#ifdef HALCONIMG
 #include "cpp/HalconCpp.h"
 /*#include "cpp/HIOStream.h"*/
-#endif
+
 
 
 #define STRICT_CALTAB_SEGMENTATION true
-#define CALTAB_SEARCH_TIMEOUT_MS 200
+#define CALTAB_SEARCH_TIMEOUT_MS 50
 
 using namespace std;
 using namespace Halcon;
@@ -78,32 +74,24 @@ double getRandomThreshold(double mean, double std_dev, double min, double max)
   return threshold;
 }
 
-#ifdef HALCONIMG
 bool FindCaltab(HTuple& CamPars, HImage img,const char* caltab_name, HTuple& Row,
                 HTuple& Col, HTuple& StartPose, CalTab* init_values)//, HTuple*CtabPose)
 {
-#ifdef ROK_DEJANSTUFF
-  timeval start, end;
-  gettimeofday(&start, 0);
-#endif /*ROK_DEJANSTUFF*/
-#ifdef HALCONIMG
+
   HRegion   caltab_region;         // calibration plate region
   double ms_elapsed = 0;
   int caltabfirsttry = 0;
-  if(img.CountChannels() > 1)
-  {
-    HImage img2,img3;
-     img = img.Decompose3(&img2, &img3);
-  }
   try
   {
-    caltab_region = img.FindCaltab(caltab_name, 3, init_values->m_calThres, init_values->m_holes);
+    printf("Initially calling: FindCaltab(%s, 7, %d %d)\n", caltab_name,  init_values->m_calThres, init_values->m_holes);
+    caltab_region = img.FindCaltab(caltab_name, 7, init_values->m_calThres, init_values->m_holes);
     caltabfirsttry = 5;
     HTuple contour_row, contour_col, convex_row, convex_col;
     contour_row = caltab_region.GetRegionPolygon(5.0, &contour_col);
     convex_row = caltab_region.GetRegionConvex(&convex_col);
     /*double contour_size = (double)contour_row.Num();
     double convex_size = (double)convex_row.Num();*/
+    printf("calling: FindMarksAndPose(..., %s, campar, %d, %f, %d, %f, %d, %d)\n",caltab_name, init_values->m_st, init_values->m_steps, init_values->m_mt, init_values->m_alpha, init_values->m_cont, init_values->m_diam);
     Row = img.FindMarksAndPose(caltab_region, caltab_name, CamPars,
                                          init_values->m_st, init_values->m_steps, init_values->m_mt, init_values->m_alpha, init_values->m_cont, init_values->m_diam,
                                          &Col, &StartPose);
@@ -122,16 +110,16 @@ bool FindCaltab(HTuple& CamPars, HImage img,const char* caltab_name, HTuple& Row
       long marksize = init_values->m_holes;
       if(caltabfirsttry == 0)
       {
-        threshold = (long)getRandomThreshold(init_values->m_calThres, 100, 60, 235);
-        marksize =  (long)getRandomThreshold(init_values->m_holes, 5, 5, 15);
+        threshold = (long)getRandomThreshold(init_values->m_calThres, 70, 40, 150);
+        marksize =  (long)getRandomThreshold(init_values->m_holes, 1, 3, 15);
         try
         {
-          caltab_region = img.FindCaltab(caltab_name, 3, threshold, marksize);
+          caltab_region = img.FindCaltab(caltab_name, 7, threshold, marksize);
           printf("got something with thres %ld and marksize %ld\n", threshold, marksize);
         }
         catch (HException &e)
         {
-        //printf("Exception in FindCaltab: %s .Continue...", e.message);
+         /*printf("Exception in FindCaltab: %s .Continue...", e.message);*/
          failed = true;
         }
         ms_elapsed++;
@@ -157,27 +145,23 @@ bool FindCaltab(HTuple& CamPars, HImage img,const char* caltab_name, HTuple& Row
       // repeat if failed
       if (failed)
       {
-#ifdef ROK_DEJANSTUFF
-        gettimeofday(&end, 0);
-        ms_elapsed = (end.tv_sec-start.tv_sec)*1000.0 + (end.tv_usec-start.tv_usec)*0.001;
-        continue;
-#else
+
         ms_elapsed += 10;
-#endif /*ROK_DEJANSTUFF*/
       }
       // try to find marks and poses in calibration table (use random alpha)
       failed = true;
       double alpha;
-      for (int j=0; j<200; j++)
+      double partly = 0.3;
+      for (int j=0; j<10 && ms_elapsed < CALTAB_SEARCH_TIMEOUT_MS; j++)
       {
         ms_elapsed++;
-        alpha = getRandomThreshold(       init_values->m_alpha, 0.6, 0.1, 1.2);
-        long thres = (long) getRandomThreshold(init_values->m_st, 60, 60, 180);
-        long steps = (long)getRandomThreshold(init_values->m_steps, 10, 1, 20);
-        long min_thres = (long)getRandomThreshold(init_values->m_mt, 10, 5, 30);
-        double cont = getRandomThreshold(init_values->m_cont, 10.0, 5.0, 30.0);
+        alpha = getRandomThreshold(       init_values->m_alpha, 0.2, 0.7, 0.8);
+        long thres = (long) getRandomThreshold(init_values->m_st, 60*partly, 60, 180);
+        long steps = (long)getRandomThreshold(init_values->m_steps, 10*partly, 1, 20);
+        long min_thres = (long)getRandomThreshold(init_values->m_mt, 10*partly, 1, 30);
+        double cont = getRandomThreshold(init_values->m_cont, init_values->m_cont*partly, 2.0, 30.0);
         /*double diam = getRandomThreshold(init_values->m_diam, 100.0, 50.0, 300.0);*/
-        double diam = getRandomThreshold(init_values->m_diam, 100, 10, 300);
+        double diam = getRandomThreshold(init_values->m_diam, init_values->m_diam*partly, 10, 300);
         try
         {
 
@@ -210,12 +194,7 @@ bool FindCaltab(HTuple& CamPars, HImage img,const char* caltab_name, HTuple& Row
       // repeat if failed
       if (failed)
       {
-#ifdef ROK_DEJANSTUFF
-        gettimeofday(&end, 0);
-        ms_elapsed = (end.tv_sec-start.tv_sec)*1000.0 + (end.tv_usec-start.tv_usec)*0.001;
-#else
         ms_elapsed += 10;
-#endif /*ROK_DEJANSTUFF*/
         continue;
       }
       // display calibration table, wait for user input, repeat if wanted
@@ -252,8 +231,6 @@ bool FindCaltab(HTuple& CamPars, HImage img,const char* caltab_name, HTuple& Row
         return false;
     }
   }
-#endif
     return true;
 }
-#endif /*HALCONIMG*/
 #endif

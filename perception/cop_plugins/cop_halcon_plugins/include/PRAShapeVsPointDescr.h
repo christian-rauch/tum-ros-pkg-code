@@ -44,7 +44,7 @@ namespace cop
       *   @param qualityMeasure
       *   @throws char* with an error message in case of failure
       */
-    virtual double Perform(std::vector<Sensor*> sensors, RelPose* pose, Signature& Object, int &numOfObjects, double& qualityMeasure);
+    virtual ImprovedPose Perform(std::vector<Sensor*> sensors, RelPose* pose, Signature& Object, int &numOfObjects, double& qualityMeasure);
 
     virtual double CheckSignature(const Signature& object, const std::vector<Sensor*> &sensors);
 

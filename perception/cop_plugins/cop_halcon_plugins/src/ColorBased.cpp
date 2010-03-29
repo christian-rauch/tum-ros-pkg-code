@@ -26,9 +26,9 @@
 #include "XMLTag.h"
 #include "Camera.h"
 #include "RelPoseHTuple.h"
-#ifdef HALCONIMG
+
 #include "cpp/HalconCpp.h"
-#endif
+
 
 
 using namespace cop;
@@ -65,7 +65,7 @@ std::vector<RelPose*> ColorBased::Perform(std::vector<Sensor*> sensors, RelPose*
   {
     Image* img = cam->GetImage(-1);
     RelPose* campose = cam->m_relPose;
-#ifdef HALCONIMG
+
     if(campose != NULL)
     {
       const Halcon::Hobject* image = img->GetHImage();
@@ -138,7 +138,7 @@ std::vector<RelPose*> ColorBased::Perform(std::vector<Sensor*> sensors, RelPose*
         }
       }
     }
-#endif
+
   }
   numOfObjects = 0;
   qualityMeasure = 0.0;

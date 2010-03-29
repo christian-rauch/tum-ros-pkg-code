@@ -31,12 +31,12 @@
 #include <string>
 
 #define XML_NODE_SHAPEBASED3DALG "ShapeBased3DAlg"
-#ifdef HALCONIMG
+
 namespace Halcon
 {
   class HTuple;
 }
-#endif
+
 namespace cop
 {
   /**
@@ -124,10 +124,8 @@ namespace cop
     double m_minScore;
     double m_greediness;
     int    m_levels;
-  #ifdef HALCONIMG
     Halcon::HTuple* m_paramNameList;
     Halcon::HTuple* m_paramList;
-  #endif
   };
 }
 #endif // SHAPEBASED3D_H

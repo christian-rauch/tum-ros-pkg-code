@@ -16,29 +16,22 @@
  */
 
 
-#ifndef RFACOLORBYSHAPE_H
-#define RFACOLORBYSHAPE_H
-
-
-#define XML_NODE_COLORBYSHAPE "RFAColorByShape"
+#ifndef RFADEFORMBYCLUSTER_H
+#define RFADEFORMBYCLUSTER_H
 
 #include "RefineAlgorithm.h"
 
+#define XML_NODE_RFADEFORMBYCLUSTER "RFADeformByCluster"
 namespace cop
 {
-
-  class CheckColorClass;
-
-  class RFAColorByShape :
+  class RFADeformByCluster :
     public RefineAlgorithm
   {
   public:
-    RFAColorByShape();
+    RFADeformByCluster(void);
+    RFADeformByCluster(XMLTag* tag);
 
-    RFAColorByShape(CheckColorClass* checkColor);
-    void SetData(XMLTag* tag);
-
-    ~RFAColorByShape(void);
+    ~RFADeformByCluster(void);
 
     virtual Descriptor* Perform(std::vector<Sensor*> sensors, RelPose* pose, Signature& Object, int &numOfObjects, double& qualityMeasure);
 
@@ -46,10 +39,8 @@ namespace cop
 
     virtual XMLTag* Save();
 
-      virtual std::string GetName(){return XML_NODE_COLORBYSHAPE;}
-  private:
-     CheckColorClass* m_checkColor;
+     virtual std::string GetName(){return XML_NODE_RFADEFORMBYCLUSTER;}
 
   };
 }
-#endif /*RFACOLORBYSHAPE_H*/
+#endif /*RFADEFORMBYCLUSTER_H*/

@@ -22,9 +22,7 @@
 **************************************************************************/
 
 #include "CameraDriver.h"
-#ifdef HALCONIMG
 #include "cpp/HalconCpp.h"
-#endif
 #include "XMLTag.h"
 
 #include "BoostUtils.h"
@@ -40,6 +38,7 @@ extern volatile bool g_stopall;
 
 #define XML_ATTRIBUTE_HASPTU "HasPTU"
 #define XML_ATTRIBUTE_ISSTOC "IsSTOC"
+#define XML_ATTRIBUTE_ISYUV "IsYUV"
 #define XML_ATTRIBUTE_GRABBERNAME "GrabberName"
 #define XML_ATTRIBUTE_CAMERATYPE "CameraType"
 #define XML_ATTRIBUTE_CAMCOLOR "CamColor"
@@ -119,8 +118,9 @@ void CameraDriver::SetData( XMLTag* ConfigFile)
       }
       m_hasPTU = ConfigFile->GetPropertyInt(XML_ATTRIBUTE_HASPTU) != 0;
       printf("HASPTU:=%s\n",ConfigFile->GetPropertyInt(XML_ATTRIBUTE_HASPTU) ? "true" : "false");
-      m_isSTOC = ConfigFile->GetPropertyInt(XML_ATTRIBUTE_ISSTOC) != 0;
+      m_isSTOC =ConfigFile->GetPropertyInt(XML_ATTRIBUTE_ISSTOC) != 0;
       printf("IsStoc:=%s\n",ConfigFile->GetPropertyInt(XML_ATTRIBUTE_ISSTOC) ? "true" : "false");
+      m_isYUV = ConfigFile->GetPropertyInt(XML_ATTRIBUTE_ISYUV) != 0;
       if(m_hasPTU)
       {
 #ifdef PTU_USED
@@ -195,19 +195,8 @@ void CameraDriver::SetData( XMLTag* ConfigFile)
 void CameraDriver::threadfunc()
 {
   int i = 0;
-#ifdef BOOST_THREAD
-#ifdef BOOST_1_35
-  BOOST(boost::system_time t);
-#else
   boost::xtime t;
-#endif
-
-#ifdef BOOST_1_35
-  BOOST(t = get_system_time());
-#else
   boost::xtime_get(&t, boost::TIME_UTC);
-#endif
-#endif
   /*#define GRAY_IMAGE 0
     #define RGB_IMAGE 1
     #define YUV_IMAGE 2
@@ -225,7 +214,6 @@ void CameraDriver::threadfunc()
             image_type = GRAY_IMAGE;
   }
   /* Special case: handles for diorect show are unique for a thread ...*/
-#ifdef HALCONIMG
   if(this->m_grabberName.compare("DirectShow") == 0)
   {
         printf("open_frame_grabber(%s, %d, %d, %d, %d, %d, %d, %s, %d, %s, %d, %s, %s, %s, %d, %d)",m_grabberName.c_str(),
@@ -264,18 +252,10 @@ void CameraDriver::threadfunc()
   }
 
   Halcon::grab_image_start (m_fg->GetHandle(), -1);
-#endif
   while(m_grabbing && !g_stopall)
   {
-#ifdef HALCONIMG
     if(m_fg != NULL)
     {
-#ifdef PTU_USED
-      if(m_hasPTU && m_ptuClient != NULL)
-      {
-//				m_ptuClient->Read();
-      }
-#endif
       Halcon::Hobject* obj = new Halcon::Hobject();
       if(obj == NULL)
       {
@@ -317,26 +297,14 @@ void CameraDriver::threadfunc()
           //Halcon::disp_obj(*(m_calibration.m_radialDistMap), GetWindow()->WindowHandle());
         }
         i++;
-#ifdef BOOST_THREAD
         if(i > 10000)
         {
-#ifdef BOOST_1_35
-          BOOST(boost::system_time t2);
-#else
           boost::xtime t2;
-#endif
-
-#ifdef BOOST_1_35
-          BOOST(t2 = get_system_time());
-/*          cout << BOOST(t2 - t) << "for 10000 frames (not deleted frames: "<< m_temp_images.size()<<")" << std::endl;*/
-#else
           boost::xtime_get(&t2, boost::TIME_UTC);
           printf("%ld,%ld s for 10000 frames (not deleted frames: %ld)\n", t2.sec - t.sec, (t2.nsec - t.nsec) % 1000000000, m_temp_images.size());
-#endif
           i = 0;
           t = t2;
         }
-#endif
       }
       catch(Halcon::HException ex)
       {
@@ -346,10 +314,9 @@ void CameraDriver::threadfunc()
       Image* img = new Image(obj, image_type, m_relPose);
       PushBack(img);
     }
-#endif
     while(m_images.size() > m_max_cameraImages)
     {
-      if(DeleteImg())
+      if(DeleteReading())
         continue;
       else
       {
@@ -384,26 +351,11 @@ Reading* CameraDriver::GetReading(const long &Frame)
     {
       while(m_grabbing && ((signed)m_images.size() < (Frame - m_deletedOffset + 1) || m_images.size() == 0))
       {
-#ifdef BOOST_THREAD
-        printf("Sleeping a while and");
-#ifdef BOOST_1_35
-  BOOST(boost::system_time t);
-#else
-  boost::xtime t;
-#endif
-
-#ifdef BOOST_1_35
-        BOOST(t = get_system_time());
-        BOOST(t += boost::posix_time::seconds(1));
-#else
-        boost::xtime_get(&t, boost::TIME_UTC);
-        t.sec += 1;
-#endif
-
-        boost::thread::sleep(t);
-#else
-#endif
-        printf("waiting for the camera to start grabbing\n");
+        BOOST(boost::xtime t);
+        BOOST(boost::xtime_get(&t, boost::TIME_UTC));
+        BOOST(t.sec += 1);
+        BOOST(boost::thread::sleep(t));
+        printf("waiting for %s to start grabbing (Grabbing: %s, NumImages: %ld)\n", GetSensorID().c_str(), m_grabbing ? "true" : false, m_images.size());
       }
       printf("Got a new image: %d\n", (int)m_images.size());
     }
@@ -422,46 +374,7 @@ Reading* CameraDriver::GetReading(const long &Frame)
   /*return m_images[Frame - m_deletedOffset];*/
 }
 
-bool  CameraDriver::CanSee (RelPose &pose) const
-{
-  printf("Can See\n");
-  if(m_relPose == NULL)
-     return false;
-#ifdef _DEBUG
-  printf("Can a camera at Pose %ld See %ld\n",m_relPose->m_uniqueID, pose.m_uniqueID);
-#endif
-  if(pose.m_uniqueID == m_relPose->m_uniqueID) /*lazy people just search in front of the camera, allow it*/
-    return true;
-  RelPose* pose_rel = RelPoseFactory::GetRelPose(pose.m_uniqueID, m_relPose->m_uniqueID);
-  Matrix m = pose_rel->GetMatrix();
-  RelPoseFactory::FreeRelPose(pose_rel);
-  double x = m.element(0,3);
-  double y = m.element(1,3);
-  double z = m.element(2,3);
-  if(z > 0.0)
-  {
 
-#ifdef  HALCONIMG
-    try
-    {
-      Halcon::HTuple R, C;
-      Halcon::project_3d_point(x,y,z, m_calibration.CamParam(), &R , &C);
-      if(R >= 0 && R < m_calibration.m_height
-        && C >= 0 && C < m_calibration.m_width)
-        return true;
-    }
-    catch(Halcon::HException ex)
-    {
-      printf("Error: %s\n", ex.message);
-    }
-  }
-#endif
-  //TODO what when the position can be in the image, but not in the center?
-#ifdef _DEBUG
-  printf("A Camera can not see pose (rel to camera): %f %f %f\n", x,y,z);
-#endif
-  return false;
-}
 
 #ifndef USE_YARP_COMM
 #include <ros/ros.h>
@@ -477,7 +390,6 @@ bool CameraDriver::Start()
 {
   if(m_grabberName.compare("1394IIDC") == 0 || m_grabberName.compare("GigEVision") == 0)
   {
-#ifdef HALCONIMG
 #ifdef _DEBUG
     if(m_grabberName.compare("1394IIDC") == 0)
       printf("Trying to open 1394-Camera\n");
@@ -546,7 +458,6 @@ bool CameraDriver::Start()
       printf("Camera not connected, or errors in driver configuration\n");
       return false;
     }
-#endif
     //mfg.OpenFramegrabber();
   }
   else if(m_grabberName.compare("LeutronVision") == 0)
@@ -559,7 +470,6 @@ bool CameraDriver::Start()
   }
   else
   {
-#ifdef HALCONIMG
     try
     {
       printf("open_frame_grabber(%s, %d, %d, %d, %d, %d, %d, %s, %d, %s, %d, %s, %s, %s, %d, %d)",m_grabberName.c_str(),
@@ -601,7 +511,7 @@ bool CameraDriver::Start()
       printf("Error opening camera: %s, DeviceName: %s\n", ex.message, m_device.c_str());
       return false;
     }
-#endif
+
   }
   m_grabbing = true;
 
@@ -653,22 +563,12 @@ XMLTag* CameraDriver::Save()
   tag->AddProperty(XML_ATTRIBUTE_EXTERNALTRIGGER,m_externalTrigger);
   tag->AddProperty(XML_ATTRIBUTE_LINEIN         ,m_lineIn);
 
-#ifdef PTU_USED
-  if(m_hasPTU && m_ptuClient != NULL)
-  {
-    tag->AddProperty(XML_ATTRIBUTE_PANTOTILTHEIGHT,m_ptuClient->m_heightPanToTilt);
-    tag->AddProperty(XML_ATTRIBUTE_PANTOTILTWIDTH,   m_ptuClient->m_lengthPanToTilt);
-    tag->AddProperty(XML_ATTRIBUTE_TILTTOENDHEIGHT,  m_ptuClient->m_heightTiltToEnd);
-    tag->AddProperty(XML_ATTRIBUTE_TILTTOENDWIDTH, m_ptuClient->m_lengthTiltToEnd);
-  }
-#endif
   return tag;
 }
 
 
 void CameraDriver::Show(const long frame)
 {
-#ifdef HALCONIMG
   try
   {
     if(m_win == NULL)
@@ -709,6 +609,121 @@ void CameraDriver::Show(const long frame)
   {
     printf("Showing not possible: %s \n", ex.message);
   }
-#endif
+}
+
+
+sensor_msgs::Image  CameraDriverRelay ::ConvertData(Reading* img)
+{
+  Halcon::HTuple chan;
+  Halcon::Hobject* obj;
+  sensor_msgs::Image image;
+  try
+  {
+    Image* img_cast = (Image*)img;
+    obj = img_cast->GetHImage();
+    Halcon::count_channels(*obj, &chan);
+    image.header.stamp = ros::Time::now();
+    image.header.frame_id = "/map";
+  }
+  catch(...)
+  {
+    throw "Error in initialization of CameraDriverRelay::CameraDriverRelay";
+  }
+  if(chan[0].I() == 3)
+  {
+    try
+    {
+      Hlong ptr_r, ptr_g, ptr_b, width, height;
+      char type[100];
+      Halcon::get_image_pointer3(*obj, &ptr_r, &ptr_g, &ptr_b, type, &width, &height);
+      HBYTE* pbr = (HBYTE*)ptr_r;
+      HBYTE* pbg = (HBYTE*)ptr_g;
+      HBYTE* pbb = (HBYTE*)ptr_b;
+      image.data.resize((size_t)(width * height * 3));
+      image.step = 3*width;
+      image.width = width;
+      image.height = height;
+      image.encoding = "rgb8";
+      for(size_t row = 0; row < (unsigned)height; row++)
+      {
+        size_t index_ipl = row * width * 3;
+        size_t index_himg = row * width;
+        for(size_t col = 0; col <  (unsigned)width; col++)
+        {
+          size_t index_ipl_inner = index_ipl + col * 3;
+          size_t index_himg_inner = index_himg + col;
+          image.data[index_ipl_inner    ] = pbr[index_himg_inner];
+          image.data[index_ipl_inner + 1] = pbg[index_himg_inner];
+          image.data[index_ipl_inner + 2] = pbb[index_himg_inner];
+        }
+      }
+    }
+    catch(...)
+    {
+      throw "Error converting data in CameraDriverRelay::CameraDriverRelay";
+
+    }
+  }
+  else
+  {
+    throw "Not yet implemented at <-- sensor_msgs::Image  CameraDriverRelay ::ConvertType(Reading* img); --> case: number of channels == 1";
+  }
+  return image;
+}
+
+XMLTag* CameraDriverRelay::Save()
+{
+  XMLTag* tag = CameraDriver::Save();
+  tag->SetName(GetName());
+  tag->AddProperty(XML_ATTRIBUTE_TOPICNAME, m_stTopic);
+  tag->AddProperty(XML_ATTRIBUTE_RATE, m_rate);
+  return tag;
+}
+
+void CameraDriverRelay::SetData(XMLTag* tag)
+{
+  CameraDriver::SetData(tag);
+  m_stTopic = tag->GetProperty(XML_ATTRIBUTE_TOPICNAME);
+  m_rate = tag->GetPropertyInt(XML_ATTRIBUTE_RATE);
+  ros::NodeHandle nh;
+  m_pub = nh.advertise<sensor_msgs::Image>(m_stTopic, 5);
+  int n = m_stTopic.find("/camera");
+  if(n == -1)
+  {
+    ROS_ERROR("Error in topic name of cop camera");
+  }
+  else
+  {
+    std::string stTemp = m_stTopic.replace(n, std::string("/camera").length(), "/camera_info");
+    m_pubCamInfo = nh.advertise<sensor_msgs::CameraInfo>(stTemp, 5);
+    try
+    {
+      Halcon::HTuple camMatrix = m_calibration.CamMatrix();
+      m_cameraInfoMessage.width = m_calibration.m_width;
+      m_cameraInfoMessage.height = m_calibration.m_height;
+      for(int i = 0; i < 9; i++)
+      {
+        m_cameraInfoMessage.K[i] = camMatrix[i].D();
+      }
+       m_cameraInfoMessage.P[0] = 1.0;
+       m_cameraInfoMessage.P[5] = 1.0;
+       m_cameraInfoMessage.P[3] =  -m_cameraInfoMessage.K[2];
+       m_cameraInfoMessage.P[7] =  -m_cameraInfoMessage.K[5];
+
+       m_cameraInfoMessage.P[10] = 1.0;
+       m_cameraInfoMessage.P[11] = 1.0;
+      m_bCameraInfo = true;
+     }
+    catch(const char *test)
+    {
+      ROS_ERROR("Error with cam param in cop camera");
+      m_bCameraInfo = false;
+    }
+    catch(Halcon::HException ex)
+    {
+      ROS_ERROR("Error with cam param in cop camera");
+      m_bCameraInfo = false;
+    }
+  }
 }
 

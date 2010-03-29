@@ -20,9 +20,8 @@
 #include "XMLTag.h"
 #include "ShapeModel.h"
 
-#ifdef HALCONIMG
+
 #include <cpp/HalconCpp.h>
-#endif
 
 #define XML_NODE_PATCHSIZE "PatchSize"
 #define XML_NODE_COLORSPEC "ColorSpec"
@@ -53,7 +52,7 @@ ColorModel::ColorModel(Class* classref, Signature* sig)
 {
 	ShapeModel* sm = (ShapeModel*)sig->GetElement(0, DESCRIPTOR_SHAPE);
 	Image* img = (Image*)sm->GetLastMatchedImage();
-#ifdef HALCONIMG
+
 	try
 	{
 		Halcon::Hobject xld = sm->GetContour(*sig->m_relPose);
@@ -94,7 +93,7 @@ ColorModel::ColorModel(Class* classref, Signature* sig)
 	{
 		printf("Error while Learning: %s\n", ex.message);
 	}
-#endif
+
 }
 
 ColorModel::~ColorModel(void)

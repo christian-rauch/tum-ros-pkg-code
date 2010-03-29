@@ -25,12 +25,12 @@
 #include "XMLTag.h"
 #include "RelPoseHTuple.h"
 
-#ifdef HALCONIMG
+
 #include "cpp/HalconCpp.h"
 #include "SupportingPlaneDescriptor.h"
 #include "SupportingPlaneDetector.h"
 using namespace Halcon;
-#endif
+
 #include "ShapeModel.h"
 
 #define XML_ATTRIBUTE_MINSCORE "MinScore"
@@ -69,7 +69,7 @@ ShapeBased3D::ShapeBased3D () :
   m_greediness(DEFAULT_GREEDINESS),
   m_levels(DEFAULT_LEVELS)
 {
-#ifdef HALCONIMG
+
       m_paramList = new HTuple(10, 0.0);
       m_paramNameList = new HTuple(10, "");
       tuple_gen_const(9, 0.0, m_paramList);
@@ -78,7 +78,7 @@ ShapeBased3D::ShapeBased3D () :
       (*m_paramNameList)[9] = "pose_refinement";
       (*m_paramList)[9] = "none";
 
-#endif
+
 }
 
 
@@ -102,13 +102,12 @@ void ShapeBased3D::SetData (XMLTag* tag)
       m_levels = DEFAULT_LEVELS;
     }
   }
-#ifdef HALCONIMG
   m_paramList = new HTuple(9, 0.0);
   m_paramNameList = new HTuple(9, "");
   ASSIGN_DEFAULT_PARAM_LIST(m_paramNameList);
   (*m_paramNameList)[9] = "pose_refinement";
   (*m_paramList)[9] = "none";
-#endif
+
 }
 
 
@@ -124,12 +123,12 @@ XMLTag* ShapeBased3D::Save()
 
 ShapeBased3D::~ShapeBased3D ( )
 {
-#ifdef HALCONIMG
+
   delete m_paramList;
   delete m_paramNameList;
-#endif
+
 }
-#ifdef HALCONIMG
+
 
 /**
 *   Given an valid last-pose of the object we want to try to track it.
@@ -205,7 +204,7 @@ bool CheckPose(Halcon::HTuple pose, ShapeModelParamSet* pm, Hlong model)
   }
 }
 
-#endif
+
 //
 // Methods
 //
@@ -239,10 +238,10 @@ std::vector<RelPose*>  ShapeBased3D::PerformForAll(Image* img, RelPose* camPose,
   int i = 0;
   while((shape = (ShapeModel*)object.GetElement(i++, DESCRIPTOR_SHAPE )) != NULL)
   {
-    if(max_eval + max_initlevel < shape->GetQuality() + shape->m_initializationLEvel)
+    if(max_eval + max_initlevel < shape->GetQuality() + shape->m_initializationLevel)
     {
       max_eval = shape->GetQuality();
-      max_initlevel = shape->m_initializationLEvel;
+      max_initlevel = shape->m_initializationLevel;
     }
   }
   max_eval -= 0.1;
@@ -251,7 +250,7 @@ std::vector<RelPose*>  ShapeBased3D::PerformForAll(Image* img, RelPose* camPose,
   i = 0;
   while((shape = (ShapeModel*)object.GetElement(i, DESCRIPTOR_SHAPE )) != NULL)
   {
-    if(max_eval < shape->GetQuality() && max_initlevel  < shape->m_initializationLEvel )
+    if(max_eval < shape->GetQuality() && max_initlevel  < shape->m_initializationLevel )
     {
       try
       {
@@ -264,19 +263,17 @@ std::vector<RelPose*>  ShapeBased3D::PerformForAll(Image* img, RelPose* camPose,
       }
       catch(const char* text)
       {
-        shape->Evaluate(-1);
+        shape->Evaluate(-1, 1.0);
         printf("ShapeBased3D::PerformForAll: Error in one of the models: %s\n", text);
       }
-#ifdef HALCONIMG
       catch(Halcon::HException ex)
       {
-        shape->Evaluate(-1);
+        shape->Evaluate(-1, 1.0);
         printf("ShapeBased3D::PerformForAll: Error in one of the models: %s\n", ex.message);
       }
-#endif /*HALCONIMG*/
       catch(...)
       {
-        shape->Evaluate(-1);
+        shape->Evaluate(-1, 1.0);
         printf("ShapeBased3D::PerformForAll: Error in one of the models.\n");
       }
     }
@@ -290,16 +287,15 @@ std::vector<RelPose*>  ShapeBased3D::PerformForAll(Image* img, RelPose* camPose,
   if(shape != NULL)
   {
     shape->m_showNow = true;
-    if(shape->m_initializationLEvel < 0.3)
+    if(shape->m_initializationLevel < 0.3)
     {
-#ifdef HALCONIMG
         SupportingPlaneDetector detector;
 
         double qualPlane = qualityMeasure;
         int  numOfObjectsInner = numOfObjects;
         /**TODO incooperate usage of index*/
 #ifdef _DEBUG
-        printf("ShapeBased3D: Trying to improve the Match (bad init Value: %f ) by projecting it on a supporting plane\n Searching...\n", shape->m_initializationLEvel);
+        printf("ShapeBased3D: Trying to improve the Match (bad init Value: %f ) by projecting it on a supporting plane\n Searching...\n", shape->m_initializationLevel);
 #endif
         std::vector<RelPose*> poses = detector.Inner(img, camPose, calib, lastKnownPose, object, numOfObjectsInner, qualPlane, 0);
         if(poses.size() > 0)
@@ -314,7 +310,6 @@ std::vector<RelPose*>  ShapeBased3D::PerformForAll(Image* img, RelPose* camPose,
           }
 
         }
-#endif
     }
   }
   if(result.size() == 0 || shape == NULL)
@@ -359,8 +354,7 @@ std::vector<RelPose*> ShapeBased3D::Perform(std::vector<Sensor*> sensors, RelPos
 std::vector<RelPose*> ShapeBased3D::Inner(Image* img, RelPose* camPose,Calibration* calib, RelPose* lastKnownPose, Signature& object, int &numOfObjects, double& qualityMeasure, int i)
 {
   std::vector<RelPose*> result;
-#ifdef HALCONIMG
-  if(img->GetType() == HALCONIMAGE)
+  if(img->GetType() == ReadingType_HalconImage)
   {
     HTuple  ViewPose, pose, CovPose, Score;
 
@@ -372,8 +366,8 @@ std::vector<RelPose*> ShapeBased3D::Inner(Image* img, RelPose* camPose,Calibrati
       return result;
     }
 #ifdef _DEBUG
-    RelPoseHTuple::Print(lastKnownPose);
-    #endif
+/*    RelPoseHTuple::Print(lastKnownPose);*/
+#endif
 
     bool trackPossible = TrackingPossible(*img, object, lastKnownPose);
 #ifdef _DEBUG
@@ -543,7 +537,6 @@ std::vector<RelPose*> ShapeBased3D::Inner(Image* img, RelPose* camPose,Calibrati
         return result;
     }
   }
-#endif
   img->Free();
   return result;
 }
@@ -551,7 +544,7 @@ std::vector<RelPose*> ShapeBased3D::Inner(Image* img, RelPose* camPose,Calibrati
 double ShapeBased3D::CheckSignature(const Signature& object, const std::vector<Sensor*> &sensors)
 {
   //TODO
-  printf("ShapeBased3D::CheckSignature: Obj %d, num elems %ld\n", object.m_ID, object.CountElems());
+  printf("ShapeBased3D::CheckSignature: Obj %ld, num elems %ld\n", object.m_ID, object.CountElems());
   if(object.GetElement(0,DESCRIPTOR_SHAPE) != NULL)
     return 1.0;
   else

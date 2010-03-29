@@ -26,7 +26,7 @@
 #include "ShapeModel.h"
 
 #define XML_NODE_POINTSDESCRBYSHAPE "PointdescrByShape"
-#define XML_NODE_COLORBYSHAPE		"ColorByShape"
+#define XML_NODE_COLORBYSHAPE		"RFAColorByShape"
 using namespace cop;
 
 RFAPointDescrByShape::RFAPointDescrByShape(void)
@@ -41,7 +41,7 @@ RFAPointDescrByShape::~RFAPointDescrByShape(void)
 {
 }
 
-Descriptor* RFAPointDescrByShape::Perform(std::vector<Camera*> cam, RelPose* pose, Signature& sig, int &numOfObjects, double& qualityMeasure)
+Descriptor* RFAPointDescrByShape::Perform(std::vector<Sensor*> cam, RelPose* pose, Signature& sig, int &numOfObjects, double& qualityMeasure)
 {
 #ifdef DESCRIPTOR_AVAILABLE
 	PointDescrModel* points  = NULL;

@@ -20,19 +20,22 @@
 #define REGIONOI_H
 #include "Descriptor.h"
 #include "XMLTag.h"
-#ifdef HALCONIMG
 #include <cpp/HalconCpp.h>
-#endif /*HALCONIMG*/
 
 #define XML_NODE_ROI "RegionOI"
 typedef std::vector<std::pair< int, std::pair<int, int > > >  RegionRuns;
 namespace cop
 {
+  class Calibration;
+
   class RegionOI
   {
   public:
     RegionOI(RegionRuns row_colStart_colEnd);
     RegionOI(std::string stFilename);
+    RegionOI(RelPose* pose, int cam_pose_id, Calibration* calib);
+
+    RegionOI(RelPose* pose);
 
     RegionOI();
     ~RegionOI(void){}
@@ -60,12 +63,9 @@ namespace cop
     *
     *********************************************************************/
     void TransitiveHull();
-  #ifdef HALCONIMG
     Halcon::Hobject& GetRegion(double scale = 1.0);
     Halcon::Hobject m_reg;
     Halcon::Hobject m_regZoomTmp;
-  #else /*HALCONIMG*/
-  #endif /*HALCONIMG*/
 
   };
 }

@@ -5,6 +5,12 @@
       This is a plugin to make the halcon framegrabbers available in cop.
     </description>
   </class>
+  
+   <class name="CameraDriverRelay" type="CameraDriverRelay" base_class_type="Sensor">
+    <description>
+      This is a plugin to make the halcon framegrabbers available over network, too.
+    </description>
+  </class>
 
   <class name="SimulatedCamera" type="SimulatedCamera" base_class_type="Sensor">
     <description>
@@ -12,7 +18,7 @@
     </description>
   </class>
 
-  <class name="ROSCamera" type="ROSCamera" base_class_type="Sensor">
+  <class name="ROSCOPCamera" type="ROSCOPCamera" base_class_type="Sensor">
     <description>
       This is a plugin to make a ros camera available in cop.
     </description>
@@ -110,5 +116,24 @@
       For debugging
     </description>
   </class>
-
+  <!-- Refine Algorithms -->
+  <class name="RFADeformByCluster" type="RFADeformByCluster"
+               base_class_type="RefineAlgorithm">
+      <description>
+            Learns a deformable shape model (texture-edges) from a cluster
+      </description>
+   </class>
+  <class name="RFAColorByShape" type="RFAColorByShape"
+               base_class_type="RefineAlgorithm">
+      <description>
+            Learns which color class a cluster has as most probable color
+      </description>
+   </class>
+  <class name="ShapeModelDownloader" type="ShapeModelDownloader"
+               base_class_type="RefineAlgorithm">
+      <description>
+            Loads new CAD models from the webfor a certain class string
+      </description>
+   </class>
+                  
 </library>

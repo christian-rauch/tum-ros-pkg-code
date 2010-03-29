@@ -22,9 +22,9 @@
 **************************************************************************/
 
 #include "SimulatedCamera.h"
-#ifdef HALCONIMG
+
 #include "cpp/HalconCpp.h"
-#endif
+
 #include "XMLTag.h"
 
 #define MAX_SIM_IMAGES 10
@@ -41,9 +41,9 @@ void SimulatedCamera::SetData(XMLTag* tag)
     m_sourceIsActiv = (false);
     m_sourceType = (0);
     m_isVideo = (false);
-#ifdef HALCONIMG
+
     m_acqHandle = (NULL);
-#endif
+
 
     if(tag != NULL)
     {
@@ -75,10 +75,10 @@ void SimulatedCamera::SetData(XMLTag* tag)
 SimulatedCamera::~SimulatedCamera ( )
 {
     Stop();
-#ifdef HALCONIMG
+
     delete m_win;
     delete m_acqHandle;
-#endif
+
 }
 
 Image* SimulatedCamera::ReadFromFile(std::string filename)
@@ -87,7 +87,7 @@ Image* SimulatedCamera::ReadFromFile(std::string filename)
     if(stExtension.compare("jpg") == 0 || stExtension.compare("png") == 0 || stExtension.compare("tiff") == 0 || stExtension.compare("tif") == 0)
     {
 
-#ifdef HALCONIMG
+
         try
         {
             Halcon::Hobject* obj = new Halcon::Hobject();
@@ -104,13 +104,12 @@ Image* SimulatedCamera::ReadFromFile(std::string filename)
             printf("%s  (Path: %s)\n", except.message, filename.c_str());
             throw ("Image not loaded\n");
         }
-#else
-#endif
+
     }
     else if(stExtension.compare("avi") == 0)
     {
         m_isVideo = true;
-#ifdef HALCONIMG
+
         Halcon::Hobject* obj = new Halcon::Hobject();
         if(m_acqHandle != NULL)
             delete m_acqHandle;
@@ -140,13 +139,11 @@ Image* SimulatedCamera::ReadFromFile(std::string filename)
             printf("%s  (Path: %s)\n", except.message, filename.c_str());
             throw ("Video not loaded\n");
         }
-#else
 
-#endif
     }
     else /* Assume directory*/
     {
-#ifdef HALCONIMG
+
         Halcon::HTuple ImageFiles, param, regex;
         param = "files";
         param.Append("follow_links");
@@ -172,7 +169,7 @@ Image* SimulatedCamera::ReadFromFile(std::string filename)
                 throw ("Directory not loaded\n");
             }
         }
-#endif /*HALCONIMG*/
+
 
     }
     return new Image(NO_IMAGE);
@@ -193,7 +190,7 @@ Reading* SimulatedCamera::GetReading(const long &Frame)
         if(m_isVideo) // TODO  Frame < deleteObjects!!!
         {
             nFrame = Frame == -1 ? m_FrameCount: Frame;
-#ifdef HALCONIMG
+
             while(m_FrameCount <= nFrame)
             {
                 Halcon::Hobject* obj = new Halcon::Hobject();
@@ -205,12 +202,12 @@ Reading* SimulatedCamera::GetReading(const long &Frame)
                     Halcon::map_image(*obj, *m_calibration.m_radialDistMap, obj);
                 while(m_images.size() > MAX_SIM_IMAGES)
                 {
-                    if(!DeleteImg())
+                    if(!DeleteReading())
                         break;
                 }
                 PushBack(new Image(obj, type ));
             }
-#endif
+
         }
         else
         {
@@ -238,9 +235,7 @@ bool	SimulatedCamera::Stop()
 {
     if(m_isVideo)
     {
-#ifdef HALCONIMG
-        Halcon::close_all_framegrabbers();
-#endif
+       Halcon::close_all_framegrabbers();
     }
     return false;
 }

@@ -5,11 +5,13 @@
   <license>GPL</license>
   <depend package="pluginlib"/>
   <depend package="cognitive_perception"/>
-  <depend package="sensor_msgs" />  
   <depend package="dxflib" />  
   <depend package="libwww" />  
   <depend package="collada-dom" />  
   <depend package="cop_sr4_plugins" />  
+  <depend package="cop_ros_plugins" />  
+  <depend package="opencv2" />  
+  <depend package="cv_bridge" />
   <export>
     <cpp cflags="-I${prefix}/include/" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lVisionPlugins"/>
     <!--

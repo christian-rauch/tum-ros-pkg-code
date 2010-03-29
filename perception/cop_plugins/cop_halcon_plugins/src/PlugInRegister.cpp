@@ -31,6 +31,8 @@
 #include "Reading.h"
 
 #include "Image.h"
+/* Image Includes also for ReadingConverter Plugins*/
+
 
 
 /*Includes for Descriptor Plugins*/
@@ -57,8 +59,15 @@
 #include "SupportingPlaneDetector.h"
 #include "SimulatedLocate.h"
 
+/*Includes for RefineAlgorithm Plugins*/
+  /*interface of cognitive_perception*/
+#include "RefineAlgorithm.h"
 
-#ifdef HALCONIMG
+#include "RFADeformByCluster.h"
+#include "RFAPointDescrByShape.h"
+#include "RFAColorByShape.h"
+#include "ShapeModelDownloader.h"
+
 
 #include "cpp/HalconCpp.h"
 //This procedure simply hands the exception object to the C++ exception handling via throw:
@@ -68,20 +77,20 @@ void MyHalconExceptionHandler(const Halcon::HException& except)
 }
 
 
-#endif /*HALCONIMG*/
-
 using namespace cop;
 
 void loadLib(void) __attribute__ ((constructor));
 
 void loadLib(void)
 {
-    printf("\n\n\n\n Registering Halcon Exception handler\n\n\n");
+    Image::RegisterImageConverter();
     Halcon::HException::InstallHHandler(&MyHalconExceptionHandler);
 }
 
 /*Sensor Plugins*/
 PLUGINLIB_REGISTER_CLASS(CameraDriver, CameraDriver, Sensor);
+PLUGINLIB_REGISTER_CLASS(CameraDriverRelay, CameraDriverRelay, Sensor);
+
 PLUGINLIB_REGISTER_CLASS(SimulatedCamera, SimulatedCamera, Sensor);
 PLUGINLIB_REGISTER_CLASS(ROSCOPCamera, ROSCOPCamera, Sensor);
 PLUGINLIB_REGISTER_CLASS(StereoSensor, StereoSensor, Sensor);
@@ -107,3 +116,9 @@ PLUGINLIB_REGISTER_CLASS(BlobLocalizer, BlobLocalizer, LocateAlgorithm);
 PLUGINLIB_REGISTER_CLASS(TwoInOneAlg, TwoInOneAlg, LocateAlgorithm);
 PLUGINLIB_REGISTER_CLASS(SupportingPlaneDetector, SupportingPlaneDetector, LocateAlgorithm);
 PLUGINLIB_REGISTER_CLASS(SimulatedLocate, SimulatedLocate, LocateAlgorithm);
+
+
+/*RefineAlgorithm Plugins*/
+PLUGINLIB_REGISTER_CLASS(RFADeformByCluster, RFADeformByCluster, RefineAlgorithm);
+PLUGINLIB_REGISTER_CLASS(RFAColorByShape, RFAColorByShape, RefineAlgorithm);
+PLUGINLIB_REGISTER_CLASS(ShapeModelDownloader, ShapeModelDownloader, RefineAlgorithm);
