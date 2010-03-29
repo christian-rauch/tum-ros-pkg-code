@@ -50,6 +50,23 @@ public:
   *   Closing of the ports
   */
   ~RosLoService ();
+
+
+  class PubParentFilterStruct
+  {
+  public:
+    PubParentFilterStruct()
+      : parent_id(0), last_value_set(false) {}
+    PubParentFilterStruct( std::vector<ros::Publisher*> pub, unsigned long parent, std::vector<double> filt)
+       : publisher(pub), parent_id(parent), filter(filt), last_value_set(false) {}
+    std::vector<ros::Publisher*> publisher;
+    unsigned long                parent_id;
+    std::vector<double>           filter;
+    std::vector<double> last_val;
+    bool last_value_set;
+
+  };
+
   /**
   * Parses a service request and reacts on the input, by generating the answer
   * @param request incoming request: command := {idquery, framequery, update, del, cout}, [id|parentid|matrix, cov,type|name]+
@@ -68,6 +85,15 @@ public:
   *   @brief this function will wait for update events and publish then a partial lo to specified topics
   */
   void UpdateEventHandler();
+
+  /**
+  *   PublishUpdate
+  *   @brief Helper fundction handling the final publishing of updated registered jlos
+  *   @param id   jlo to be published
+  *   @param obj_to_pub   object containing parent id and list of publishers to which the update will be send
+  *   @param return false if the referenced jlo was already deleted
+  */
+  bool PublishUpdate(unsigned long id, PubParentFilterStruct& obj_to_pub);
   /**
   *   UpdateEventNotifier
   *   @brief raises and update event
@@ -75,13 +101,19 @@ public:
   static void UpdateEventNotifier(unsigned long object_id);
 private:
   /**
-  *
+  *   Members to handle tf subscription and main service
   */
   ros::Subscriber tf_subscription;
   ros::ServiceServer located_object_service;
-  ros::ServiceServer located_object_callback_reagister_service;
   std::set<std::string> tf_blacklist;
-  std::map<unsigned long, std::vector<ros::Publisher*> > m_jlotopicMap;
+
+  /**
+  *   Handle call
+  */
+  ros::ServiceServer located_object_callback_reagister_service;
+
+  std::map<unsigned long, PubParentFilterStruct > m_jlotopicMap;
+  std::map<unsigned long, unsigned long> m_parentToRegisteredJlo;
   std::map<std::string, ros::Publisher> m_topicPublisherMap;
   static std::queue<unsigned long> m_queueOfLosToPublish;
 

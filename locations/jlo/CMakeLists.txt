@@ -2,7 +2,7 @@ PROJECT(jlo)
 
 cmake_minimum_required(VERSION 2.4.6)
 include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
-rospack(jlo)
+rosbuild_init()
 
 include($ENV{ROS_ROOT}/core/rosbuild/FindPkgConfig.cmake)
 
@@ -27,11 +27,11 @@ add_definitions( ${LIBXML2_CFLAGS} )
 
 
 
-genmsg()
-gensrv() 
+rosbuild_genmsg()
+rosbuild_gensrv() 
 
 include_directories(source)
 
-rospack_add_executable(jlo source/main.cpp source/RosLoService.cpp)
+rosbuild_add_executable(jlo source/main.cpp source/RosLoService.cpp)
 
 target_link_libraries(jlo ${LO_LIBRARIES} ${LIBXML2_LDFLAGS})
