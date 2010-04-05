@@ -1,9 +1,7 @@
 ; -*- Mode: Lisp; Syntax: ANSI-Common-Lisp; Base: 10 -*-
 
-(operate 'load-op "lisp_asdf_manager/lisp_asdf_manager")
-
-(asdf:defsystem cram/designators
-  :name "cram/designators"
+(asdf:defsystem designators
+  :name "designators"
   :author "Lorenz Moesenlechner <moesenle@cs.tum.edu>"
   :version "0.1"
   :maintainer "Lorenz Moesenlechner <moesenle@cs.tum.edu>"
