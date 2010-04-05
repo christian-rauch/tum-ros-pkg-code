@@ -5,7 +5,13 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <rosdep name="sbcl"/>
-  <depend package="cram"/>
+  <depend package="cram_language"/>
+  <depend package="cram_reasoning"/>
+  <depend package="cram_utilities"/>
+  <depend package="designators"/>
+  <depend package="liswip"/>
+  <depend package="process_modules"/>
+  <depend package="cljlo"/>
   <depend package="ltk"/>
   <depend package="vision_srvs"/>
   <depend package="roslisp"/>

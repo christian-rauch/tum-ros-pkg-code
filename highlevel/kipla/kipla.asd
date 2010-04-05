@@ -27,36 +27,34 @@
 ;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
-(operate 'load-op "lisp_asdf_manager/lisp_asdf_manager")
-
 ;; Contribs to build
 ;; (pushnew :kipla-contrib-oro *features*)
 ;; (pushnew :kipla-contrib-hri *features*)
 
-(asdf:defsystem kipla/kipla
+(asdf:defsystem kipla
     :name "kipla"
-    :author "Piotr Esden-Tempski <esdentem@cs.tum.edu>,
-             Lorenz Moesenlechner <moesenle@cs.tum.edu>"
+    :author "Lorenz Moesenlechner <moesenle@cs.tum.edu>,
+             Piotr Esden-Tempski <esdentem@cs.tum.edu>"
     :version "0.1"
     :maintainer "Lorenz Moesenlechner <moesenle@cs.tum.edu>"
     :license "GPLv3"
     :description "Cognitive kitchen planner and coordinator"
     :long-description "Cogtinive kitchen planner and coordinator"
 
-    :depends-on (cram/utilities
-                 cram/language
-                 cram/designators
-                 cram/process-modules
-                 cram/reasoning
-                 cram/liswip
+    :depends-on (cram-utilities
+                 cram-language
+                 cram-reasoning
+                 designators
+                 process-modules
+                 liswip
                  roslisp
                  std_msgs-msg
                  geometry_msgs-msg
                  nav_pcontroller-msg
                  vision_srvs-srv
                  cogman_msgs-msg
-                 clactionlib/actionlib
-                 cljlo/cljlo
+                 actionlib
+                 cljlo
                  alexandria
                  #+kipla-contrib-oro oro_ros-srv
                  #+kipla-contrib-oro yason
