@@ -1,1 +1,0 @@
-../liswip/liswip.asd
