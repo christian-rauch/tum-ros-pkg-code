@@ -1,0 +1,16 @@
+<package>
+  <description brief="turtle_cram_demo">
+
+     turtle_cram_demo
+
+  </description>
+  <author>Lorenz Mosenlechner</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/turtle_cram_demo</url>
+  <depend package="roslisp"/>
+  <depend package="cram"/>
+
+</package>
+
+
