@@ -161,7 +161,7 @@
                         `(let ((,',tag-path (cond ((executed ,name)
                                                    (let ((iter-path (cons (path-next-iteration `(tagged ,',name))
                                                                           (task-path ,name))))
-                                                     (setf ,name (make-task :name ,'name
+                                                     (setf ,name (make-task :name ',name
                                                                             :path iter-path))
                                                      iter-path))
                                                   (t (cons `(tagged ,',name) ,',current-path)))))
