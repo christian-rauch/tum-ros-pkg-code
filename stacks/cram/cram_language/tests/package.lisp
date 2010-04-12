@@ -32,10 +32,11 @@
 (defpackage :cram-language-tests
   (:documentation "Package for the cram-language test-suite")
   (:nicknames :cpl-tests)
-  (:use :cram-language
+  (:use :common-lisp
+        :cram-language-implementation
         :cram-utilities
+        :cram-test-utilities
         :fiveam
         :alexandria)
   (:import-from #:cram-walker #:make-plan-tree-node)
-  (:shadowing-import-from :cram-language #:fail))
-
+  (:shadowing-import-from :cram-language-implementation #:fail))

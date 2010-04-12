@@ -30,49 +30,31 @@
 
 (in-package :cpl-tests)
 
-(defmacro with-producer-consumer-threads
-    ((&key (n-producers 1) (n-consumers 1)) &body ((&key producer)
-                                                   (&key consumer)))
-  (assert producer) (assert consumer)
-  `(let ((producer-thunk ,producer)
-         (consumer-thunk ,consumer)
-         (n-threads (+ ,n-producers ,n-consumers)))
-     (with-synchronization-barrier (all-ready n-threads)
-       (let ((producers (spawn-threads ,n-producers "Producer"
-                                       (lambda ()
-                                         (enter-barrier all-ready)
-                                         (funcall producer-thunk))))
-             (consumers (spawn-threads ,n-consumers "Consumer"
-                                       (lambda ()
-                                         (enter-barrier all-ready)
-                                         (funcall consumer-thunk)))))
-         (mapc #'join-thread producers)
-         (mapc #'join-thread consumers)))))
+(defun list-spawned-threads (tasks)
+  (declare (type queue tasks))
+  (loop for task in (list-queue-contents tasks)
+        for thread = (slot-value task 'thread)
+        do (assert thread ()
+                   "~@<Assertion failure in test suite infrastructure.~
+                       Task ~S was on ~S which did not have a thread ~
+                       associated with it. Did you mess with CPL internals?."
+                   task '*tasks*)
+        collect thread))
 
-
-(defvar *spawned-threads*)
-(declaim (type queue *spawned-threads*))
-
-(defun make-thread-and-enqueue (function &key name)
-  (assert (boundp '*spawned-threads*) ()
-          "Must be used within the extent of DEFINE-CRAM-TEST.")
-  ;; Disable interrupts so we won't leave orphans behind...
-  (sb-sys:without-interrupts
-    (let ((thread (sb-thread:make-thread function :name name)))
-      (enqueue thread *spawned-threads*)
-      thread)))
-
-(defun list-spawned-threads ()
-  (list-queue-contents *spawned-threads*))
-
-(defun assert-spawned-threads-dead ()
-  (let ((alive (remove-if-not #'thread-alive-p (list-spawned-threads))))
+(defun assert-threads-dead (threads)
+  ;; It may take quite some time until a task that is basically dead
+  ;; finishes down so that its thread can update its alive-p slot; so
+  ;; let's give it some time to do so:
+  (dolist (thread threads)
+    (join-thread thread :timeout 0.01))
+  (let ((alive (remove-if-not #'thread-alive-p threads)))
     (assert (null alive) ()
             "~@<Test returned success, yet the following threads ~
                 were still alive: ~2I~:_~{~A~^, ~}.~@:>"
             (mapcar #'thread-name alive))))
 
-(defun shutdown-spawned-threads (n-repeats)
+(defun shutdown-spawned-tasks (tasks n-repeats)
+  (declare (type queue tasks) (type unsigned-byte n-repeats))
   (let ((already-dead    (cons 0 nil))
         (already-aborted (cons 0 nil))
         (killed          (cons 0 nil))
@@ -80,25 +62,26 @@
     (flet* ((add (thread box)
              (incf (car box))
              (push (thread-name thread) (cdr box)))
-            (shutdown () 
-             (loop for thread = (dequeue *spawned-threads*)
-                   while thread do
-                   (cond ((not (thread-alive-p thread))
-                          (if (eq (join-thread thread) :error)
-                              (add thread already-aborted)
-                              (add thread already-dead)))
-                         ((kill-thread thread)
-                          (add thread killed))
-                         (t
-                          (case (join-thread thread :timeout 0.1)
-                            ((:error)   (add thread already-aborted))
-                            ((:timeout) (add thread unkillable))
-                            (t          (add thread already-dead))))))))
-      ;; There's a race at play here: killing a thread may have some
-      ;; small delay, and during that delay, it may spawn new
-      ;; threads. That may happen exactly after DEQUEUE returned NIL.
-      ;; We kill N-REPEATS times so the likelyhood of the race is kept
-      ;; very very small.
+            (shutdown ()
+              (loop for task   = (dequeue tasks)
+                    for thread = (and task (slot-value task 'thread))
+                    while thread do
+                    (cond ((not (thread-alive-p thread))
+                           (if (eq (join-thread thread) :error)
+                               (add thread already-aborted)
+                               (add thread already-dead)))
+                          ((kill-thread thread)
+                           (add thread killed))
+                          (t
+                           (case (join-thread thread :timeout 0.1)
+                             ((:error)   (add thread already-aborted))
+                             ((:timeout) (add thread unkillable))
+                             (t          (add thread already-dead))))))))
+      ;; There's a race at play here: killing a task's thread may have
+      ;; some small delay, and during that delay, it may spawn new
+      ;; tasks and hence threads. That may happen exactly after
+      ;; DEQUEUE returned NIL. We kill N-REPEATS times so the
+      ;; likelyhood of the race is kept very very small.
       (loop repeat n-repeats do (shutdown) (sleep 0.05))
       (values (reduce #'+ (list already-dead already-aborted
                                 killed unkillable)
@@ -106,9 +89,10 @@
               killed unkillable
               already-dead already-aborted))))
 
-(defun serious-test-failure (condition)
+(defun serious-test-failure (condition tasks)
   (multiple-value-bind (total killed unkillable already-dead already-aborted)
-      (shutdown-spawned-threads 3)
+      (shutdown-spawned-tasks tasks 3)
+    (format t "foof")
     (symbol-macrolet
         ((n-killed                (car killed))
          (n-unkillable            (car unkillable))
@@ -126,7 +110,7 @@
           Preempted due to ~S:~@:_~
               ~<    ~@;\"~A\"~:>~@:_~@:_~
           Summary:~1I~@:_~
-            ~3D threads total~
+            ~3D tasks total~
             ~:[~@:_~3D terminated before preemption: ~<~@{~A~^, ~:_~}~:>~;~2*~]~
             ~:[~@:_~3D aborted before preemption:    ~<~@{~A~^, ~:_~}~:>~;~2*~]~
             ~:[~@:_~3D killed after preemption:      ~<~@{~A~^, ~:_~}~:>~;~2*~]~
@@ -139,23 +123,32 @@
        (zerop n-killed)          n-killed           killed-threads
        (zerop n-unkillable)      n-unkillable       unkillable-threads))))
 
-(defun run-cram-test (timeout thunk)
-  ;; N.b. unwinding by HANDLER-CASE out of the WITHOUT-TIMEOUT is
-  ;; important so we won't get caught by a timeout during execution of
-  ;; the handler.
-  (handler-case
-      ;; We try to enforce the timeout with a deadline first because
-      ;; unwinding from such a place is deemed to be safer.
-      (multiple-value-prog1 (sb-ext:with-timeout (+ timeout 0.01)
-                              (sb-sys:with-deadline (:seconds timeout)
-                                (funcall thunk)))
-        (assert-spawned-threads-dead))
-    (serious-condition (c)
-      (serious-test-failure c)
-      c)))
+(defun run-cram-test (name timeout thunk)
+  (let ((*save-tasks* t)
+        (*tasks* (make-queue
+                  :name (format nil "*TASKS* for cram test ~A." name))))
+    ;; N.b. unwinding by HANDLER-CASE out of the WITHOUT-TIMEOUT is
+    ;; important so we won't get caught by a timeout during execution of
+    ;; the handler.
+    (handler-case
+        ;; We try to enforce the timeout with a deadline first because
+        ;; unwinding from such a place is deemed to be safer.
+        (multiple-value-prog1 (sb-ext:with-timeout (+ timeout 0.01)
+                                (sb-sys:with-deadline (:seconds timeout)
+                                  (funcall thunk)))
+          ;; There's a small race here, too: if the test nominally
+          ;; passed but there's a task left over which spawns new
+          ;; tasks right after the LIST-SPAWNED-THREADS here. However,
+          ;; I don't think this race can ever fully be overcome (just
+          ;; as in SHUTDOWN-SPAWNED-TASKS.) Anyhow, all this is
+          ;; supposed to be "just" sanity checks anyway.
+          (assert-threads-dead (list-spawned-threads *tasks*)))
+      (serious-condition (c)
+        (serious-test-failure c *tasks*)
+        c))))
 
 (defparameter +timeout+ 1.0
-  "Default timeout per run if not explicitly given.")
+  "Default timeout per run.")
 
 (defparameter +n-runs+ 10
   "Default number of runs a test should be repeated.")
@@ -166,9 +159,12 @@
   compiling them at definition time, means that tests have to be
   recompiled in case macros are changed.")
 
+(defparameter *ignore-skips* nil
+  "If true, execute tests even though they specified (:SKIP).")
+
 (declaim (type (member :definition-time :run-time) *compile-tests-at*))
 
-(defmacro define-cram-test (name clauses docstring &body body)
+(defmacro define-cram-test (name docstring clauses &body body)
   "Some sugar on top of 5AM:TEST.
 
 During the execution of BODY
@@ -205,24 +201,29 @@ CLAUSES can be one of
     specifies bindings for 5AM's random testing facility as per
     5AM:FOR-ALL.
 
+  (:SKIP <reason>)
+
+    specifies to skip over the test. (:SKIP) clauses are ignored in
+    case *IGNORE-SKIPS* is true.
+
 A documentation string must be given. Please document what your test
 cases are supposed to test.
 "
   (check-type docstring string)
-  (labels ((genname (thing)
-             (format nil "~A for test ~S" thing name))
-           (default (x default-value)
+  (labels ((default (x default-value)
              (if (eq x :default) default-value x))
            (assert-default (tag var)
              (assert (eq var :default) () "~S specified twice." tag))
            (parse-clauses (clauses)
-             (let ((timeout    :default)
-                   (generators :default)
-                   (n-runs     :default))
+             (let ((timeout     :default)
+                   (generators  :default)
+                   (n-runs      :default)
+                   (skip-reason :default))
                (dolist (clause clauses (values
-                                        (default timeout +timeout+)
-                                        (default generators nil)
-                                        (default n-runs +n-runs+)))
+                                        (default timeout     +timeout+)
+                                        (default generators  nil)
+                                        (default n-runs      +n-runs+)
+                                        (default skip-reason nil)))
                  (destructure-case clause
                    ((:timeout x)
                     (assert-default :timeout timeout)
@@ -232,17 +233,21 @@ cases are supposed to test.
                     (setq generators gs))
                    ((:n-runs n)
                     (assert-default :n-runs n-runs)
-                    (setq n-runs n)))))))
-    (multiple-value-bind (timeout generators n-runs)
+                    (setq n-runs n))
+                   ((:skip . reason)
+                    (assert-default :skip skip-reason)
+                    (setq skip-reason reason)))))))
+    (multiple-value-bind (timeout generators n-runs skip-reason)
         (parse-clauses clauses)
       ;; We want the tests to be compiled at definition time so we
       ;; will get warnings etc. at compile-time; of course, that won't
       ;; take macro
       `(5am:test (,name :compile-at ,*compile-tests-at*)
-         (let ((5am::*num-trials* ,n-runs)
-               (*make-thread-function* #'make-thread-and-enqueue)
-               (*spawned-threads*
-                (make-queue :name ,(genname "*SPAWNED-THREADS*"))))
-           (format 5am:*test-dribble* "~&Running ~S (~Dx): " ',name ,n-runs)
-           (5am:for-all ,generators
-             (run-cram-test ,timeout #'(lambda () ,@body))))))))
+         (format 5am:*test-dribble* "~&Running ~S: " ',name)
+         ,(cond
+           ((and skip-reason (not *ignore-skips*))
+            `(5am:skip ,@skip-reason))
+           (t
+            `(let ((5am::*num-trials* ,n-runs))
+               (5am:for-all ,generators
+                 (run-cram-test ',name ,timeout #'(lambda () ,@body))))))))))

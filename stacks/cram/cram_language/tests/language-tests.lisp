@@ -29,36 +29,36 @@
 
 (in-package :cpl-tests)
 
-(def-suite language-base :in language)
+(def-suite language-tests :in language)
 
-(in-suite language-base)
+(in-suite language-tests)
 
-(define-cram-test top-level-terminates ()
-    "FIXME"
+(define-cram-test top-level-terminates
+    "FIXME" ()
   (is-true (top-level t)))
 
-(define-cram-test par-terminates ()
-    "FIXME"
+(define-cram-test par-terminates
+    "FIXME" ()
   (let ((v (vector nil nil)))
     (top-level
       (par (setf (elt v 0) t)
            (setf (elt v 1) t)))
     (is (every #'identity v))))
 
-(define-cram-test par-performs-parallel ()
-    "FIXME"
+(define-cram-test par-performs-parallel
+    "FIXME" ()
   (let ((ping-pong (make-fluent :name :ping-pong :value nil)))
     (top-level
       (par (seq
              (setf (value ping-pong) :ping)
-             (wait-for (eq ping-pong :pong)))
+             (wait-for (fl-eq ping-pong :pong)))
            (seq
-             (wait-for (eq ping-pong :ping))
+             (wait-for (fl-eq ping-pong :ping))
              (setf (value ping-pong) :pong))))
     (pass)))
 
-(define-cram-test par-failure-handling ()
-    "FIXME"
+(define-cram-test par-failure-handling
+    "FIXME" ()
   (let ((failure nil)
         (worker-terminated nil))
     (handler-case
@@ -82,8 +82,9 @@
 ;;                     (setf (aref finished 1) t))))
 ;;         (is (every #'identity finished))))))
 
-(define-cram-test par-failure-final-status-of-tasks ((:timeout 1.0))
-    "FIXME"
+;;; I suspect this test fails because 
+(define-cram-test par-failure-final-status-of-tasks
+    "FIXME" ()
   (let ((producer-thread nil)
         (worker-1-thread nil)
         (worker-2-thread nil)
@@ -92,7 +93,7 @@
       (with-tags
         (ignore-some-conditions (cpl:simple-plan-error cpl-impl::rethrown-error)
           (par (:tag producer
-                 (sleep 0.01)
+                 (sleep 0.1)
                  (fail))
                (:tag worker-1
                  (par (:tag worker-2
@@ -102,14 +103,17 @@
         (setf producer-thread producer)
         (setf worker-1-thread worker-1)
         (setf worker-2-thread worker-2)
-        (setf worker-3-thread worker-3)))
+        (setf worker-3-thread worker-3)
+        ;; Give the worker threads time to terminate before testing
+        ;; for correct status.
+        (sleep 0.1)))
     (is (eq :failed (value (status producer-thread))))
     (is (eq :evaporated (value (status worker-1-thread))))
     (is (eq :evaporated (value (status worker-2-thread))))
     (is (eq :evaporated (value (status worker-3-thread))))))
 
-(define-cram-test test-task-blocking ((:timeout 0.5))
-    "FIXME"
+(define-cram-test test-task-blocking
+    "FIXME" ()
   (flet ((time-equal (t1 t2  &key (threshold 0.01))
            (<  (/ (abs (- t2 t1))
                   internal-time-units-per-second)
@@ -120,7 +124,7 @@
         (with-tags
           (par (:tag blocker
                  (let ((start-time nil))
-                   (wait-for (eq (status blockee) :waiting))
+                   (wait-for (fl-eq (status blockee) :waiting))
                    (with-task-suspended blockee
                      (setf start-time (get-internal-real-time))
                      (setf (value blockee-trigger) t)
@@ -161,8 +165,8 @@
 ;;           (is (eq protected t))
 ;;           (is (eql runs 2)))))))
 
-(define-cram-test test-pursue ((:timeout 0.25))
-    "FIXME"
+(define-cram-test test-pursue
+    "FIXME" ()
   (let ((worker-1-terminated nil)
         (worker-2-terminated nil))
     (top-level
@@ -176,8 +180,8 @@
     (is (not worker-1-terminated))
     (is (not (null worker-2-terminated)))))
 
-(define-cram-test test-try-all ((:timeout 0.25))
-    "FIXME"
+(define-cram-test test-try-all
+    "FIXME" ()
   (let ((worker-1-finished nil)
         (worker-2-finished nil))
     (top-level
@@ -186,11 +190,11 @@
         (seq
           (sleep 0.15)
           (setf worker-2-finished t))))
-    (is (not (null worker-1-finished))
-        (not worker-2-finished))))
+    (is (not (null worker-1-finished)))
+    (is (not worker-2-finished))))
 
-(define-cram-test test-try-all-failure ((:timeout 0.5))
-    "FIXME"
+(define-cram-test test-try-all-failure
+    "FIXME" ()
   (let ((worker-1-exec nil)
         (worker-2-exec nil)
         (worker-3-exec nil)
@@ -209,8 +213,8 @@
     (is (not (null worker-3-exec)))
     (is (typep err 'composite-failure))))
 
-(define-cram-test test-try-in-order ()
-    "FIXME"
+(define-cram-test test-try-in-order
+    "FIXME" ()
   (let ((worker-1-exec nil)
         (worker-2-exec nil))
     (top-level
@@ -222,8 +226,8 @@
     (is (not (null worker-1-exec)))
     (is (not (null worker-2-exec)))))
 
-(define-cram-test test-try-in-order-failure ()
-    "FIXME"
+(define-cram-test test-try-in-order-failure
+    "FIXME" ()
   (let ((worker-1-exec nil)
         (worker-2-exec nil)
         (worker-3-exec nil)

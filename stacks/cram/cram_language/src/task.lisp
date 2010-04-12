@@ -33,11 +33,6 @@
 (defvar *current-task* nil
   "Dynamically bound current task.")
 
-(defvar *save-tasks* nil
-  "When t, every created task is pushed to *tasks*.")
-(defvar *tasks* (list)
-  "List of all created tasks. Used for debugging")
-
 (defvar *task-pprint-verbosity* 0
   "Verbosity level for how TASK objects are printed.
    A value of 0 means that no information is printed that may depend
@@ -122,15 +117,21 @@
       (when (and task (eq (value (status task)) new-status))
         (update-status task old-status)))))
 
-(defun clear-saved-tasks ()
-  (setf *tasks* (list)))
+(defparameter +dead+
+  '(:failed :succeeded :evaporated))
+
+(defparameter +done+
+  '(:succeeded :evaporated))
+
+(defparameter +alive+
+  '(:created :running :waiting :suspended))
 
 (defun task-alive (task)
   "Returns a fluent indicating if the task is alive"
-  (fl-funcall #'member (status task) '(:created :running :waiting :suspended)))
+  (fl-funcall #'member (status task) +alive+))
 
 (defun task-dead (task)
-  (fl-funcall #'member (status task) '(:failed :succeeded :evaporated)))
+  (fl-funcall #'member (status task) +dead+))
 
 (define-condition suspension (condition)
   ((suspend-handler :initform (required-argument :handler)
@@ -301,7 +302,8 @@
 
 (defvar *task-local-variables* nil)
 (defmacro define-task-variable (name &optional (global-value nil gvp)
-                                               (docstring nil docp))
+                                               (docstring nil docp)
+                                     &key      (type nil typep))
   "Define `name' as a global and task-local variable with an initial value of
    `global-value', if given. Before the execution of a task, a new binding for
    `name' will be established within the task's thread. These thread local
@@ -313,5 +315,7 @@
      (defvar ,name
        ,@(when gvp  (list global-value))
        ,@(when docp (list docstring)))
+     (declaim (type ,(if typep type t) ,name))
      (eval-when (:compile-toplevel :load-toplevel :execute)
        (pushnew ',name *task-local-variables*))))
+

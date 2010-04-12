@@ -30,6 +30,6 @@
 
 (in-package :cpl-tests)
 
-(def-suite execution-trace :in language)
+(def-suite execution-trace-tests :in language)
 
-(in-suite execution-trace)
+(in-suite execution-trace-tests)

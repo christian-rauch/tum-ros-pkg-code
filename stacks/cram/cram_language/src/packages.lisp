@@ -108,7 +108,7 @@
 ;;; CPL. The former contains the language implementation whereas the
 ;;; latter is supposed to be :USEd.
 ;;;
-;;; There are two notable differences:
+;;; There are three notable differences:
 ;;;
 ;;;   i) CPL-IMPL only exports symbols which are specific to CRAM.
 ;;;
@@ -119,6 +119,10 @@
 ;;;      however, in CPL, these are exported as +,-,*,/,etc.
 ;;; 
 ;;;      E.g. CPL:+ is actually CPL-IMPL:FL+.
+;;;
+;;; iii) CPL-IMPL also exports some bits used in its implementation
+;;;      which may be good for other uses, too. In particular for the
+;;;      test suite.
 ;;;
 ;;; Caveat: 
 ;;;   CPL:EQL is not the same as CL:EQL. That means, if you want to
@@ -218,6 +222,14 @@
            #:fl< #:fl> #:fl=  #:fl+ #:fl- #:fl* #:fl/
            #:fl-eq #:fl-eql #:fl-not #:fl-and #:fl-or 
            #:fl-pulsed #:fl-funcall))
+        (cpl-impl-ext-symbols
+         '(#:+alive+
+           #:+dead+
+           #:+done+
+           #:*save-tasks*
+           #:*tasks*
+           #:list-saved-tasks*
+           #:define-task-variable))
         (cl-symbols
          (let (r) (do-external-symbols (s :cl r) (push s r)))))
 
@@ -232,7 +244,7 @@
                :cram-execution-trace
                :trivial-garbage
                :alexandria)
-         (:export ,@cpl-symbols ,@fluent-ops))
+         (:export ,@cpl-symbols ,@fluent-ops ,@cpl-impl-ext-symbols))
 
        (defpackage :cram-language
          (:nicknames :cpl)

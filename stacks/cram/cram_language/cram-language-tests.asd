@@ -10,18 +10,19 @@
   :licence "BSD"
   :description "Test-suite for cram-language"
 
-  :depends-on (cram-language cram-utilities fiveam alexandria)
+  :depends-on (cram-language cram-utilities cram-test-utilities
+               fiveam alexandria)
   :components
   ((:module "tests"
-            :components ((:file "package")
-                         (:file "test-infrastructure")
-                         (:file "suite")
-                         (:file "walker")
-                         (:file "tasks")
-                         (:file "fluents")
-                         (:file "language-base")
-                         (:file "execution-trace"))
-            :serial t)))
+    :components
+    ((:file "package")
+     (:file "suite"                 :depends-on ("package"))
+     (:file "test-infrastructure"   :depends-on ("package"))
+     (:file "walker-tests"          :depends-on ("package" "suite" "test-infrastructure"))
+     (:file "task-tests"            :depends-on ("package" "suite" "test-infrastructure"))
+     (:file "fluent-tests"          :depends-on ("package" "suite" "test-infrastructure"))
+     (:file "language-tests"        :depends-on ("package" "suite" "test-infrastructure"))
+     (:file "execution-trace-tests" :depends-on ("package" "suite" "test-infrastructure"))))))
 
 (defmethod asdf:perform ((o asdf:test-op)
                          (c (eql (asdf:find-system 'cram-language-tests))))

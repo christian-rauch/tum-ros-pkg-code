@@ -13,6 +13,7 @@
   <depend package="trivial_garbage"/>  
   <depend package="cl_store"/>
   <depend package="cram_utilities"/>
+  <depend package="cram_test_utilities"/>  
   <depend package="synchronization_tools"/>
 </package>
 

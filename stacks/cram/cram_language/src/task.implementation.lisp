@@ -30,6 +30,22 @@
 
 (in-package :cpl-impl)
 
+;;; These are task-local so the test suite can use them to get all the
+;;; tasks spawned during the extent of a test run.
+
+(define-task-variable *save-tasks* nil
+  "When t, every task to be executed is pushed to *tasks*.")
+
+(define-task-variable *tasks* (make-queue)
+  "Queue of all running tasks."
+  :type queue)
+
+(defun list-saved-tasks ()
+  (list-queue-contents *tasks*))
+
+(defun clear-saved-tasks ()
+  (setf *tasks* (make-queue)))
+
 (defclass task ()
   ((name
     :reader task-name
@@ -98,12 +114,9 @@
 (defmethod initialize-instance :after
     ((task task) &key (ignore-no-parent nil)
                       (run-thread t))
-  (with-slots (name status lexical-environment thread-fun) task
+  (with-slots (name status thread-fun parent-task child-tasks) task
     (setf status (make-fluent :name (format-gensym "~A-STATUS" name)
                               :value :created))
-    (when *save-tasks*
-      (as-atomic-operation
-        (push task *tasks*)))
     (when (and thread-fun run-thread)
       (execute task :ignore-no-parent ignore-no-parent))))
 
@@ -117,10 +130,10 @@
         (format stream " ~S" (value (status task)))))))
 
 (defun task-running-p (task)
-  (member (value (status task)) '(:running :suspended :waiting :created)))
+  (member (value (status task)) +alive+))
 
 (defun task-done-p (task)
-  (member (value (status task)) '(:succeeded :evaporated)))
+  (member (value (status task)) +done+))
 
 (defun task-failed-p (task)
   (eq (value (status task)) :failed))
@@ -155,7 +168,7 @@
 
 (defun task-body (task)
   (unwind-protect
-       (with-slots (status parent-task constraints lexical-environment thread-fun) task
+       (with-slots (status parent-task constraints thread-fun) task
          (let ((*current-task* task))
            (declare (special *current-task*))
            (flet ((task-error-handler (condition)
@@ -179,11 +192,13 @@
                                                     :error condition)))))
                   (error #'task-error-handler))
                (update-status task :running)
+               (when *save-tasks*
+                 (enqueue task *tasks*))
                (wait-for (apply #'fl-and constraints))
                (let ((result (multiple-value-list (funcall thread-fun))))
                  (terminate task :succeeded result))))))
     (loop for child in (child-tasks task) do
-         (terminate child :evaporated))))
+          (terminate child :evaporated))))
 
 (defun task-terminate (task status result)
   (unless (task-dead-p task)
@@ -231,7 +246,6 @@
                 (setf barrier-pulsed t)
                 (condition-variable-signal thread-barrier)))
             (wait-for (fl-not (fl-eq (status task) :created)))))))))
-
 
 (defun spawn-thread-for-task (task thunk)
   "Like SPAWN-THREAD but establishes task-specific context in the

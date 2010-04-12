@@ -33,25 +33,25 @@
 
 (in-suite fluent-tests)
 
-(define-cram-test wait-for-wakes-up-on-pulse ((:timeout 0.2))
-    "FIXME"
+(define-cram-test wait-for-wakes-up-on-pulse
+    "FIXME" ()
   (let ((fluent (make-fluent :name :test-fluent :value t)))
-    (with-producer-consumer-threads (:n-consumers 10)
+    (with-producer-consumer-tasks (:n-consumers 10)
       (:producer #'(lambda () (sleep 0.05) (pulse fluent)))
       (:consumer #'(lambda () (wait-for fluent))))
     (pass)))
 
-(define-cram-test wait-for-with-timeout ((:timeout 0.2))
-    "FIXME"
+(define-cram-test wait-for-with-timeout
+    "FIXME" ()
   (let ((fluent (make-fluent :name :test-fluent :value nil)))
     (wait-for fluent :timeout 0.05)
     (pass)))
 
-(define-cram-test wait-for-fluent-network-not-eq ((:timeout 0.2))
-    "FIXME"
+(define-cram-test wait-for-fluent-network-not-eq
+    "FIXME" ()
   (let* ((fluent (make-fluent :name :test-fluent :value :wait-for-me))
          (fluent-net (not (eq fluent :wait-for-me))))
-    (with-producer-consumer-threads (:n-consumers 10)
+    (with-producer-consumer-tasks (:n-consumers 10)
       (:producer #'(lambda ()
                      (sleep 0.05)
                      (setf (value fluent) :stop-waiting)))      
@@ -60,12 +60,11 @@
     (pass)))
 
 (define-cram-test wait-for-fluent-network-fl-funcall
-    ((:timeout 0.2)
-     (:generators (a-value (gen-one-element :a :b :c :d))))
     "FIXME"
+    ((:generators (a-value (gen-one-element :a :b :c :d))))
   (let* ((fluent (make-fluent :name :test-fluent :value :wait-for-me))
          (fluent-net (fl-funcall #'member fluent '(:a :b :c :d))))
-    (with-producer-consumer-threads (:n-consumers 10)
+    (with-producer-consumer-tasks (:n-consumers 10)
       (:producer #'(lambda ()
                      (sleep 0.05)
                      (setf (value fluent) a-value)))
@@ -74,13 +73,13 @@
     (pass)))
 
 (define-cram-test whenever-always-triggered
-    ((:timeout 5.0) (:n-runs 1)
-     (:generators (n-consumers (gen-integer :min 1 :max 50))
-                  (n-triggers  (gen-integer :min 1 :max 100))))
     "FIXME"
+    ((:timeout 10.0)
+     (:generators (n-consumers (gen-integer :min 1 :max 25))
+                  (n-triggers  (gen-integer :min 1 :max 50))))
   (let ((fluent (make-fluent :name :test-fluent :value t)))
-    (with-producer-consumer-threads (:n-producers 1
-                                     :n-consumers n-consumers)
+    (with-producer-consumer-tasks (:n-producers 1
+                                   :n-consumers n-consumers)
       (:producer #'(lambda ()
                      ;; Sleeps are evil, but we need to let the
                      ;; consumers enter the whenever state. If we are
@@ -98,28 +97,29 @@
     (pass)))
 
 (define-cram-test whenever-once-triggered
+    "FIXME"
     ((:timeout 5.0)
      (:generators (n-consumers (gen-integer :min 1 :max 50))
                   (n-producers (gen-integer :min 1 :max 50))
                   (n-triggers  (gen-integer :min 1 :max 100))))
-    "FIXME"
   (let ((fluent (make-fluent :name :test-fluent :value 0)))
-    (with-producer-consumer-threads (:n-producers n-producers
-                                     :n-consumers n-consumers)
+    (with-producer-consumer-tasks (:n-producers n-producers
+                                   :n-consumers n-consumers)
       (:producer #'(lambda ()
                      (loop for i from 1 to n-triggers
                            do (setf (value fluent) i))))
       (:consumer #'(lambda ()
-                     (whenever ((pulsed fluent) :handle-missed-pulses :once)
+                     (whenever ((fl-pulsed fluent) :handle-missed-pulses :once)
                        (when (eql (value fluent) n-triggers)
                          (return-from whenever))))))
     (pass)))
 
-(define-cram-test fluent-net-many-inputs ((:timeout 2.5))
+(define-cram-test fluent-net-many-inputs
     "FIXME"
+     ((:timeout 2.5))
   (let* ((fl-1 (make-fluent :name :fl-1 :value 0))
          (fl-2 (make-fluent :name :fl-2 :value 0))
-         (fl-net (+ fl-1 fl-2)))
+         (fl-net (fl+ fl-1 fl-2)))
     (declare (ignore fl-net))
     (top-level
       (pursue

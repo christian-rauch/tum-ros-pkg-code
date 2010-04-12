@@ -60,7 +60,8 @@
                         :name ',(format-gensym "[PARALLEL-CHILD-#~D/~D]-" i n)
                         :thread-fun (lambda () ,form)))
      (wait-for (fl-funcall #'every (compose #'not (curry #'eq :created))
-                           (fl-funcall #'mapcar #'status (child-tasks *current-task*))))
+                           (fl-funcall #'mapcar #'status
+                                       (child-tasks *current-task*))))
      (block nil
        (whenever ((apply #'fl-pulsed (mapcar #'status (child-tasks *current-task*))))
          (multiple-value-bind (,running ,done ,failed)
@@ -148,7 +149,8 @@
       (with-gensyms (current-path tag-path)
         `(let* ((,current-path *current-path*)
                 ,@(mapcar (lambda (tag)
-                            `(,tag (task ',tag (cons `(tagged ,',tag) ,current-path))))
+                            `(,tag (make-task :name ',tag
+                                              :path (cons `(tagged ,',tag) ,current-path))))
                           tags))
            (declare (ignorable ,current-path))
            (macrolet ((:tag (name &body tag-body)
@@ -159,7 +161,8 @@
                         `(let ((,',tag-path (cond ((executed ,name)
                                                    (let ((iter-path (cons (path-next-iteration `(tagged ,',name))
                                                                           (task-path ,name))))
-                                                     (setf ,name (task ',name iter-path))
+                                                     (setf ,name (make-task :name ,'name
+                                                                            :path iter-path))
                                                      iter-path))
                                                   (t (cons `(tagged ,',name) ,',current-path)))))
                            (execute-task-tree-node
