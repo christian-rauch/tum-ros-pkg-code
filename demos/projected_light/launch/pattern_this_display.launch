@@ -1,5 +1,5 @@
 <launch>
-  <node pkg="projected_light" type="project_light" name="project_light">
+  <node pkg="projected_light" type="project_light" name="project_light" output="screen">
     <param name="pattern_on" type="int" value="1"/>
     <!--env name="DISPLAY" value=":0" /-->
   </node>

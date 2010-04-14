@@ -83,7 +83,7 @@ public:
   
   LightProjector() : ros::NodeHandle("light_projector"), alt2_on1_off0(1), _offset(-180), _range(400), _block_size(4), _ramp(false), ffactor(1.0)
   {
-    param("~frequency", frequency, 1.0);
+    param("frequency", frequency, 1.0);
     setParam("pattern_on", 1);
     cout << "frequency = " << frequency << endl;
     status_publisher = advertise<std_msgs::UInt8>("projector_status", 10);
@@ -202,7 +202,10 @@ public:
 	    printf("New Pattern: offset(%d), range(%d), block_size(%d), ramp(%d)\n",_offset,_range,_block_size,_ramp);
 	    grayscale_rbp(Rbp, _offset, _range, _block_size, _ramp);
 	    break;
-	    
+	  case 's':
+	    cvSaveImage("pattern.png", Rbp);
+	    ROS_INFO("Saved image pattern.png");
+	    break;
 	  }
 	
 	//IF PRODUCING ALTERNATING RANDOM IMAGE OR BLACK SCREEN

@@ -27,7 +27,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "opencv_latest/CvBridge.h" // CvBridge converts ros image_msgs to OpenCV images.
+#include "cv_bridge/CvBridge.h" // CvBridge converts ros image_msgs to OpenCV images.
 #include "opencv/cxcore.h" // OpenCV
 #include "opencv/cv.h" // OpenCV
 #include "opencv/highgui.h" // OpenCV's gui functions
