@@ -54,8 +54,9 @@
 
 #define WD 1280
 #define HT 1024
-#define DELAY 30
-#define BLOCK_SIZE 32
+#define BLOCK_SIZE 2
+#define MAX_BLOCK_SIZE 128
+#define MIN_BLOCK_SIZE 1
 
 //#define COLOR
 inline int min(int a, int b){
@@ -81,20 +82,21 @@ public:
   bool _ramp;							//If true, add a ramp of decreasing brightness from top to bottom
   float ffactor;						//Speed up factor for alternation frequency
   
-  LightProjector() : ros::NodeHandle("light_projector"), alt2_on1_off0(1), _offset(-180), _range(400), _block_size(4), _ramp(false), ffactor(1.0)
+  LightProjector(ros::NodeHandle &n) : alt2_on1_off0(1), _offset(0), _range(128), _block_size(BLOCK_SIZE), _ramp(false), ffactor(1.0),  n_(n)
   {
-    param("frequency", frequency, 1.0);
-    setParam("pattern_on", 1);
+    n_.param("frequency", frequency, 1.0);
+    n_.setParam("pattern_on", 1);
     cout << "frequency = " << frequency << endl;
-    status_publisher = advertise<std_msgs::UInt8>("projector_status", 10);
+    status_publisher = n_.advertise<std_msgs::UInt8>("projector_status", 10);
   }
   // MAKE RANDOM PATTERN IMAGE:
-  // rbp			-- random block pattern image
-  // offset		-- Add this possibly negative value to the number, clip [0,255]
-  // range		-- Vary numbers this much, clip [0,255]
+  // rbp		-- random block pattern image
+  // offset		-- Add this possibly negative value to the number, clip [0,255] (for random number generation)
+  // range		-- Vary numbers this much, clip [0,255] (for random number generation)
   // blocks_size	-- How big the random squares should be
-  // ramp			-- if on, linear ramp from top (bright) to bottom (dimmer)
+  // ramp		-- if on, linear ramp from top (bright) to bottom (dimmer)
   void grayscale_rbp(IplImage *rbp, int offset = 0, int range = 128, int block_size = BLOCK_SIZE, bool ramp = false){
+    printf("Pattern: offset(%d), range(%d), block_size(%d), ramp(%d)\n",offset,range,block_size,ramp);
     int w = rbp->width;
     int h = rbp->height;
     int ws = rbp->widthStep;
@@ -186,14 +188,14 @@ public:
 	    grayscale_rbp(Rbp, _offset, _range, _block_size, _ramp);
 	    break;
 	  case 'b':
-	    _block_size -= 2;
-	    if(_block_size <= 0) _block_size = 2;
+	    _block_size /= 2;
+	    if(_block_size <= 0) _block_size = MIN_BLOCK_SIZE;
 	    printf("New Pattern: offset(%d), range(%d), block_size(%d), ramp(%d)\n",_offset,_range,_block_size,_ramp);
 	    grayscale_rbp(Rbp, _offset, _range, _block_size, _ramp);
 	    break;
 	  case 'B':
-	    _block_size += 2;
-	    if(_block_size > 80) _block_size = 80;
+	    _block_size *= 2;
+	    if(_block_size > 80) _block_size = MAX_BLOCK_SIZE;
 	    printf("New Pattern: offset(%d), range(%d), block_size(%d), ramp(%d)\n",_offset,_range,_block_size,_ramp);
 	    grayscale_rbp(Rbp, _offset, _range, _block_size, _ramp);
 	    break;
@@ -232,6 +234,7 @@ public:
 	usleep(1000000.0/(frequency*ffactor));	      //FREQUENCY CONVERTS TO SECONDS, FFACTOR SCALES THAT. DURATION OF FLASH
 	if(alt2_on1_off0 == 2) BlankScreen = !BlankScreen;
 	status_out.data = (int)BlankScreen;
+	
 	status_publisher.publish(status_out);
 	//	  printf("Speckle(1) Blank(0) = %d \n",(int)(BlankScreen));	  
       }
@@ -241,13 +244,16 @@ public:
 private:
   double frequency;
   ros::Publisher status_publisher;
+  ros::NodeHandle n_;
 };
 
 int main(int argc, char **argv){
   for(int i = 0; i<argc; ++i)
     cout << "(" << i << "): " << argv[i] << endl;
   ros::init(argc, argv, "light_projector");
-  
+  ros::NodeHandle n("~");
+  LightProjector  LP(n);
+
   Rbp = cvCreateImage(cvSize(WD,HT), 8, 1);
   BlankImage = cvCreateImage(cvSize(WD,HT), 8, 1);
   for(int j=0; j<BlankImage->height; j++)
@@ -259,8 +265,6 @@ int main(int argc, char **argv){
   cvMoveWindow("RBP Projector", 0, 0);
   
   cvShowImage("RBP Projector", BlankImage);
-  
-  LightProjector LP;
   
   LP.grayscale_rbp(Rbp); //Set initial image
   
