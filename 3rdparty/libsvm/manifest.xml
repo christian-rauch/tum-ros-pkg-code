@@ -1,0 +1,15 @@
+<package>
+  <description>
+    LIBSVM is a Support Vector Machine implementation (http://www.csie.ntu.edu.tw/~cjlin/libsvm/)
+  </description>
+  <author>
+    Chih-Chung Chang, Chih-Jen Lin
+  </author>
+  <license></license>
+
+  <export>
+    <cpp cflags="-I${prefix}/include/" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lsvm"/>
+  </export>
+            
+</package>
+
