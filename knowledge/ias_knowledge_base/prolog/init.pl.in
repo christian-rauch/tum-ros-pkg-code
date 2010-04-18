@@ -31,8 +31,8 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % parse OWL files, register name spaces
-:- owl_parser:owl_parse('../owl/owl.owl', false, false, true).
-:- owl_parser:owl_parse('../owl/knowrob.owl', false, false, true).
+:- owl_parser:owl_parse('@LOCAL_PACKAGE_PATH@/owl/owl.owl', false, false, true).
+:- owl_parser:owl_parse('@LOCAL_PACKAGE_PATH@/owl/knowrob.owl', false, false, true).
 
 :- rdf_db:rdf_register_ns(rdfs,    'http://www.w3.org/2000/01/rdf-schema#',     [keep(true)]).
 :- rdf_db:rdf_register_ns(owl,     'http://www.w3.org/2002/07/owl#',            [keep(true)]).
@@ -43,4 +43,30 @@
 :- set_prolog_flag(toplevel_print_anon, false).
 :- set_prolog_flag(toplevel_print_options, [quoted(true), portray(true), max_depth(0), attributes(portray)]).
 
+:- set_prolog_flag(float_format, '%.12g').
 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% utility to generate unique instance identifiers
+
+:- assert(instance_nr(0)).
+rdf_instance_from_class(Class, Instance) :-
+
+  % retrieve global index
+  instance_nr(Index),
+
+  % create instance from type
+  ((concat_atom(List, '#', Class),length(List,Length),Length>1) -> (
+    % Class is already a URI
+    T=Class
+  );(
+    atom_concat('http://ias.cs.tum.edu/kb/knowrob.owl#', Class, T)
+  )),
+  atom_concat(T, Index, Instance),
+  rdf_assert(Instance, rdf:type, T),
+
+  % update index
+  retract(instance_nr(_)),
+  Index1 is Index+1,
+  assert(instance_nr(Index1)).

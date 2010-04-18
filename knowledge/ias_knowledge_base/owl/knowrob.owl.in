@@ -641,6 +641,16 @@ Note that locatedAtPoint-Spatial is irreflexive; in order to locate points in sp
     
 
 
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#pointOnArmTrajectorySeg -->
+
+    <owl:ObjectProperty rdf:about="#pointOnArmTrajectorySeg">
+        <rdfs:domain rdf:resource="#ArmTrajectory"/>
+        <rdfs:range rdf:resource="#PointOnArmTrajectory"/>
+        <rdfs:subPropertyOf rdf:resource="#pointOnTrajectory"/>
+    </owl:ObjectProperty>
+    
+
+
     <!-- http://ias.cs.tum.edu/kb/knowrob.owl#pointOnBaseTrajectory -->
 
     <owl:ObjectProperty rdf:about="#pointOnBaseTrajectory">
@@ -866,8 +876,8 @@ Note that locatedAtPoint-Spatial is irreflexive; in order to locate points in sp
     <!-- http://ias.cs.tum.edu/kb/knowrob.owl#trajectory-Arm -->
 
     <owl:ObjectProperty rdf:about="#trajectory-Arm">
+        <rdfs:domain rdf:resource="#Action"/>
         <rdfs:range rdf:resource="#ArmTrajectory"/>
-        <rdfs:domain rdf:resource="#Movement-TranslationEvent"/>
         <rdfs:subPropertyOf rdf:resource="#trajectory-Complete"/>
     </owl:ObjectProperty>
     
@@ -876,9 +886,19 @@ Note that locatedAtPoint-Spatial is irreflexive; in order to locate points in sp
     <!-- http://ias.cs.tum.edu/kb/knowrob.owl#trajectory-Complete -->
 
     <owl:ObjectProperty rdf:about="#trajectory-Complete">
-        <rdfs:domain rdf:resource="#Movement-TranslationEvent"/>
+        <rdfs:domain rdf:resource="#Action"/>
         <rdfs:range rdf:resource="#Trajectory"/>
         <rdfs:subPropertyOf rdf:resource="#eventOccursAt"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#trajectory-Mean -->
+
+    <owl:ObjectProperty rdf:about="#trajectory-Mean">
+        <rdfs:domain rdf:resource="#Action"/>
+        <rdfs:range rdf:resource="#Trajectory"/>
+        <rdfs:subPropertyOf rdf:resource="#trajectory-Complete"/>
     </owl:ObjectProperty>
     
 
@@ -886,7 +906,7 @@ Note that locatedAtPoint-Spatial is irreflexive; in order to locate points in sp
     <!-- http://ias.cs.tum.edu/kb/knowrob.owl#trajectory-RobotBase -->
 
     <owl:ObjectProperty rdf:about="#trajectory-RobotBase">
-        <rdfs:domain rdf:resource="#Movement-TranslationEvent"/>
+        <rdfs:domain rdf:resource="#Action"/>
         <rdfs:range rdf:resource="#RobotBaseTrajectory"/>
         <rdfs:subPropertyOf rdf:resource="#trajectory-Complete"/>
     </owl:ObjectProperty>
@@ -1021,15 +1041,6 @@ There are various specializations of coordinateValuePredicateOfSystem currently 
 
     <owl:DatatypeProperty rdf:about="#diameterOfObject">
         <rdfs:subPropertyOf rdf:resource="#extensionParametersOfObject"/>
-        <rdfs:range rdf:resource="&xsd;float"/>
-    </owl:DatatypeProperty>
-    
-
-
-    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#existenceProbability -->
-
-    <owl:DatatypeProperty rdf:about="#existenceProbability">
-        <rdfs:domain rdf:resource="#SpatialThing"/>
         <rdfs:range rdf:resource="&xsd;float"/>
     </owl:DatatypeProperty>
     
@@ -1550,6 +1561,15 @@ There are various specializations of coordinateValuePredicateOfSystem currently 
     
 
 
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#probability -->
+
+    <owl:DatatypeProperty rdf:about="#probability">
+        <rdfs:domain rdf:resource="#SpatialThing"/>
+        <rdfs:range rdf:resource="&xsd;float"/>
+    </owl:DatatypeProperty>
+    
+
+
     <!-- http://ias.cs.tum.edu/kb/knowrob.owl#qu -->
 
     <owl:DatatypeProperty rdf:about="#qu">
@@ -1745,14 +1765,14 @@ See also xAxisPredicateOfSystem and yAxisPredicateOfSystem.</rdfs:comment>
     <owl:Class rdf:about="&actionmodel;Action">
         <rdfs:subClassOf>
             <owl:Restriction>
-                <owl:onProperty rdf:resource="&actionmodel;doneBy"/>
-                <owl:allValuesFrom rdf:resource="#Agent-Generic"/>
+                <owl:onProperty rdf:resource="#ofType"/>
+                <owl:allValuesFrom rdf:resource="#ActionOnObject"/>
             </owl:Restriction>
         </rdfs:subClassOf>
         <rdfs:subClassOf>
             <owl:Restriction>
-                <owl:onProperty rdf:resource="#ofType"/>
-                <owl:allValuesFrom rdf:resource="#ActionOnObject"/>
+                <owl:onProperty rdf:resource="&actionmodel;doneBy"/>
+                <owl:allValuesFrom rdf:resource="#Agent-Generic"/>
             </owl:Restriction>
         </rdfs:subClassOf>
     </owl:Class>
@@ -2102,14 +2122,14 @@ See also xAxisPredicateOfSystem and yAxisPredicateOfSystem.</rdfs:comment>
         <rdfs:subClassOf rdf:resource="#HeatingElement"/>
         <rdfs:subClassOf>
             <owl:Restriction>
-                <owl:onProperty rdf:resource="#lispClass"/>
-                <owl:hasValue rdf:datatype="&xsd;string">hot-plate</owl:hasValue>
+                <owl:onProperty rdf:resource="#typeIntendedBehaviorCapable-DeviceUsed"/>
+                <owl:someValuesFrom rdf:resource="#HeatingFood"/>
             </owl:Restriction>
         </rdfs:subClassOf>
         <rdfs:subClassOf>
             <owl:Restriction>
-                <owl:onProperty rdf:resource="#typeIntendedBehaviorCapable-DeviceUsed"/>
-                <owl:someValuesFrom rdf:resource="#HeatingFood"/>
+                <owl:onProperty rdf:resource="#lispClass"/>
+                <owl:hasValue rdf:datatype="&xsd;string">hot-plate</owl:hasValue>
             </owl:Restriction>
         </rdfs:subClassOf>
         <rdfs:comment rdf:datatype="&xsd;string"
@@ -2315,13 +2335,13 @@ Cf. PolarCoordinateSystem.</rdfs:comment>
         <rdfs:subClassOf>
             <owl:Restriction>
                 <owl:onProperty rdf:resource="#subEvents"/>
-                <owl:someValuesFrom rdf:resource="#ReleasingGraspOfSomething"/>
+                <owl:someValuesFrom rdf:resource="#ClosingADrawer"/>
             </owl:Restriction>
         </rdfs:subClassOf>
         <rdfs:subClassOf>
             <owl:Restriction>
                 <owl:onProperty rdf:resource="#subEvents"/>
-                <owl:someValuesFrom rdf:resource="#ClosingADrawer"/>
+                <owl:someValuesFrom rdf:resource="#ReleasingGraspOfSomething"/>
             </owl:Restriction>
         </rdfs:subClassOf>
     </owl:Class>
@@ -2416,6 +2436,14 @@ Cf. PolarCoordinateSystem.</rdfs:comment>
     <owl:Class rdf:about="#ConstructionArtifact">
         <rdfs:subClassOf rdf:resource="#Artifact"/>
         <rdfs:subClassOf rdf:resource="#HumanScaleObject"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#ConsumingFoodOrDrink -->
+
+    <owl:Class rdf:about="#ConsumingFoodOrDrink">
+        <rdfs:subClassOf rdf:resource="#Ingesting"/>
     </owl:Class>
     
 
@@ -2665,15 +2693,8 @@ The two most common types of coordinate systems are CartesianCoordinateSystems a
         <rdfs:subClassOf rdf:resource="#Box-Container"/>
         <rdfs:subClassOf>
             <owl:Restriction>
-                <owl:onProperty rdf:resource="#properPhysicalPartTypes"/>
-                <owl:someValuesFrom>
-                    <owl:Class>
-                        <owl:unionOf rdf:parseType="Collection">
-                            <rdf:Description rdf:about="#Drawer"/>
-                            <rdf:Description rdf:about="#Handle"/>
-                        </owl:unionOf>
-                    </owl:Class>
-                </owl:someValuesFrom>
+                <owl:onProperty rdf:resource="#lispClass"/>
+                <owl:hasValue rdf:datatype="&xsd;string">cupboard</owl:hasValue>
             </owl:Restriction>
         </rdfs:subClassOf>
         <rdfs:subClassOf>
@@ -2684,8 +2705,15 @@ The two most common types of coordinate systems are CartesianCoordinateSystems a
         </rdfs:subClassOf>
         <rdfs:subClassOf>
             <owl:Restriction>
-                <owl:onProperty rdf:resource="#lispClass"/>
-                <owl:hasValue rdf:datatype="&xsd;string">cupboard</owl:hasValue>
+                <owl:onProperty rdf:resource="#properPhysicalPartTypes"/>
+                <owl:someValuesFrom>
+                    <owl:Class>
+                        <owl:unionOf rdf:parseType="Collection">
+                            <rdf:Description rdf:about="#Drawer"/>
+                            <rdf:Description rdf:about="#Handle"/>
+                        </owl:unionOf>
+                    </owl:Class>
+                </owl:someValuesFrom>
             </owl:Restriction>
         </rdfs:subClassOf>
     </owl:Class>
@@ -2795,15 +2823,8 @@ The two most common types of coordinate systems are CartesianCoordinateSystems a
         <rdfs:subClassOf rdf:resource="#ElectricalHouseholdAppliance"/>
         <rdfs:subClassOf>
             <owl:Restriction>
-                <owl:onProperty rdf:resource="#typePrimaryFunction-deviceUsed"/>
-                <owl:someValuesFrom>
-                    <owl:Class>
-                        <owl:unionOf rdf:parseType="Collection">
-                            <rdf:Description rdf:about="#WashingDishes"/>
-                            <rdf:Description rdf:about="#WashingDishesByMachine"/>
-                        </owl:unionOf>
-                    </owl:Class>
-                </owl:someValuesFrom>
+                <owl:onProperty rdf:resource="#lispClass"/>
+                <owl:hasValue rdf:datatype="&xsd;string">dish-washer</owl:hasValue>
             </owl:Restriction>
         </rdfs:subClassOf>
         <rdfs:subClassOf>
@@ -2814,8 +2835,15 @@ The two most common types of coordinate systems are CartesianCoordinateSystems a
         </rdfs:subClassOf>
         <rdfs:subClassOf>
             <owl:Restriction>
-                <owl:onProperty rdf:resource="#lispClass"/>
-                <owl:hasValue rdf:datatype="&xsd;string">dish-washer</owl:hasValue>
+                <owl:onProperty rdf:resource="#typePrimaryFunction-deviceUsed"/>
+                <owl:someValuesFrom>
+                    <owl:Class>
+                        <owl:unionOf rdf:parseType="Collection">
+                            <rdf:Description rdf:about="#WashingDishes"/>
+                            <rdf:Description rdf:about="#WashingDishesByMachine"/>
+                        </owl:unionOf>
+                    </owl:Class>
+                </owl:someValuesFrom>
             </owl:Restriction>
         </rdfs:subClassOf>
         <rdfs:comment rdf:datatype="&xsd;string"
@@ -2917,6 +2945,14 @@ The two most common types of coordinate systems are CartesianCoordinateSystems a
     
 
 
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#DrinkingEvent -->
+
+    <owl:Class rdf:about="#DrinkingEvent">
+        <rdfs:subClassOf rdf:resource="#ConsumingFoodOrDrink"/>
+    </owl:Class>
+    
+
+
     <!-- http://ias.cs.tum.edu/kb/knowrob.owl#DrinkingGlass -->
 
     <owl:Class rdf:about="#DrinkingGlass">
@@ -2976,6 +3012,14 @@ The two most common types of coordinate systems are CartesianCoordinateSystems a
 
     <owl:Class rdf:about="#EarlyMorning">
         <rdfs:subClassOf rdf:resource="#QualitativeTimeOfDay"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#EatingEvent -->
+
+    <owl:Class rdf:about="#EatingEvent">
+        <rdfs:subClassOf rdf:resource="#ConsumingFoodOrDrink"/>
     </owl:Class>
     
 
@@ -3336,14 +3380,14 @@ The two most common types of coordinate systems are CartesianCoordinateSystems a
         <rdfs:subClassOf rdf:resource="#NonPoweredDevice"/>
         <rdfs:subClassOf>
             <owl:Restriction>
-                <owl:onProperty rdf:resource="#lispClass"/>
-                <owl:hasValue rdf:datatype="&xsd;string">handle</owl:hasValue>
+                <owl:onProperty rdf:resource="#center"/>
+                <owl:someValuesFrom rdf:resource="#Point3D"/>
             </owl:Restriction>
         </rdfs:subClassOf>
         <rdfs:subClassOf>
             <owl:Restriction>
-                <owl:onProperty rdf:resource="#center"/>
-                <owl:someValuesFrom rdf:resource="#Point3D"/>
+                <owl:onProperty rdf:resource="#lispClass"/>
+                <owl:hasValue rdf:datatype="&xsd;string">handle</owl:hasValue>
             </owl:Restriction>
         </rdfs:subClassOf>
         <rdfs:comment rdf:datatype="&xsd;string"
@@ -3554,6 +3598,22 @@ The two most common types of coordinate systems are CartesianCoordinateSystems a
 
     <owl:Class rdf:about="#InfusionDrink">
         <rdfs:subClassOf rdf:resource="#Drink"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#Ingesting -->
+
+    <owl:Class rdf:about="#Ingesting">
+        <rdfs:subClassOf rdf:resource="#ActionOnObject"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#IntentionalMentalEvent -->
+
+    <owl:Class rdf:about="#IntentionalMentalEvent">
+        <rdfs:subClassOf rdf:resource="#MentalEvent"/>
     </owl:Class>
     
 
@@ -3896,6 +3956,14 @@ For predicates that relate things to measurable quantities that characterize the
     
 
 
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#MentalEvent -->
+
+    <owl:Class rdf:about="#MentalEvent">
+        <rdfs:subClassOf rdf:resource="#Event"/>
+    </owl:Class>
+    
+
+
     <!-- http://ias.cs.tum.edu/kb/knowrob.owl#MicrowaveOven -->
 
     <owl:Class rdf:about="#MicrowaveOven">
@@ -3968,6 +4036,14 @@ For predicates that relate things to measurable quantities that characterize the
 
     <owl:Class rdf:about="#Movement-TranslationEvent">
         <rdfs:subClassOf rdf:resource="#ActionOnObject"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#NaivePhysicsSimulation -->
+
+    <owl:Class rdf:about="#NaivePhysicsSimulation">
+        <rdfs:subClassOf rdf:resource="#ThoughtExperimenting"/>
     </owl:Class>
     
 
@@ -4053,13 +4129,13 @@ For predicates that relate things to measurable quantities that characterize the
         <rdfs:subClassOf>
             <owl:Restriction>
                 <owl:onProperty rdf:resource="#subEvents"/>
-                <owl:someValuesFrom rdf:resource="#OpeningADoor"/>
+                <owl:someValuesFrom rdf:resource="#Reaching"/>
             </owl:Restriction>
         </rdfs:subClassOf>
         <rdfs:subClassOf>
             <owl:Restriction>
                 <owl:onProperty rdf:resource="#subEvents"/>
-                <owl:someValuesFrom rdf:resource="#Reaching"/>
+                <owl:someValuesFrom rdf:resource="#OpeningADoor"/>
             </owl:Restriction>
         </rdfs:subClassOf>
     </owl:Class>
@@ -4073,13 +4149,13 @@ For predicates that relate things to measurable quantities that characterize the
         <rdfs:subClassOf>
             <owl:Restriction>
                 <owl:onProperty rdf:resource="#subEvents"/>
-                <owl:someValuesFrom rdf:resource="#OpeningADrawer"/>
+                <owl:someValuesFrom rdf:resource="#Reaching"/>
             </owl:Restriction>
         </rdfs:subClassOf>
         <rdfs:subClassOf>
             <owl:Restriction>
                 <owl:onProperty rdf:resource="#subEvents"/>
-                <owl:someValuesFrom rdf:resource="#Reaching"/>
+                <owl:someValuesFrom rdf:resource="#OpeningADrawer"/>
             </owl:Restriction>
         </rdfs:subClassOf>
     </owl:Class>
@@ -4150,6 +4226,19 @@ For predicates that relate things to measurable quantities that characterize the
         <rdfs:subClassOf rdf:resource="#HouseholdAppliance"/>
         <rdfs:subClassOf>
             <owl:Restriction>
+                <owl:onProperty rdf:resource="#properPhysicalPartTypes"/>
+                <owl:someValuesFrom>
+                    <owl:Class>
+                        <owl:unionOf rdf:parseType="Collection">
+                            <rdf:Description rdf:about="#DoorwayCovering"/>
+                            <rdf:Description rdf:about="#Handle"/>
+                        </owl:unionOf>
+                    </owl:Class>
+                </owl:someValuesFrom>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
                 <owl:onProperty rdf:resource="#lispClass"/>
                 <owl:hasValue rdf:datatype="&xsd;string">oven</owl:hasValue>
             </owl:Restriction>
@@ -4162,19 +4251,6 @@ For predicates that relate things to measurable quantities that characterize the
                         <owl:unionOf rdf:parseType="Collection">
                             <rdf:Description rdf:about="#CookingFood"/>
                             <rdf:Description rdf:about="#HeatingFood"/>
-                        </owl:unionOf>
-                    </owl:Class>
-                </owl:someValuesFrom>
-            </owl:Restriction>
-        </rdfs:subClassOf>
-        <rdfs:subClassOf>
-            <owl:Restriction>
-                <owl:onProperty rdf:resource="#properPhysicalPartTypes"/>
-                <owl:someValuesFrom>
-                    <owl:Class>
-                        <owl:unionOf rdf:parseType="Collection">
-                            <rdf:Description rdf:about="#DoorwayCovering"/>
-                            <rdf:Description rdf:about="#Handle"/>
                         </owl:unionOf>
                     </owl:Class>
                 </owl:someValuesFrom>
@@ -4216,6 +4292,14 @@ For predicates that relate things to measurable quantities that characterize the
     
 
 
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#PartialOrderModelInference -->
+
+    <owl:Class rdf:about="#PartialOrderModelInference">
+        <rdfs:subClassOf rdf:resource="#ProbCogReasoning"/>
+    </owl:Class>
+    
+
+
     <!-- http://ias.cs.tum.edu/kb/knowrob.owl#PartialOrdering -->
 
     <owl:Class rdf:about="#PartialOrdering">
@@ -4253,6 +4337,7 @@ For predicates that relate things to measurable quantities that characterize the
     <!-- http://ias.cs.tum.edu/kb/knowrob.owl#Perceiving -->
 
     <owl:Class rdf:about="#Perceiving">
+        <rdfs:subClassOf rdf:resource="#IntentionalMentalEvent"/>
         <rdfs:subClassOf rdf:resource="#PurposefulAction"/>
         <rdfs:subClassOf rdf:resource="#SensoryEvent"/>
     </owl:Class>
@@ -4534,6 +4619,14 @@ For predicates that relate things to measurable quantities that characterize the
     
 
 
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#ProbCogReasoning -->
+
+    <owl:Class rdf:about="#ProbCogReasoning">
+        <rdfs:subClassOf rdf:resource="#Reasoning"/>
+    </owl:Class>
+    
+
+
     <!-- http://ias.cs.tum.edu/kb/knowrob.owl#PullingAnObject -->
 
     <owl:Class rdf:about="#PullingAnObject">
@@ -4572,14 +4665,14 @@ For predicates that relate things to measurable quantities that characterize the
         </rdfs:subClassOf>
         <rdfs:subClassOf>
             <owl:Restriction>
-                <owl:onProperty rdf:resource="#lispClass"/>
-                <owl:hasValue rdf:datatype="&xsd;string">entity-put-down</owl:hasValue>
+                <owl:onProperty rdf:resource="#subEvents"/>
+                <owl:someValuesFrom rdf:resource="#LoweringAnObject"/>
             </owl:Restriction>
         </rdfs:subClassOf>
         <rdfs:subClassOf>
             <owl:Restriction>
-                <owl:onProperty rdf:resource="#subEvents"/>
-                <owl:someValuesFrom rdf:resource="#LoweringAnObject"/>
+                <owl:onProperty rdf:resource="#lispClass"/>
+                <owl:hasValue rdf:datatype="&xsd;string">entity-put-down</owl:hasValue>
             </owl:Restriction>
         </rdfs:subClassOf>
     </owl:Class>
@@ -4591,12 +4684,6 @@ For predicates that relate things to measurable quantities that characterize the
     <owl:Class rdf:about="#PuttingSomethingSomewhere">
         <rdfs:subClassOf rdf:resource="#Movement-TranslationEvent"/>
         <rdfs:subClassOf rdf:resource="#TransportationEvent"/>
-        <rdfs:subClassOf>
-            <owl:Restriction>
-                <owl:onProperty rdf:resource="#orderingConstraints"/>
-                <owl:hasValue rdf:resource="#SubEventOrderingPuttingSomethingSomewhere1"/>
-            </owl:Restriction>
-        </rdfs:subClassOf>
         <rdfs:subClassOf>
             <owl:Restriction>
                 <owl:onProperty rdf:resource="#orderingConstraints"/>
@@ -4612,13 +4699,19 @@ For predicates that relate things to measurable quantities that characterize the
         <rdfs:subClassOf>
             <owl:Restriction>
                 <owl:onProperty rdf:resource="#subEvents"/>
-                <owl:someValuesFrom rdf:resource="#PuttingDownAnObject"/>
+                <owl:someValuesFrom rdf:resource="#PickingUpAnObject"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#orderingConstraints"/>
+                <owl:hasValue rdf:resource="#SubEventOrderingPuttingSomethingSomewhere1"/>
             </owl:Restriction>
         </rdfs:subClassOf>
         <rdfs:subClassOf>
             <owl:Restriction>
                 <owl:onProperty rdf:resource="#subEvents"/>
-                <owl:someValuesFrom rdf:resource="#PickingUpAnObject"/>
+                <owl:someValuesFrom rdf:resource="#PuttingDownAnObject"/>
             </owl:Restriction>
         </rdfs:subClassOf>
     </owl:Class>
@@ -4677,6 +4770,14 @@ For predicates that relate things to measurable quantities that characterize the
 
     <owl:Class rdf:about="#Reading">
         <rdfs:subClassOf rdf:resource="#Perceiving"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#Reasoning -->
+
+    <owl:Class rdf:about="#Reasoning">
+        <rdfs:subClassOf rdf:resource="#Thinking"/>
     </owl:Class>
     
 
@@ -4759,6 +4860,14 @@ For predicates that relate things to measurable quantities that characterize the
     
 
 
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#Remembering -->
+
+    <owl:Class rdf:about="#Remembering">
+        <rdfs:subClassOf rdf:resource="#IntentionalMentalEvent"/>
+    </owl:Class>
+    
+
+
     <!-- http://ias.cs.tum.edu/kb/knowrob.owl#RemovingSomething -->
 
     <owl:Class rdf:about="#RemovingSomething">
@@ -4809,7 +4918,6 @@ For predicates that relate things to measurable quantities that characterize the
         <rdfs:subClassOf rdf:resource="#Hand"/>
     </owl:Class>
     
-
 
 
     <!-- http://ias.cs.tum.edu/kb/knowrob.owl#RightHandTrajectory -->
@@ -4980,6 +5088,15 @@ For predicates that relate things to measurable quantities that characterize the
     
 
 
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#SemanticMapPerception -->
+
+    <owl:Class rdf:about="#SemanticMapPerception">
+        <rdfs:subClassOf rdf:resource="#Remembering"/>
+        <rdfs:subClassOf rdf:resource="#VisualPerception"/>
+    </owl:Class>
+    
+
+
     <!-- http://ias.cs.tum.edu/kb/knowrob.owl#SensoryEvent -->
 
     <owl:Class rdf:about="#SensoryEvent">
@@ -5024,6 +5141,14 @@ For predicates that relate things to measurable quantities that characterize the
     
 
 
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#SiftPerception -->
+
+    <owl:Class rdf:about="#SiftPerception">
+        <rdfs:subClassOf rdf:resource="#VisualPerception"/>
+    </owl:Class>
+    
+
+
     <!-- http://ias.cs.tum.edu/kb/knowrob.owl#SilverwarePiece -->
 
     <owl:Class rdf:about="#SilverwarePiece">
@@ -5039,14 +5164,14 @@ For predicates that relate things to measurable quantities that characterize the
         <rdfs:subClassOf rdf:resource="#FurniturePiece"/>
         <rdfs:subClassOf>
             <owl:Restriction>
-                <owl:onProperty rdf:resource="#typeIntendedBehaviorCapable-DeviceUsed"/>
-                <owl:someValuesFrom rdf:resource="#WashingDishes"/>
+                <owl:onProperty rdf:resource="#properPhysicalPartTypes"/>
+                <owl:someValuesFrom rdf:resource="#Tap-PlumbingFixture"/>
             </owl:Restriction>
         </rdfs:subClassOf>
         <rdfs:subClassOf>
             <owl:Restriction>
-                <owl:onProperty rdf:resource="#properPhysicalPartTypes"/>
-                <owl:someValuesFrom rdf:resource="#Tap-PlumbingFixture"/>
+                <owl:onProperty rdf:resource="#typeIntendedBehaviorCapable-DeviceUsed"/>
+                <owl:someValuesFrom rdf:resource="#WashingDishes"/>
             </owl:Restriction>
         </rdfs:subClassOf>
         <rdfs:subClassOf>
@@ -5276,14 +5401,14 @@ Note that a fictional or imaginary object (such as Frodo, Captain Queeg, or HAL9
         <rdfs:subClassOf rdf:resource="#FurniturePiece"/>
         <rdfs:subClassOf>
             <owl:Restriction>
-                <owl:onProperty rdf:resource="#typePrimaryFunction-deviceUsed"/>
-                <owl:someValuesFrom rdf:resource="#CookingFood"/>
+                <owl:onProperty rdf:resource="#properPhysicalPartTypes"/>
+                <owl:someValuesFrom rdf:resource="#Burner"/>
             </owl:Restriction>
         </rdfs:subClassOf>
         <rdfs:subClassOf>
             <owl:Restriction>
-                <owl:onProperty rdf:resource="#properPhysicalPartTypes"/>
-                <owl:someValuesFrom rdf:resource="#Burner"/>
+                <owl:onProperty rdf:resource="#typePrimaryFunction-deviceUsed"/>
+                <owl:someValuesFrom rdf:resource="#CookingFood"/>
             </owl:Restriction>
         </rdfs:subClassOf>
         <rdfs:comment rdf:datatype="&xsd;string"
@@ -5402,6 +5527,23 @@ Cf. Surface, whose instances are two-dimensional, intangible regions of space.</
     
 
 
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#TableMemory -->
+
+    <owl:Class rdf:about="#TableMemory">
+        <rdfs:subClassOf rdf:resource="#Remembering"/>
+        <rdfs:subClassOf rdf:resource="#VisualPerception"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#TableSettingModelInference -->
+
+    <owl:Class rdf:about="#TableSettingModelInference">
+        <rdfs:subClassOf rdf:resource="#ProbCogReasoning"/>
+    </owl:Class>
+    
+
+
     <!-- http://ias.cs.tum.edu/kb/knowrob.owl#TakingABath -->
 
     <owl:Class rdf:about="#TakingABath">
@@ -5449,14 +5591,14 @@ Cf. Surface, whose instances are two-dimensional, intangible regions of space.</
         <rdfs:subClassOf rdf:resource="#Tap-FlowControlDevice"/>
         <rdfs:subClassOf>
             <owl:Restriction>
-                <owl:onProperty rdf:resource="#lispClass"/>
-                <owl:hasValue rdf:datatype="&xsd;string">tap</owl:hasValue>
+                <owl:onProperty rdf:resource="#properPhysicalPartTypes"/>
+                <owl:someValuesFrom rdf:resource="#ControlKnob"/>
             </owl:Restriction>
         </rdfs:subClassOf>
         <rdfs:subClassOf>
             <owl:Restriction>
-                <owl:onProperty rdf:resource="#properPhysicalPartTypes"/>
-                <owl:someValuesFrom rdf:resource="#ControlKnob"/>
+                <owl:onProperty rdf:resource="#lispClass"/>
+                <owl:hasValue rdf:datatype="&xsd;string">tap</owl:hasValue>
             </owl:Restriction>
         </rdfs:subClassOf>
         <rdfs:comment rdf:datatype="&xsd;string"
@@ -5535,6 +5677,22 @@ Cf. Surface, whose instances are two-dimensional, intangible regions of space.</
 
     <owl:Class rdf:about="#Thermos">
         <rdfs:subClassOf rdf:resource="#FoodVessel"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#Thinking -->
+
+    <owl:Class rdf:about="#Thinking">
+        <rdfs:subClassOf rdf:resource="#IntentionalMentalEvent"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#ThoughtExperimenting -->
+
+    <owl:Class rdf:about="#ThoughtExperimenting">
+        <rdfs:subClassOf rdf:resource="#IntentionalMentalEvent"/>
     </owl:Class>
     
 
@@ -6047,5 +6205,5 @@ Cf. Surface, whose instances are two-dimensional, intangible regions of space.</
 
 
 
-<!-- Generated by the OWL API (version 2.2.1.974) http://owlapi.sourceforge.net -->
+<!-- Generated by the OWL API (version 2.2.1.1101) http://owlapi.sourceforge.net -->
 
