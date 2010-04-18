@@ -18,11 +18,11 @@
   <depend package="opencv2" /> 
   <depend package="cv_bridge" />
   <depend package="rosconsole" />
-  <depend package="libdc1394v2"/>
+<!--   <depend package="libdc1394v2"/> -->
   <depend package="sensor_msgs"/>
   <depend package="image_transport"/>
   <depend package="pluginlib"/>
-  <depend package="detect_objects_chamfer"/>
+<!--   <depend package="detect_objects_chamfer"/> -->
   <depend package="compressed_image_transport"/>
 </package>
 
