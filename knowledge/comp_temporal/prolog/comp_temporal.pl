@@ -1,8 +1,11 @@
 /** <module> comp_ehow
 
   Description:
-    contains all computables that calculate temporal relations between events
-    to allow for temporal reasoning
+    Contains all computables that calculate temporal relations between events
+    to allow for temporal reasoning.
+
+    Now extended with predicates for reasoning on other relations over time (esp.
+    holds/holds_tt)
 
   Copyright (C) 2010 by Moritz Tenorth
 
@@ -29,11 +32,24 @@
       comp_duration/2
     ]).
 
+:-  rdf_meta
+    comp_temporallySubsumes(r, r),
+    comp_after(r, r),
+    comp_duration(r, r).
+
+
+
 :- use_module(library('semweb/rdfs')).
 :- use_module(library('semweb/rdf_db')).
 :- use_module(library('semweb/rdfs_computable')).
 
-:- rdf_db:rdf_register_ns(knowrob, 'http://ias.cs.tum.edu/kb/knowrob.owl#',      [keep(true)]).
+:- owl_parser:owl_parse('../owl/comp_temporal.owl', false, false, true).
+
+:- rdf_db:rdf_register_ns(knowrob,      'http://ias.cs.tum.edu/kb/knowrob.owl#',      [keep(true)]).
+:- rdf_db:rdf_register_ns(comp_temporal, 'http://ias.cs.tum.edu/kb/comp_temporal.owl#', [keep(true)]).
+
+
+
 
 %% comp_temporallySubsumes(?Long, ?Short) is nondet.
 %
@@ -46,27 +62,36 @@
 
       % case: both temporally extended, i.e. start and end set
 
-      rdf_triple(knowrob:startTime, Long, Ls), rdf_split_url(_, LLs, Ls), term_to_atom(Lstart, LLs),
-      rdf_triple(knowrob:endTime, Long, Le),   rdf_split_url(_, LLe, Le), term_to_atom(Lend,   LLe),
+      % read times for the longer event
+      rdf_triple(knowrob:startTime, Long, Ls),
+      rdf_triple(knowrob:endTime, Long, Le),
 
-      rdf_triple(knowrob:startTime, Short, Ss),rdf_split_url(_, LSs, Ss), term_to_atom(Sstart, LSs),
-      rdf_triple(knowrob:endTime, Short, Se),  rdf_split_url(_, LSe, Se), term_to_atom(Send,   LSe),
+      % convert time stamps to numbers
+      rdf_split_url(_, LsLocal, Ls),
+      atom_concat('timepoint_', LsAtom, LsLocal),
+      term_to_atom(Lstart, LsAtom),
 
+      rdf_split_url(_, LeLocal, Le),
+      atom_concat('timepoint_', LeAtom, LeLocal),
+      term_to_atom(Lend, LeAtom),
+
+      % read times for the shorter event
+      rdf_triple(knowrob:startTime, Short, Ss),
+      rdf_triple(knowrob:endTime, Short, Se),
+
+      % convert time stamps to numbers
+      rdf_split_url(_, SsLocal, Ss),
+      atom_concat('timepoint_', SsAtom, SsLocal),
+      term_to_atom(Sstart, SsAtom),
+
+      rdf_split_url(_, SeLocal, Se),
+      atom_concat('timepoint_', SeAtom, SeLocal),
+      term_to_atom(Send, SeAtom),
+
+      % compare the start and end times
       (Sstart=<Send),
-
       (Lstart=<Sstart), (Sstart=<Lend),
       (Lstart=<Send),   (Send=<Lend).
-
-    comp_temporallySubsumes(Long, Short) :-
-
-      % case: short is a time point, i.e. end is not set
-      rdf_triple(knowrob:startTime, Long, Ls), rdf_split_url(_, LLs, Ls), term_to_atom(Lstart, LLs),
-      rdf_triple(knowrob:endTime, Long, Le),   rdf_split_url(_, LLe, Le), term_to_atom(Lend,   LLe),
-
-      rdf_triple(knowrob:startTime, Short, Ss),rdf_split_url(_, LSs, Ss), term_to_atom(Sstart, LSs),
-      not(rdf_triple(knowrob:endTime, Short, _)),
-
-      (Lstart=<Sstart), (Sstart=<Lend).
 
 
 %%  comp_after(Pre, After) is nondet.
@@ -75,14 +100,38 @@
 %
 % @param Pre Identifier of the earlier time point
 % @param After Identifier of the later time point
-% 
+%
     comp_after(Pre, After) :-
       rdf_has(Pre,   rdf:type, knowrob:'TimePoint'),
       rdf_has(After, rdf:type, knowrob:'TimePoint'),
-      term_to_atom(P, Pre),
-      term_to_atom(A, After),
+
+      rdf_split_url(_, PreLocal, Pre),
+      atom_concat('timepoint_', PreAtom, PreLocal),
+      term_to_atom(P, PreAtom),
+
+      rdf_split_url(_, AfterLocal, After),
+      atom_concat('timepoint_', AfterAtom, AfterLocal),
+      term_to_atom(A, AfterAtom),
+
       P<A.
 
+%%  comp_time_point_start_time(Pre, After) is nondet.
+%
+% Start time of a time point is the time point itself
+%
+% @param T Identifier of a time point
+%
+    comp_time_point_start_time(T, T) :-
+      rdf_has(T, rdf:type, knowrob:'TimePoint').
+
+%%  comp_time_point_end_time(Pre, After) is nondet.
+%
+% End time of a time point is the time point itself
+%
+% @param T Identifier of a time point
+%
+    comp_time_point_end_time(T, T) :-
+      rdf_has(T, rdf:type, knowrob:'TimePoint').
 
 %%  comp_duration(Event, Duration) is nondet.
 %
@@ -90,8 +139,19 @@
 %
 % @param Event Identifier of a TemporalThing
 % @param Duration Duration of the event
-% 
+%
     comp_duration(Event, Duration) :-
-      rdf_has(Event, knowrob:startTime, Es), rdf_split_url(_, LEs, Es), term_to_atom(Start, LEs),
-      rdf_has(Event, knowrob:endTime, Ee),   rdf_split_url(_, LEe, Ee), term_to_atom(End,   LEe),
+      rdf_has(Event, knowrob:startTime, Es),
+      rdf_has(Event, knowrob:endTime, Ee),
+
+      rdf_split_url(_, StartLocal, Es),
+      atom_concat('timepoint_', StartAtom, StartLocal),
+      term_to_atom(Start, StartAtom),
+
+      rdf_split_url(_, EndLocal, Ee),
+      atom_concat('timepoint_', EndAtom, EndLocal),
+      term_to_atom(End, EndAtom),
+
       Duration is (End-Start).
+
+
