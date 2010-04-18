@@ -40,7 +40,7 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % parse OWL files, register name spaces
-:- owl_parser:owl_parse('../owl/actionmodel.owl', false, false, true).
+:- owl_parser:owl_parse('@LOCAL_PACKAGE_PATH@/owl/actionmodel.owl', false, false, true).
 
 :- rdf_db:rdf_register_ns(am,         'http://ias.cs.tum.edu/kb/actionmodel.owl#', [keep(true)]).
 :- rdf_db:rdf_register_ns(computable, 'http://ias.cs.tum.edu/kb/computable.owl#', [keep(true)]).

@@ -538,7 +538,7 @@ rdfs_prolog_to_rdf(Property, PrologValue, RDFValue) :-
      ( (rdf_split_url('', _, PrologValueTerm)) ->
        (rdf_split_url(NS, _, Range),
        atom_concat(NS, PrologValue, RDFValue),
-       rdf_assert(RDFValue, rdf:type, Range),!);
+       !,rdf_assert(RDFValue, rdf:type, Range));
       (RDFValue = PrologValue))
 
   ; rdf_global_id(NS:_, Range),
