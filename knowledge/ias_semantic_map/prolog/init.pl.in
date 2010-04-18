@@ -20,6 +20,6 @@
 
 :- consult('ias_semantic_map').
 
-:- owl_parser:owl_parse('../owl/ias_map_addons.owl', false, false, true).
+:- owl_parser:owl_parse('@LOCAL_PACKAGE_PATH@/owl/ias_map_addons.owl', false, false, true).
 :- rdf_db:rdf_register_ns(map_addons, 'http://ias.cs.tum.edu/kb/map_addons.owl#', [keep(true)]).
 

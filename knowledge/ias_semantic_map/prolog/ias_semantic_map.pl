@@ -20,6 +20,7 @@
       rdf_atom_no_ns/2,
       objectType/2,
       rootObjects/1,
+      rootObject/1,
       objectDimensions/4,
       objectPose/2,
       childObject/2,
@@ -106,7 +107,7 @@ objectDimensions( O, W, D, H ) :-
     atom_number(H_, H).
 
 objectDimensions( O, W, D, H ) :-
-    % The depth of a know defaults to 3cm here. This information
+    % The depth of a knob defaults to 3cm here. This information
     % should either be asserted somewhere else or be set as a property
     % when importing the semantic map.
     rdf_has( O, knowrob:'radius', literal(type(_, R_)) ),
@@ -139,7 +140,7 @@ childObjects( P, Cs ) :-
     setof( C, childObject(P, C), Cs).
 
 objectPose( O, P ) :-
-    rdf_has( O, knowrob:orientation, Pobj ),
+    rdf_triple(knowrob:orientation, O, Pobj ),
     bagof( V,
            X^Y^(member(Y, [0, 1, 2, 3]),
                 member(X, [0, 1, 2, 3]),
@@ -150,7 +151,7 @@ matrixValue( M, X, Y, V ) :-
     concat( m, Y, Tmp ),
     concat( Tmp, X, Name ),
     rdf_global_id(knowrob:Name, FullName),
-    rdf_has( M, FullName, literal(type(_, V_)) ),
+    rdf_triple( FullName, M, literal(type(_, V_)) ),
     atom_number( V_, V ).
 
 % todo: generalize projection to floor. polygon instead of rectangle.
@@ -161,17 +162,19 @@ objectAtPoint2D(Point2D, Obj) :-
     objectAtPoint2D(PX,PY,Obj).
  
 objectAtPoint2D(PX,PY,Obj) :-
+
     % get information of potential objects at positon point2d (x/y)
-    rdf_triple(knowrob:center, Obj, ObjCPoint),
-    rdf_triple(knowrob:xCoord, ObjCPoint, literal(type(_,OCx))),atom_to_term(OCx,OX,_),
-    rdf_triple(knowrob:yCoord, ObjCPoint, literal(type(_,OCy))),atom_to_term(OCy,OY,_),
+
     rdf_has(Obj, knowrob:widthOfObject, literal(type(_,Ow))),atom_to_term(Ow,OW,_),
     rdf_has(Obj, knowrob:depthOfObject, literal(type(_,Od))),atom_to_term(Od,OD,_),
-    rdf_has(Obj, knowrob:orientation, Mat),
-    rdf_has(Mat, knowrob:m00, literal(type(_,TM00))), atom_to_term(TM00,M00,_),
-    rdf_has(Mat, knowrob:m01, literal(type(_,TM01))), atom_to_term(TM01,M01,_),
-    rdf_has(Mat, knowrob:m10, literal(type(_,TM10))), atom_to_term(TM10,M10,_),
-    rdf_has(Mat, knowrob:m11, literal(type(_,TM11))), atom_to_term(TM11,M11,_),
+
+    rdf_triple(knowrob:orientation, Obj, Mat),
+    rdf_triple(knowrob:m03, Mat, literal(type(_,TM03))), atom_to_term(TM03,OX,_),
+    rdf_triple(knowrob:m13, Mat, literal(type(_,TM13))), atom_to_term(TM13,OY,_),
+    rdf_triple(knowrob:m00, Mat, literal(type(_,TM00))), atom_to_term(TM00,M00,_),
+    rdf_triple(knowrob:m01, Mat, literal(type(_,TM01))), atom_to_term(TM01,M01,_),
+    rdf_triple(knowrob:m10, Mat, literal(type(_,TM10))), atom_to_term(TM10,M10,_),
+    rdf_triple(knowrob:m11, Mat, literal(type(_,TM11))), atom_to_term(TM11,M11,_),
 
     % object must have an extension
     <(0,OW), <(0,OD),
