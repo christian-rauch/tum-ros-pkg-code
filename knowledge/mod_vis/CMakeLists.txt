@@ -3,9 +3,14 @@ include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 
 rosbuild_init()
 
-add_classpath(${inf9_comp_ros_PACKAGE_PATH}/lib/controlP5.jar)
-add_classpath(${inf9_comp_ros_PACKAGE_PATH}/lib/core.jar)
-add_classpath(${inf9_comp_ros_PACKAGE_PATH}/lib/srldb.jar)
-add_classpath(${inf9_comp_ros_PACKAGE_PATH}/lib/vis.jar)
+set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
+set(JAVA_OUTPUT_DIR ${PROJECT_SOURCE_DIR}/bin)
 
+add_classpath(${PROJECT_SOURCE_DIR}/lib/controlP5.jar)
+add_classpath(${PROJECT_SOURCE_DIR}/lib/core.jar)
+add_classpath(${PROJECT_SOURCE_DIR}/lib/vecmath.jar)
 
+rosbuild_find_ros_package(jpl)
+add_classpath(${jpl_PACKAGE_PATH}/jpl/jpl.jar)
+
+add_java_source_dir(${PROJECT_SOURCE_DIR}/src)
