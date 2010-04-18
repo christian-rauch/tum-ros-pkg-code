@@ -37,9 +37,7 @@
       extract_values_from_row/3,
       print_info/2,
       string_tokens/2,
-      lists_equal/2,
-      max_list/2,
-      min_list/2
+      lists_equal/2
 ]).
 
 %%
@@ -215,21 +213,25 @@ fast_vector_add_list(Vector, [Elem|Rest]) :-
 %
 % Takes a java Object, and converts any arrays to lists.
 % (i.e. double[][] becomes list of list of doubles).
-  arrays_to_lists(Object, Result) :- jpl_object_to_type(Object,array(_)),
-      !,
-      jpl_array_to_list(Object, TempList),
-      arrToListWork(TempList,Result).
-  arrays_to_lists(X,X).
 
-  arrToListWork([F | List] , [R | Result]) :- arrays_to_lists(F,R), arrToListWork(List,Result).
-  arrToListWork([],[]).
+arrays_to_lists(Object, Result) :-
+  jpl_object_to_type(Object,array(_)), !,
+  jpl_array_to_list(Object, TempList),
+  arrToListWork(TempList,Result).
+arrays_to_lists(X,X).
+
+arrToListWork([],[]).
+arrToListWork([F | List] , [R | Result]) :-
+  arrays_to_lists(F,R),       % convert the first entry if it is a list by itself
+  arrToListWork(List,Result). % continue with the rest
+
 
 
 % lists_to_arrays(+Object, -Result)
 %
 % Takes a List, and converts any lists to arrays. (exacte opposite of arrays_to_lists
 % (i.e. list of list of doubles becomes double[][]).
-  lists_to_arrays([Head|Tail], Result) :-
+lists_to_arrays([Head|Tail], Result) :-
       listToArrWork([Head|Tail], TempList),
       jpl_list_to_array(TempList,Result).
   lists_to_arrays(X,Y) :- number(X), string_to_atom(X,Y).
@@ -299,12 +301,13 @@ lists_equal([A|Arest],[B|Brest]) :-
 %%
 % min_list(+List, +Min)
 %
-% re-implementation of lists:min_list (apparently not available in this version)
-%%
+% re-implementation of lists:min_list  that is not available in some versions
+% not exported to avoid conflicts (use util:min_list to refer to this implementation)
+%
 min_list([], _).
 min_list([A], A).
 min_list([A|Arest],Min) :-
-  min_list1(Arest, A, Min).
+  min_list1(Arest, A, Min),!.
 
 min_list1([], Min, Min).
 min_list1([A|Arest], OldMin ,Min) :-
@@ -313,12 +316,13 @@ min_list1([A|Arest], OldMin ,Min) :-
 %%
 % max_list(+List, +max)
 %
-% re-implementation of lists:max_list (apparently not available in this version)
-%%
+% re-implementation of lists:max_list  that is not available in some versions
+% not exported to avoid conflicts (use util:max_list to refer to this implementation)
+%
 max_list([], _).
 max_list([A], A).
 max_list([A|Arest], Max) :-
-  max_list1(Arest, A, Max).
+  max_list1(Arest, A, Max),!.
 
 max_list1([], Max ,Max).
 max_list1([A|Arest], OldMax ,Max) :-
