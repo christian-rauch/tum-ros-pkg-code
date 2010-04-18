@@ -1,0 +1,32 @@
+cmake_minimum_required(VERSION 2.4.6)
+
+include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
+set(ROS_BUILD_TYPE Debug)
+#set(ROS_BUILD_TYPE RelWithDebInfo)
+#rosbuild_init()
+#gensrv()
+rosbuild_init()
+rosbuild_add_boost_directories()
+#download test video
+#file(DOWNLOAD http://www9.cs.tum.edu/~pangerci/test.avi ${PROJECT_SOURCE_DIR}/test.avi)
+#include_directories(src/segment)
+set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
+set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
+
+#rosbuild_add_executable (play_video src/play_video.cpp)
+#rosbuild_add_executable (capture_image src/capture_image.cpp)
+#rosbuild_add_executable (convexhull_2d src/convexhull_2d.cpp)
+#rosbuild_add_executable (get_sub_img src/get_sub_img.cpp)
+#rosbuild_add_executable (watershed src/watershed.cpp)
+#rosbuild_add_executable (segment src/segment/segment.cpp)
+#rosbuild_add_executable (ros_to_openCv_to_ros src/ros_to_openCv_to_ros.cpp)
+#rosbuild_add_executable (ros_to_openCv src/ros_to_openCv.cpp)
+rosbuild_add_executable (openCv_to_ros utils/openCV_to_ros.cpp)
+rosbuild_add_compile_flags(openCv_to_ros "-pg")
+#rosbuild_add_executable (edge src/edge.cpp)
+#rosbuild_link_boost(get_sub_img filesystem)
+
+#rosbuild_add_library(testlib src/play_video_class.cpp src/register_class_list.cpp)
+#rosbuild_add_executable (play_video_node src/play_video_node.cpp)
+
+#rosbuild_add_executable(test_node src/test_node.cpp)
