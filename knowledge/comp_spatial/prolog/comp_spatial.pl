@@ -26,9 +26,10 @@
 
 :- module(comp_spatial,
     [
+      holds/2,
+      comp_orientation/2,
       on_Physical/2,
       in_ContGeneric/2,
-      adjacent_Objects/2,
       comp_toTheRightOf/2,
       comp_toTheLeftOf/2,
       comp_toTheSideOf/2,
@@ -81,194 +82,307 @@
 :- use_module(library('semweb/rdfs_computable')).
 :- use_module(library('thea/owl_parser')).
 
-
 :- owl_parser:owl_parse('../owl/comp_spatial.owl', false, false, true).
 
 :- rdf_db:rdf_register_ns(knowrob,      'http://ias.cs.tum.edu/kb/knowrob.owl#',      [keep(true)]).
 :- rdf_db:rdf_register_ns(comp_spatial, 'http://ias.cs.tum.edu/kb/comp_spatial.owl#', [keep(true)]).
 
-%
-% test-comment for svn-ros sync
-% 
+
+
+% define holds as meta-predicate and allow the definitions
+% to be in different parts of the source file
+:- meta_predicate holds(0, ?, ?).
+:- discontiguous holds/2.
+
+% define predicates as rdf_meta predicates
+% (i.e. rdf namespaces are automatically expanded)
+:-  rdf_meta
+    holds(:, r),
+    holds_tt(:,t),
+    comp_orientation(r, r),
+    on_Physical(r, r),
+    in_ContGeneric(r, r),
+    adjacent_Objects(r, r),
+    comp_toTheSideOf(r, r),    comp_toTheRightOf(r, r),    comp_toTheLeftOf(r, r),
+    comp_inFrontOf(r, r),
+    comp_inCenterOf(r, r),
+    comp_center(r, r), comp_xCoord(r, r), comp_yCoord(r, r), comp_zCoord(r, r),
+    comp_m00(r, r),    comp_m01(r, r),    comp_m02(r, r),    comp_m03(r, r),    comp_m04(r, r),    comp_m05(r, r),
+    comp_m10(r, r),    comp_m11(r, r),    comp_m12(r, r),    comp_m13(r, r),    comp_m14(r, r),    comp_m15(r, r),
+    comp_m20(r, r),    comp_m21(r, r),    comp_m22(r, r),    comp_m23(r, r),    comp_m23(r, r),    comp_m25(r, r),
+    comp_m30(r, r),    comp_m31(r, r),    comp_m32(r, r),    comp_m33(r, r),    comp_m34(r, r),    comp_m35(r, r),
+    comp_m40(r, r),    comp_m41(r, r),    comp_m42(r, r),    comp_m43(r, r),    comp_m44(r, r),    comp_m45(r, r),
+    comp_m50(r, r),    comp_m51(r, r),    comp_m52(r, r),    comp_m53(r, r),    comp_m54(r, r),    comp_m55(r, r).
+
 
 
 
 %% on_Physical(?Top, ?Bottom) is nondet.
 %
-% Check if Top is in the area of and above Bottom. Currently does not take the orientation
-% into account, only the position and dimension.
+% Check if Top is in the area of and above Bottom.
+% 
+% Implemented as a wrapper predicate around holds(...) that computes the relation for the
+% current point in time
 %
 % @param Top Identifier of the upper Object
 % @param Bottom Identifier of the lower Object
-
-   on_Physical(Top, Bottom) :-
-          rdf_triple(knowrob:center, Top, TopCPoint),
-          rdf_triple(knowrob:center, Bottom, BottomCPoint),
-
-          % read the center coordinates of the top entity
-          rdf_triple(knowrob:xCoord, TopCPoint, literal(type(_,TCx))),atom_to_term(TCx,TX,_),
-          rdf_triple(knowrob:yCoord, TopCPoint, literal(type(_,TCy))),atom_to_term(TCy,TY,_),
-          rdf_triple(knowrob:zCoord, TopCPoint, literal(type(_,TCz))),atom_to_term(TCz,TZ,_),
-
-          % read the center coordinates of the bottom entity
-          rdf_triple(knowrob:xCoord, BottomCPoint, literal(type(_,BCx))),atom_to_term(BCx,BX,_),
-          rdf_triple(knowrob:yCoord, BottomCPoint, literal(type(_,BCy))),atom_to_term(BCy,BY,_),
-          rdf_triple(knowrob:zCoord, BottomCPoint, literal(type(_,BCz))),atom_to_term(BCz,BZ,_),
-
-          % read the dimensions of the bottom entity
-          rdf_has(Bottom, knowrob:widthOfObject, literal(type(_,Bw))),atom_to_term(Bw,BW,_),
-          rdf_has(Bottom, knowrob:depthOfObject, literal(type(_,Bd))),atom_to_term(Bd,BD,_),
-
-          % the criterion is if the difference between them is less than epsilon=5cm
-          =<( BZ, TZ ),
-
-          % additional criterion: center of the top entity has to be inside the
-          % area of the bottom entity
-          =<( (BX - 0.5*BD), TX ), >=( (BX + 0.5*BD), TX ),
-          =<( (BY - 0.5*BW), TY ), >=( (BY + 0.5*BW), TY ),
-          Top \= Bottom.
-
-
-  
-
-
 %
-% old version: cleaner, but does not work if not both objects have their dimensions specified
+on_Physical(Top, Bottom) :-
+    get_timepoint(T),
+    holds(on_Physical(Top, Bottom), T).
+
+
+%% holds(on_Physical(?Top, ?Bottom), +T) is nondet.
 %
-% 
-%     on_Physical(Top, Bottom) :-
-%           rdf_triple(knowrob:center, Top, TopCPoint),
-%           rdf_triple(knowrob:center, Bottom, BottomCPoint),
-% 
-%           % read the center coordinates of the top entity
-%           rdf_triple(knowrob:xCoord, TopCPoint, literal(type(_,TCx))),atom_to_term(TCx,TX,_),
-%           rdf_triple(knowrob:yCoord, TopCPoint, literal(type(_,TCy))),atom_to_term(TCy,TY,_),
-%           rdf_triple(knowrob:zCoord, TopCPoint, literal(type(_,TCz))),atom_to_term(TCz,TZ,_),
-% 
-%           % read the center coordinates of the bottom entity
-%           rdf_triple(knowrob:xCoord, BottomCPoint, literal(type(_,BCx))),atom_to_term(BCx,BX,_),
-%           rdf_triple(knowrob:yCoord, BottomCPoint, literal(type(_,BCy))),atom_to_term(BCy,BY,_),
-%           rdf_triple(knowrob:zCoord, BottomCPoint, literal(type(_,BCz))),atom_to_term(BCz,BZ,_),
-% 
-%           % read the dimensions of the top entity
-%           rdf_has(Top, knowrob:heightOfObject,literal(type(_,Th))),atom_to_term(Th,TH,_),
-% 
-%           % read the dimensions of the bottom entity
-%           rdf_has(Bottom, knowrob:widthOfObject, literal(type(_,Bw))),atom_to_term(Bw,BW,_),
-%           rdf_has(Bottom, knowrob:heightOfObject,literal(type(_,Bh))),atom_to_term(Bh,BH,_),
-%           rdf_has(Bottom, knowrob:depthOfObject, literal(type(_,Bd))),atom_to_term(Bd,BD,_),
-% 
-%           % the criterion is if the difference between them is less than epsilon=5cm
-%           =<( abs((TZ - 0.5*TH) - (BZ + 0.5*BH)), 0.10),
-% 
-%           % additional criterion: center of the top entity has to be inside the
-%           % area of the bottom entity
-%           =<( (BX - 0.5*BD), TX ), >=( (BX + 0.5*BD), TX ),
-%           =<( (BY - 0.5*BW), TY ), >=( (BY + 0.5*BW), TY ),
-%           Top \= Bottom.
+% Check if Top has been in the area of and above Bottom at time point T.
+%
+% Currently does not take the orientation into account, only the position and dimension.
+%
+% @param Top    Identifier of the upper Object
+% @param Bottom Identifier of the lower Object
+% @param T      TimePoint or Event for which the relations is supposed to hold
+%
+holds(on_Physical(Top, Bottom), T) :-
+
+    object_perception(Top, T, VPT),
+    object_perception(Bottom, T, VPB),
+
+    rdf_triple(knowrob:eventOccursAt, VPT,    TopMatrix),
+    rdf_triple(knowrob:eventOccursAt, VPB, BottomMatrix),
+
+    rdf_triple(knowrob:m03, TopMatrix, literal(type(_,TCx))),atom_to_term(TCx,TX,_),
+    rdf_triple(knowrob:m13, TopMatrix, literal(type(_,TCy))),atom_to_term(TCy,TY,_),
+    rdf_triple(knowrob:m23, TopMatrix, literal(type(_,TCz))),atom_to_term(TCz,TZ,_),
+
+    rdf_triple(knowrob:m03, BottomMatrix, literal(type(_,BCx))),atom_to_term(BCx,BX,_),
+    rdf_triple(knowrob:m13, BottomMatrix, literal(type(_,BCy))),atom_to_term(BCy,BY,_),
+    rdf_triple(knowrob:m23, BottomMatrix, literal(type(_,BCz))),atom_to_term(BCz,BZ,_),
+
+    % read the dimensions of the bottom entity
+    rdf_has(Bottom, knowrob:widthOfObject, literal(type(_,Bw))),atom_to_term(Bw,BW,_),
+    rdf_has(Bottom, knowrob:depthOfObject, literal(type(_,Bd))),atom_to_term(Bd,BD,_),
+
+    % the criterion is if the difference between them is less than epsilon=5cm
+    =<( BZ, TZ ),
+
+    % additional criterion: center of the top entity has to be inside the
+    % area of the bottom entity
+    =<( (BX - 0.5*BD), TX ), >=( (BX + 0.5*BD), TX ),
+    =<( (BY - 0.5*BW), TY ), >=( (BY + 0.5*BW), TY ),
+    Top \= Bottom.
+
+
 
 
 %% comp_toTheLeftOf(?Left, ?Right) is nondet.
 %
-% Check if Left is to the left of Right. Currently does not take the orientation
-% into account, only the position and dimension.
+% Check if Left is to the left of Right.
+%
+% Implemented as a wrapper predicate around holds(...) that computes the relation for the
+% current point in time
 %
 % @param Left Identifier of the left Object
 % @param Right Identifier of the right Object
-  comp_toTheLeftOf(Left, Right) :-
-  %
-  % TODO: adapt this to take rotations and object dimensions into account
-  % 
-          rdf_triple(knowrob:center, Left, LeftCPoint),
-          rdf_triple(knowrob:center, Right, RightCPoint),
+% 
+comp_toTheLeftOf(Left, Right) :-
+    get_timepoint(T),
+    holds(comp_toTheLeftOf(Left, Right), T).
 
-          % read the center coordinates of the left entity
-          rdf_triple(knowrob:xCoord, LeftCPoint, literal(type(_,LCx))),atom_to_term(LCx,LX,_),
-          rdf_triple(knowrob:yCoord, LeftCPoint, literal(type(_,LCy))),atom_to_term(LCy,LY,_),
-          rdf_triple(knowrob:zCoord, LeftCPoint, literal(type(_,LCz))),atom_to_term(LCz,LZ,_),
 
-          % read the center coordinates of the right entity
-          rdf_triple(knowrob:xCoord, RightCPoint, literal(type(_,RCx))),atom_to_term(RCx,RX,_),
-          rdf_triple(knowrob:yCoord, RightCPoint, literal(type(_,RCy))),atom_to_term(RCy,RY,_),
-          rdf_triple(knowrob:zCoord, RightCPoint, literal(type(_,RCz))),atom_to_term(RCz,RZ,_),
+%% holds(comp_toTheLeftOf(?Left, ?Right), +T) is nondet.
+%
+% Check if Left is to the left of Right. Currently does not take the orientation
+% into account, only the position and dimension.
+%
+% @param Top    Identifier of the upper Object
+% @param Bottom Identifier of the lower Object
+% @param T      TimePoint or Event for which the relations is supposed to hold
+%
+holds(comp_toTheLeftOf(Left, Right), T) :-
+    %
+    % TODO: adapt this to take rotations and object dimensions into account
+    %
 
-          =<( abs( LX - RX), 0.30),  % less than 30cm y diff
-          =<( RY, LY ),              % right obj has a smaller y coord than the left one (on the table)
-          =<( abs( LZ - RZ), 0.30),  % less than 30cm height diff
-          Left \= Right.
+    object_perception(Left, T, VPL),
+    object_perception(Right, T, VPR),
+
+    rdf_triple(knowrob:eventOccursAt, VPL, LeftMatrix),
+    rdf_triple(knowrob:eventOccursAt, VPR, RightMatrix),
+
+    % read the center coordinates of the left entity
+    rdf_triple(knowrob:m03, LeftMatrix, literal(type(_,LCx))),atom_to_term(LCx,LX,_),
+    rdf_triple(knowrob:m13, LeftMatrix, literal(type(_,LCy))),atom_to_term(LCy,LY,_),
+    rdf_triple(knowrob:m23, LeftMatrix, literal(type(_,LCz))),atom_to_term(LCz,LZ,_),
+
+    % read the center coordinates of the right entity
+    rdf_triple(knowrob:m03, RightMatrix, literal(type(_,RCx))),atom_to_term(RCx,RX,_),
+    rdf_triple(knowrob:m13, RightMatrix, literal(type(_,RCy))),atom_to_term(RCy,RY,_),
+    rdf_triple(knowrob:m23, RightMatrix, literal(type(_,RCz))),atom_to_term(RCz,RZ,_),
+
+    =<( abs( LX - RX), 0.30),  % less than 30cm y diff
+    =<( RY, LY ),              % right obj has a smaller y coord than the left one (on the table)
+    =<( abs( LZ - RZ), 0.30),  % less than 30cm height diff
+    Left \= Right.
+
 
 
 %% comp_toTheRightOf(?Right,?Left) is nondet.
 %
 % Check if Right is to the right of Left.
 % 
+% Implemented as a wrapper predicate around holds(...) that computes the relation for the
+% current point in time
+%
 % @param Right Identifier of the right Object
 % @param Left Identifier of the left Object
 % @see comp_toTheLeftOf
-  comp_toTheRightOf(Right, Left) :-
-          comp_toTheLeftOf(Left, Right).
+% 
+comp_toTheRightOf(Right, Left) :-
+    get_timepoint(T),
+    holds(comp_toTheRightOf(Right, Left), T).
+
+
+%% holds(comp_toTheRightOf(?Right,?Left), +T) is nondet.
+%
+% Check if Right is to the right of Left.
+%
+% @param Right Identifier of the right Object
+% @param Left Identifier of the left Object
+% @param T      TimePoint or Event for which the relations is supposed to hold
+% @see comp_toTheLeftOf
+% 
+holds(comp_toTheRightOf(Right, Left), T) :-
+    holds(comp_toTheLeftOf(Left, Right), T).
+
+
 
 
 %% comp_toTheSideOf(?A, ?B) is nondet.
 %
 % Check if A is either to the left or the rigth of B.
 %
+% Implemented as a wrapper predicate around holds(...) that computes the relation for the
+% current point in time
+% 
 % @param A Identifier of Object A
 % @param B Identifier of Object B
 % @see comp_toTheLeftOf
 % @see comp_toTheRightOf
-  comp_toTheSideOf(A, B) :-
-          comp_toTheRightOf(A, B);
-          comp_toTheLeftOf(A, B).
+% 
+comp_toTheSideOf(A, B) :-
+    get_timepoint(T),
+    holds(comp_toTheSideOf(A, B), T).
+
+%% holds(comp_toTheSideOf(?A, ?B), +T) is nondet.
+%
+% Check if A is either to the left or the right of B.
+%
+% @param A Identifier of Object A
+% @param B Identifier of Object B
+% @param T TimePoint or Event for which the relations is supposed to hold
+% @see comp_toTheLeftOf
+% @see comp_toTheRightOf
+% 
+holds(comp_toTheSideOf(A, B), T) :-
+    holds(comp_toTheRightOf(A, B), T);
+    holds(comp_toTheLeftOf(A, B), T).
+
+
 
 
 %% comp_inFrontOf(?Front, ?Back) is nondet.
 %
 % Check if Front is in front of Back. Currently does not take the orientation
 % into account, only the position and dimension.
+% 
+% Implemented as a wrapper predicate around holds(...) that computes the relation for the
+% current point in time
 %
 % @param Front Identifier of the front Object
 % @param Back Identifier of the back Object
-  comp_inFrontOf(Front, Back) :-
-  %
-  % TODO: adapt this to take rotations and object dimensions into account
-  %
-          rdf_triple(knowrob:center, Front, FrontCPoint),
-          rdf_triple(knowrob:center, Back, BackCPoint),
+% 
+comp_inFrontOf(Front, Back) :-
+    get_timepoint(T),
+    holds(comp_inFrontOf(Front, Back), T).
 
-          % read the center coordinates of the left entity
-          rdf_triple(knowrob:xCoord, FrontCPoint, literal(type(_,FCx))),atom_to_term(FCx,FX,_),
+%% holds(comp_inFrontOf(?Front, ?Back), +T) is nondet.
+% 
+% Check if Front is in front of Back. Currently does not take the orientation
+% into account, only the position and dimension.
+%
+% @param Front Identifier of the front Object
+% @param Back Identifier of the back Object
+% @param T TimePoint or Event for which the relations is supposed to hold
+% 
+holds(comp_inFrontOf(Front, Back), T) :-
+    %
+    % TODO: adapt this to take rotations and object dimensions into account
+    %
 
-          % read the center coordinates of the right entity
-          rdf_triple(knowrob:xCoord, BackCPoint, literal(type(_,BCx))),atom_to_term(BCx,BX,_),
+    object_perception(Front, T, VPF),
+    object_perception(Back, T, VPB),
 
-          =<( BX, FX ),      % front obj has a higher x coord
-          Front \= Back.
+    rdf_triple(knowrob:eventOccursAt, VPF, FrontMatrix),
+    rdf_triple(knowrob:eventOccursAt, VPB, BackMatrix),
+
+    % read the center coordinates of the front entity
+    rdf_triple(knowrob:m03, FrontMatrix, literal(type(_,FCx))),atom_to_term(FCx,FX,_),
+
+    % read the center coordinates of the back entity
+    rdf_triple(knowrob:m03, BackMatrix, literal(type(_,BCx))),atom_to_term(BCx,BX,_),
+
+    =<( BX, FX ),      % front obj has a higher x coord
+    Front \= Back.
+
+
+
 
 %% comp_inCenterOf(?Inner, ?Outer) is nondet.
 %
 % Check if Inner is in the center of OuterObj. Currently does not take the orientation
 % into account, only the position and dimension.
 %
+% Implemented as a wrapper predicate around holds(...) that computes the relation for the
+% current point in time
+% 
 % @param Inner Identifier of the inner Object
 % @param Outer Identifier of the outer Object
-  comp_inCenterOf(Inner, Outer) :-
-          rdf_triple(knowrob:center, Inner, InnerCPoint),
-          rdf_triple(knowrob:center, Outer, OuterCPoint),
+% 
+comp_inCenterOf(Inner, Outer) :-
+    get_timepoint(T),
+    holds(comp_inCenterOf(Inner, Outer), T).
 
-          % read the center coordinates of the left entity
-          rdf_triple(knowrob:xCoord, InnerCPoint, literal(type(_,ICx))),atom_to_term(ICx,IX,_),
-          rdf_triple(knowrob:yCoord, InnerCPoint, literal(type(_,ICy))),atom_to_term(ICy,IY,_),
-          rdf_triple(knowrob:zCoord, InnerCPoint, literal(type(_,ICz))),atom_to_term(ICz,IZ,_),
+%% holds(comp_inCenterOf(?Inner, ?Outer), +T) is nondet.
+%
+% Check if Inner is in the center of OuterObj. Currently does not take the orientation
+% into account, only the position and dimension.
+%
+% @param Inner Identifier of the inner Object
+% @param Outer Identifier of the outer Object
+% @param T TimePoint or Event for which the relations is supposed to hold
+% 
+holds(comp_inCenterOf(Inner, Outer), T) :-
 
-          % read the center coordinates of the right entity
-          rdf_triple(knowrob:xCoord, OuterCPoint, literal(type(_,OCx))),atom_to_term(OCx,OX,_),
-          rdf_triple(knowrob:yCoord, OuterCPoint, literal(type(_,OCy))),atom_to_term(OCy,OY,_),
-          rdf_triple(knowrob:zCoord, OuterCPoint, literal(type(_,OCz))),atom_to_term(OCz,OZ,_),
+    object_perception(Inner, T, VPI),
+    object_perception(Outer, T, VPO),
 
-          =<( abs( IX - OX), 0.20),  % less than 20cm x diff
-          =<( abs( IY - OY), 0.20),  % less than 20cm y diff
-          =<( abs( IZ - OZ), 0.20).  % less than 20cm z diff
+    rdf_triple(knowrob:eventOccursAt, VPI, InnerMatrix),
+    rdf_triple(knowrob:eventOccursAt, VPO, OuterMatrix),
+
+    % read the center coordinates of the left entity
+    rdf_triple(knowrob:m03, InnerMatrix, literal(type(_,ICx))),atom_to_term(ICx,IX,_),
+    rdf_triple(knowrob:m13, InnerMatrix, literal(type(_,ICy))),atom_to_term(ICy,IY,_),
+    rdf_triple(knowrob:m23, InnerMatrix, literal(type(_,ICz))),atom_to_term(ICz,IZ,_),
+
+    % read the center coordinates of the right entity
+    rdf_triple(knowrob:m03, OuterMatrix, literal(type(_,OCx))),atom_to_term(OCx,OX,_),
+    rdf_triple(knowrob:m13, OuterMatrix, literal(type(_,OCy))),atom_to_term(OCy,OY,_),
+    rdf_triple(knowrob:m23, OuterMatrix, literal(type(_,OCz))),atom_to_term(OCz,OZ,_),
+
+    =<( abs( IX - OX), 0.20),  % less than 20cm x diff
+    =<( abs( IY - OY), 0.20),  % less than 20cm y diff
+    =<( abs( IZ - OZ), 0.20),  % less than 20cm z diff
+    Inner \= Outer.
 
 
 %% in_ContGeneric(?InnerObj, ?OuterObj) is nondet.
@@ -276,95 +390,102 @@
 % Check if InnerObj is contained by OuterObj. Currently does not take the orientation
 % into account, only the position and dimension.
 %
+% Implemented as a wrapper predicate around holds(...) that computes the relation for the
+% current point in time
+% 
 % @param InnerObj Identifier of the inner Object
 % @param OuterObj Identifier of the outer Object
-    in_ContGeneric(InnerObj, OuterObj) :-
-          rdf_triple(knowrob:center, InnerObj, InnerCPoint),
-          rdf_triple(knowrob:center, OuterObj, OuterCPoint),
+% 
+in_ContGeneric(InnerObj, OuterObj) :-
+    get_timepoint(T),
+    holds(in_ContGeneric(InnerObj, OuterObj), T).
 
-          % read the center coordinates of the outer entity
-          rdf_triple(knowrob:xCoord, OuterCPoint, literal(type(_,OCx))),atom_to_term(OCx,OX,_),
-          rdf_triple(knowrob:yCoord, OuterCPoint, literal(type(_,OCy))),atom_to_term(OCy,OY,_),
-          rdf_triple(knowrob:zCoord, OuterCPoint, literal(type(_,OCz))),atom_to_term(OCz,OZ,_),
 
-          % read the center coordinates of the inner entity
-          rdf_triple(knowrob:xCoord, InnerCPoint, literal(type(_,ICx))),atom_to_term(ICx,IX,_),
-          rdf_triple(knowrob:yCoord, InnerCPoint, literal(type(_,ICy))),atom_to_term(ICy,IY,_),
-          rdf_triple(knowrob:zCoord, InnerCPoint, literal(type(_,ICz))),atom_to_term(ICz,IZ,_),
-
-          % read the dimensions of the outer entity
-          rdf_has(OuterObj, knowrob:widthOfObject, literal(type(_,Ow))),atom_to_term(Ow,OW,_),
-          rdf_has(OuterObj, knowrob:heightOfObject,literal(type(_,Oh))),atom_to_term(Oh,OH,_),
-          rdf_has(OuterObj, knowrob:depthOfObject, literal(type(_,Od))),atom_to_term(Od,OD,_),
-
-          % read the dimensions of the inner entity
-          rdf_has(InnerObj, knowrob:widthOfObject, literal(type(_,Iw))),atom_to_term(Iw,IW,_),
-          rdf_has(InnerObj, knowrob:heightOfObject,literal(type(_,Ih))),atom_to_term(Ih,IH,_),
-          rdf_has(InnerObj, knowrob:depthOfObject, literal(type(_,Id))),atom_to_term(Id,ID,_),
-
-          % InnerObj is contained by OuterObj if (center_i+0.5*dim_i)<=(center_o+0.5*dim_o)
-          % for all dimensions (x, y, z)
-          >=( (IX - 0.5*ID), (OX - 0.5*OD)+0.05 ), =<( (IX + 0.5*ID), (OX + 0.5*OD)-0.05 ),
-          >=( (IY - 0.5*IW), (OY - 0.5*OW)+0.05 ), =<( (IY + 0.5*IW), (OY + 0.5*OW)-0.05 ),
-          >=( (IZ - 0.5*IH), (OZ - 0.5*OH)+0.05 ), =<( (IZ + 0.5*IH), (OZ + 0.5*OH)-0.05 ),
-          InnerObj \= OuterObj.
-
-%% adjacent_Objects(?ObjA, ?ObjB) is nondet.
+%% holds(in_ContGeneric(?InnerObj, ?OuterObj), +T) is nondet.
 %
-% Check if two objects A, B are adjacent.
+% Check if Inner is in the center of OuterObj. Currently does not take the orientation
+% into account, only the position and dimension.
 %
-% @param ObjA Identifier of Object A
-% @param ObjB Identifier of Object B
-    adjacent_Objects(ObjA, ObjB) :-
-          rdf_triple(knowrob:center, ObjA, CenterA),
-          rdf_triple(knowrob:center, ObjB, CenterB),
-          ObjA \= ObjB,
+% @param InnerObj Identifier of the inner Object
+% @param OuterObj Identifier of the outer Object
+% @param T TimePoint or Event for which the relations is supposed to hold
+% 
+holds(in_ContGeneric(InnerObj, OuterObj), T) :-
 
-          % read the center coordinates & dimensions of entityA
-          rdf_triple(knowrob:xCoord, CenterA, literal(type(_,ACx))),atom_to_term(ACx,AX,_),
-          rdf_triple(knowrob:yCoord, CenterA, literal(type(_,ACy))),atom_to_term(ACy,AY,_),
-          rdf_triple(knowrob:zCoord, CenterA, literal(type(_,ACz))),atom_to_term(ACz,AZ,_),
-          rdf_has(ObjA, knowrob:widthOfObject, literal(type(_,ATw))),atom_to_term(ATw,AW,_),
-          rdf_has(ObjA, knowrob:heightOfObject,literal(type(_,ATh))),atom_to_term(ATh,AH,_),
-          rdf_has(ObjA, knowrob:depthOfObject, literal(type(_,ATd))),atom_to_term(ATd,AD,_),
+    object_perception(InnerObj, T, VPI),
+    object_perception(OuterObj, T, VPO),
+
+    rdf_triple(knowrob:eventOccursAt, VPI, InnerObjMatrix),
+    rdf_triple(knowrob:eventOccursAt, VPO, OuterObjMatrix),
+
+    % read the center coordinates of the left entity
+    rdf_triple(knowrob:m03, InnerObjMatrix, literal(type(_,ICx))),atom_to_term(ICx,IX,_),
+    rdf_triple(knowrob:m13, InnerObjMatrix, literal(type(_,ICy))),atom_to_term(ICy,IY,_),
+    rdf_triple(knowrob:m23, InnerObjMatrix, literal(type(_,ICz))),atom_to_term(ICz,IZ,_),
+
+    % read the center coordinates of the right entity
+    rdf_triple(knowrob:m03, OuterObjMatrix, literal(type(_,OCx))),atom_to_term(OCx,OX,_),
+    rdf_triple(knowrob:m13, OuterObjMatrix, literal(type(_,OCy))),atom_to_term(OCy,OY,_),
+    rdf_triple(knowrob:m23, OuterObjMatrix, literal(type(_,OCz))),atom_to_term(OCz,OZ,_),
+
+    % read the dimensions of the outer entity
+    rdf_has(OuterObj, knowrob:widthOfObject, literal(type(_,Ow))),atom_to_term(Ow,OW,_),
+    rdf_has(OuterObj, knowrob:heightOfObject,literal(type(_,Oh))),atom_to_term(Oh,OH,_),
+    rdf_has(OuterObj, knowrob:depthOfObject, literal(type(_,Od))),atom_to_term(Od,OD,_),
+
+    % read the dimensions of the inner entity
+    rdf_has(InnerObj, knowrob:widthOfObject, literal(type(_,Iw))),atom_to_term(Iw,IW,_),
+    rdf_has(InnerObj, knowrob:heightOfObject,literal(type(_,Ih))),atom_to_term(Ih,IH,_),
+    rdf_has(InnerObj, knowrob:depthOfObject, literal(type(_,Id))),atom_to_term(Id,ID,_),
+
+    % InnerObj is contained by OuterObj if (center_i+0.5*dim_i)<=(center_o+0.5*dim_o)
+    % for all dimensions (x, y, z)
+    >=( (IX - 0.5*ID), (OX - 0.5*OD)+0.05 ), =<( (IX + 0.5*ID), (OX + 0.5*OD)-0.05 ),
+    >=( (IY - 0.5*IW), (OY - 0.5*OW)+0.05 ), =<( (IY + 0.5*IW), (OY + 0.5*OW)-0.05 ),
+    >=( (IZ - 0.5*IH), (OZ - 0.5*OH)+0.05 ), =<( (IZ + 0.5*IH), (OZ + 0.5*OH)-0.05 ),
+    InnerObj \= OuterObj.
 
 
-          % read the center coordinates & dimensions of entityB
-          rdf_triple(knowrob:xCoord, CenterB, literal(type(_,BCx))),atom_to_term(BCx,BX,_),
-          rdf_triple(knowrob:yCoord, CenterB, literal(type(_,BCy))),atom_to_term(BCy,BY,_),
-          rdf_triple(knowrob:zCoord, CenterB, literal(type(_,BCz))),atom_to_term(BCz,BZ,_),
-          rdf_has(ObjB, knowrob:widthOfObject, literal(type(_,BTw))),atom_to_term(BTw,BW,_),
-          rdf_has(ObjB, knowrob:heightOfObject,literal(type(_,BTh))),atom_to_term(BTh,BH,_),
-          rdf_has(ObjB, knowrob:depthOfObject, literal(type(_,BTd))),atom_to_term(BTd,BD,_),
 
-          (
-            adjacentHelper(AX,AY,AZ,AW,AH,AD, BX,BY,BZ,BW,BH,BD);
-            adjacentHelper(AY,AX,AZ,AH,AW,AD, BY,BX,BZ,BH,BW,BD);
-            adjacentHelper(AZ,AY,AX,AW,AD,AH, BZ,BY,BX,BW,BD,BH)
 
-          ).
+%% comp_orientation(+Object, -Orientation) is nondet.
+%
+% Wrapper to compute the (deprecated) object orientation property by
+% finding the most current object detection. Intended as convenience
+% and compatibility predicate.
+% 
+% @param InnerObj Identifier of the inner Object
+% @param OuterObj Identifier of the outer Object
+% 
+comp_orientation(Object, Orientation) :-
 
-    % takes coordinates & dimensions of two objects, and succeeds if
-    % - A is left of B (AX+0.5*AW - BX-0.5*AW <= 0.15)
-    % - Center of one Y-Z-Area is inside Other Y-Z-Area
-    adjacentHelper(AX,AY,AZ,AW,AH,AD, BX,BY,BZ,BW,BH,BD) :-
-          =<( abs((AX + 0.5*AW) - (BX - 0.5*BW)), 0.05),
-          (
-            (=<( (BZ - 0.5*BD), AZ ), >=( (BZ + 0.5*BD), AZ ),
-            =<( (BY - 0.5*BH), AY ), >=( (BY + 0.5*BH), AY ));
-            (=<( (AZ - 0.5*AD), BZ ), >=( (AZ + 0.5*AD), BZ ),
-            =<( (AY - 0.5*AH), BY ), >=( (AY + 0.5*AH), BY ))
-          ),!.
+    % find all perceptions of the object and sort by their start time
+    findall([P_i,Object,St], (rdf_has(P_i, knowrob:objectActedOn, Object),
+                              rdfs_individual_of(P_i,  knowrob:'MentalEvent'),
+                              rdf_triple(knowrob:startTime, P_i, StTg),
+                              rdf_split_url(_, StTl, StTg),
+                              atom_concat('timepoint_', StTa, StTl),
+                              term_to_atom(St, StTa)), Perceptions),
+
+    predsort(compare_object_perceptions, Perceptions, Psorted),
+
+    % compute the homography for the newest perception
+    nth0(0, Psorted, Newest),
+    nth0(0, Newest, NewestPerception),
+
+    rdf_triple(knowrob:eventOccursAt, NewestPerception, Orientation).
+
+
 
 
 % % % % % % % % % % % % % % % % % % % %
-% matrix and vector computations (relating the new homography-based
+% matrix and vector computations (relating the homography-based
 % position representation with the old center-point-based one)
 %
 
 %% comp_center(+Obj, ?Center) is semidet.
 %
-% Compute the center point of an object using its homography matrix
+% Compute the center point of an object from its homography matrix
 %
 % @param Obj    The object identifier
 % @param Center The center point identifier as a String 'translation_<rotation matrix identifier>'
@@ -841,5 +962,8 @@
     comp_m55(Matrix, M55) :-
         rdf_split_url(_, O, Matrix),
         term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M55), O).
+
+
+
 
 
