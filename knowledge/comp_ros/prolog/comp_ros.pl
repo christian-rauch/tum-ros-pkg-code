@@ -36,6 +36,7 @@
 :- use_module(library('semweb/rdf_db')).
 :- use_module(library('semweb/rdfs_computable')).
 :- use_module(library('jpl')).
+:- use_module(library('util')).
 
 
 %% comp_lo_orientation(+Name, -Orientation) is nondet.
@@ -81,7 +82,7 @@
         % call lo
         jpl_call('KBClient', 'loQuery', [Type, Name, ObjID, ParentID], Answer),
         jpl_get(Answer, 'pose', JPose),
-        classifiers:arrays_to_lists(JPose, Pose),
+        arrays_to_lists(JPose, Pose),
 
         % read the single pose values from the result, combine to string representation
         nth0(0, Pose, P00),  nth0(1,  Pose, P01), nth0(2,  Pose, P02), nth0(3,  Pose, P03),
@@ -109,7 +110,7 @@
         % call lo
         jpl_call('KBClient', 'loQuery', [Type, Name, ObjID, ParentID], Answer),
         jpl_get(Answer, 'cov', JCov),
-        classifiers:arrays_to_lists(JCov, Cov),
+        arrays_to_lists(JCov, Cov),
 
         % read the single cov values from the result, combine to string representation
         nth0(0,  Cov, P00), nth0(1,  Cov, P01), nth0(2,  Cov, P02), nth0(3,  Cov, P03), nth0(4,  Cov, P04), nth0(5,  Cov, P05),

@@ -19,7 +19,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % dependencies
 
-:- register_ros_package(inf9_knowledge_base).
+:- register_ros_package(ias_knowledge_base).
 :- register_ros_package(comp_ros).
 
 :- use_module(library('comp_ros')).
@@ -27,7 +27,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % parse OWL files, register name spaces
 
-:- owl_parser:owl_parse('../owl/comp_ros.owl', false, false, true).
+:- owl_parser:owl_parse('@LOCAL_PACKAGE_PATH@/owl/comp_ros.owl', false, false, true).
 :- rdf_db:rdf_register_ns(comp_ros, 'http://ias.cs.tum.edu/kb/comp_ros.owl#',     [keep(true)]).
 
 
