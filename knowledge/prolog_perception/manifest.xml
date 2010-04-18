@@ -17,6 +17,7 @@
    <depend package="point_cloud_mapping" />
    <depend package="ias_table_srvs" />
    <depend package="ias_table_msgs" />
+   <depend package="ias_knowledge_base" />
 </package>
 
 

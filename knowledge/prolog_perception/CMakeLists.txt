@@ -34,15 +34,30 @@ rosbuild_add_library(ros_query_table_objects src/cpp/query_table_objects.cpp)
 rosbuild_add_library(ros_query_cluster_color src/cpp/query_cluster_color.cpp)
 rosbuild_add_library(ros_query_table_memory src/cpp/query_table_memory.cpp)
 
-#uncomment if you have defined messages
-#rosbuild_genmsg()
-#uncomment if you have defined services
-#rosbuild_gensrv()
 
-#common commands for building c++ executables and libraries
-#rosbuild_add_library(${PROJECT_NAME} src/example.cpp)
-#target_link_libraries(${PROJECT_NAME} another_library)
-#rosbuild_add_boost_directories()
-#rosbuild_link_boost(${PROJECT_NAME} thread)
-#rosbuild_add_executable(example examples/example.cpp)
-#target_link_libraries(example ${PROJECT_NAME})
+###########################################################
+#
+# code for replacings paths in the prolog module
+#
+
+
+# replace paths for includes in prolog files
+rosbuild_find_ros_package(prolog_perception)
+set( PL_PATH_PREFIX "${prolog_perception_PACKAGE_PATH}/" )
+
+file(GLOB inputs prolog/*.in)
+
+foreach( _in ${inputs} )
+  string(REPLACE ".in" "" _out ${_in})
+  configure_file( ${_in} ${_out} )
+endforeach( _in )
+
+rosbuild_find_ros_package(ias_knowledge_base)
+set( OWL_PATH_PREFIX ${ias_knowledge_base_PACKAGE_PATH} )
+
+file(GLOB inputs owl/*.in)
+
+foreach( _in ${inputs} )
+  string(REPLACE ".in" "" _out ${_in})
+  configure_file( ${_in} ${_out} )
+endforeach( _in )
