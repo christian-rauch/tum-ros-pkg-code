@@ -1,0 +1,20 @@
+<package>
+  <description brief="position_string_rviz_plugin">
+     Message and rviz plugin for visualizing strings at certain positions..
+  </description>
+  <author>Nico Blodow</author>
+  <license>BSD</license>
+
+  <depend package="std_msgs" />
+  <depend package="geometry_msgs" />
+  <depend package="rviz"/>
+  <depend package="roscpp"/>
+  <depend package="tf"/>
+  <depend package="sensor_msgs"/>
+  
+  <export>
+    <rviz plugin="${prefix}/lib/rviz_plugin.yaml"/>
+    <cpp cflags="-I${prefix}/msg/cpp"/>
+  </export>
+</package>
+
