@@ -1,0 +1,10 @@
+# Cop call,  U. Klank klank@in.tum.de
+# Message to query cop
+string outputtopic           #name of the topic where the answer should be published
+string[] object_classes      #descriptor/object class name
+uint64[] object_ids          #id of an previously seen object
+uint64 action_type           #actiontype: e.g. locate = 0x000 track 0x100 refine = 0x300 prove 0x400 stop_track 0x800 start_attend 0x1600 stop_attend 0x3200
+uint64 number_of_objects     #number of objects
+vision_msgs/apriori_position[] list_of_poses 	   #pose matrix, fully projective 4x4 matrix
+---
+uint64 perception_primitive  # return a unique id for the called perception primitive which has to be used for later feedback with cop_feedback

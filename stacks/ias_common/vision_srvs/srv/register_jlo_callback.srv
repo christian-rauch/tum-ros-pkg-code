@@ -1,0 +1,7 @@
+# This creates on a certain topic the publication of a vision_msgs::partial_lo on update
+string topic_name  #topic that should be used to publish updated los
+uint64     jlo_id  #jlo id that should exist
+uint64     parent_id #contains the reference lo. If you are only interested in movement at all, leave this 0
+float64[6] filter_delta_cov #Defines a threshold to reduce the publishing rate & relvance
+---
+string error       #empty if the id exists, error if it does not exist now or was already deleted
