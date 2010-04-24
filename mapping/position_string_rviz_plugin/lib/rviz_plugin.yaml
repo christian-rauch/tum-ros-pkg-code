@@ -1,0 +1,13 @@
+name: PositionString Display
+library: position_string_rviz_plugin
+displays:
+  -
+    class_name: position_string_rviz_plugin::PositionStringDisplay
+    display_name: PositionString
+    description: |
+      Displays text (a string) from a position_string_rviz_plugin::PositionString message at a given position.
+  -
+    class_name: position_string_rviz_plugin::PositionStringListDisplay
+    display_name: PositionStringList
+    description: |
+      Displays multiple strings from a position_string_rviz_plugin::PositionStringList message at given positions.

@@ -34,6 +34,6 @@
 
 extern "C" void rvizPluginInit(rviz::TypeRegistry* reg)
 {
-  reg->registerDisplay<positionstring_rviz_plugin::PositionStringDisplay>("positionstring_rviz_plugin::PositionStringDisplay");
-  reg->registerDisplay<positionstring_rviz_plugin::PositionStringListDisplay>("positionstring_rviz_plugin::PositionStringListDisplay");
+  reg->registerDisplay<position_string_rviz_plugin::PositionStringDisplay>("position_string_rviz_plugin::PositionStringDisplay");
+  reg->registerDisplay<position_string_rviz_plugin::PositionStringListDisplay>("position_string_rviz_plugin::PositionStringListDisplay");
 }

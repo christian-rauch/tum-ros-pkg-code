@@ -54,7 +54,7 @@ class SceneNode;
 class ManualObject;
 }
 
-namespace positionstring_rviz_plugin
+namespace position_string_rviz_plugin
 {
 
 /**
@@ -122,6 +122,6 @@ protected:
   rviz::ROSTopicStringPropertyWPtr topic_property_;
 };
 
-} // namespace positionstring_rviz_plugin
+} // namespace position_string_rviz_plugin
 
 #endif /* RVIZ_POSITION_STRING_LIST_DISPLAY_H_ */

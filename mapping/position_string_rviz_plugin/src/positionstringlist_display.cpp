@@ -44,7 +44,7 @@
 
 #include <ogre_tools/movable_text.h>
 
-namespace positionstring_rviz_plugin
+namespace position_string_rviz_plugin
 {
 
 PositionStringListDisplay::PositionStringListDisplay(const std::string & name, rviz::VisualizationManager * manager)
@@ -258,4 +258,4 @@ void PositionStringListDisplay::createProperties()
   topic_prop->setMessageType(ros::message_traits::DataType<position_string_rviz_plugin::PositionStringList>().value());
 }
 
-} // namespace mapping_rviz_plugin
+} // namespace position_string_rviz_plugin
