@@ -1,0 +1,10 @@
+<package>
+  <description>Cognitive Perception Server</description>
+  <author>Ulrich F Klank</author>
+  <license>Closed</license>
+  <depend package="roscpp" />
+  <depend package="geometry_msgs" />  
+  <export>
+        <cpp cflags="-I${prefix}/msg/cpp"/>
+  </export>
+</package>
