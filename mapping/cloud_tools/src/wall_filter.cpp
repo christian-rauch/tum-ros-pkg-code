@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2008 Radu Bogdan Rusu <rusu -=- cs.tum.edu>
- *
+ * Dejan Pangercic <pangercic@cs.tum.edu>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,6 +26,28 @@
  *
  *
  */
+/** 
+@file
+
+@brief wall_filter detects vertically oriented planes in a PointCloud, 
+removes them from the original PointCloud and publishes the wall-less
+PointCloud
+
+@par Advertises
+- \b input_cloud_topic with PointCloud message
+
+@par Subscribes
+- \b output_cloud_topic with PointCloud message (wall-less PointCloud)
+
+
+@par Parameters
+-    string input_cloud_topic;
+-    string output_cloud_topic;
+-    int k;
+-    double clusters_growing_tolerance;
+-    int clusters_min_pts;
+-    double sac_distance_threshold, eps_angle, region_angle_threshold;
+*/
 
 // ROS core
 #include <ros/ros.h>
@@ -66,6 +88,11 @@ using namespace geometry_msgs;
 using namespace mapping_msgs;
 
 // Comparison operator for a vector of vectors
+/**
+ * \brief Comparison operator for a vector of vectors
+ * \param a first vector
+ * \param b second vector
+ */
 bool
   compareRegions (const std::vector<int> &a, const std::vector<int> &b)
 {
@@ -85,31 +112,24 @@ class WallFilter
     geometry_msgs::Point32 z_axis_;
     PolygonalMap pmap_;
 
-//     tf::TransformListener tf_;
-
     // Parameters
-    string global_frame_;
     string input_cloud_topic_;
     string output_cloud_topic_;
     int k_;
     double clusters_growing_tolerance_;
     int clusters_min_pts_;
-
-
-    bool publish_debug_;
-
     double sac_distance_threshold_, eps_angle_, region_angle_threshold_;
 
-
+    //Subscribers/Publishers
     ros::Subscriber cloud_sub_;
     ros::Publisher cloud_pub_;
-    ros::Publisher semantic_map_publisher_, cloud_publisher_;
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /**
+    * \brief Constructor initializes parameters
+    */
     WallFilter (ros::NodeHandle& anode) : node_ (anode)
     {
-      node_.param ("/global_frame_id", global_frame_, std::string("/map"));
-
       // Use downsampling internally to estimate solutions faster.
       {
         node_.param ("downsample_leaf_width_x", leaf_width_.x, 0.06);          // 3cm radius by default
@@ -128,22 +148,11 @@ class WallFilter
       node_.param ("clusters_growing_tolerance", clusters_growing_tolerance_, 0.5);   // 0.5 m
       node_.param ("clusters_min_pts", clusters_min_pts_, 10);                        // 10 points
 
-      // Used to publish the results as additional messages. 
-      {
-        node_.param ("publish_debug", publish_debug_, true);
-      }
-
       node_.param ("input_cloud_topic", input_cloud_topic_, string ("/cloud_pcd"));
       node_.param ("output_cloud_topic", output_cloud_topic_, string ("/cloud_without_walls"));
 
       // This should be set to whatever the leaf_width factor is in the downsampler
       node_.param ("sac_distance_threshold", sac_distance_threshold_, 0.03);     // 5 cm
-
-      if (publish_debug_)
-      {
-        semantic_map_publisher_ = node_.advertise<PolygonalMap> ("semantic_polygonal_map", 1);
-        cloud_publisher_ = node_.advertise<sensor_msgs::PointCloud> ("/cloud_annotated", 1);
-      }
 
       cloud_pub_ = node_.advertise<sensor_msgs::PointCloud> (output_cloud_topic_, 1);
       cloud_sub_ = node_.subscribe (input_cloud_topic_, 1, &WallFilter::cloud_cb, this);
@@ -151,6 +160,9 @@ class WallFilter
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /**
+    * \brief updates parameters from server
+    */
     void
       updateParametersFromServer ()
     {
@@ -173,12 +185,14 @@ class WallFilter
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // Callback
+    /** 
+    * \brief point cloud  callback, every other function gets called from here
+    * \param pc input point cloud
+    */
     void cloud_cb (const sensor_msgs::PointCloudConstPtr& pc)
     {
       ROS_INFO ("+ callback");
       cloud_in_ = *pc;
-      //tf_.transformPointCloud(global_frame_, *pc, cloud_in_);
       
       ros::Time ts = ros::Time::now ();
 
@@ -255,17 +269,7 @@ class WallFilter
                   indices_wall_points.push_back (j);
               good_walls.push_back (i);
             }
-  //           else
-  //             break;
-
           }
-//           std::vector <int> rest;
-//           
-//           std::sort (cur_clust.begin (), cur_clust.end ());
-//           std::sort (inliers.begin (), inliers.end ());
-//           set_difference (cur_clust.begin (), cur_clust.end (), inliers.begin (), inliers.end (), rest.begin ());
-//           cur_clust = std::vector<int> (rest.begin(), rest.end());
-//         } while (old_nr_indices > (signed int) cur_clust.size());
       }
 
       if (good_walls.size() == 0)
@@ -308,6 +312,13 @@ class WallFilter
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /**
+    * \brief fits a plane to the set of 3D points
+    * \param points set of 3D points
+    * \param indices points' vector indices
+    * \param inliers indices of in-lying points (to be filled) 
+    * \param coeff plane equation coefficients
+    */
     int
       fitSACPlane (sensor_msgs::PointCloud *points, vector<int> *indices, vector<int> &inliers, vector<double> &coeff)
     {
@@ -352,6 +363,10 @@ class WallFilter
     }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /**
+    * \brief estimates normals for all 3D points
+    * \param cloud input point cloud data
+    */
     void
       estimatePointNormals (sensor_msgs::PointCloud &cloud)
     {

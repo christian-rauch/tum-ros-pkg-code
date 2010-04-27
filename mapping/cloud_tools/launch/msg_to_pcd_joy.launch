@@ -1,0 +1,6 @@
+<launch>
+<node pkg="cloud_tools" type="msg_to_pcd_joy_node" name="msg_to_pcd_joy_node" output="screen" respawn="false" >
+  <param name="input_cloud_topic" value="/cloud_pcd"/>
+  <param name="input_joy_topic" value="/wii/wiimote"/>
+</node>
+</launch>

@@ -1,0 +1,7 @@
+<launch>
+<node pkg="cloud_tools" type="table_msg_split_node" name="table_msg_split_node" output="screen" respawn="false" >
+  <param name="input_table_topic" value="/table_with_objects"/>
+  <param name="output_pcds_topic" value="/table_pcds"/>
+  <param name="output_polygon_topic" value="/table_polygon"/>
+</node>
+</launch>

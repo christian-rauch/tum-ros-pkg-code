@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2008 Radu Bogdan Rusu <rusu -=- cs.tum.edu>
+ * Copyright (c) 2010 Radu Bogdan Rusu <rusu -=- cs.tum.edu>
+ * Nico Blodow <blodow@cs.tum.edu>
  *
  * All rights reserved.
  *
@@ -24,20 +25,8 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * $Id: table_object_detector.cpp 24607 2009-10-07 02:42:21Z gerkey $
  *
  */
-
-/**
-@mainpage
-
-@htmlinclude manifest.html
-
-\author Radu Bogdan Rusu
-
-@b table_object_detector detects tables and objects.
-
- **/
 
 // ROS core
 #include <ros/ros.h>
@@ -81,7 +70,41 @@ using namespace sensor_msgs;
 using namespace geometry_msgs;
 using namespace mapping_msgs;
 
-// Comparison operator for a vector of vectors
+/** 
+@file
+
+@brief  table_object_detector_passive detects tables and objects in 
+point cloud data
+
+@par Advertises
+- \b semantic_polygonal_map topic with PolygonalMap message
+- \b cloud_annotated topic with PointCloud message (object candidates)
+- \b table topic with TableWithObjects message
+
+@par Subscribes
+ - \b  cloud_sub topic with PointCloud message
+
+
+@par Parameters
+-    string global_frame_;
+-    double min_z_bounds_, max_z_bounds_;
+-    string output_table_topic_;
+-    string input_cloud_topic_;
+-    int k_;
+-    double clusters_growing_tolerance_;
+-    int clusters_min_pts_;
+-    int object_cluster_min_pts_;
+-    double object_cluster_tolerance_;
+-    bool publish_debug_;
+-    double sac_distance_threshold_, eps_angle_, region_angle_threshold_;
+-    double table_min_height_, table_max_height_, delta_z_, object_min_distance_from_table_;
+*/
+
+/**
+ * \brief Comparison operator for a vector of vectors
+ * \param a first vector
+ * \param b second vector
+ */
 bool
   compareRegions (const std::vector<int> &a, const std::vector<int> &b)
 {
@@ -124,7 +147,10 @@ class TableObjectDetector
     ros::Subscriber cloud_sub_;
     ros::Publisher semantic_map_publisher_, cloud_publisher_, table_pub_;
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  /**
+   * \brief Constructor initializes parameters
+   */
     TableObjectDetector (ros::NodeHandle& anode) : node_ (anode)
     {
       node_.param ("/global_frame_id", global_frame_, std::string("/map"));
@@ -187,13 +213,16 @@ class TableObjectDetector
       ROS_INFO ("callback registered");
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    void
-      updateParametersFromServer ()
-    {
-      if (node_.hasParam ("input_cloud_topic"))
-        node_.getParam ("input_cloud_topic", input_cloud_topic_);
-    }
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  /**
+   * \brief updates parameters from server
+   */
+  void
+  updateParametersFromServer ()
+  {
+    if (node_.hasParam ("input_cloud_topic"))
+      node_.getParam ("input_cloud_topic", input_cloud_topic_);
+  }
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     /** \brief Obtain a 24-bit RGB coded value from 3 independent <r, g, b> channel values
@@ -209,7 +238,16 @@ class TableObjectDetector
       return (rgb);
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  /** \brief finds table and supported object candidates
+   * \param points input point cloud
+   * \param coeff table plane coefficients
+   * \param poly table as polygon represenatation
+   * \param minP min table boundary
+   * \param maxP max table boundary
+   * \param object_indices point indices of object candidates to be filled-in
+   * \param table table msg to be filled-in with TableObject(s)
+   */
     void
       findObjectClusters (sensor_msgs::PointCloud &points, const vector<double> &coeff, const Polygon &poly,
                           const geometry_msgs::Point32 &minP, const geometry_msgs::Point32 &maxP,
@@ -254,6 +292,7 @@ class TableObjectDetector
 
       geometry_msgs::Point32 minPCluster, maxPCluster;
       table.objects.resize (object_clusters.size ());
+      int cluster_count = 0;
       for (unsigned int i = 0; i < object_clusters.size (); i++)
       {
         vector<int> object_idx = object_clusters.at (i);
@@ -263,29 +302,40 @@ class TableObjectDetector
         if (minPCluster.z > (maxP.z + object_min_distance_from_table_) )
             continue;
 
-        table.objects[i].points.points.resize (object_idx.size ());
+        table.objects[cluster_count].points.header.frame_id =  points.header.frame_id;
+        table.objects[cluster_count].points.points.resize (object_idx.size ());
 
-        table.objects[i].points.channels.resize(1);
-        table.objects[i].points.channels[0].name="intensities";
-        table.objects[i].points.channels[0].values.resize (object_idx.size());
+        table.objects[cluster_count].points.channels.resize(points.channels.size());
+        for (unsigned int c = 0; c < points.channels.size (); c++)
+        {
+          table.objects[cluster_count].points.channels[c].name=points.channels[c].name;
+          table.objects[cluster_count].points.channels[c].values.resize (points.channels[c].values.size());
+        }
 //         int intensity_idx = cloud_io::getIndex (&points, "intensities");
         // Process this cluster and extract the centroid and the bounds
         for (unsigned int j = 0; j < object_idx.size (); j++)
         {
-          table.objects[i].points.points.at (j) = points.points.at (object_idx.at (j));
+          table.objects[cluster_count].points.points.at (j) = points.points.at (object_idx.at (j));
+          for (unsigned int c = 0; c < points.channels.size (); c++)
+            table.objects[cluster_count].points.channels[c].values.at (j) = points.channels[c].values.at (object_idx.at (j));
           object_indices[nr_p] = object_idx.at (j);
           nr_p++;
         }
         
-        cloud_geometry::statistics::getMinMax (points, object_idx, table.objects[i].min_bound, table.objects[i].max_bound);
-        cloud_geometry::nearest::computeCentroid (points, object_idx, table.objects[i].center);
+        cloud_geometry::statistics::getMinMax (points, object_idx, table.objects[cluster_count].min_bound, table.objects[cluster_count].max_bound);
+        cloud_geometry::nearest::computeCentroid (points, object_idx, table.objects[cluster_count].center);
+        cluster_count++;
       }
-      ROS_INFO ("created %i clusters with %i points total.", object_clusters.size (), nr_p);
+      object_clusters.resize(cluster_count);
+      ROS_INFO ("created %i clusters with %i points total.", (int)object_clusters.size (), nr_p);
       object_indices.resize (nr_p);
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // Callback
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  /** 
+   * \brief point cloud  callback, every other function gets called from here
+   * \param pc input point cloud
+   */
     void cloud_cb (const sensor_msgs::PointCloudConstPtr& pc)
     {
       cloud_in_ = *pc;
@@ -374,7 +424,7 @@ class TableObjectDetector
       for (unsigned int cluster_num = 0; cluster_num < c_good.size(); cluster_num++)
       {
         ROS_INFO ("Number of clusters found: %d, largest cluster: %d.", (int)clusters.size (), (int)clusters[c_good[cluster_num]].size ());
-        if (clusters[c_good[cluster_num]].size () < clusters_min_pts_)
+        if (clusters[c_good[cluster_num]].size () < (unsigned int)clusters_min_pts_)
           continue;
         if (good_inliers [cluster_num].size () < 100)
           continue;
@@ -550,7 +600,14 @@ class TableObjectDetector
       return;
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  /**
+   * \brief fits a plane to the set of 3D points
+   * \param points set of 3D points
+   * \param indices points' vector indices
+   * \param inliers indices of in-lying points (to be filled) 
+   * \param coeff plane equation coefficients
+   */
     int
       fitSACPlane (sensor_msgs::PointCloud *points, vector<int> *indices, vector<int> &inliers, vector<double> &coeff)
     {
@@ -594,7 +651,11 @@ class TableObjectDetector
       return (0);
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  /**
+   * \brief estimates normals for all 3D points
+   * \param cloud input point cloud data
+   */
     void
       estimatePointNormals (sensor_msgs::PointCloud &cloud)
     {

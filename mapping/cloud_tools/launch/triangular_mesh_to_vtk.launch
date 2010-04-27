@@ -1,0 +1,17 @@
+<launch>
+  <node pkg="point_cloud_mapping" type="pcd_to_msg_node" name="pcd_to_msg_node" output="screen" respawn="true"
+        args="$(find cloud_tools)/data/box.pcd $(optenv period 5)" />
+  
+  <node pkg="topic_tools" type="relay" name="relay_cloud_pcd" args="/cloud_pcd /depth_image_triangulation_node/cloud_pcd" respawn="false" output="screen"/>
+  <!--Note: you need to compile cloud_algos to get the triangulation going-->
+  <node pkg="cloud_algos" type="depth_image_triangulation_node" name="depth_image_triangulation_node" output="screen" respawn="true">
+  </node>
+  
+  <node pkg="topic_tools" type="relay" name="relay_depth_image_triangulation" args="/depth_image_triangulation_node/cloud_triangulated /triangular_mesh_to_vtk_node/mesh" respawn="false" output="screen"/>
+  
+  <node pkg="cloud_tools" type="triangular_mesh_to_vtk_node" name="triangular_mesh_to_vtk_node" output="screen" respawn="true">
+    <param name="input_mesh_topic" type="string" value="mesh"/>
+    <param name="output_vtk_file" type="string" value="mesh_test.vtk"/>
+    <rosparam param="subscribed_to_nodes">["/depth_image_triangulation_node"]</rosparam>
+  </node>
+</launch>

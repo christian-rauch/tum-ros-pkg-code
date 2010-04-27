@@ -1,0 +1,9 @@
+<launch>
+<node pkg="cloud_tools" type="msg_to_pcd_node" name="msg_to_pcd_node" output="screen" respawn="false" >
+  <param name="input_cloud_topic" value="/cloud_pcd"/>
+  <param name="name" value="cloud"/>
+  <param name="dir" value="$(find cloud_tools)/data/"/>
+  <param name="nr_saved_pcds" value="1"/>
+  <param name="get_name_from_param_server" value=""/>
+</node>
+</launch>

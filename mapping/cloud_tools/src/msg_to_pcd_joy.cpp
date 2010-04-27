@@ -1,3 +1,50 @@
+/*
+ * Copyright (c) 2010 Nico Blodow <blodow -=- cs.tum.edu>
+ *
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ *
+ */
+
+/** 
+@file
+
+@brief msg_to_pcd_joy subscribes to both, topic with PointCloud message
+and topic with Joy message, and saves PointCloud as pcd file upon pressing 
+button B on the Wii joystick device. 
+
+
+@par Advertises
+
+@par Subscribes
+- \b topic with PointCloud message
+- \b topic with Joy message
+@par Parameters
+- \b string input_cloud_topic_
+- \b string input_joy_topic_
+*/
+
 // #include <unistd.h>
 
 #include <ctime>
@@ -28,7 +75,12 @@ class MsgToPCDJoy
       joy_sub_ = nh_.subscribe (input_joy_topic_, 1, &MsgToPCDJoy::joy_cb, this);
       ROS_INFO ("subscribed to both topics.");
     }
-    
+  
+  /*
+   * \brief joy_cb checks if button B is pressed and if we received the PointCloud message
+   * and writes it to disk.
+   * \param j input Joy message
+   */
     void
       joy_cb (const joy::Joy::ConstPtr& j)
     {
@@ -48,7 +100,11 @@ class MsgToPCDJoy
             ROS_INFO ("Joystick button Nr. %i pressed.", i);
       }
     }
-    
+  
+  /*
+   * \brief cloud_cb PointCloud callback
+   * \param cloud input PointCloud message
+   */
     void
       cloud_cb (const sensor_msgs::PointCloudConstPtr& cloud)
     {
@@ -58,18 +114,6 @@ class MsgToPCDJoy
       counter_ ++;
       lock.unlock ();
     }
-
-    bool 
-      spin ()
-    {
-      while (ros::ok())
-      {
-        ros::spinOnce ();
-//         if (counter_ > 0)
-//           return true;
-      }
-      return true;
-    }
 };
 
 int main (int argc, char* argv[])
@@ -77,7 +121,7 @@ int main (int argc, char* argv[])
   ros::init (argc, argv, "msg_to_pcd");
 
   MsgToPCDJoy n;
-  n.spin ();
+  ros::spin ();
 
   return (0);
 }

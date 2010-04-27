@@ -1,0 +1,9 @@
+<launch>
+  <node pkg="point_cloud_mapping" type="pcd_to_msg_node" name="pcd_to_msg_node" output="screen" respawn="true"
+        args="$(find cloud_tools)/data/box.pcd $(optenv period 5)" />
+  
+  <node pkg="cloud_tools" type="wall_filter_node" name="wall_filter_node" output="screen" respawn="true">
+    <param name="input_cloud_topic" type="string" value="/cloud_pcd"/>
+    <param name="output_cloud_topic" type="string" value="cloud_wallless"/>
+  </node>
+</launch>
