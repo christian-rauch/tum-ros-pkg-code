@@ -11,8 +11,8 @@ foreach( _in ${inputs} )
 endforeach( _in )
 
 # replace path to local OWL files
-rosbuild_find_ros_package(ias_semweb)
-set( LOCAL_PACKAGE_PATH ${ias_semweb_PACKAGE_PATH} )
+rosbuild_find_ros_package(semweb)
+set( LOCAL_PACKAGE_PATH ${semweb_PACKAGE_PATH} )
 
 file(GLOB inputs prolog/*.in)
 foreach( _in ${inputs} )

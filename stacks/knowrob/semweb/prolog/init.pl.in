@@ -23,7 +23,7 @@
 :- jpl_set_default_jvm_opts(['-Xmx256M']).
 
 :- register_ros_package(ias_prolog_addons).
-:- register_ros_package(ias_semweb).
+:- register_ros_package(semweb).
 
 
 :- use_module(library('semweb/rdf_db')).
