@@ -1,0 +1,15 @@
+<package>
+  <description brief="gpc">
+    General Polygon Clipper library (http://www.cs.man.ac.uk/~toby/alan/software/index.html)
+  </description>
+  <author>Alan Murta</author>
+  <license>free for non-commercial use</license>
+  <review status="unreviewed" notes=""/>
+  <url></url>
+
+  <export>
+    <cpp cflags="-I${prefix}/include/" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lgpc"/>
+  </export>
+</package>
+
+
