@@ -74,7 +74,9 @@
       comp_m52/2,
       comp_m53/2,
       comp_m54/2,
-      comp_m55/2
+      comp_m55/2,
+      objectAtPoint2D/2,
+      objectAtPoint2D/3
     ]).
 
 :- use_module(library('semweb/rdfs')).
@@ -142,36 +144,58 @@ on_Physical(Top, Bottom) :-
 % @param Bottom Identifier of the lower Object
 % @param T      TimePoint or Event for which the relations is supposed to hold
 %
-holds(on_Physical(Top, Bottom), T) :-
-
+%%% holds(on_Physical(Top, Bottom), T) :-
+%%% 
+%%%     object_perception(Top, T, VPT),
+%%%     object_perception(Bottom, T, VPB),
+%%% 
+%%%     rdf_triple(knowrob:eventOccursAt, VPT,    TopMatrix),
+%%%     rdf_triple(knowrob:eventOccursAt, VPB, BottomMatrix),
+%%% 
+%%%     rdf_triple(knowrob:m03, TopMatrix, literal(type(_,TCx))),atom_to_term(TCx,TX,_),
+%%%     rdf_triple(knowrob:m13, TopMatrix, literal(type(_,TCy))),atom_to_term(TCy,TY,_),
+%%%     rdf_triple(knowrob:m23, TopMatrix, literal(type(_,TCz))),atom_to_term(TCz,TZ,_),
+%%% 
+%%%     rdf_triple(knowrob:m03, BottomMatrix, literal(type(_,BCx))),atom_to_term(BCx,BX,_),
+%%%     rdf_triple(knowrob:m13, BottomMatrix, literal(type(_,BCy))),atom_to_term(BCy,BY,_),
+%%%     rdf_triple(knowrob:m23, BottomMatrix, literal(type(_,BCz))),atom_to_term(BCz,BZ,_),
+%%% 
+%%%     % read the dimensions of the bottom entity
+%%%     rdf_has(Bottom, knowrob:widthOfObject, literal(type(_,Bw))),atom_to_term(Bw,BW,_),
+%%%     rdf_has(Bottom, knowrob:depthOfObject, literal(type(_,Bd))),atom_to_term(Bd,BD,_),
+%%% 
+%%%     % the criterion is if the difference between them is less than epsilon=5cm
+%%%     =<( BZ, TZ ),
+%%% 
+%%%     % additional criterion: center of the top entity has to be inside the
+%%%     % area of the bottom entity
+%%%     =<( (BX - 0.5*BD), TX ), >=( (BX + 0.5*BD), TX ),
+%%%     =<( (BY - 0.5*BW), TY ), >=( (BY + 0.5*BW), TY ),
+%%%     Top \= Bottom.
+holds(on_Physical(Top, Bottom),T) :-
+    % get object center for Top 
     object_perception(Top, T, VPT),
-    object_perception(Bottom, T, VPB),
-
     rdf_triple(knowrob:eventOccursAt, VPT,    TopMatrix),
-    rdf_triple(knowrob:eventOccursAt, VPB, BottomMatrix),
+    rdf_triple(knowrob:m03, TopMatrix, TCxx),strip_literal_type(TCxx, TCx),atom_to_term(TCx,TX,_),
+    rdf_triple(knowrob:m13, TopMatrix, TCyy),strip_literal_type(TCyy, TCy),atom_to_term(TCy,TY,_),
+%     rdf_triple(knowrob:m23, TopMatrix, TCzz),strip_literal_type(TCzz, TCz),atom_to_term(TCz,TZ,_),
 
-    rdf_triple(knowrob:m03, TopMatrix, literal(type(_,TCx))),atom_to_term(TCx,TX,_),
-    rdf_triple(knowrob:m13, TopMatrix, literal(type(_,TCy))),atom_to_term(TCy,TY,_),
-    rdf_triple(knowrob:m23, TopMatrix, literal(type(_,TCz))),atom_to_term(TCz,TZ,_),
+%     rdf_has(Top, knowrob:heightOfObject, literal(type(_,Th))),atom_to_term(Th,TH,_),
 
-    rdf_triple(knowrob:m03, BottomMatrix, literal(type(_,BCx))),atom_to_term(BCx,BX,_),
-    rdf_triple(knowrob:m13, BottomMatrix, literal(type(_,BCy))),atom_to_term(BCy,BY,_),
-    rdf_triple(knowrob:m23, BottomMatrix, literal(type(_,BCz))),atom_to_term(BCz,BZ,_),
+    % query for objects at center point
+    objectAtPoint2D(TX,TY,Bottom),
 
-    % read the dimensions of the bottom entity
-    rdf_has(Bottom, knowrob:widthOfObject, literal(type(_,Bw))),atom_to_term(Bw,BW,_),
-    rdf_has(Bottom, knowrob:depthOfObject, literal(type(_,Bd))),atom_to_term(Bd,BD,_),
+    % get height of objects at center point
+%     object_perception(Bottom, T, VPB),
+%     rdf_triple(knowrob:eventOccursAt, VPB, BottomMatrix),
+%     rdf_triple(knowrob:m23, BottomMatrix, BCzz), strip_literal_type(BCzz, BCz),atom_to_term(BCz,BZ,_),
+%     rdf_has(Bottom, knowrob:heightOfObject, literal(type(_,Bh))),atom_to_term(Bh,BH,_),
+
+%     print('bottom height:'), print(BH),
 
     % the criterion is if the difference between them is less than epsilon=5cm
-    =<( BZ, TZ ),
-
-    % additional criterion: center of the top entity has to be inside the
-    % area of the bottom entity
-    =<( (BX - 0.5*BD), TX ), >=( (BX + 0.5*BD), TX ),
-    =<( (BY - 0.5*BW), TY ), >=( (BY + 0.5*BW), TY ),
+%     =<( abs((BZ + 0.5*BH) - (TZ - 0.5*TH)), 0.05),
     Top \= Bottom.
-
-
 
 
 %% comp_toTheLeftOf(?Left, ?Right) is nondet.
@@ -965,5 +989,68 @@ comp_orientation(Object, Orientation) :-
 
 
 
+% todo: generalize projection to floor. polygon instead of rectangle.
+objectAtPoint2D(Point2D, Obj) :-
+    % get coordinates of point of interest
+    rdf_triple(knowrob:xCoord, Point2D, PCxx), strip_literal_type(PCxx, PCx), atom_to_term(PCx,PX,_),
+    rdf_triple(knowrob:yCoord, Point2D, PCyy), strip_literal_type(PCyy, PCy), atom_to_term(PCy,PY,_),
+    objectAtPoint2D(PX,PY,Obj).
+ 
+objectAtPoint2D(PX,PY,Obj) :-
 
+    % get information of potential objects at positon point2d (x/y)
+
+    rdf_has(Obj, knowrob:widthOfObject, Oww), strip_literal_type(Oww, Ow),atom_to_term(Ow,OW,_),
+    rdf_has(Obj, knowrob:depthOfObject, Odd), strip_literal_type(Odd, Od),atom_to_term(Od,OD,_),
+
+    rdf_triple(knowrob:orientation, Obj, Mat),
+    rdf_triple(knowrob:m03, Mat, Tmm03), strip_literal_type(Tmm03, TM03),atom_to_term(TM03,OX,_),
+    rdf_triple(knowrob:m13, Mat, Tmm13), strip_literal_type(Tmm13, TM13),atom_to_term(TM13,OY,_),
+    rdf_triple(knowrob:m00, Mat, Tmm00), strip_literal_type(Tmm00, TM00),atom_to_term(TM00,M00,_),
+    rdf_triple(knowrob:m01, Mat, Tmm01), strip_literal_type(Tmm01, TM01),atom_to_term(TM01,M01,_),
+    rdf_triple(knowrob:m10, Mat, Tmm10), strip_literal_type(Tmm10, TM10),atom_to_term(TM10,M10,_),
+    rdf_triple(knowrob:m11, Mat, Tmm11), strip_literal_type(Tmm11, TM11),atom_to_term(TM11,M11,_),
+
+    % object must have an extension
+    <(0,OW), <(0,OD),
+
+    % calc corner points of rectangle (consider rectangular objects only!)
+    P0X is (OX - 0.5*OW),
+    P0Y is (OY + 0.5*OD),
+    P1X is (OX + 0.5*OW),
+    P1Y is (OY + 0.5*OD),
+    P2X is (OX - 0.5*OW),
+    P2Y is (OY - 0.5*OD),
+    % rotate points
+    RP0X is (OX + (P0X - OX) * M00 + (P0Y - OY) * M01), 
+    RP0Y is (OY + (P0X - OX) * M10 + (P0Y - OY) * M11), 
+    RP1X is (OX + (P1X - OX) * M00 + (P1Y - OY) * M01), 
+    RP1Y is (OY + (P1X - OX) * M10 + (P1Y - OY) * M11), 
+    RP2X is (OX + (P2X - OX) * M00 + (P2Y - OY) * M01), 
+    RP2Y is (OY + (P2X - OX) * M10 + (P2Y - OY) * M11),
+
+    % debug: print rotated points
+    %write('P0 X: '), write(P0X), write(' -> '), writeln(RP0X), 
+    %write('P0 Y: '), write(P0Y), write(' -> '), writeln(RP0Y), 
+    %write('P1 X: '), write(P1X), write(' -> '), writeln(RP1X), 
+    %write('P1 Y: '), write(P1Y), write(' -> '), writeln(RP1Y), 
+    %write('P2 X: '), write(P2X), write(' -> '), writeln(RP2X), 
+    %write('P2 Y: '), write(P2Y), write(' -> '), writeln(RP2Y),
+
+    V1X is (RP1X - RP0X), 
+    V1Y is (RP1Y - RP0Y), 
+
+    V2X is (RP2X - RP0X), 
+    V2Y is (RP2Y - RP0Y), 
+
+    VPX is (PX - RP0X), 
+    VPY is (PY - RP0Y), 
+
+    DOT1 is (VPX * V1X + VPY * V1Y),
+    DOT2 is (VPX * V2X + VPY * V2Y),
+    DOTV1 is (V1X * V1X + V1Y * V1Y),
+    DOTV2 is (V2X * V2X + V2Y * V2Y),
+
+    =<(0,DOT1), =<(DOT1, DOTV1), 
+    =<(0,DOT2), =<(DOT2, DOTV2). 
 
