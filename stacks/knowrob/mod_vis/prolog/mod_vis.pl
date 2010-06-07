@@ -25,6 +25,8 @@
 
 :- module(mod_vis,
     [
+      vis_all_objects_on_table/1,
+      vis_all_objects_inferred/3,
       visualisation_canvas/1,
       clear_canvas/1,
       draw_background/2,
@@ -34,6 +36,7 @@
       display_action_fixed/2,
       show_actionseq/4,
       add_object/2,
+      add_object_perception/2,
       add_object_with_children/2,
       remove_object/2,
       remove_object_with_children/2,
@@ -64,13 +67,19 @@
 %
 % Launch the visualization canvas
 %
+:- assert(v_canvas(fail)).
 visualisation_canvas(Canvas) :-
+    v_canvas(fail),
     jpl_new('javax.swing.JFrame', [], Frame),
     jpl_call(Frame, 'resize', [800, 600], _),
     jpl_new('de.tum.in.fipm.kipm.gui.visualisation.base.PrologVisualizationCanvas', [], Canvas),
     jpl_call(Canvas, 'init', [], _),
     jpl_call(Frame, 'add', [Canvas], _),
-    jpl_call(Frame, 'setVisible', [@(true)], _).
+    jpl_call(Frame, 'setVisible', [@(true)], _),
+    retract(v_canvas(fail)),
+    assert(v_canvas(Canvas)).
+visualisation_canvas(Canvas) :-
+    v_canvas(Canvas).
 
 
 %% clear_canvas(+Canvas) is det.
@@ -80,6 +89,7 @@ visualisation_canvas(Canvas) :-
 % @param Canvas Visualization canvas
 % 
 clear_canvas(Canvas) :-
+    ((var(Canvas)) -> (v_canvas(Canvas));(true)),
     jpl_call(Canvas, 'clear', [], _).
 
 
@@ -95,6 +105,7 @@ clear_canvas(Canvas) :-
 % @param Canvas     Visualization canvas
 % 
 draw_background(Identifier, Canvas) :-
+    ((var(Canvas)) -> (v_canvas(Canvas));(true)),
     jpl_call(Canvas, 'drawBackground', [Identifier], _).
 
 
@@ -110,6 +121,7 @@ draw_background(Identifier, Canvas) :-
 % @param Canvas   Visualization canvas
 % 
 set_view_parameters(XShift, YShift, XRot, YRot, Zoom, Canvas) :-
+    ((var(Canvas)) -> (v_canvas(Canvas));(true)),
     jpl_call(Canvas, 'setViewParameters', [XShift, YShift, XRot, YRot, Zoom], _).
 
 
@@ -122,6 +134,7 @@ set_view_parameters(XShift, YShift, XRot, YRot, Zoom, Canvas) :-
 % @param Canvas     Visualization canvas
 % 
 display_information_for(Identifier, Canvas) :-
+    ((var(Canvas)) -> (v_canvas(Canvas));(true)),
     jpl_call(Canvas, 'displayInfoFor', [Identifier], _).
 
 
@@ -141,6 +154,7 @@ display_information_for(Identifier, Canvas) :-
 % @param Canvas     Visualization canvas
 % 
 display_action(Identifier, Canvas) :-
+    ((var(Canvas)) -> (v_canvas(Canvas));(true)),
     jpl_call(Canvas, 'displayAction', [Identifier], _).
 
 
@@ -153,6 +167,7 @@ display_action(Identifier, Canvas) :-
 % @param Canvas     Visualization canvas
 % 
 display_action_fixed(Identifier, Canvas) :-
+    ((var(Canvas)) -> (v_canvas(Canvas));(true)),
     jpl_call(Canvas, 'displayFixed', [Identifier], _).
   
 
@@ -166,12 +181,10 @@ display_action_fixed(Identifier, Canvas) :-
 % @param Canvas     Visualization canvas
 % 
 show_actionseq(SeqInfos, Canvas, Hand, Level) :-
+    ((var(Canvas)) -> (v_canvas(Canvas));(true)),
     jpl_call(Canvas, 'setActionInformation', [SeqInfos, Hand, Level], _).
 
 
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %
 % Adding/removing objects
 % 
@@ -184,6 +197,7 @@ show_actionseq(SeqInfos, Canvas, Hand, Level) :-
 % @param Canvas     Visualization canvas
 % 
 add_object(Identifier, Canvas) :-
+    ((var(Canvas)) -> (v_canvas(Canvas));(true)),
     jpl_call(Canvas, 'addObject', [Identifier], _).
 
 
@@ -196,6 +210,7 @@ add_object(Identifier, Canvas) :-
 % @param Canvas     Visualization canvas
 % 
 add_object_with_children(Identifier, Canvas) :-
+    ((var(Canvas)) -> (v_canvas(Canvas));(true)),
     jpl_call(Canvas, 'addObjectWithChildren', [Identifier], _).
 
 
@@ -207,6 +222,7 @@ add_object_with_children(Identifier, Canvas) :-
 % @param Canvas     Visualization canvas
 % 
 remove_object(Identifier, Canvas) :-
+    ((var(Canvas)) -> (v_canvas(Canvas));(true)),
     jpl_call(Canvas, 'removeObject', [Identifier], _).
 
 
@@ -219,9 +235,50 @@ remove_object(Identifier, Canvas) :-
 % @param Canvas     Visualization canvas
 % 
 remove_object_with_children(Identifier, Canvas) :-
+    ((var(Canvas)) -> (v_canvas(Canvas));(true)),
     jpl_call(Canvas, 'removeObjectWithChildren', [Identifier], _).
 
 
+%% add_object_perception(+Identifier, +Canvas) is nondet.
+%
+% Add an object to the scene and color it based on the kind of process that generated it:
+% * Perceived objects are light grey
+% * Inferred objects are colored based on their probability
+%
+% @param Identifier Object identifier, eg. "http://ias.cs.tum.edu/kb/ias_semantic_map.owl#F360-Containers-revised-walls"
+% @param Canvas     Visualization canvas
+%
+add_object_perception(Identifier, Canvas) :-
+    ((var(Canvas)) -> (v_canvas(Canvas));(true)),
+
+    % add the object based on its latest detection
+    add_object(Identifier, Canvas),
+
+    % find all perceptions of the object and sort by their start time
+    findall([P_i,Identifier,St], (rdf_has(P_i, knowrob:objectActedOn, Identifier),
+                                  rdfs_individual_of(P_i,  knowrob:'MentalEvent'),
+                                  rdf_triple(knowrob:startTime, P_i, StTg),
+                                  rdf_split_url(_, StTl, StTg),
+                                  atom_concat('timepoint_', StTa, StTl),
+                                  term_to_atom(St, StTa)), Perceptions),
+
+    predsort(compare_object_perceptions, Perceptions, Psorted),
+
+    % compute the homography for the newest perception
+    nth0(0, Psorted, Newest),
+    nth0(0, Newest, NewestPerception),
+
+    % highlight based on the source of information
+    ((
+        % display perceived objects in light grey
+        rdfs_instance_of(NewestPerception, knowrob:'Perceiving'),
+        highlight_object(Identifier, @(true), 110, 110, 110, Canvas)
+    ) ; (
+        % display inferred objects by their probability
+        rdfs_instance_of(NewestPerception, knowrob:'ProbCogReasoning'),
+        rdf_has(NewestPerception, knowrob:probability, Prob),
+        highlight_object(Identifier, @(true), 230, 230, 230, Prob, Canvas)
+    ) ).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -247,7 +304,7 @@ remove_object_with_children(Identifier, Canvas) :-
 % (ignoring, in this case, the parameters R, B, G).
 % 
 % @param Identifier eg. "http://ias.cs.tum.edu/kb/ias_semantic_map.owl#F360-Containers-revised-walls"
-% @param Highlight  True = highlight; false=remove highlighting
+% @param Highlight  @(true) = highlight; @(false)=remove highlighting
 % @param Color      Color value as integer, e.g. #AARRBBGG
 % @param R          Red color value
 % @param B          Blue color value
@@ -256,18 +313,23 @@ remove_object_with_children(Identifier, Canvas) :-
 % @param Canvas     Visualization canvas
 % 
 highlight_object(Identifier, Canvas) :-
+    ((var(Canvas)) -> (v_canvas(Canvas));(true)),
     jpl_call(Canvas, 'highlight', [Identifier, @(true)], _).
 
 highlight_object(Identifier, Highlight, Canvas) :-
+    ((var(Canvas)) -> (v_canvas(Canvas));(true)),
     jpl_call(Canvas, 'highlight', [Identifier, Highlight], _).
 
 highlight_object(Identifier, Highlight, Color, Canvas) :-
+    ((var(Canvas)) -> (v_canvas(Canvas));(true)),
     jpl_call(Canvas, 'highlight', [Identifier, Highlight, Color], _).
 
 highlight_object(Identifier, Highlight, R, B, G, Canvas) :-
+    ((var(Canvas)) -> (v_canvas(Canvas));(true)),
     jpl_call(Canvas, 'highlight', [Identifier, Highlight, R, B, G], _).
 
 highlight_object(Identifier, Highlight, R, B, G, Prob, Canvas) :-
+    ((var(Canvas)) -> (v_canvas(Canvas));(true)),
     jpl_call(Canvas, 'highlight', [Identifier, Highlight, R, B, G, Prob], _).
 
 
@@ -280,6 +342,7 @@ highlight_object(Identifier, Highlight, R, B, G, Prob, Canvas) :-
 % @param Canvas     Visualization canvas
 % 
 add_and_highlight_object(Identifier, Canvas) :-
+    ((var(Canvas)) -> (v_canvas(Canvas));(true)),
     jpl_call(Canvas, 'addObject', [Identifier], _),
     jpl_call(Canvas, 'highlight', [Identifier, @(true)], _).
 
@@ -297,9 +360,11 @@ add_and_highlight_object(Identifier, Canvas) :-
 % @param Canvas     Visualization canvas
 %
 highlight_object_with_children(Identifier, Canvas) :-
+    ((var(Canvas)) -> (v_canvas(Canvas));(true)),
     jpl_call(Canvas, 'highlightWithChildren', [Identifier, @(true)], _).
 
 highlight_object_with_children(Identifier, Highlight, Canvas) :-
+    ((var(Canvas)) -> (v_canvas(Canvas));(true)),
     jpl_call(Canvas, 'highlightWithChildren', [Identifier, Highlight], _).
 
 
@@ -311,4 +376,20 @@ highlight_object_with_children(Identifier, Highlight, Canvas) :-
 % @param Canvas     Visualization canvas
 % 
 reset_highlighting(Canvas) :-
+    ((var(Canvas)) -> (v_canvas(Canvas));(true)),
     jpl_call(Canvas, 'clearHighlight', [], _).
+
+
+vis_all_objects_on_table(Table):- 
+  add_object_perception(Table, _),
+  current_objects_on_table(Table, O),
+  add_object_perception(O, _).
+
+vis_all_objects_inferred(T,O,P):- 
+  rdf_has(Inf, rdf:type, knowrob:'TableSettingModelInference'), 
+  rdf_has(Inf,knowrob:objectActedOn,O),
+  rdf_has(Inf,knowrob:probability,P),
+  term_to_atom(N,P),
+  N>T,
+  add_object_perception(O,  _).
+

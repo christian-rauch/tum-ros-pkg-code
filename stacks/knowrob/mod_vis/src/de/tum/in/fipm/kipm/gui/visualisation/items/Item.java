@@ -32,7 +32,7 @@ public abstract class Item extends ItemBase {
 	public Item(float x, float y, float z) {
 		this.animated = false;
 		this.currentData = new float[] {x,y,z,0,0,0,1};
-		this.currentColor = Item.convertColor(150,150,150,150);
+		this.currentColor = Item.convertColor(220,220,220,255);
 		this.defaultColor = currentColor;
 	}
 

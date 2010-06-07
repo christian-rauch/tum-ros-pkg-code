@@ -176,24 +176,25 @@ public class PrologVisualizationCanvas extends PApplet implements MouseListener,
     }   
     public void highlight(String identifier, boolean highlight, int color) {
     	KVObject.highlightItem(addSingleQuotes(identifier),highlight, color);
-		KVObject.redraw();
+      KVObject.redraw();
     }
     public void highlight(String identifier, boolean highlight, int r, int g, int b) {
-    	highlight(identifier, highlight, r, g, b, "1");
-		KVObject.redraw();
+
+      int c = (((((255 << 8) + r) << 8) + g) << 8) + b;
+      KVObject.highlightItem(addSingleQuotes(identifier),highlight, c);
+      KVObject.redraw();
+
     }
     public void highlight(String identifier, boolean highlight, int r, int g, int b, String prob) {
     	
     	// show prob by alpha channel
-    	//int c = (((int) (Double.valueOf(prob) * 220)) << 24) + 0x0000FF00 * r + 0x000000FF * g + b;
+      // int c = (((((alpha << 8) + r) << 8) + g) << 8) + b;
 
     	// show prob by hue
     	int c = HSVtoRGB (1-Float.valueOf(prob), 1.0f, 1.0f)+ 0xFF000000;
-    	
-    	System.out.println(identifier+": "+ Integer.toHexString(c));
-    	
+
     	KVObject.highlightItem(addSingleQuotes(identifier),highlight, c);
-		KVObject.redraw();
+      KVObject.redraw();
     }
     /**
      * helper function: converts HSV to RGB color space 

@@ -31,9 +31,9 @@ public class CerealBox extends Item {
 		if(currentData[3] != 0) c.rotateX(currentData[3]);
 		if(currentData[4] != 0) c.rotateY(currentData[4]); 
 		if(currentData[5] != 0) c.rotateZ(currentData[5]);
-		
-		c.translate(0,0,15f);
-		c.box(20f, 8f, -30f);
+
+
+		c.box(20f, 8f, 30f);
 		
 		c.popMatrix();
 	}

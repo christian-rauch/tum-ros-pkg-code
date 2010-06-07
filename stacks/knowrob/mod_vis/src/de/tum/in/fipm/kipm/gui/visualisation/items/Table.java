@@ -10,7 +10,7 @@ public class Table extends Item {
 	 * normal position is 320.0, 200.33, 0.0
 	 */
 	public Table(float x, float y, float z) { super(x,y,z);
-		this.currentColor = ItemBase.convertColor(150,150,150,255);
+		this.currentColor = ItemBase.convertColor(100,100,100,255);
 	}
 
 	/**
@@ -48,12 +48,20 @@ public class Table extends Item {
 		c.translate (0f, -89.82f, 0f);  				c.box(5f, 5f, 73.177f);
 		*/
 		
-		c.translate(0, 0, 72.177f);	  
-		c.box(80.46f, 119.76f, -2f);
-		c.translate (20.115f, 44.91f, -36.5885f);	c.box(-5f, 5f, 73.175f);
-		c.translate(-40.23f,0,0);		c.box(-5f, 5f, 73.175f);
-		c.translate(0,-89.82f,0);		c.box(-5f, 5f, 73.175f);
-		c.translate(40.23f,0,0);		c.box(-5f, 5f, 73.175f);
+// 		c.translate(0, 0, 72.177f);
+
+    float depth = 60f;
+    float width = 120f;
+    float height= 72f;
+    float legs  = 5f;
+    float ttop  = 2f;
+
+    c.translate(0, 0, 0.5f*height);
+    c.box(depth, width, -ttop);
+    c.translate (0.45f*depth, 0.45f*width, -0.5f*height); c.box(-legs, legs, height);
+    c.translate(-0.9f*depth,0,0);                         c.box(-legs, legs, height);
+    c.translate(0,-0.9f*width,0);                         c.box(-legs, legs, height);
+    c.translate(0.9f*depth,0,0);                          c.box(-legs, legs, height);
 
 		
 		c.popMatrix();

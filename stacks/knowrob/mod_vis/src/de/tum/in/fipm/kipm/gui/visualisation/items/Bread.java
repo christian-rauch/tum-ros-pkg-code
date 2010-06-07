@@ -30,7 +30,7 @@ public class Bread extends Item {
 		if(currentData[4] != 0) c.rotateY(currentData[4]); 
 		if(currentData[5] != 0) c.rotateZ(currentData[5]);
 
-		c.box(20f, 8f, -8f);
+		c.box(20f, 8f, 8f);
 		
 		c.popMatrix();
 	}

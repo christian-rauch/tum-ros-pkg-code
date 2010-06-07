@@ -141,7 +141,7 @@ public class StandaloneKitchenVisApplet extends AnimatedCanvas implements MouseL
     setColors();
  
     noLoop();
-    
+    hint(ENABLE_DEPTH_SORT);
     drawBackground();
     draw();
     isInitialized = true;
@@ -269,9 +269,10 @@ public class StandaloneKitchenVisApplet extends AnimatedCanvas implements MouseL
 				drawMeshes();
 	      
 			// draw all Items
-			for(int i=0;i<allItems.size();i++)
+			for(int i=0;i<allItems.size();i++) {
+        hint(ENABLE_DEPTH_TEST);
 				allItems.get(i).draw(this, currentFrame);	
-
+      }
 
 			
 			
@@ -434,8 +435,8 @@ public class StandaloneKitchenVisApplet extends AnimatedCanvas implements MouseL
    */
   public void drawBackground() {
 	  clear();
-	  addObjectWithChildren("'http://ias.cs.tum.edu/kb/ias_semantic_map.owl#F360-Containers-revised-walls'");
-	  addObjectWithChildren("'http://ias.cs.tum.edu/kb/ias_map_addons.owl#table0'");
+// 	  addObjectWithChildren("'http://ias.cs.tum.edu/kb/ias_semantic_map.owl#F360-Containers-revised-walls'");
+// 	  addObjectWithChildren("'http://ias.cs.tum.edu/kb/ias_map_addons.owl#table0'");
   }
   
     
