@@ -1,3 +1,5 @@
 owl/ccrl_semantic_map.owl
 owl/ias_map_addons.owl
 owl/ias_semantic_map.owl
+prolog/init.pl
+prolog/ias_semantic_map.pl
