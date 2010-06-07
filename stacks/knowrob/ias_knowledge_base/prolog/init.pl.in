@@ -120,6 +120,50 @@ get_timepoint(T) :-
   atom_concat('http://ias.cs.tum.edu/kb/knowrob.owl#timepoint_', Ts, T),
   rdf_assert(T, rdf:type, knowrob:'TimePoint').
 
+% get the lastest perception of object O
+latest_perception(Object, NewestPerception) :-
+
+    findall([P_i,Object,St], (rdf_has(P_i, knowrob:objectActedOn, Object),
+                              rdfs_individual_of(P_i,  knowrob:'MentalEvent'),
+                              rdf_triple(knowrob:startTime, P_i, StTg),
+                              rdf_split_url(_, StTl, StTg),
+                              atom_concat('timepoint_', StTa, StTl),
+                              term_to_atom(St, StTa)), Perceptions),
+
+    predsort(compare_object_perceptions, Perceptions, Psorted),
+
+    % compute the homography for the newest perception
+    nth0(0, Psorted, Newest),
+    nth0(0, Newest, NewestPerception).
+
+
+% get the lastest perception of an object of type Type
+latest_perception_of_type(Type, NewestPerception) :-
+
+    findall([P_i,Object,St], (rdfs_instance_of(Object, Type),
+                              rdf_has(P_i, knowrob:objectActedOn, Object),
+                              rdfs_individual_of(P_i,  knowrob:'MentalEvent'),
+                              rdf_triple(knowrob:startTime, P_i, StTg),
+                              rdf_split_url(_, StTl, StTg),
+                              atom_concat('timepoint_', StTa, StTl),
+                              term_to_atom(St, StTa)), Perceptions),
+
+    predsort(compare_object_perceptions, Perceptions, Psorted),
+
+    % compute the homography for the newest perception
+    nth0(0, Psorted, Newest),
+    nth0(0, Newest, NewestPerception).
+
+
+% ask for the objects detected in the latest scan of table Table
+% e.g. 'http://ias.cs.tum.edu/kb/knowrob.owl#KitchenTable0'
+current_objects_on_table(Table, Object) :-
+    latest_perception(Table, P),
+    rdfs_instance_of(Perc, knowrob:'VisualPerception'),
+    rdf_has(Perc, knowrob:objectActedOn, Object),
+    rdf_has(P, knowrob:startTime, Pstart),
+    rdf_has(Perc, knowrob:startTime, Pstart),
+    Object\=Table.
 
 % find all perceptions of the object that are valid at time point T
 object_perception(Object, Time, Perception) :-
@@ -132,6 +176,18 @@ object_perception(Object, Time, Perception) :-
     nth0(1, P_O, Object),
 
     temporally_subsumes(Perception, Time).
+
+
+% find all perceptions of the object that are valid at time point T
+object_perception(Object, Time, Perception) :-
+
+    var(Time),
+    findall([P_i,Object], (rdf_has(P_i, knowrob:objectActedOn, Object),
+                         rdfs_individual_of(P_i,  knowrob:'MentalEvent')), Perceptions),
+
+    member(P_O, Perceptions),
+    nth0(0, P_O, Perception),
+    nth0(1, P_O, Object).
 
 
 temporally_subsumes(Long, Short) :-
