@@ -10,7 +10,7 @@ if [ -n "$1" ] && [ -n "$(rospack find $1)" ]; then
     export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$(rospack find rosjava)/bin
 
     if [ -f $(rospack find $1)/prolog/init.pl ]; then
-        SCRIPT_FILE="-s $(rospack find $1)/prolog/init.pl"
+        SCRIPT_FILE="-g register_ros_package($1)"
     fi
     PL_ARGS=${@:1}
 fi
