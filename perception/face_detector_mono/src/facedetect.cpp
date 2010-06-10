@@ -31,6 +31,8 @@
 #include "cv_bridge/CvBridge.h"
 
 //yarp
+//#define YARP
+#ifdef YARP
 #include <yarp/os/all.h>
 #include <yarp/sig/all.h>
 //namespaces
@@ -38,6 +40,7 @@ using namespace yarp::os;
 using namespace yarp::sig;
 using namespace yarp::sig::draw;
 using namespace yarp::sig::file;
+#endif
 
 #ifdef _EiC
 #define WIN32
@@ -45,8 +48,6 @@ using namespace yarp::sig::file;
 
 using namespace std;
 using namespace cv;
-
-//#define YARP
 
 class FaceDetect {
 
@@ -57,10 +58,17 @@ public:
   String input_image_topic_, port_name_;
   CascadeClassifier cascade_, nested_cascade_;
   double scale_;
-  bool display_;
+  bool display_, yarp_image_;
+#ifdef YARP
   Network yarp_;
   // Make a port for reading and writing images
   BufferedPort<Bottle> port_;
+#endif
+  int hsizes_[2];
+  CvHistogram *start_hist_;
+  IplImage* hist_image_; 
+  ros::Time ts_;
+
   FaceDetect(ros::NodeHandle &n) :
     n_(n), it_(n_)
   {
@@ -69,25 +77,43 @@ public:
     n_.param("scale", scale_, 1.5);
     n_.param("input_image_topic", input_image_topic_, std::string("/yarp_to_ros_image/yarp_to_ros_image"));
     n_.param("display", display_, false);
+    n_.param("yarp_image", yarp_image_, false);
     n_.param("port_name", port_name_, std::string("/icub_look_at_head"));
+    ts_ = ros::Time::now ();
 
     image_sub_ = it_.subscribe(input_image_topic_, 1, &FaceDetect::image_callback, this);
 
     if (cascade_name_ == "" || nested_cascade_name_ == "")
       ROS_ERROR("Classification files missing!");
+    hsizes_[0] = 128, hsizes_[1] = 128;
+    start_hist_ = cvCreateHist(2, hsizes_, CV_HIST_ARRAY);
+    hist_image_ = cvCreateImage(cvSize(30,30), IPL_DEPTH_8U, 1 );
+    
     if(display_)
+    {
       cvNamedWindow( "result", 1 );
+      cvNamedWindow( "smallImg", 1 );
+    }
+
 #ifdef YARP    
-    ConstString yarp_port_name_(port_name_.c_str());
-    yarp_.init();
-    port_.open(yarp_port_name_);
-#endif 
+    if(yarp_image_)
+      {
+	ConstString yarp_port_name_(port_name_.c_str());
+	yarp_.init();
+	port_.open(yarp_port_name_);
+      }
+#endif
   }
 
   ~FaceDetect()
     {
       if(display_)
+      {
         cvDestroyWindow("result");
+        cvDestroyWindow("smallImg");
+      }
+      cvReleaseImage(&hist_image_);
+      cvReleaseHist(&start_hist_);
     }
 
   void image_callback(const sensor_msgs::ImageConstPtr& msg_ptr)
@@ -117,7 +143,7 @@ public:
     if( !image_.empty() )
     {
       detect_and_draw( image_, cascade_, nested_cascade_, scale_ );
-      waitKey(100);
+      waitKey(3);
     }   
     
     // return 0;
@@ -143,17 +169,17 @@ public:
     cvtColor( img, gray, CV_BGR2GRAY );
     resize( gray, smallImg, smallImg.size(), 0, 0, INTER_LINEAR );
     equalizeHist( smallImg, smallImg );
-    
+
     t = (double)cvGetTickCount();
     cascade.detectMultiScale( smallImg, faces,
-                              1.1, 3, 0
+                              1.1, 5, 0
                               //|CV_HAAR_FIND_BIGGEST_OBJECT
                               //|CV_HAAR_DO_ROUGH_SEARCH
                               |CV_HAAR_SCALE_IMAGE
                               ,
                               Size(30, 30) );
     t = (double)cvGetTickCount() - t;
-    printf( "detection time = %g ms\n", t/((double)cvGetTickFrequency()*1000.) );
+    ROS_INFO( "detection time = %g ms", t/((double)cvGetTickFrequency()*1000.) );
     for( vector<Rect>::const_iterator r = faces.begin(); r != faces.end(); r++, i++ )
     {
       Mat smallImgROI;
@@ -164,20 +190,31 @@ public:
       center.x = cvRound((r->x + r->width*0.5)*scale);
       center.y = cvRound((r->y + r->height*0.5)*scale);
 #ifdef YARP 
-     //send center coordinates to the icub head
-        send_face_center_to_yarp_port(center.x, center.y);
+      //send center coordinates to the icub head
+      if(yarp_image_)
+	send_face_center_to_yarp_port(center.x, center.y);
+#else
+      //send center coordinates with <geometry_msg::PointStamped> ????
 #endif      
       radius = cvRound((r->width + r->height)*0.25*scale);
       circle( img, center, radius, color, 3, 8, 0 );
+      
+      //cvSetImageROI(smallImg, *r); 
+      //cvCopy(smallImg, hist_image_);
+      //cvResetImageROI(smallImg);
+      smallImgROI = smallImg(*r);
+      //cvCalcHist(smallImgROI, start_hist_);
+      cv::imshow( "smallImg", smallImgROI );    
+      
       if( nestedCascade.empty() )
         continue;
       smallImgROI = smallImg(*r);
       nestedCascade.detectMultiScale( smallImgROI, nestedObjects,
                                       1.1, 2, 0
-                                      //|CV_HAAR_FIND_BIGGEST_OBJECT
+                                      |CV_HAAR_FIND_BIGGEST_OBJECT
                                       //|CV_HAAR_DO_ROUGH_SEARCH
                                       //|CV_HAAR_DO_CANNY_PRUNING
-                                      |CV_HAAR_SCALE_IMAGE
+                                      //|CV_HAAR_SCALE_IMAGE
                                       ,
                                       Size(30, 30) );
       for( vector<Rect>::const_iterator nr = nestedObjects.begin(); nr != nestedObjects.end(); nr++ )
@@ -192,7 +229,6 @@ public:
     if(display_)
       cv::imshow( "result", img );    
   }
-
 #ifdef YARP
   void send_face_center_to_yarp_port(double x, double y)
   {
@@ -200,10 +236,13 @@ public:
     output.clear();
     output.addDouble(x);
     output.addDouble(y);
-    ROS_INFO("Writting center coordinates %s to port %s", output.toString().c_str(), port_name_.c_str());
+    ROS_INFO("Writting center coordinates %s to port %s. Time elapsed since last sending: %g seconds", 
+	     output.toString().c_str(), port_name_.c_str(), (ros::Time::now () - ts_).toSec ());
+    ts_ = ros::Time::now();
     port_.write();
   }
 #endif
+
 protected:
   
   ros::NodeHandle n_;
