@@ -1,0 +1,15 @@
+<package>
+  <description brief="kuka_fri">
+    control node for the KUKA lightweight arm, using the
+    Fast Research Interface (FRI) over UDP.
+  </description>
+  <author>Ingo Kresse, Alexis Maldonado</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <depend package="roscpp"/>
+  <depend package="yarp2"/>
+  <depend package="sensor_msgs"/>
+  <depend package="diagnostic_updater"/>
+  <depend package="kuka_fri_header"/>
+</package>
+
