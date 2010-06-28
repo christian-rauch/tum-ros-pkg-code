@@ -1,0 +1,15 @@
+<package>
+  <description brief="people_detector_2d_laser">
+     people_detector_2d_laser
+  </description>
+  <author>Oscar Martinez Mozos, Dejan Pangercic(ROS)</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/people_detector_2d_laser</url>
+  <depend package="roscpp" />
+  <depend package="std_msgs" />
+  <depend package="sensor_msgs" />
+  <depend package="people_detector" />
+</package>
+
+
