@@ -1,0 +1,14 @@
+<package>
+  <description>
+    People Detection Library 
+  </description>
+  <author>
+    Oscar Martinez Mozos
+  </author>
+  <license>BSD</license>
+  <export>
+    <cpp cflags="-I${prefix}/build/people_detector/common -I${prefix}/build/people_detector/features -I${prefix}/build/people_detector/linalg -I${prefix}/build/people_detector/PeopleDetector"
+         lflags="-Wl,-rpath,${prefix}/build/people_detector/common -L${prefix}/build/people_detector/common -lcommon -Wl,-rpath,${prefix}/build/people_detector/features -L${prefix}/build/people_detector/features -lfeatures -Wl,-rpath,${prefix}/build/people_detector/linalg -L${prefix}/build/people_detector/linalg -llinalg -Wl,-rpath,${prefix}/build/people_detector/PeopleDetector -L${prefix}/build/people_detector/PeopleDetector -lPeopleDetector" />
+  </export>
+</package>
+
