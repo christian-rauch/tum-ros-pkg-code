@@ -6,10 +6,10 @@
 
 #include <ros/ros.h>
 #include "octomap/octomap.h"
-#include "pcl_to_octree/octree/OcTreeNodePCL.h"
-#include "pcl_to_octree/octree/OcTreePCL.h"
-#include "pcl_to_octree/octree/OcTreeServerPCL.h"
-//#include "octomap_server/octomap_server.h"
+//#include "pcl_to_octree/octree/OcTreeNodePCL.h"
+//#include "pcl_to_octree/octree/OcTreePCL.h"
+//#include "pcl_to_octree/octree/OcTreeServerPCL.h"
+#include "octomap_server/octomap_server.h"
 #include <pcl/point_types.h>
 #include <pcl/io/pcd_io.h>
 #include <visualization_msgs/MarkerArray.h>
@@ -49,7 +49,7 @@ private:
 
 OctreeClient::OctreeClient() : nh_("~")
 {
-  nh_.param("octree_topic", octree_topic_, std::string("/pcl_to_octree/octree_binary")); 
+  nh_.param("octree_topic", octree_topic_, std::string("/pcl_to_octree_vanilla/octree_binary")); 
   nh_.param("visualize_octree", visualize_octree_, true); 
   ROS_INFO("octree_client node is up and running.");
   run();   
@@ -77,9 +77,11 @@ OctreeClient::~OctreeClient()
 void OctreeClient::OctreeCallback(const octomap_server::OctomapBinary& mapMsg)
 {
   ROS_INFO("Received an octree.");
-  octomap::OcTreePCL* octree = new octomap::OcTreePCL (0.5);
+  //create new OcTree with arbitrary resolution - 0.25 in this case
+  //the resolution gets overridden from the incoming octree
+  octomap::OcTree* octree = new octomap::OcTree(0.25);
   octomap_server::octomapMsgToMap(mapMsg, *octree);
-  ROS_INFO("OctomapBinary converted to OctreePCL");
+  ROS_INFO("OctomapBinary converted to Octree with resolution %lf", octree->getResolution());
 
   //ROS_INFO("Octree Node List size: %ld",octree->octree_node_list.size());
 
@@ -114,7 +116,7 @@ void OctreeClient::OctreeCallback(const octomap_server::OctomapBinary& mapMsg)
 
     for (unsigned i = 0; i < octree_marker_array_msg_.markers.size(); ++i)
     {
-      octree_marker_array_msg_.markers[i].header.frame_id = mapMsg.header.frame_id;
+      octree_marker_array_msg_.markers[i].header.frame_id = "/map";
       octree_marker_array_msg_.markers[i].header.stamp = ros::Time::now();
 	
       double size = lowestRes * pow(2,i);
