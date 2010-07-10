@@ -25,8 +25,6 @@
 
 :- module(mod_vis,
     [
-      vis_all_objects_on_table/1,
-      vis_all_objects_inferred/3,
       visualisation_canvas/1,
       clear_canvas/1,
       draw_background/2,
@@ -77,7 +75,7 @@ visualisation_canvas(Canvas) :-
     jpl_call(Frame, 'add', [Canvas], _),
     jpl_call(Frame, 'setVisible', [@(true)], _),
     retract(v_canvas(fail)),
-    assert(v_canvas(Canvas)).
+    assert(v_canvas(Canvas)),!.
 visualisation_canvas(Canvas) :-
     v_canvas(Canvas).
 
@@ -255,28 +253,31 @@ add_object_perception(Identifier, Canvas) :-
     add_object(Identifier, Canvas),
 
     % find all perceptions of the object and sort by their start time
-    findall([P_i,Identifier,St], (rdf_has(P_i, knowrob:objectActedOn, Identifier),
-                                  rdfs_individual_of(P_i,  knowrob:'MentalEvent'),
-                                  rdf_triple(knowrob:startTime, P_i, StTg),
+    findall([D_i,Identifier,St], (rdf_has(D_i, knowrob:objectActedOn, Identifier),
+                                  rdfs_individual_of(D_i,  knowrob:'MentalEvent'),
+                                  rdf_has(D_i, knowrob:startTime, StTg),
                                   rdf_split_url(_, StTl, StTg),
                                   atom_concat('timepoint_', StTa, StTl),
-                                  term_to_atom(St, StTa)), Perceptions),
+                                  term_to_atom(St, StTa)), Detections),
 
-    predsort(compare_object_perceptions, Perceptions, Psorted),
+    predsort(compare_object_detections, Detections, Dsorted),
 
     % compute the homography for the newest perception
-    nth0(0, Psorted, Newest),
-    nth0(0, Newest, NewestPerception),
+    nth0(0, Dsorted, Newest),
+    nth0(0, Newest, NewestDetection),
 
     % highlight based on the source of information
     ((
+        % do not highlight pieces of furniture
+        rdfs_individual_of(Identifier, knowrob:'FurniturePiece')
+    ) ; (
         % display perceived objects in light grey
-        rdfs_instance_of(NewestPerception, knowrob:'Perceiving'),
-        highlight_object(Identifier, @(true), 110, 110, 110, Canvas)
+        rdfs_individual_of(NewestDetection, knowrob:'Perceiving'),
+        highlight_object(Identifier, @(true), 160, 160, 160, Canvas)
     ) ; (
         % display inferred objects by their probability
-        rdfs_instance_of(NewestPerception, knowrob:'ProbCogReasoning'),
-        rdf_has(NewestPerception, knowrob:probability, Prob),
+        rdfs_individual_of(NewestDetection, knowrob:'ProbCogReasoning'),
+        rdf_has(NewestDetection, knowrob:probability, Prob),
         highlight_object(Identifier, @(true), 230, 230, 230, Prob, Canvas)
     ) ).
 
@@ -378,18 +379,4 @@ highlight_object_with_children(Identifier, Highlight, Canvas) :-
 reset_highlighting(Canvas) :-
     ((var(Canvas)) -> (v_canvas(Canvas));(true)),
     jpl_call(Canvas, 'clearHighlight', [], _).
-
-
-vis_all_objects_on_table(Table):- 
-  add_object_perception(Table, _),
-  current_objects_on_table(Table, O),
-  add_object_perception(O, _).
-
-vis_all_objects_inferred(T,O,P):- 
-  rdf_has(Inf, rdf:type, knowrob:'TableSettingModelInference'), 
-  rdf_has(Inf,knowrob:objectActedOn,O),
-  rdf_has(Inf,knowrob:probability,P),
-  term_to_atom(N,P),
-  N>T,
-  add_object_perception(O,  _).
 

@@ -39,9 +39,8 @@ public class StandaloneKitchenVisApplet extends AnimatedCanvas implements MouseL
   ////////////////////////////////////////////////////////////////////////////////
   // DISPLAY PROPERTIES (ROTATION, ZOOM, ...)
   private float leftMouseX=-1.0f, leftMouseY=-1.0f, rightMouseX=-1.0f, rightMouseY=-1.0f, centerMouseY=-1.0f;
-  private float xRotDisplay=30.4f, yRotDisplay=-20.75f, xShiftDisplay=1.0f, yShiftDisplay=369f, zoomDisplay=1.0f;
-  
-  
+  private float xRotDisplay=117.1f, yRotDisplay=-39.6f, xShiftDisplay=301.0f, yShiftDisplay=393.5f, zoomDisplay=0.86f;
+
   ////////////////////////////////////////////////////////////////////////////////
   // SETTINGS
   private String meshFile = "/home/tenorth/work/kipm/meshdata/unclassified300p.vtk";
@@ -248,7 +247,9 @@ public class StandaloneKitchenVisApplet extends AnimatedCanvas implements MouseL
 		
 	    scale(zoomDisplay);
 		translate(xShiftDisplay, yShiftDisplay, 0.0f);
-		
+
+    // print out view values (useful to determine good initial values)
+		//System.out.println("xShift: " + xShiftDisplay + ", yShift: " + yShiftDisplay + ", zoom:" +zoomDisplay+ ", xRot: " + xRotDisplay + ", yRot:" +yRotDisplay);
 		
 		pushMatrix();
 		  	rotateZ( -PI/2 );
@@ -895,157 +896,187 @@ public class StandaloneKitchenVisApplet extends AnimatedCanvas implements MouseL
   			} else {System.out.println("ORIENTATION NULL");}
   			it.name = identifier;
   			return it;
-  		}
+
+  		} else {
   		
-  		
-  		// check if it is a storage facility, if it is: create; WITHOUT handles
-  		HashMap<String, Vector<Object>> storage = PrologVisualizationCanvas.executeQuery(
-  				"rdf_has("+identifier+", rdf:type, OBJECTCLASS)," +
-  				"rdf_reachable(OBJECTCLASS, rdfs:subClassOf, knowrob:'StorageConstruct')," +
-  				"rdf_has("+identifier+",knowrob:widthOfObject,literal(type(_,_W)))," + 
-  				"rdf_has("+identifier+",knowrob:heightOfObject,literal(type(_,_H))), " + 
-  				"rdf_has("+identifier+",knowrob:depthOfObject,literal(type(_,_D))), " +
-  				
-  				"rdf_triple(knowrob:orientation,"+identifier+",Or), " +
-  				
-  				"rdf_triple(knowrob:m00,Or,literal(type(_,_M00))), term_to_atom(M00,_M00)," +
-  				"rdf_triple(knowrob:m01,Or,literal(type(_,_M01))), term_to_atom(M01,_M01)," +
-  				"rdf_triple(knowrob:m02,Or,literal(type(_,_M02))), term_to_atom(M02,_M02)," +
-  				"rdf_triple(knowrob:m03,Or,literal(type(_,_M03))), term_to_atom(M03,_M03)," +
-  				
-  				"rdf_triple(knowrob:m10,Or,literal(type(_,_M10))), term_to_atom(M10,_M10)," +
-  				"rdf_triple(knowrob:m11,Or,literal(type(_,_M11))), term_to_atom(M11,_M11)," +
-  				"rdf_triple(knowrob:m12,Or,literal(type(_,_M12))), term_to_atom(M12,_M12)," +
-  				"rdf_triple(knowrob:m13,Or,literal(type(_,_M13))), term_to_atom(M13,_M13)," +
-  				
-  				"rdf_triple(knowrob:m20,Or,literal(type(_,_M20))), term_to_atom(M20,_M20)," +
-  				"rdf_triple(knowrob:m21,Or,literal(type(_,_M21))), term_to_atom(M21,_M21)," +
-  				"rdf_triple(knowrob:m22,Or,literal(type(_,_M22))), term_to_atom(M22,_M22)," +
-  				"rdf_triple(knowrob:m23,Or,literal(type(_,_M23))), term_to_atom(M23,_M23)," +
-  				
-  				"rdf_triple(knowrob:m30,Or,literal(type(_,_M30))), term_to_atom(M30,_M30)," +
-  				"rdf_triple(knowrob:m31,Or,literal(type(_,_M31))), term_to_atom(M31,_M31)," +
-  				"rdf_triple(knowrob:m32,Or,literal(type(_,_M32))), term_to_atom(M32,_M32)," +
-  				"rdf_triple(knowrob:m33,Or,literal(type(_,_M33))), term_to_atom(M33,_M33)," +
-  				 
-  				"atom_to_term(_W,W,_), atom_to_term(_H,H,_), atom_to_term(_D,D,_)", null);
-  		if( storage.get("W") != null && storage.get("W").size() > 0) {
-  			StorageFacility c = null;
-			if(storage.get("OBJECTCLASS").get(0).toString().endsWith("Cupboard'")) {
-				c = new Cupboard(
-					Float.valueOf(storage.get("M00").get(0).toString()),
-					Float.valueOf(storage.get("M01").get(0).toString()),
-					Float.valueOf(storage.get("M02").get(0).toString()),
-					100*Float.valueOf(storage.get("M03").get(0).toString()),
+        // check if it is a storage facility, if it is: create; WITHOUT handles
+        HashMap<String, Vector<Object>> storage = PrologVisualizationCanvas.executeQuery(
+            "rdf_has("+identifier+", rdf:type, OBJECTCLASS)," +
+            "rdf_reachable(OBJECTCLASS, rdfs:subClassOf, knowrob:'StorageConstruct')," +
+            "rdf_has("+identifier+",knowrob:widthOfObject,literal(type(_,_W)))," + 
+            "rdf_has("+identifier+",knowrob:heightOfObject,literal(type(_,_H))), " + 
+            "rdf_has("+identifier+",knowrob:depthOfObject,literal(type(_,_D))), " +
+            
+            "rdf_triple(knowrob:orientation,"+identifier+",Or), " +
+            
+            "rdf_triple(knowrob:m00,Or,literal(type(_,_M00))), term_to_atom(M00,_M00)," +
+            "rdf_triple(knowrob:m01,Or,literal(type(_,_M01))), term_to_atom(M01,_M01)," +
+            "rdf_triple(knowrob:m02,Or,literal(type(_,_M02))), term_to_atom(M02,_M02)," +
+            "rdf_triple(knowrob:m03,Or,literal(type(_,_M03))), term_to_atom(M03,_M03)," +
+            
+            "rdf_triple(knowrob:m10,Or,literal(type(_,_M10))), term_to_atom(M10,_M10)," +
+            "rdf_triple(knowrob:m11,Or,literal(type(_,_M11))), term_to_atom(M11,_M11)," +
+            "rdf_triple(knowrob:m12,Or,literal(type(_,_M12))), term_to_atom(M12,_M12)," +
+            "rdf_triple(knowrob:m13,Or,literal(type(_,_M13))), term_to_atom(M13,_M13)," +
+            
+            "rdf_triple(knowrob:m20,Or,literal(type(_,_M20))), term_to_atom(M20,_M20)," +
+            "rdf_triple(knowrob:m21,Or,literal(type(_,_M21))), term_to_atom(M21,_M21)," +
+            "rdf_triple(knowrob:m22,Or,literal(type(_,_M22))), term_to_atom(M22,_M22)," +
+            "rdf_triple(knowrob:m23,Or,literal(type(_,_M23))), term_to_atom(M23,_M23)," +
+            
+            "rdf_triple(knowrob:m30,Or,literal(type(_,_M30))), term_to_atom(M30,_M30)," +
+            "rdf_triple(knowrob:m31,Or,literal(type(_,_M31))), term_to_atom(M31,_M31)," +
+            "rdf_triple(knowrob:m32,Or,literal(type(_,_M32))), term_to_atom(M32,_M32)," +
+            "rdf_triple(knowrob:m33,Or,literal(type(_,_M33))), term_to_atom(M33,_M33)," +
+            
+            "atom_to_term(_W,W,_), atom_to_term(_H,H,_), atom_to_term(_D,D,_)", null);
+        if( storage.get("W") != null && storage.get("W").size() > 0) {
+          StorageFacility c = null;
+        if(storage.get("OBJECTCLASS").get(0).toString().endsWith("Cupboard'")) {
+          c = new Cupboard(
+            Float.valueOf(storage.get("M00").get(0).toString()),
+            Float.valueOf(storage.get("M01").get(0).toString()),
+            Float.valueOf(storage.get("M02").get(0).toString()),
+            100*Float.valueOf(storage.get("M03").get(0).toString()),
 
-					Float.valueOf(storage.get("M10").get(0).toString()),
-					Float.valueOf(storage.get("M11").get(0).toString()),
-					Float.valueOf(storage.get("M12").get(0).toString()),
-					100*Float.valueOf(storage.get("M13").get(0).toString()),
+            Float.valueOf(storage.get("M10").get(0).toString()),
+            Float.valueOf(storage.get("M11").get(0).toString()),
+            Float.valueOf(storage.get("M12").get(0).toString()),
+            100*Float.valueOf(storage.get("M13").get(0).toString()),
 
-					Float.valueOf(storage.get("M20").get(0).toString()),
-					Float.valueOf(storage.get("M21").get(0).toString()),
-					Float.valueOf(storage.get("M22").get(0).toString()),
-					100*Float.valueOf(storage.get("M23").get(0).toString()),
+            Float.valueOf(storage.get("M20").get(0).toString()),
+            Float.valueOf(storage.get("M21").get(0).toString()),
+            Float.valueOf(storage.get("M22").get(0).toString()),
+            100*Float.valueOf(storage.get("M23").get(0).toString()),
 
-					Float.valueOf(storage.get("M30").get(0).toString()),
-					Float.valueOf(storage.get("M31").get(0).toString()),
-					Float.valueOf(storage.get("M32").get(0).toString()),
-					Float.valueOf(storage.get("M33").get(0).toString()),
+            Float.valueOf(storage.get("M30").get(0).toString()),
+            Float.valueOf(storage.get("M31").get(0).toString()),
+            Float.valueOf(storage.get("M32").get(0).toString()),
+            Float.valueOf(storage.get("M33").get(0).toString()),
 
-					100*Float.valueOf(storage.get("D").get(0).toString()),
-					100*Float.valueOf(storage.get("W").get(0).toString()),
-					100*Float.valueOf(storage.get("H").get(0).toString()));
-			} else {
-				c = new Drawer(
-					Float.valueOf(storage.get("M00").get(0).toString()),
-					Float.valueOf(storage.get("M01").get(0).toString()),
-					Float.valueOf(storage.get("M02").get(0).toString()),
-					100*Float.valueOf(storage.get("M03").get(0).toString()),
+            100*Float.valueOf(storage.get("D").get(0).toString()),
+            100*Float.valueOf(storage.get("W").get(0).toString()),
+            100*Float.valueOf(storage.get("H").get(0).toString()));
+        } else {
+          c = new Drawer(
+            Float.valueOf(storage.get("M00").get(0).toString()),
+            Float.valueOf(storage.get("M01").get(0).toString()),
+            Float.valueOf(storage.get("M02").get(0).toString()),
+            100*Float.valueOf(storage.get("M03").get(0).toString()),
 
-					Float.valueOf(storage.get("M10").get(0).toString()),
-					Float.valueOf(storage.get("M11").get(0).toString()),
-					Float.valueOf(storage.get("M12").get(0).toString()),
-					100*Float.valueOf(storage.get("M13").get(0).toString()),
+            Float.valueOf(storage.get("M10").get(0).toString()),
+            Float.valueOf(storage.get("M11").get(0).toString()),
+            Float.valueOf(storage.get("M12").get(0).toString()),
+            100*Float.valueOf(storage.get("M13").get(0).toString()),
 
-					Float.valueOf(storage.get("M20").get(0).toString()),
-					Float.valueOf(storage.get("M21").get(0).toString()),
-					Float.valueOf(storage.get("M22").get(0).toString()),
-					100*Float.valueOf(storage.get("M23").get(0).toString()),
+            Float.valueOf(storage.get("M20").get(0).toString()),
+            Float.valueOf(storage.get("M21").get(0).toString()),
+            Float.valueOf(storage.get("M22").get(0).toString()),
+            100*Float.valueOf(storage.get("M23").get(0).toString()),
 
-					Float.valueOf(storage.get("M30").get(0).toString()),
-					Float.valueOf(storage.get("M31").get(0).toString()),
-					Float.valueOf(storage.get("M32").get(0).toString()),
-					Float.valueOf(storage.get("M33").get(0).toString()),
+            Float.valueOf(storage.get("M30").get(0).toString()),
+            Float.valueOf(storage.get("M31").get(0).toString()),
+            Float.valueOf(storage.get("M32").get(0).toString()),
+            Float.valueOf(storage.get("M33").get(0).toString()),
 
-					100*Float.valueOf(storage.get("D").get(0).toString()),
-					100*Float.valueOf(storage.get("W").get(0).toString()),
-					100*Float.valueOf(storage.get("H").get(0).toString()));
-  				}
-			int col = grayValues[(++grayLevelCounter) % grayValues.length];
-			
-			c.defaultColor = convertColor(col, col, col, 255);
-			c.setColor(c.defaultColor);
-  			c.name = identifier;
-  			
-			return c;
-  		}
-	
-  		
-  		
-  		// check if Handle
-		HashMap<String, Vector<Object>> handles = PrologVisualizationCanvas.executeQuery(
-					"rdf_has("+identifier+", rdf:type, knowrob:'Handle'), " +
-					"rdf_has("+identifier+",knowrob:widthOfObject,literal(type(_,W))), " + 
-					"rdf_has("+identifier+",knowrob:heightOfObject,literal(type(_,H))), " + 
-					"rdf_has("+identifier+",knowrob:depthOfObject,literal(type(_,D))), " + 
-					"rdf_triple(knowrob:orientation,"+identifier+",Or), " +
-					"rdf_triple(knowrob:m03, Or, literal(type(_,POS_X)))," +  
-					"rdf_triple(knowrob:m13, Or, literal(type(_,POS_Y))), " + 
-					"rdf_triple(knowrob:m23, Or, literal(type(_,POS_Z))), " + 
-					"atom_to_term(W,NUM_WIDTH,_), atom_to_term(H,NUM_HEIGHT,_)," +  
-					"atom_to_term(D,NUM_DEPTH,_), atom_to_term(POS_X,NUM_POS_X,_), " + 
-					"atom_to_term(POS_Y,NUM_POS_Y,_), " + 
-					"atom_to_term(POS_Z,NUM_POS_Z,_)", null);
-		if (handles.get("NUM_WIDTH") != null && handles.get("NUM_WIDTH").size() > 0)
-		{
-			ItemBase item =  new BoxHandle(
-					100*Float.valueOf(handles.get("NUM_POS_X").get(0).toString()),
-					100*Float.valueOf(handles.get("NUM_POS_Y").get(0).toString()),
-					100*Float.valueOf(handles.get("NUM_POS_Z").get(0).toString()),
-					100*Float.valueOf(handles.get("NUM_WIDTH").get(0).toString()),
-					100*Float.valueOf(handles.get("NUM_HEIGHT").get(0).toString()),
-					100*Float.valueOf(handles.get("NUM_DEPTH").get(0).toString())
-					);
-  			item.name = identifier;
-  			return item;
-		}
+            100*Float.valueOf(storage.get("D").get(0).toString()),
+            100*Float.valueOf(storage.get("W").get(0).toString()),
+            100*Float.valueOf(storage.get("H").get(0).toString()));
+            }
+        int col = grayValues[(++grayLevelCounter) % grayValues.length];
+        
+        c.defaultColor = convertColor(col, col, col, 255);
+        c.setColor(c.defaultColor);
+          c.name = identifier;
+          
+        return c;
+        }
+    
+        
+        
+        // check if Handle
+      HashMap<String, Vector<Object>> handles = PrologVisualizationCanvas.executeQuery(
+            "rdf_has("+identifier+", rdf:type, knowrob:'Handle'), " +
+            "rdf_has("+identifier+",knowrob:widthOfObject,literal(type(_,W))), " + 
+            "rdf_has("+identifier+",knowrob:heightOfObject,literal(type(_,H))), " + 
+            "rdf_has("+identifier+",knowrob:depthOfObject,literal(type(_,D))), " + 
+            "rdf_triple(knowrob:orientation,"+identifier+",Or), " +
+            "rdf_triple(knowrob:m03, Or, literal(type(_,POS_X)))," +  
+            "rdf_triple(knowrob:m13, Or, literal(type(_,POS_Y))), " + 
+            "rdf_triple(knowrob:m23, Or, literal(type(_,POS_Z))), " + 
+            "atom_to_term(W,NUM_WIDTH,_), atom_to_term(H,NUM_HEIGHT,_)," +  
+            "atom_to_term(D,NUM_DEPTH,_), atom_to_term(POS_X,NUM_POS_X,_), " + 
+            "atom_to_term(POS_Y,NUM_POS_Y,_), " + 
+            "atom_to_term(POS_Z,NUM_POS_Z,_)", null);
+      if (handles.get("NUM_WIDTH") != null && handles.get("NUM_WIDTH").size() > 0)
+      {
+        ItemBase item =  new BoxHandle(
+            100*Float.valueOf(handles.get("NUM_POS_X").get(0).toString()),
+            100*Float.valueOf(handles.get("NUM_POS_Y").get(0).toString()),
+            100*Float.valueOf(handles.get("NUM_POS_Z").get(0).toString()),
+            100*Float.valueOf(handles.get("NUM_WIDTH").get(0).toString()),
+            100*Float.valueOf(handles.get("NUM_HEIGHT").get(0).toString()),
+            100*Float.valueOf(handles.get("NUM_DEPTH").get(0).toString())
+            );
+          item.name = identifier;
+          return item;
+      }
 
-		// check if knob
-		HashMap<String, Vector<Object>> knobs = PrologVisualizationCanvas.executeQuery(
-				"rdf_has("+identifier+", rdf:type, knowrob:'ControlKnob'), " +
-				"rdf_has("+identifier+",knowrob:radius,literal(type(_,R))), " + 
-				"rdf_triple(knowrob:orientation,"+identifier+",Or), " +
-				"rdf_triple(knowrob:m03, Or, literal(type(_,POS_X)))," +  
-				"rdf_triple(knowrob:m13, Or, literal(type(_,POS_Y))), " + 
-				"rdf_triple(knowrob:m23, Or, literal(type(_,POS_Z))), " + 
-				"atom_to_term(R,RADIUS,_), atom_to_term(POS_X,NUM_POS_X,_), " + 
-				"atom_to_term(POS_Y,NUM_POS_Y,_), " + 
-				"atom_to_term(POS_Z,NUM_POS_Z,_)", null);
-		if (knobs.get("RADIUS") != null && knobs.get("RADIUS").size() > 0)
-		{
-			ItemBase item = new SphereHandle(
-					100*Float.valueOf(knobs.get("NUM_POS_X").get(0).toString()),
-					100*Float.valueOf(knobs.get("NUM_POS_Y").get(0).toString()),
-					100*Float.valueOf(knobs.get("NUM_POS_Z").get(0).toString()),
-					100*Float.valueOf(knobs.get("RADIUS").get(0).toString())
-					);
+      // check if knob
+      HashMap<String, Vector<Object>> knobs = PrologVisualizationCanvas.executeQuery(
+          "rdf_has("+identifier+", rdf:type, knowrob:'ControlKnob'), " +
+          "rdf_has("+identifier+",knowrob:radius,literal(type(_,R))), " + 
+          "rdf_triple(knowrob:orientation,"+identifier+",Or), " +
+          "rdf_triple(knowrob:m03, Or, literal(type(_,POS_X)))," +  
+          "rdf_triple(knowrob:m13, Or, literal(type(_,POS_Y))), " + 
+          "rdf_triple(knowrob:m23, Or, literal(type(_,POS_Z))), " + 
+          "atom_to_term(R,RADIUS,_), atom_to_term(POS_X,NUM_POS_X,_), " + 
+          "atom_to_term(POS_Y,NUM_POS_Y,_), " + 
+          "atom_to_term(POS_Z,NUM_POS_Z,_)", null);
+      if (knobs.get("RADIUS") != null && knobs.get("RADIUS").size() > 0)
+      {
+        ItemBase item = new SphereHandle(
+            100*Float.valueOf(knobs.get("NUM_POS_X").get(0).toString()),
+            100*Float.valueOf(knobs.get("NUM_POS_Y").get(0).toString()),
+            100*Float.valueOf(knobs.get("NUM_POS_Z").get(0).toString()),
+            100*Float.valueOf(knobs.get("RADIUS").get(0).toString())
+            );
 
-  			item.name = identifier;
-  			return item;
-		}
+          item.name = identifier;
+          return item;
+      }
+
+        
+      // check if Table
+      HashMap<String, Vector<Object>> tables = PrologVisualizationCanvas.executeQuery(
+            "rdf_has("+identifier+", rdf:type, knowrob:'KitchenTable'), " +
+            "rdf_has("+identifier+",knowrob:widthOfObject,literal(type(_,W))), " + 
+            "rdf_has("+identifier+",knowrob:heightOfObject,literal(type(_,H))), " + 
+            "rdf_has("+identifier+",knowrob:depthOfObject,literal(type(_,D))), " + 
+            "rdf_triple(knowrob:orientation,"+identifier+",Or), " +
+            "rdf_triple(knowrob:m03, Or, _POS_X),strip_literal_type(_POS_X, POS_X)," +  
+            "rdf_triple(knowrob:m13, Or, _POS_Y),strip_literal_type(_POS_Y, POS_Y)," + 
+            "rdf_triple(knowrob:m23, Or, _POS_Z),strip_literal_type(_POS_Z, POS_Z)," + 
+            "atom_to_term(W,NUM_WIDTH,_), atom_to_term(H,NUM_HEIGHT,_)," +  
+            "atom_to_term(D,NUM_DEPTH,_), atom_to_term(POS_X,NUM_POS_X,_), " + 
+            "atom_to_term(POS_Y,NUM_POS_Y,_), " + 
+            "atom_to_term(POS_Z,NUM_POS_Z,_)", null);
+      if (tables.get("NUM_WIDTH") != null && tables.get("NUM_WIDTH").size() > 0)
+      {
+        ItemBase item =  new Table(
+            100*Float.valueOf(tables.get("NUM_POS_X").get(0).toString()),
+            100*Float.valueOf(tables.get("NUM_POS_Y").get(0).toString()),
+            100*Float.valueOf(tables.get("NUM_POS_Z").get(0).toString()),
+            100*Float.valueOf(tables.get("NUM_WIDTH").get(0).toString()),
+            100*Float.valueOf(tables.get("NUM_DEPTH").get(0).toString()),
+            100*Float.valueOf(tables.get("NUM_HEIGHT").get(0).toString())
+            );
+          item.name = identifier;
+          return item;
+      }
 
 
+    }
   		displayMessage("could not find how to add Item "+identifier+"\nType was: "+type);
   		return null;
 
@@ -1575,13 +1606,12 @@ public class StandaloneKitchenVisApplet extends AnimatedCanvas implements MouseL
   		} else if (type.endsWith("#CardboardBox'")) {
   			return new Bread(0,0,0);
 
+      } else if (type.endsWith("#CowsMilk-Product'")) {
+        return new Tetrapak(0,0,0);
 
   			
   		/////////////////////////////////////////////
   		// furniture
-  			
-  		} else if(type.endsWith("#KitchenTable'")) {
-  			return new Table(0,0,0);
   	  		
   		} else if(type.endsWith("#Chair-PieceOfFurniture'")) {
   			return new Chair(0,0,0);

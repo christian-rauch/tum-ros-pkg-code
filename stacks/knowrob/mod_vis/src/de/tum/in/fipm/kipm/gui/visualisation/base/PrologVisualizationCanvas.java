@@ -271,10 +271,7 @@ public class PrologVisualizationCanvas extends PApplet implements MouseListener,
 			args.add( "-q" );
 			args.add( "-nosignals" );
 			Prolog.set_default_init_args( args.toArray( new String[0] ) );
-			
-				// load the appropriate startup file for this context
-			new Query("ensure_loaded('C:/Projects/Eclipse/HIWI/OWL/gram_ias_human.pl')").oneSolution();
-
+		
 		} catch(Exception e) {
 			e.printStackTrace();
 		}
