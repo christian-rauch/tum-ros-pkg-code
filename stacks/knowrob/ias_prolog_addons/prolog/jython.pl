@@ -67,8 +67,8 @@ jython_variable(Interpreter, Key, Value) :-
   -> (is_list(Value)
     -> jpl_datums_to_array(Value, ValArray),
       jpl_call(Interpreter, set, [Key, ValArray], _)
-    ; jpl_box_datum(Value, BValue),
-      jpl_call(Interpreter, set, [Key, BValue], _)
+%     ; jpl_box_datum(Value, BValue),
+%       jpl_call(Interpreter, set, [Key, BValue], _)
     )
   ;  jpl_call(Interpreter, get, [Key], Value)).
 jython_variable(_,_,_) :-
