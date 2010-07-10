@@ -128,9 +128,9 @@
 :- use_module(library(url)).
 :- use_module(library(debug)).
 :- use_module(rdf_cache).
+:- use_module(library(shlib)).
 
-:- initialization
-   load_foreign_library(foreign(rdf_db)).
+:- load_foreign_library(foreign(rdf_db)).
 
 :- multifile
 	ns/2,
@@ -1197,7 +1197,7 @@ rdf_graph(DB) :-
 
 rdf_source(DB, SourceURL) :-
 	rdf_graph(DB),
-	rdf_graph_source_(DB, SourceURL).
+	rdf_graph_source_(DB, SourceURL,_).
 
 %%	rdf_source(?Source)
 %	
@@ -1994,3 +1994,36 @@ in_time(Triples, ParseTime) -->
 prolog:meta_goal(rdf_transaction(G),	[G]).
 prolog:meta_goal(rdf_transaction(G,_),	[G]).
 prolog:meta_goal(rdf_monitor(G,_),	[G+1]).
+
+
+
+
+
+
+
+:- if(current_predicate(iri_xml_namespace, _)).
+
+		%%	rdf_split_url(+Prefix, +Local, -URL) is det.
+		%%	rdf_split_url(-Prefix, -Local, +URL) is det.
+		%
+		%	Split/join a URL.  This functionality is moved to library(sgml).
+		%
+		%	@deprecated Use iri_xml_namespace/3. Note that the argument
+		%	order is iri_xml_namespace(+IRI, -Namespace, -Localname).
+
+		rdf_split_url(Prefix, Local, URL) :-
+			atomic(URL), !,
+			iri_xml_namespace(URL, Prefix, Local).
+		rdf_split_url(Prefix, Local, URL) :-
+			atom_concat(Prefix, Local, URL).
+
+		%%	rdf_url_namespace(+URL, -Namespace)
+		%
+		%	Namespace is the namespace of URL.
+		%
+		%	@deprecated Use iri_xml_namespace/2
+
+		rdf_url_namespace(URL, Prefix) :-
+			iri_xml_namespace(URL, Prefix).
+
+:- endif.

@@ -49,7 +49,8 @@ rdf_triple(Property, Frame, Value) :-
   findall(SubProp, rdfs:rdfs_subproperty_of(SubProp, Property), SubProperties),
   member(SubProperty, SubProperties),
 
-  ( (findall(V, rdf_has(Frame, SubProperty, V), Vs), member(Value, Vs))
+  ( (findall([Frame,Value], rdf_has(Frame, SubProperty, Value), Res),
+     member(R, Res),nth0(0, R, Frame), nth0(1, R, Value) )
   ; rdfs_computable_compute_property_concatenation(SubProperty, Frame, Value)
   ; catch( rdfs_computable_triple(SubProperty, Frame, Value), error(instantiation_error, _), fail)
   ; user:rdf_triple_hook(SubProperty, Frame, Value)
@@ -394,7 +395,7 @@ rdfs_computable_sql_instance_of(Instance, Class) :-
 %
 rdfs_computable_prolog_instance_of(Instance, Class) :-
 
-  \+ (rdf_has(Instance, rdf:type, Class)),
+%  \+ (rdf_has(Instance, rdf:type, Class)),
 
   % get the associated prolog computable
   rdfs_computable_prolog_class(Class, ComputableClass),
@@ -412,10 +413,18 @@ rdfs_computable_prolog_instance_of(Instance, Class) :-
     ->  call(Command, Instance, Class);
   (
 
-    call(Command, MyInstance, Class),!,
-    rdf_split_url(Namespace, _, Class),
-    rdf_split_url(Namespace, MyInstance, Instance),
-    rdf_assert(Instance, rdf:type, Class) )).
+    call(Command, MyInstance, Class),
+
+    % check if MyInstance is already a global RDF URI 
+    ((rdf_split_url('', _, MyInstance)) -> (
+      rdf_split_url(Namespace, _, Class),
+      rdf_split_url(Namespace, MyInstance, Instance),
+      rdf_assert(Instance, rdf:type, Class)
+    );(
+      Instance=MyInstance,
+      rdf_assert(Instance, rdf:type, Class)
+    ))
+     )).
 
 %     % result: PrologValue
 %     ( PrologValue=[_|_]
@@ -527,8 +536,8 @@ rdfs_computable_prolog_triple(Property, Frame, Value) :-
 % 
 rdfs_prolog_to_rdf(Property, PrologValue, RDFValue) :-
   rdf_has(Property, rdfs:range, Range),
-  ((rdfs_instance_of(Range, rdf:'Class')
-    ; rdfs_instance_of(Range, owl:'Class'))
+  ((rdfs_individual_of(Range, rdf:'Class')
+    ; rdfs_individual_of(Range, owl:'Class'))
   -> %RDFValue = PrologValue
 
      % add namespace if not present yet

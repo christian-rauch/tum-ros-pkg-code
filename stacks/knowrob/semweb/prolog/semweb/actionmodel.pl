@@ -563,16 +563,19 @@ am_bayes_initialize_dependency_domain(ParentName, PredictableName, Splits, Domai
 am_bayes_add_dependencies(_, _, [], _).
 am_bayes_add_dependencies(BayesNet, PredictableName, [Parent|RestParents], Splits) :-
 	am_property_name(Parent, ParentName),
-  jpl_call(BayesNet, 'getNode', [ParentName], Node),
-  jpl_call(Node, 'getDomain', [], OldDomain),
-  (jpl_instance_of(OldDomain, class([edu,tum,cs,bayesnets,core],['Discretized']))
-  -> has_to_work(actionmodel:am_bayes_initialize_dependency_domain(ParentName, PredictableName, Splits, Domain),
-      unable_to_initialize_dependency_domain),
-    concat_atom([ParentName, PredictableName], '$', NodeName),
-    jpl_call(BayesNet, 'addNode', [NodeName, Domain, ParentName], _),
-    jpl_call(BayesNet, 'connect', [ParentName, NodeName], _),
-    jpl_call(BayesNet, 'connect', [NodeName, PredictableName], _)
-  ; jpl_call(BayesNet, 'connect', [ParentName, PredictableName], _)),
+%   jpl_call(BayesNet, 'getNode', [ParentName], Node),
+%   jpl_call(Node, 'getDomain', [], OldDomain),
+% MT: disabled probably unused code to eliminate Prolog warnings (jpl_instance_of undefined)
+%   (jpl_instance_of(OldDomain, class([edu,tum,cs,bayesnets,core],['Discretized']))
+%   -> has_to_work(actionmodel:am_bayes_initialize_dependency_domain(ParentName, PredictableName, Splits, Domain),
+%       unable_to_initialize_dependency_domain),
+%     concat_atom([ParentName, PredictableName], '$', NodeName),
+%     jpl_call(BayesNet, 'addNode', [NodeName, Domain, ParentName], _),
+%     jpl_call(BayesNet, 'connect', [ParentName, NodeName], _),
+%     jpl_call(BayesNet, 'connect', [NodeName, PredictableName], _)
+%   ;
+  jpl_call(BayesNet, 'connect', [ParentName, PredictableName], _),
+%   ),
 	am_bayes_add_dependencies(BayesNet, PredictableName, RestParents, Splits).
 %%
 % am_bayes_initialize_dependencies(BayesNet, Observables, Predictables)
