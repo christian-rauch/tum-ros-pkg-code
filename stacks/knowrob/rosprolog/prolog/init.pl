@@ -1,4 +1,7 @@
 
+:- use_module(library('process')).
+
+
 rospack_package_path(Package, Path) :-
   nonvar(Package),
   process_create(path('rospack'), ['find', Package], [stdout(pipe(RospackOutput)), process(_PID)]),
