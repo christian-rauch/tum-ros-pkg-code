@@ -146,8 +146,8 @@ on_Physical(Top, Bottom) :-
 %
 %%% holds(on_Physical(Top, Bottom), T) :-
 %%% 
-%%%     object_perception(Top, T, VPT),
-%%%     object_perception(Bottom, T, VPB),
+%%%     object_detection(Top, T, VPT),
+%%%     object_detection(Bottom, T, VPB),
 %%% 
 %%%     rdf_triple(knowrob:eventOccursAt, VPT,    TopMatrix),
 %%%     rdf_triple(knowrob:eventOccursAt, VPB, BottomMatrix),
@@ -174,7 +174,7 @@ on_Physical(Top, Bottom) :-
 %%%     Top \= Bottom.
 holds(on_Physical(Top, Bottom),T) :-
     % get object center for Top 
-    object_perception(Top, T, VPT),
+    object_detection(Top, T, VPT),
     rdf_triple(knowrob:eventOccursAt, VPT,    TopMatrix),
     rdf_triple(knowrob:m03, TopMatrix, TCxx),strip_literal_type(TCxx, TCx),atom_to_term(TCx,TX,_),
     rdf_triple(knowrob:m13, TopMatrix, TCyy),strip_literal_type(TCyy, TCy),atom_to_term(TCy,TY,_),
@@ -186,7 +186,7 @@ holds(on_Physical(Top, Bottom),T) :-
     objectAtPoint2D(TX,TY,Bottom),
 
     % get height of objects at center point
-%     object_perception(Bottom, T, VPB),
+%     object_detection(Bottom, T, VPB),
 %     rdf_triple(knowrob:eventOccursAt, VPB, BottomMatrix),
 %     rdf_triple(knowrob:m23, BottomMatrix, BCzz), strip_literal_type(BCzz, BCz),atom_to_term(BCz,BZ,_),
 %     rdf_has(Bottom, knowrob:heightOfObject, literal(type(_,Bh))),atom_to_term(Bh,BH,_),
@@ -227,8 +227,8 @@ holds(comp_toTheLeftOf(Left, Right), T) :-
     % TODO: adapt this to take rotations and object dimensions into account
     %
 
-    object_perception(Left, T, VPL),
-    object_perception(Right, T, VPR),
+    object_detection(Left, T, VPL),
+    object_detection(Right, T, VPR),
 
     rdf_triple(knowrob:eventOccursAt, VPL, LeftMatrix),
     rdf_triple(knowrob:eventOccursAt, VPR, RightMatrix),
@@ -343,8 +343,8 @@ holds(comp_inFrontOf(Front, Back), T) :-
     % TODO: adapt this to take rotations and object dimensions into account
     %
 
-    object_perception(Front, T, VPF),
-    object_perception(Back, T, VPB),
+    object_detection(Front, T, VPF),
+    object_detection(Back, T, VPB),
 
     rdf_triple(knowrob:eventOccursAt, VPF, FrontMatrix),
     rdf_triple(knowrob:eventOccursAt, VPB, BackMatrix),
@@ -387,8 +387,8 @@ comp_inCenterOf(Inner, Outer) :-
 % 
 holds(comp_inCenterOf(Inner, Outer), T) :-
 
-    object_perception(Inner, T, VPI),
-    object_perception(Outer, T, VPO),
+    object_detection(Inner, T, VPI),
+    object_detection(Outer, T, VPO),
 
     rdf_triple(knowrob:eventOccursAt, VPI, InnerMatrix),
     rdf_triple(knowrob:eventOccursAt, VPO, OuterMatrix),
@@ -436,8 +436,8 @@ in_ContGeneric(InnerObj, OuterObj) :-
 % 
 holds(in_ContGeneric(InnerObj, OuterObj), T) :-
 
-    object_perception(InnerObj, T, VPI),
-    object_perception(OuterObj, T, VPO),
+    object_detection(InnerObj, T, VPI),
+    object_detection(OuterObj, T, VPO),
 
     rdf_triple(knowrob:eventOccursAt, VPI, InnerObjMatrix),
     rdf_triple(knowrob:eventOccursAt, VPO, OuterObjMatrix),
@@ -491,13 +491,13 @@ comp_orientation(Object, Orientation) :-
                               atom_concat('timepoint_', StTa, StTl),
                               term_to_atom(St, StTa)), Perceptions),
 
-    predsort(compare_object_perceptions, Perceptions, Psorted),
+    predsort(compare_object_detections, Perceptions, Psorted),
 
     % compute the homography for the newest perception
     nth0(0, Psorted, Newest),
     nth0(0, Newest, NewestPerception),
 
-    rdf_triple(knowrob:eventOccursAt, NewestPerception, Orientation).
+    rdf_triple(knowrob:eventOccursAt, NewestPerception, Orientation),!.
 
 
 
@@ -571,74 +571,79 @@ comp_orientation(Object, Orientation) :-
 %
 % Extract component m(0,0) from a matrix
 %
-% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D-(M00)-(M01)-(M02)-(M03)-(M10)-(M11)-(M12)-(M13)-(M20)-(M21)-(M22)-(M23)-(M30)-(M31)-(M32)-(M33) for 4x4 and covMat3D--(M00)-(M01... for 6x6)
+% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D_M00_M01_M02_M03_M10_M11_M12_M13_M20_M21_M22_M23_M30_M31_M32_M33 for 4x4 and covMat3D_M00_M01... for 6x6)
 % @param M00 Component m(0,0)
+%
     comp_m00(Matrix, M00) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(rotMat3D-(M00)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([rotMat3D,M00,_,_,_,   _,_,_,_,   _,_,_,_,   _,_,_,_], '_', O),!.
     comp_m00(Matrix, M00) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(M00)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,M00,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 %% comp_m01(+Matrix, ?M01) is semidet.
 %
 % Extract component m(0,1) from a matrix
 %
-% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D-(M00)-(M01)-(M02)-(M03)-(M10)-(M11)-(M12)-(M13)-(M20)-(M21)-(M22)-(M23)-(M30)-(M31)-(M32)-(M33) for 4x4 and covMat3D--(M00)-(M01... for 6x6)
+% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D_M00_M01_M02_M03_M10_M11_M12_M13_M20_M21_M22_M23_M30_M31_M32_M33 for 4x4 and covMat3D_M00_M01... for 6x6)
 % @param M01 Component m(0,1)
+%
     comp_m01(Matrix, M01) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(rotMat3D-(_)-(M01)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([rotMat3D,_,M01,_,_,   _,_,_,_,   _,_,_,_,   _,_,_,_], '_', O),!.
     comp_m01(Matrix, M01) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(M01)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,M01,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 %% comp_m02(+Matrix, ?M02) is semidet.
 %
 % Extract component m(0,2) from a matrix
 %
-% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D-(M00)-(M01)-(M02)-(M03)-(M10)-(M11)-(M12)-(M13)-(M20)-(M21)-(M22)-(M23)-(M30)-(M31)-(M32)-(M33) for 4x4 and covMat3D--(M00)-(M01... for 6x6)
+% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D_M00_M01_M02_M03_M10_M11_M12_M13_M20_M21_M22_M23_M30_M31_M32_M33 for 4x4 and covMat3D_M00_M01... for 6x6)
 % @param M02 Component m(0,2)
+%
     comp_m02(Matrix, M02) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(rotMat3D-(_)-(_)-(M02)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([rotMat3D,_,_,M02,_,   _,_,_,_,   _,_,_,_   ,_,_,_,_], '_', O),!.
     comp_m02(Matrix, M02) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(M02)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,M02,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 %% comp_m03(+Matrix, ?M03) is semidet.
 %
 % Extract component m(0,3) from a matrix
 %
-% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D-(M00)-(M01)-(M02)-(M03)-(M10)-(M11)-(M12)-(M13)-(M20)-(M21)-(M22)-(M23)-(M30)-(M31)-(M32)-(M33) for 4x4 and covMat3D--(M00)-(M01... for 6x6)
+% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D_M00_M01_M02_M03_M10_M11_M12_M13_M20_M21_M22_M23_M30_M31_M32_M33 for 4x4 and covMat3D_M00_M01... for 6x6)
 % @param M03 Component m(0,3)
+%
     comp_m03(Matrix, M03) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(rotMat3D-(_)-(_)-(_)-(M03)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([rotMat3D,_,_,_,M03,   _,_,_,_,   _,_,_,_   ,_,_,_,_], '_', O),!.
     comp_m03(Matrix, M03) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(M03)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,M03,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 %% comp_m04(+Matrix, ?M04) is semidet.
 %
 % Extract component m(0,4) from a matrix
 %
-% @param Matrix The matrix (6x6, represented as String covMat3D--(M00)-(M01...)
+% @param Matrix The matrix (6x6, represented as String covMat3D_M00_M01...)
 % @param M04 Component m(0,4)
+%
     comp_m04(Matrix, M04) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(M04)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,M04,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 %% comp_m05(+Matrix, ?M05) is semidet.
 %
 % Extract component m(0,5) from a matrix
 %
-% @param Matrix The matrix (6x6, represented as String covMat3D--(M00)-(M01...)
+% @param Matrix The matrix (6x6, represented as String covMat3D_M00_M01...)
 % @param M05 Component m(0,5)
+%
     comp_m05(Matrix, M05) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(M05)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
-
+        atomic_list_concat([covMat3D,_,_,_,_,_,M05,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 
 
@@ -647,73 +652,79 @@ comp_orientation(Object, Orientation) :-
 %
 % Extract component m(1,0) from a matrix
 %
-% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D-(M00)-(M01)-(M02)-(M03)-(M10)-(M11)-(M12)-(M13)-(M20)-(M21)-(M22)-(M23)-(M30)-(M31)-(M32)-(M33) for 4x4 and covMat3D--(M00)-(M01... for 6x6)
+% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D_M00_M01_M02_M03_M10_M11_M12_M13_M20_M21_M22_M23_M30_M31_M32_M33 for 4x4 and covMat3D_M00_M01... for 6x6)
 % @param M10 Component m(1,0)
+%
     comp_m10(Matrix, M10) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(rotMat3D-(_)-(_)-(_)-(_)-(M10)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([rotMat3D,_,_,_,_,   M10,_,_,_,   _,_,_,_,   _,_,_,_], '_', O),!.
     comp_m10(Matrix, M10) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(M10)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   M10,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 %% comp_m11(+Matrix, ?M11) is semidet.
 %
 % Extract component m(1,1) from a matrix
 %
-% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D-(M00)-(M01)-(M02)-(M03)-(M10)-(M11)-(M12)-(M13)-(M20)-(M21)-(M22)-(M23)-(M30)-(M31)-(M32)-(M33) for 4x4 and covMat3D--(M00)-(M01... for 6x6)
+% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D_M00_M01_M02_M03_M10_M11_M12_M13_M20_M21_M22_M23_M30_M31_M32_M33 for 4x4 and covMat3D_M00_M01... for 6x6)
 % @param M11 Component m(1,1)
+%
     comp_m11(Matrix, M11) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(rotMat3D-(_)-(_)-(_)-(_)-(_)-(M11)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([rotMat3D,_,_,_,_,   _,M11,_,_,   _,_,_,_,   _,_,_,_], '_', O),!.
     comp_m11(Matrix, M11) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M11)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,M11,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 %% comp_m12(+Matrix, ?M12) is semidet.
 %
 % Extract component m(1,2) from a matrix
 %
-% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D-(M00)-(M01)-(M02)-(M03)-(M10)-(M11)-(M12)-(M13)-(M20)-(M21)-(M22)-(M23)-(M30)-(M31)-(M32)-(M33) for 4x4 and covMat3D--(M00)-(M01... for 6x6)
+% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D_M00_M01_M02_M03_M10_M11_M12_M13_M20_M21_M22_M23_M30_M31_M32_M33 for 4x4 and covMat3D_M00_M01... for 6x6)
 % @param M12 Component m(1,2)
+%
     comp_m12(Matrix, M12) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(rotMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(M12)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([rotMat3D,_,_,_,_,   _,_,M12,_,   _,_,_,_,   _,_,_,_], '_', O),!.
     comp_m12(Matrix, M12) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M12)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,M12,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 %% comp_m13(+Matrix, ?M13) is semidet.
 %
 % Extract component m(1,3) from a matrix
 %
-% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D-(M00)-(M01)-(M02)-(M03)-(M10)-(M11)-(M12)-(M13)-(M20)-(M21)-(M22)-(M23)-(M30)-(M31)-(M32)-(M33) for 4x4 and covMat3D--(M00)-(M01... for 6x6)
+% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D_M00_M01_M02_M03_M10_M11_M12_M13_M20_M21_M22_M23_M30_M31_M32_M33 for 4x4 and covMat3D_M00_M01... for 6x6)
 % @param M13 Component m(1,3)
+%
     comp_m13(Matrix, M13) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(rotMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M13)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([rotMat3D,_,_,_,_,   _,_,_,M13,   _,_,_,_,   _,_,_,_], '_', O),!.
     comp_m13(Matrix, M13) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M13)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,M13,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 %% comp_m14(+Matrix, ?M14) is semidet.
 %
 % Extract component m(1,4) from a matrix
 %
-% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D-(M00)-(M01)-(M02)-(M03)-(M10)-(M11)-(M12)-(M13)-(M20)-(M21)-(M22)-(M23)-(M30)-(M31)-(M32)-(M33) for 4x4 and covMat3D--(M00)-(M01... for 6x6)
+% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D_M00_M01_M02_M03_M10_M11_M12_M13_M20_M21_M22_M23_M30_M31_M32_M33 for 4x4 and covMat3D_M00_M01... for 6x6)
 % @param M14 Component m(1,4)
+%
     comp_m14(Matrix, M14) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M14)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,M14,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 %% comp_m15(+Matrix, ?M15) is semidet.
 %
 % Extract component m(1,5) from a matrix
 %
-% @param Matrix The matrix (6x6, represented as String covMat3D--(M00)-(M01...)
+% @param Matrix The matrix (6x6, represented as String covMat3D_M00_M01...)
 % @param M15 Component m(1,5)
+%
     comp_m15(Matrix, M15) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M15)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,_,M15,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 
 
@@ -722,73 +733,79 @@ comp_orientation(Object, Orientation) :-
 %
 % Extract component m(2,0) from a matrix
 %
-% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D-(M00)-(M01)-(M02)-(M03)-(M10)-(M11)-(M12)-(M13)-(M20)-(M21)-(M22)-(M23)-(M30)-(M31)-(M32)-(M33) for 4x4 and covMat3D--(M00)-(M01... for 6x6)
+% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D_M00_M01_M02_M03_M10_M11_M12_M13_M20_M21_M22_M23_M30_M31_M32_M33 for 4x4 and covMat3D_M00_M01... for 6x6)
 % @param M20 Component m(2,0)
+%
     comp_m20(Matrix, M20) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(rotMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M20)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([rotMat3D,_,_,_,_,   _,_,_,_,   M20,_,_,_,   _,_,_,_], '_', O),!.
     comp_m20(Matrix, M20) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M20)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,_,_,   M20,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 %% comp_m21(+Matrix, ?M21) is semidet.
 %
 % Extract component m(2,1) from a matrix
 %
-% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D-(M00)-(M01)-(M02)-(M03)-(M10)-(M11)-(M12)-(M13)-(M20)-(M21)-(M22)-(M23)-(M30)-(M31)-(M32)-(M33) for 4x4 and covMat3D--(M00)-(M01... for 6x6)
+% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D_M00_M01_M02_M03_M10_M11_M12_M13_M20_M21_M22_M23_M30_M31_M32_M33 for 4x4 and covMat3D_M00_M01... for 6x6)
 % @param M21 Component m(2,1)
+%
     comp_m21(Matrix, M21) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(rotMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M21)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([rotMat3D,_,_,_,_,   _,_,_,_,   _,M21,_,_,   _,_,_,_], '_', O),!.
     comp_m21(Matrix, M21) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M21)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,_,_,   _,M21,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 %% comp_m22(+Matrix, ?M22) is semidet.
 %
 % Extract component m(2,2) from a matrix
 %
-% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D-(M00)-(M01)-(M02)-(M03)-(M10)-(M11)-(M12)-(M13)-(M20)-(M21)-(M22)-(M23)-(M30)-(M31)-(M32)-(M33) for 4x4 and covMat3D--(M00)-(M01... for 6x6)
+% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D_M00_M01_M02_M03_M10_M11_M12_M13_M20_M21_M22_M23_M30_M31_M32_M33 for 4x4 and covMat3D_M00_M01... for 6x6)
 % @param M22 Component m(2,2)
+%
     comp_m22(Matrix, M22) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(rotMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M22)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([rotMat3D,_,_,_,_,   _,_,_,_,   _,_,M22,_,   _,_,_,_], '_', O),!.
     comp_m22(Matrix, M22) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M22)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,_,_,   _,_,M22,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 %% comp_m23(+Matrix, ?M23) is semidet.
 %
 % Extract component m(2,3) from a matrix
 %
-% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D-(M00)-(M01)-(M02)-(M03)-(M10)-(M11)-(M12)-(M13)-(M20)-(M21)-(M22)-(M23)-(M30)-(M31)-(M32)-(M33) for 4x4 and covMat3D--(M00)-(M01... for 6x6)
+% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D_M00_M01_M02_M03_M10_M11_M12_M13_M20_M21_M22_M23_M30_M31_M32_M33 for 4x4 and covMat3D_M00_M01... for 6x6)
 % @param M23 Component m(2,3)
+%
     comp_m23(Matrix, M23) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(rotMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M23)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([rotMat3D,_,_,_,_,   _,_,_,_,   _,_,_,M23,   _,_,_,_], '_', O),!.
     comp_m23(Matrix, M23) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M23)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,M23,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 %% comp_m24(+Matrix, ?M24) is semidet.
 %
 % Extract component m(2,4) from a matrix
 %
-% @param Matrix The matrix (6x6, represented as String covMat3D--(M00)-(M01...)
+% @param Matrix The matrix (6x6, represented as String covMat3D_M00_M01...)
 % @param M24 Component m(2,4)
+%
     comp_m24(Matrix, M24) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M24)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,M24,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 %% comp_m25(+Matrix, ?M25) is semidet.
 %
 % Extract component m(2,5) from a matrix
 %
-% @param Matrix The matrix (6x6, represented as String covMat3D--(M00)-(M01...)
+% @param Matrix The matrix (6x6, represented as String covMat3D_M00_M01...)
 % @param M25 Component m(2,5)
+%
     comp_m25(Matrix, M25) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M25)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,M25,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 
 
@@ -797,195 +814,213 @@ comp_orientation(Object, Orientation) :-
 %
 % Extract component m(3,0) from a matrix
 %
-% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D-(M00)-(M01)-(M02)-(M03)-(M10)-(M11)-(M12)-(M13)-(M20)-(M21)-(M22)-(M23)-(M30)-(M31)-(M32)-(M33) for 4x4 and covMat3D--(M00)-(M01... for 6x6)
+% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D_M00_M01_M02_M03_M10_M11_M12_M13_M20_M21_M22_M23_M30_M31_M32_M33 for 4x4 and covMat3D_M00_M01... for 6x6)
 % @param M30 Component m(3,0)
+%
     comp_m30(Matrix, M30) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(rotMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M30)-(_)-(_)-(_), O).
+        atomic_list_concat([rotMat3D,_,_,_,_,   _,_,_,_,   _,_,_,_,   M30,_,_,_], '_', O),!.
     comp_m30(Matrix, M30) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M30)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   M30,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 %% comp_m31(+Matrix, ?M31) is semidet.
 %
 % Extract component m(3,1) from a matrix
 %
-% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D-(M00)-(M01)-(M02)-(M03)-(M10)-(M11)-(M12)-(M13)-(M20)-(M21)-(M22)-(M23)-(M30)-(M31)-(M32)-(M33) for 4x4 and covMat3D--(M00)-(M01... for 6x6)
+% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D_M00_M01_M02_M03_M10_M11_M12_M13_M20_M21_M22_M23_M30_M31_M32_M33 for 4x4 and covMat3D_M00_M01... for 6x6)
 % @param M31 Component m(3,1)
+%
     comp_m31(Matrix, M31) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(rotMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M31)-(_)-(_), O).
+        atomic_list_concat([rotMat3D,_,_,_,_,   _,_,_,_,   _,_,_,_,   _,M31,_,_], '_', O),!.
     comp_m31(Matrix, M31) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M31)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,M31,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 %% comp_m32(+Matrix, ?M32) is semidet.
 %
 % Extract component m(3,2) from a matrix
 %
-% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D-(M00)-(M01)-(M02)-(M03)-(M10)-(M11)-(M12)-(M13)-(M20)-(M21)-(M22)-(M23)-(M30)-(M31)-(M32)-(M33) for 4x4 and covMat3D--(M00)-(M01... for 6x6)
+% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D_M00_M01_M02_M03_M10_M11_M12_M13_M20_M21_M22_M23_M30_M31_M32_M33 for 4x4 and covMat3D_M00_M01... for 6x6)
 % @param M32 Component m(3,2)
+%
     comp_m32(Matrix, M32) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(rotMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M32)-(_), O).
+        atomic_list_concat([rotMat3D,_,_,_,_,   _,_,_,_,   _,_,_,_,   _,_,M32,_], '_', O),!.
     comp_m32(Matrix, M32) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M32)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,M32,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
-%% comp_m33(+Matrix, ?M33) is semidet.
+%% comp_m33(+Matrix, ?M33 is semidet.
 %
 % Extract component m(3,3) from a matrix
 %
-% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D-(M00)-(M01)-(M02)-(M03)-(M10)-(M11)-(M12)-(M13)-(M20)-(M21)-(M22)-(M23)-(M30)-(M31)-(M32)-(M33) for 4x4 and covMat3D--(M00)-(M01... for 6x6)
+% @param Matrix The matrix (4x4 or 6x6, represented as String rotMat3D_M00_M01_M02_M03_M10_M11_M12_M13_M20_M21_M22_M23_M30_M31_M32_M33 for 4x4 and covMat3D_M00_M01... for 6x6)
 % @param M33 Component m(3,3)
+%
     comp_m33(Matrix, M33) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(rotMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M33), O).
+        atomic_list_concat([rotMat3D,_,_,_,_,   _,_,_,_,   _,_,_,_,   _,_,_,M33], '_', O),!.
     comp_m33(Matrix, M33) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M33)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,M33,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 %% comp_m34(+Matrix, ?M34) is semidet.
 %
 % Extract component m(3,4) from a matrix
 %
-% @param Matrix The matrix (6x6, represented as String covMat3D--(M00)-(M01...)
+% @param Matrix The matrix (6x6, represented as String covMat3D_M00_M01...)
 % @param M34 Component m(3,4)
+%
     comp_m34(Matrix, M34) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M34)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,M34,_,   _,_,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 %% comp_m35(+Matrix, ?M35) is semidet.
 %
 % Extract component m(3,5) from a matrix
 %
-% @param Matrix The matrix (6x6, represented as String covMat3D--(M00)-(M01...)
+% @param Matrix The matrix (6x6, represented as String covMat3D_M00_M01...)
 % @param M35 Component m(3,5)
+%
     comp_m35(Matrix, M35) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M35)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,M35,   _,_,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 
 %% comp_m40(+Matrix, ?M40) is semidet.
 %
 % Extract component m(4,0) from a matrix
 %
-% @param Matrix The matrix (6x6, represented as String covMat3D--(M00)-(M01...)
+% @param Matrix The matrix (6x6, represented as String covMat3D_M00_M01...)
 % @param M40 Component m(4,0)
+%
     comp_m40(Matrix, M40) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M40)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   M40,_,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 %% comp_m41(+Matrix, ?M41) is semidet.
 %
 % Extract component m(4,1) from a matrix
 %
-% @param Matrix The matrix (6x6, represented as String covMat3D--(M00)-(M01...)
+% @param Matrix The matrix (6x6, represented as String covMat3D_M00_M01...)
 % @param M41 Component m(4,1)
+%
     comp_m41(Matrix, M41) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M41)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,M41,_,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 %% comp_m42(+Matrix, ?M42) is semidet.
 %
 % Extract component m(4,2) from a matrix
 %
-% @param Matrix The matrix (6x6, represented as String covMat3D--(M00)-(M01...)
+% @param Matrix The matrix (6x6, represented as String covMat3D_M00_M01...)
 % @param M42 Component m(4,2)
+%
     comp_m42(Matrix, M42) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M42)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,M42,_,_,_,   _,_,_,_,_,_], '_', O),!.
 
 %% comp_m43(+Matrix, ?M43) is semidet.
 %
 % Extract component m(4,3) from a matrix
 %
-% @param Matrix The matrix (6x6, represented as String covMat3D--(M00)-(M01...)
+% @param Matrix The matrix (6x6, represented as String covMat3D_M00_M01...)
 % @param M43 Component m(4,3)
+%
     comp_m43(Matrix, M43) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M43)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,M43,_,_,   _,_,_,_,_,_], '_', O),!.
 
 %% comp_m44(+Matrix, ?M44) is semidet.
 %
 % Extract component m(4,4) from a matrix
 %
-% @param Matrix The matrix (6x6, represented as String covMat3D--(M00)-(M01...)
+% @param Matrix The matrix (6x6, represented as String covMat3D_M00_M01...)
 % @param M44 Component m(4,4)
+%
     comp_m44(Matrix, M44) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M44)-(_)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,M44,_,   _,_,_,_,_,_], '_', O),!.
 
 %% comp_m45(+Matrix, ?M45) is semidet.
 %
 % Extract component m(4,5) from a matrix
 %
-% @param Matrix The matrix (6x6, represented as String covMat3D--(M00)-(M01...)
+% @param Matrix The matrix (6x6, represented as String covMat3D_M00_M01...)
 % @param M45 Component m(4,5)
+%
     comp_m45(Matrix, M45) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M45)-(_)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,M45,   _,_,_,_,_,_], '_', O),!.
 
 
 %% comp_m50(+Matrix, ?M50) is semidet.
 %
 % Extract component m(5,0) from a matrix
 %
-% @param Matrix The matrix (6x6, represented as String covMat3D--(M00)-(M01...)
+% @param Matrix The matrix (6x6, represented as String covMat3D_M00_M01...)
 % @param M50 Component m(5,0)
+%
     comp_m50(Matrix, M50) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M50)-(_)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   M50,_,_,_,_,_], '_', O),!.
 
 %% comp_m51(+Matrix, ?M51) is semidet.
 %
 % Extract component m(5,1) from a matrix
 %
-% @param Matrix The matrix (6x6, represented as String covMat3D--(M00)-(M01...)
+% @param Matrix The matrix (6x6, represented as String covMat3D_M00_M01...)
 % @param M51 Component m(5,1)
+%
     comp_m51(Matrix, M51) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M51)-(_)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,M51,_,_,_,_], '_', O),!.
 
 %% comp_m52(+Matrix, ?M52) is semidet.
 %
 % Extract component m(5,2) from a matrix
 %
-% @param Matrix The matrix (6x6, represented as String covMat3D--(M00)-(M01...)
+% @param Matrix The matrix (6x6, represented as String covMat3D_M00_M01...)
 % @param M52 Component m(5,2)
+%
     comp_m52(Matrix, M52) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M52)-(_)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,M52,_,_,_], '_', O),!.
 
 %% comp_m53(+Matrix, ?M53) is semidet.
 %
 % Extract component m(5,3) from a matrix
 %
-% @param Matrix The matrix (6x6, represented as String covMat3D--(M00)-(M01...)
+% @param Matrix The matrix (6x6, represented as String covMat3D_M00_M01...)
 % @param M53 Component m(5,3)
+%
     comp_m53(Matrix, M53) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M53)-(_)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,M53,_,_], '_', O),!.
 
 %% comp_m54(+Matrix, ?M54) is semidet.
 %
 % Extract component m(5,4) from a matrix
 %
-% @param Matrix The matrix (6x6, represented as String covMat3D--(M00)-(M01...)
+% @param Matrix The matrix (6x6, represented as String covMat3D_M00_M01...)
 % @param M54 Component m(5,4)
+%
     comp_m54(Matrix, M54) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M54)-(_), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,M54,_], '_', O),!.
 
 %% comp_m55(+Matrix, ?M55) is semidet.
 %
 % Extract component m(5,5) from a matrix
 %
-% @param Matrix The matrix (6x6, represented as String covMat3D--(M00)-(M01...)
+% @param Matrix The matrix (6x6, represented as String covMat3D_M00_M01...)
 % @param M55 Component m(5,5)
+%
     comp_m55(Matrix, M55) :-
         rdf_split_url(_, O, Matrix),
-        term_to_atom(covMat3D-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(_)-(M55), O).
+        atomic_list_concat([covMat3D,_,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,_,   _,_,_,_,_,M55], '_', O),!.
 
 
 
@@ -995,7 +1030,7 @@ objectAtPoint2D(Point2D, Obj) :-
     rdf_triple(knowrob:xCoord, Point2D, PCxx), strip_literal_type(PCxx, PCx), atom_to_term(PCx,PX,_),
     rdf_triple(knowrob:yCoord, Point2D, PCyy), strip_literal_type(PCyy, PCy), atom_to_term(PCy,PY,_),
     objectAtPoint2D(PX,PY,Obj).
- 
+
 objectAtPoint2D(PX,PY,Obj) :-
 
     % get information of potential objects at positon point2d (x/y)
@@ -1054,3 +1089,14 @@ objectAtPoint2D(PX,PY,Obj) :-
     =<(0,DOT1), =<(DOT1, DOTV1), 
     =<(0,DOT2), =<(DOT2, DOTV2). 
 
+
+% compatibility with Prolog < 5.8
+:- if(\+current_predicate(atomic_list_concat, _)).
+
+  atomic_list_concat(List, Atom) :-
+    concat_atom(List, Atom).
+
+  atomic_list_concat(List, Separator, Atom) :-
+    concat_atom(List, Separator, Atom).
+
+:- endif.
