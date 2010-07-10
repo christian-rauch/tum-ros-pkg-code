@@ -99,50 +99,99 @@ holds_tt(Goal, [Start, End]) :-
     holds(Goal, Start),
     holds(Goal, End),
 
-    % find all perceptions of the objects at hand
+    % find all detections of the objects at hand
     arg(1, Goal, Arg1),arg(2, Goal, Arg2),
-    findall([P_i,Arg1], ( (rdf_has(P_i, knowrob:objectActedOn, Arg1);rdf_has(P_i, knowrob:objectActedOn, Arg2)),
-                           rdfs_individual_of(P_i,  knowrob:'MentalEvent')), Perceptions),
+    findall([D_i,Arg1], ( (rdf_has(D_i, knowrob:objectActedOn, Arg1);rdf_has(D_i, knowrob:objectActedOn, Arg2)),
+                           rdfs_individual_of(D_i,  knowrob:'MentalEvent')), Detections),
 
-      forall( ( member(P_O, Perceptions), nth0(0, P_O, Perception),
-                rdf_triple(knowrob:startTime, Perception, PStT),
-                rdf_triple(knowrob:temporallySubsumes, knowrob:'holds_tt', PStT) ),
-              holds(Goal, PStT) ),
+      forall( ( member(D_O, Detections), nth0(0, D_O, Detection),
+                rdf_triple(knowrob:startTime, Detection, DStT),
+                rdf_triple(knowrob:temporallySubsumes, knowrob:'holds_tt', DStT) ),
+              holds(Goal, DStT) ),
 
     rdf_retractall(knowrob:'holds_tt', _, _).
 
 
-% Helper predicates
 
-% create a timepoint-identifier for the current time
+%% get_timepoint(-T) is det.
+%
+% Create a timepoint-identifier for the current time
+%
+% @param T TimePoint instance identifying the current time stamp
+%
 get_timepoint(T) :-
   get_time(Ts),
   atom_concat('http://ias.cs.tum.edu/kb/knowrob.owl#timepoint_', Ts, T),
   rdf_assert(T, rdf:type, knowrob:'TimePoint').
 
-% get the lastest perception of object O
-latest_perception(Object, NewestPerception) :-
 
-    findall([P_i,Object,St], (rdf_has(P_i, knowrob:objectActedOn, Object),
-                              rdfs_individual_of(P_i,  knowrob:'MentalEvent'),
-                              rdf_triple(knowrob:startTime, P_i, StTg),
+
+%% latest_detection_of_instance(+Object, -LatestDetection) is nondet.
+%
+% Get the lastest detection of the object instance Object
+%
+% A detection is an instance of MentalEvent, i.e. can be a perception
+% process as well as an inference result
+%
+% @param Object          An object instance
+% @param LatestDetection Latest MentalEvent associated with this instance
+%
+latest_detection_of_instance(Object, LatestDetection) :-
+
+    findall([D_i,Object,St], (rdf_has(D_i, knowrob:objectActedOn, Object),
+                              rdfs_individual_of(D_i,  knowrob:'MentalEvent'),
+                              rdf_triple(knowrob:startTime, D_i, StTg),
                               rdf_split_url(_, StTl, StTg),
                               atom_concat('timepoint_', StTa, StTl),
-                              term_to_atom(St, StTa)), Perceptions),
+                              term_to_atom(St, StTa)), Detections),
 
-    predsort(compare_object_perceptions, Perceptions, Psorted),
+    predsort(compare_object_detections, Detections, Dsorted),
 
     % compute the homography for the newest perception
-    nth0(0, Psorted, Newest),
-    nth0(0, Newest, NewestPerception).
+    nth0(0, Dsorted, Latest),
+    nth0(0, Latest, LatestDetection).
 
 
-% get the lastest perception of an object of type Type
-latest_perception_of_type(Type, NewestPerception) :-
 
-    findall([P_i,Object,St], (rdfs_instance_of(Object, Type),
+%% latest_detection_of_type(+Type, -LatestDetection) is nondet.
+%
+% Get the lastest detection of an object of type Type
+%
+% A detection is an instance of MentalEvent, i.e. can be a perception
+% process as well as an inference result
+%
+% @param Object          An object type
+% @param LatestDetection Latest MentalEvent associated with any instance of this type
+%
+latest_detection_of_type(Type, LatestDetection) :-
+
+    findall([D_i,Object,St], (rdfs_individual_of(Object, Type),
+                              rdf_has(D_i, knowrob:objectActedOn, Object),
+                              rdfs_individual_of(D_i,  knowrob:'MentalEvent'),
+                              rdf_triple(knowrob:startTime, D_i, StTg),
+                              rdf_split_url(_, StTl, StTg),
+                              atom_concat('timepoint_', StTa, StTl),
+                              term_to_atom(St, StTa)), Detections),
+
+    predsort(compare_object_detections, Detections, Dsorted),
+
+    % compute the homography for the newest perception
+    nth0(0, Dsorted, Latest),
+    nth0(0, Latest, LatestDetection).
+
+
+%% latest_perception_of_type(+Type, -LatestPerception) is nondet.
+%
+% Get the lastest perception of an object of type Type
+%
+% @param Object          An object type
+% @param LatestPerception Latest MentalEvent associated with any instance of this type
+%
+latest_perception_of_type(Type, LatestPerception) :-
+
+    findall([P_i,Object,St], (rdfs_individual_of(Object, Type),
                               rdf_has(P_i, knowrob:objectActedOn, Object),
-                              rdfs_individual_of(P_i,  knowrob:'MentalEvent'),
+                              rdfs_individual_of(P_i,  knowrob:'VisualPerception'),
                               rdf_triple(knowrob:startTime, P_i, StTg),
                               rdf_split_url(_, StTl, StTg),
                               atom_concat('timepoint_', StTa, StTl),
@@ -151,84 +200,167 @@ latest_perception_of_type(Type, NewestPerception) :-
     predsort(compare_object_perceptions, Perceptions, Psorted),
 
     % compute the homography for the newest perception
-    nth0(0, Psorted, Newest),
-    nth0(0, Newest, NewestPerception).
+    nth0(0, Psorted, Latest),
+    nth0(0, Latest, LatestPerception).
 
 
-% ask for the objects detected in the latest scan of table Table
-% e.g. 'http://ias.cs.tum.edu/kb/knowrob.owl#KitchenTable0'
-current_objects_on_table(Table, Object) :-
-    latest_perception(Table, P),
-    rdfs_instance_of(Perc, knowrob:'VisualPerception'),
-    rdf_has(Perc, knowrob:objectActedOn, Object),
-    rdf_has(P, knowrob:startTime, Pstart),
-    rdf_has(Perc, knowrob:startTime, Pstart),
-    Object\=Table.
+%% latest_perceptions_of_types(+Type, -LatestPerceptions) is nondet.
+%
+% Get the lastest perceptions of all objects of type Type
+%
+% @param Object          An object type
+% @param LatestPerceptions Latest MentalEvents associated with instances of this type
+%
+latest_perceptions_of_types(Type, LatestPerceptions) :-
 
-% find all perceptions of the object that are valid at time point T
-object_perception(Object, Time, Perception) :-
+    findall(Obj, rdfs_individual_of(Obj, Type), Objs),
 
-    findall([P_i,Object], (rdf_has(P_i, knowrob:objectActedOn, Object),
-                         rdfs_individual_of(P_i,  knowrob:'MentalEvent')), Perceptions),
+    findall(LatestDetection,
+            ( member(Object, Objs),
+              latest_detection_of_instance(Object, LatestDetection),
+              rdfs_individual_of(LatestDetection, knowrob:'VisualPerception') ),
+            LatestPerceptions).
 
-    member(P_O, Perceptions),
-    nth0(0, P_O, Perception),
+
+
+%% latest_inferred_object_set(-Object) is nondet.
+%
+% Ask for the objects inferred in the last inference run
+%
+% @param Objects   Set of object instances inferred in the latest inference run
+%
+latest_inferred_object_set(Objects) :-
+
+    findall([D_i,_,St],  (rdfs_individual_of(D_i,  knowrob:'Reasoning'),
+                          rdf_has(Inf, knowrob:probability, InfProb),
+                          term_to_atom(Prob, InfProb),
+                          >(Prob, 0),
+                          rdf_triple(knowrob:startTime, D_i, StTg),
+                          rdf_split_url(_, StTl, StTg),
+                          atom_concat('timepoint_', StTa, StTl),
+                          term_to_atom(St, StTa)), Inferences),
+
+    predsort(compare_object_detections, Inferences, Psorted),
+
+    % compute the newest perception
+    nth0(0, Psorted, Latest),
+    nth0(0, Latest, LatestInf),
+
+    % find other inferences performed at the same time
+    findall(OtherInf, (rdf_has(LatestInf, knowrob:'startTime', St), rdf_has(OtherInf, knowrob:'startTime', St)), OtherInfs),
+
+    predsort(compare_inferences_by_prob, OtherInfs, SortedInfs),
+
+    findall(Obj, (member(Inf, SortedInfs), rdf_has(Inf, knowrob:'objectActedOn', Obj)), Objects).
+
+
+%% latest_inferred_object_types(-ObjectTypes) is nondet.
+%
+% Ask for the object types inferred in the last inference run
+%
+% @param ObjectTypes   Set of object types inferred in the latest inference run
+%
+latest_inferred_object_types(ObjectTypes) :-
+
+    latest_inferred_object_set(Objects),
+    findall(ObjT, (member(Obj, Objects), rdf_has(Obj, rdf:type, ObjT)), ObjectTypes).
+
+
+
+
+%% object_detection(+Object, ?Time, -Detection) is nondet.
+%
+% Find all detections of the Object that are valid at time point Time
+%
+% @param Object     Object instance of interest
+% @param Time       Time point of interest. If unbound, all detections of the object are returned.
+% @param Detection  Detections of the object that are assumed to be valid at time Time
+%
+object_detection(Object, Time, Detection) :-
+
+    findall([D_i,Object], (rdf_has(D_i, knowrob:objectActedOn, Object),
+                           rdfs_individual_of(D_i,  knowrob:'MentalEvent')), Detections),
+
+    member(P_O, Detections),
+    nth0(0, P_O, Detection),
     nth0(1, P_O, Object),
 
-    temporally_subsumes(Perception, Time).
+    ((var(Time))
+      -> (
+        true
+      ) ; (
+        temporally_subsumes(Detection, Time)
+    )).
 
 
-% find all perceptions of the object that are valid at time point T
-object_perception(Object, Time, Perception) :-
-
-    var(Time),
-    findall([P_i,Object], (rdf_has(P_i, knowrob:objectActedOn, Object),
-                         rdfs_individual_of(P_i,  knowrob:'MentalEvent')), Perceptions),
-
-    member(P_O, Perceptions),
-    nth0(0, P_O, Perception),
-    nth0(1, P_O, Object).
-
-
+%% temporally_subsumes(+Long, +Short) is nondet.
+%
+% Verify whether Long temporally subsumes Short
+%
+% @param Long   The longer time span (e.g. detection of an object)
+% @param Short  The shorter time span (e.g. detection of an object)
+%
 temporally_subsumes(Long, Short) :-
 
-      read_perception_starttime(Long, LongSt),!,
-      read_perception_endtime(Long,   LongEt),!,
+      detection_starttime(Long, LongSt),!,
+      detection_endtime(Long,   LongEt),!,
 
-      read_perception_starttime(Short, ShortSt),!,
-      read_perception_endtime(Short,   ShortEt),!,
+      detection_starttime(Short, ShortSt),!,
+      detection_endtime(Short,   ShortEt),!,
 
       % compare the start and end times
       (ShortSt=<ShortEt),
       (LongSt=<ShortSt), (ShortSt=<LongEt),
-      (LongSt=<ShortEt),   (ShortEt=<LongEt).
+      (LongSt=<ShortEt), (ShortEt=<LongEt).
 
 
-read_perception_starttime(Perception, StartTime) :-
+%% detection_starttime(+Detection, -StartTime) is nondet.
+%
+% Determine the start time of an object detection as numerical value.
+% Simply reads the asserted knowrob:startTime and transforms the timepoint
+% into a numeric value.
+%
+% @param Detection  Instance of an event with asserted startTime
+% @param StartTime  Numeric value describing the start time
+%
+detection_starttime(Detection, StartTime) :-
 
   % start time is asserted
-  rdf_triple(knowrob:startTime, Perception, StartTtG),
+  rdf_triple(knowrob:startTime, Detection, StartTtG),
   rdf_split_url(_, StartTt, StartTtG),
   atom_concat('timepoint_', StartTAtom, StartTt),
   term_to_atom(StartTime, StartTAtom).
 
 
-
-read_perception_endtime(Perception, EndTime) :-
+%% detection_endtime(+Detection, -EndTime) is nondet.
+%
+% Determine the end time of an object detection as numerical value.
+% If the knowrob:endTime is asserted, it is read and and transformed
+% into a numeric value. Otherwise, the predicate searches for later
+% perceptions of the same object and takes the startTime of the first
+% subsequent detection as the endTime of the current detection. If
+% there is neither an asserted endTime nor any later detection of the
+% object, it is assumed that the observation is still valid and the
+% current time + 1s is returned (to avoid problems with time glitches).
+%
+% @param Detection  Instance of an event
+% @param EndTime    Numeric value describing the ent time
+%
+detection_endtime(Detection, EndTime) :-
 
   % end time is asserted
-  rdf_triple(knowrob:endTime, Perception, EndTtG),
+  rdf_triple(knowrob:endTime, Detection, EndTtG),
   rdf_split_url(_, EndTt, EndTtG),
   atom_concat('timepoint_', EndTAtom, EndTt),
   term_to_atom(EndTime, EndTAtom),!;
 
   % search for later detections of the object
-  ( rdf_has(Perception, knowrob:objectActedOn, Object),
-    rdf_has(LaterPerception, knowrob:objectActedOn, Object),
-    LaterPerception \= Perception,
-    rdfs_individual_of(LaterPerception,  knowrob:'MentalEvent'),
-    rdf_triple(knowrob:startTime, Perception, StT),
-    rdf_triple(knowrob:startTime, LaterPerception, EndTtG),
+  ( rdf_has(Detection, knowrob:objectActedOn, Object),
+    rdf_has(LaterDetection, knowrob:objectActedOn, Object),
+    LaterDetection \= Detection,
+    rdfs_individual_of(LaterDetection,  knowrob:'MentalEvent'),
+    rdf_triple(knowrob:startTime, Detection, StT),
+    rdf_triple(knowrob:startTime, LaterDetection, EndTtG),
     rdf_triple(knowrob:after, StT, EndTtG),
     rdf_split_url(_, EndTt, EndTtG),
     atom_concat('timepoint_', EndTAtom, EndTt),
@@ -238,14 +370,39 @@ read_perception_endtime(Perception, EndTime) :-
   ( get_time(ET), EndTime is ET + 1.0).
 
 
-% sort perceptions by their start time
-compare_object_perceptions(Delta, P1, P2) :-
+
+
+%% compare_object_detections(-Delta, +P1, +P2) is det.
+%
+% Sort detections by their start time
+%
+% 
+%
+% @param Delta  One of '>', '<', '='
+% @param P1     List [_, _, Time] as used in latest_detection_of_instance, latest_detection_of_type, latest_inferred_object_set
+% @param P2     List [_, _, Time] as used in latest_detection_of_instance, latest_detection_of_type, latest_inferred_object_set
+%
+compare_object_detections(Delta, P1, P2) :-
 
     nth0(2, P1, St1),
     nth0(2, P2, St2),
     compare(Delta, St2, St1).
 
+%% compare_inferences_by_prob(-Delta, +P1, +P2) is det.
+%
+% Sort inference results by their probability
+% 
+% @param Delta  One of '>', '<'
+% @param P1     List [_, _, Time] as used in latest_detection_of_instance, latest_detection_of_type, latest_inferred_object_set
+% @param P2     List [_, _, Time] as used in latest_detection_of_instance, latest_detection_of_type, latest_inferred_object_set
+%
 
+compare_inferences_by_prob('>', Inf1, Inf2) :-
+  rdf_has(Inf1,knowrob:probability,Pr1), term_to_atom(P1,Pr1),
+  rdf_has(Inf2,knowrob:probability,Pr2), term_to_atom(P2,Pr2),
+  P1 < P2.
 
-
-
+compare_inferences_by_prob('<', Inf1, Inf2) :-
+  rdf_has(Inf1,knowrob:probability,Pr1), term_to_atom(P1,Pr1),
+  rdf_has(Inf2,knowrob:probability,Pr2), term_to_atom(P2,Pr2),
+  P1 >= P2.
