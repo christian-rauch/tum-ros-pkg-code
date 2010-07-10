@@ -45,7 +45,7 @@
 % lo-service via the ROS middleware.
 %
 % @param Name Object identifier
-% @param Orientation Orientation matrix (4x4) as String rotMat3D-(P00)-(P01)-(P02)-(P03)-(P10)-(P11)-(P12)-(P13)-(P20)-(P21)-(P22)-(P23)-(P30)-(P31)-(P32)-(P33)
+% @param Orientation Orientation matrix (4x4) as String rotMat3D_P00_P01_P02_P03_P10_P11_P12_P13_P20_P21_P22_P23_P30_P31_P32_P33)
 
     comp_lo_orientation(Name, Orientation) :-
         rdfs_instance_of(Name, knowrob:'EnduringThing-Localized'),!,
@@ -58,7 +58,7 @@
 % lo-service via the ROS middleware.
 %
 % @param Name Object identifier
-% @param Covariance Covariance matrix (6x6) as String covMat3D-(P00)-(P01)-(P02)-(P03)-(P04)-(P05)-(P10)-(P11)-(P12)-(P13)-(P14)-(P15)-(P20)-(P21)-(P22)-(P23)-(P24)-(P25)-(P30)-(P31)-(P32)-(P33)-(P34)-(P35)-(P40)-(P41)-(P42)-(P43)-(P44)-(P45)-(P50)-(P51)-(P52)-(P53)-(P54)-(P55)
+% @param Covariance Covariance matrix (6x6) as String covMat3D_P00_P01_P02_P03_P04_P05_P10_P11_P12_P13_P14_P15_P20_P21_P22_P23_P24_P25_P30_P31_P32_P33_P34_P35_P40_P41_P42_P43_P44_P45_P50_P51_P52_P53_P54_P55)
 
     comp_lo_covariance(Name, Covariance) :-
         rdfs_instance_of(Name, knowrob:'EnduringThing-Localized'),!,
@@ -75,7 +75,7 @@
 % @param Name lo object name (needs to be bound for 'namequery'
 % @param ObjID lo object ID (needs to be bound for 'framequery'
 % @param ParentID lo parent object ID (i.e. ID of the reference coordinate frame), can be bound for 'framequery'
-% @param Orientation returned orientation matrix (4x4) as String rotMat3D-(P00)-(P01)-(P02)-(P03)-(P10)-(P11)-(P12)-(P13)-(P20)-(P21)-(P22)-(P23)-(P30)-(P31)-(P32)-(P33)
+% @param Orientation returned orientation matrix (4x4) as String rotMat3D_P00_P01_P02_P03_P10_P11_P12_P13_P20_P21_P22_P23_P30_P31_P32_P33)
 
     query_lo_orientation(Type, Name, ObjID, ParentID, Orientation) :-
 
@@ -89,8 +89,8 @@
         nth0(4, Pose, P10),  nth0(5,  Pose, P11), nth0(6,  Pose, P12), nth0(7,  Pose, P13),
         nth0(8, Pose, P20),  nth0(9,  Pose, P21), nth0(10, Pose, P22), nth0(11, Pose, P23),
         nth0(12, Pose, P30), nth0(13, Pose, P31), nth0(14, Pose, P32), nth0(15, Pose, P33),
-        term_to_atom(rotMat3D-(P00)-(P01)-(P02)-(P03)-(P10)-(P11)-(P12)-(P13)-(P20)-(P21)-(P22)-(P23)-(P30)-(P31)-(P32)-(P33), Orientation).
 
+        atomic_list_concat(['rotMat3D_',P00,'_',P01,'_',P02,'_',P03,'_',P10,'_',P11,'_',P12,'_',P13,'_',P20,'_',P21,'_',P22,'_',P23,'_',P30,'_',P31,'_',P32,'_',P33], Orientation).
 
 
 
@@ -103,7 +103,7 @@
 % @param Name lo object name (needs to be bound for 'namequery'
 % @param ObjID lo object ID (needs to be bound for 'framequery'
 % @param ParentID lo parent object ID (i.e. ID of the reference coordinate frame), can be bound for 'framequery'
-% @param Covariance returned covariance matrix (6x6) as String covMat3D-(P00)-(P01)-(P02)-(P03)-(P04)-(P05)-(P10)-(P11)-(P12)-(P13)-(P14)-(P15)-(P20)-(P21)-(P22)-(P23)-(P24)-(P25)-(P30)-(P31)-(P32)-(P33)-(P34)-(P35)-(P40)-(P41)-(P42)-(P43)-(P44)-(P45)-(P50)-(P51)-(P52)-(P53)-(P54)-(P55)
+% @param Covariance returned covariance matrix (6x6) as String covMat3D_P00_P01_P02_P03_P04_P05_P10_P11_P12_P13_P14_P15_P20_P21_P22_P23_P24_P25_P30_P31_P32_P33_P34_P35_P40_P41_P42_P43_P44_P45_P50_P51_P52_P53_P54_P55)
 
     query_lo_covariance(Type, Name, ObjID, ParentID, Covariance) :-
 
@@ -120,5 +120,14 @@
         nth0(24, Cov, P40), nth0(25, Cov, P41), nth0(26, Cov, P42), nth0(27, Cov, P43), nth0(28, Cov, P44), nth0(29, Cov, P45),
         nth0(30, Cov, P50), nth0(31, Cov, P51), nth0(32, Cov, P52), nth0(33, Cov, P53), nth0(34, Cov, P54), nth0(35, Cov, P55),
 
-        term_to_atom(covMat3D-(P00)-(P01)-(P02)-(P03)-(P04)-(P05)-(P10)-(P11)-(P12)-(P13)-(P14)-(P15)-(P20)-(P21)-(P22)-(P23)-(P24)-(P25)-(P30)-(P31)-(P32)-(P33)-(P34)-(P35)-(P40)-(P41)-(P42)-(P43)-(P44)-(P45)-(P50)-(P51)-(P52)-(P53)-(P54)-(P55), Covariance).
+        atomic_list_concat(['covMat3D_',P00,'_',P01,'_',P02,'_',P03,'_',P04,'_',P05,'_',P10,'_',P11,'_',P12,'_',P13,'_',P14,'_',P15,'_',P20,'_',P21,'_',P22,'_',P23'_',P24,'_',P25,'_',P30,'_',P31,'_',P32,'_',P33'_',P34,'_',P35,'_',P4,'_',P41,'_',P42,'_',P43'_',P44,'_',P45,'_',P50,'_',P51,'_',P52,'_',P53'_',P54,'_',P55], Covariance).
+
+
+% compatibility with Prolog < 5.8
+:- if(\+current_predicate(atomic_list_concat, _)).
+
+  atomic_list_concat(List, Atom) :-
+    concat_atom(List, Atom).
+
+:- endif.
 
