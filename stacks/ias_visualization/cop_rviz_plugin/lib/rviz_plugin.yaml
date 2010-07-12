@@ -1,0 +1,13 @@
+name: CopAnswer
+library: cop_rviz_plugin
+displays:
+  -
+    class_name: rviz_shows_cop::CopAnswerDisplay
+    display_name: CopAnswerDisplay
+    description: |
+      Displays data from a vision_msgs::cop_answer message as axes.
+  -
+    class_name: rviz_shows_cop::JloTopicDisplay
+    display_name: JloTopicDisplay
+    description: |
+      Displays jlo poses from a std_msgs::UInt32 message.

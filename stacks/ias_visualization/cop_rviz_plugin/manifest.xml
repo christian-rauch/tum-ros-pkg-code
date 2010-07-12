@@ -1,0 +1,19 @@
+<package>
+  <description brief="rviz_shows_cop">
+     rviz_shows_cop
+  </description>
+  <author>U. Klank, Josh Faust</author>
+  <license>BSD</license>
+  <depend package="rviz"/>
+  <depend package="roscpp"/>
+  <depend package="simple_grasp_planner"/>
+  <depend package="vision_msgs"/>
+  <depend package="vision_srvs"/>
+  <depend package="std_msgs"/>
+  <export>
+    <rviz plugin="${prefix}/lib/rviz_plugin.yaml"/>
+  </export>
+
+</package>
+
+
