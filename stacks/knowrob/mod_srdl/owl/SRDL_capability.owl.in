@@ -1,0 +1,653 @@
+<?xml version="1.0"?>
+
+
+<!DOCTYPE rdf:RDF [
+    <!ENTITY owl "http://www.w3.org/2002/07/owl#" >
+    <!ENTITY dc "http://purl.org/dc/elements/1.1/" >
+    <!ENTITY xsd "http://www.w3.org/2001/XMLSchema#" >
+    <!ENTITY SRDL "http://ias.cs.tum.edu/kb/SRDL.owl#" >
+    <!ENTITY owl2xml "http://www.w3.org/2006/12/owl2-xml#" >
+    <!ENTITY knowrob "http://ias.cs.tum.edu/kb/knowrob.owl#" >
+    <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#" >
+    <!ENTITY rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#" >
+    <!ENTITY SRDL_capability "http://ias.cs.tum.ed/kb/SRDL_capability.owl#" >
+    <!ENTITY SRDL_capability2 "http://ias.cs.tum.edu/kb/SRDL_capability.owl#" >
+]>
+
+
+<rdf:RDF xmlns="http://ias.cs.tum.edu/kb/SRDL_capability.owl#"
+     xml:base="http://ias.cs.tum.edu/kb/SRDL_capability.owl"
+     xmlns:dc="http://purl.org/dc/elements/1.1/"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:owl2xml="http://www.w3.org/2006/12/owl2-xml#"
+     xmlns:SRDL="http://ias.cs.tum.edu/kb/SRDL.owl#"
+     xmlns:SRDL_capability2="http://ias.cs.tum.edu/kb/SRDL_capability.owl#"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:SRDL_capability="http://ias.cs.tum.ed/kb/SRDL_capability.owl#"
+     xmlns:knowrob="http://ias.cs.tum.edu/kb/knowrob.owl#">
+    <owl:Ontology rdf:about="">
+        <rdfs:comment
+            >Capability Ontology - ontology of capabilities</rdfs:comment>
+        <rdfs:comment
+            >Part of semlang - semantic robot description language</rdfs:comment>
+        <owl:imports rdf:resource="file://@IAS_KB_PACKAGE_PATH@/owl/knowrob.owl"/>
+    </owl:Ontology>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Annotation properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    <owl:AnnotationProperty rdf:about="&dc;contributor"/>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Object Properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#hasSubCapability -->
+
+    <owl:ObjectProperty rdf:about="#hasSubCapability">
+        <rdfs:comment
+            >Property of a composite capability
+The set of all &#39;subCapability&#39; properties defines which capabilities are necessary to possess a composite capability</rdfs:comment>
+        <rdfs:range rdf:resource="#Capability"/>
+        <rdfs:domain rdf:resource="#CompositeCapability"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Classes
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#EggCrackingCapability -->
+
+    <owl:Class rdf:about="&SRDL;EggCrackingCapability">
+        <rdfs:subClassOf rdf:resource="#CompositeCapability"/>
+        <rdfs:subClassOf>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasSubCapability"/>
+                        <owl:someValuesFrom rdf:resource="#PickAndPlaceCapability"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasSubCapability"/>
+                        <owl:someValuesFrom rdf:resource="#PressWithForceCapability"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </rdfs:subClassOf>
+        <rdfs:comment
+            >Capability to crack an egg</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#ActionOnObject -->
+
+    <owl:Class rdf:about="#ActionOnObject">
+        <rdfs:subClassOf rdf:resource="#CapabilityByType"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#Capability -->
+
+    <owl:Class rdf:about="#Capability">
+        <rdfs:subClassOf rdf:resource="&knowrob;TemporalThing"/>
+        <rdfs:subClassOf rdf:resource="&owl;Thing"/>
+        <rdfs:comment
+            >Taxonomy based capability representation</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#CapabilityByStructure -->
+
+    <owl:Class rdf:about="#CapabilityByStructure">
+        <rdfs:subClassOf rdf:resource="#Capability"/>
+        <rdfs:comment
+            >This class is only used for organization of the ontology.
+QUESTION How to avoid this class?</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#CapabilityByType -->
+
+    <owl:Class rdf:about="#CapabilityByType">
+        <rdfs:subClassOf rdf:resource="#Capability"/>
+        <rdfs:comment
+            >Capability Taxonomy is a central infrastructure for inference!!!
+Needed for computation of semantic matchmaking</rdfs:comment>
+        <rdfs:comment
+            >This class is only used for organization of the ontology.
+QUESTION How to avoid this class?</rdfs:comment>
+        <rdfs:comment
+            >Taxonomy is modelled similiar to Cyc action taxonomy</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#ClosingAContainer -->
+
+    <owl:Class rdf:about="#ClosingAContainer">
+        <rdfs:subClassOf rdf:resource="#ActionOnObject"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#CommunicateWithAgentCapability -->
+
+    <owl:Class rdf:about="#CommunicateWithAgentCapability">
+        <rdfs:subClassOf rdf:resource="#NonRosActionLibConcept"/>
+        <dc:contributor
+            >capability to communicate with another agent/ device/ entity</dc:contributor>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#CompositeCapability -->
+
+    <owl:Class rdf:about="#CompositeCapability">
+        <rdfs:subClassOf rdf:resource="#CapabilityByStructure"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasSubCapability"/>
+                <owl:someValuesFrom rdf:resource="#Capability"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <owl:disjointWith rdf:resource="#PrimitiveCapability"/>
+        <rdfs:comment
+            >Equal to Cyc:ComplexCapability</rdfs:comment>
+        <rdfs:comment
+            >A capability that is not atomic/ primitive but composed (=built from other capabilities)
+Opposite to primitive capability
+
+Examples:
+Pickup (from move arm, grasp)
+Transport (from moveBase, pickup)</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#ControlDeviceCapability -->
+
+    <owl:Class rdf:about="#ControlDeviceCapability">
+        <rdfs:subClassOf rdf:resource="#NonRosActionLibConcept"/>
+        <dc:contributor
+            >Capability to control a device (meaning to know what the device can be operated and which commands can be send to it)</dc:contributor>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#CuttingMeat -->
+
+    <owl:Class rdf:about="#CuttingMeat">
+        <rdfs:subClassOf rdf:resource="#CuttingPieceOfFood"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#CuttingPieceOfFood -->
+
+    <owl:Class rdf:about="#CuttingPieceOfFood">
+        <rdfs:subClassOf rdf:resource="#CuttingSomething"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#CuttingSomething -->
+
+    <owl:Class rdf:about="#CuttingSomething">
+        <rdfs:subClassOf rdf:resource="#ActionOnObject"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#FlushingAToilet -->
+
+    <owl:Class rdf:about="#FlushingAToilet">
+        <rdfs:subClassOf rdf:resource="#OperatingAHouseholdAppliance"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#GreenCupClassificationCapability -->
+
+    <owl:Class rdf:about="#GreenCupClassificationCapability">
+        <rdfs:subClassOf rdf:resource="#ObjectClassificationCapability"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#HandlingADevice -->
+
+    <owl:Class rdf:about="#HandlingADevice">
+        <rdfs:subClassOf rdf:resource="#HandlingAnObject"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#HandlingAnObject -->
+
+    <owl:Class rdf:about="#HandlingAnObject">
+        <rdfs:subClassOf rdf:resource="#ActionOnObject"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#HoldAndRotateObjectCapability -->
+
+    <owl:Class rdf:about="#HoldAndRotateObjectCapability">
+        <rdfs:subClassOf rdf:resource="#NonRosActionLibConcept"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#LockingADoor -->
+
+    <owl:Class rdf:about="#LockingADoor">
+        <rdfs:subClassOf rdf:resource="#ActionOnObject"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#ManipulatingWithFingers -->
+
+    <owl:Class rdf:about="#ManipulatingWithFingers">
+        <rdfs:subClassOf rdf:resource="#HandlingAnObject"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#NonRosActionLibConcept -->
+
+    <owl:Class rdf:about="#NonRosActionLibConcept">
+        <rdfs:subClassOf rdf:resource="#PrimitiveCapability"/>
+        <owl:disjointWith rdf:resource="#RosActionLibConcepts"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#ObjectClassificationCapability -->
+
+    <owl:Class rdf:about="#ObjectClassificationCapability">
+        <rdfs:subClassOf rdf:resource="#NonRosActionLibConcept"/>
+        <rdfs:comment
+            >Capability of classifying an object that is somewhere in the environment
+E.g. tell that this is a cup</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#OperateOvenCapability -->
+
+    <owl:Class rdf:about="#OperateOvenCapability">
+        <rdfs:subClassOf rdf:resource="#CompositeCapability"/>
+        <rdfs:subClassOf>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasSubCapability"/>
+                        <owl:someValuesFrom rdf:resource="#CommunicateWithAgentCapability"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasSubCapability"/>
+                        <owl:someValuesFrom rdf:resource="#ControlDeviceCapability"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#OperatingAHouseholdAppliance -->
+
+    <owl:Class rdf:about="#OperatingAHouseholdAppliance">
+        <rdfs:subClassOf rdf:resource="#HandlingADevice"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#Perceiving -->
+
+    <owl:Class rdf:about="#Perceiving">
+        <rdfs:subClassOf rdf:resource="#CapabilityByType"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#PickAndPlaceCapability -->
+
+    <owl:Class rdf:about="#PickAndPlaceCapability">
+        <rdfs:subClassOf rdf:resource="#CompositeCapability"/>
+        <rdfs:subClassOf>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasSubCapability"/>
+                        <owl:someValuesFrom rdf:resource="#grasp_execution"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasSubCapability"/>
+                        <owl:someValuesFrom rdf:resource="#move_arm"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </rdfs:subClassOf>
+        <rdfs:comment
+            >Capability of picking sth und placing it somewhere</rdfs:comment>
+    </owl:Class>
+    <rdf:Description>
+        <rdf:type rdf:resource="&owl;Axiom"/>
+        <rdfs:comment
+            >old line: hasSubCapability some grasp_execution
+new line: hasSubCapability some ActionOnObject</rdfs:comment>
+        <owl:subject rdf:resource="#PickAndPlaceCapability"/>
+        <owl:predicate rdf:resource="&rdfs;subClassOf"/>
+        <owl:object>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasSubCapability"/>
+                        <owl:someValuesFrom rdf:resource="#grasp_execution"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasSubCapability"/>
+                        <owl:someValuesFrom rdf:resource="#move_arm"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </owl:object>
+    </rdf:Description>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#PlayingAMusicalInstrument -->
+
+    <owl:Class rdf:about="#PlayingAMusicalInstrument">
+        <rdfs:subClassOf rdf:resource="#HandlingADevice"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#PourCapability -->
+
+    <owl:Class rdf:about="#PourCapability">
+        <rdfs:subClassOf rdf:resource="#CompositeCapability"/>
+        <rdfs:subClassOf>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasSubCapability"/>
+                        <owl:someValuesFrom rdf:resource="#HoldAndRotateObjectCapability"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasSubCapability"/>
+                        <owl:someValuesFrom rdf:resource="#PickAndPlaceCapability"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </rdfs:subClassOf>
+        <rdfs:comment
+            >Capability to pour a liquid from one container (e.g. cup, bowl) into another</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#PressWithForceCapability -->
+
+    <owl:Class rdf:about="#PressWithForceCapability">
+        <rdfs:subClassOf rdf:resource="#NonRosActionLibConcept"/>
+        <rdfs:comment
+            >Capability to press an object (e.g. an egg) with force</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#PrimitiveCapability -->
+
+    <owl:Class rdf:about="#PrimitiveCapability">
+        <rdfs:subClassOf rdf:resource="#CapabilityByStructure"/>
+        <rdfs:comment
+            >A capability that is not composed.
+Primitive capabilities are atomic and asserted.
+Opposite to composite capability
+
+Examples:
+MoveBase, MoveArm</rdfs:comment>
+        <rdfs:comment
+            >Equal to Cyc:Capability</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#RedCupClassificationCapability -->
+
+    <owl:Class rdf:about="#RedCupClassificationCapability">
+        <rdfs:subClassOf rdf:resource="#ObjectClassificationCapability"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#RosActionLibConcepts -->
+
+    <owl:Class rdf:about="#RosActionLibConcepts">
+        <rdfs:subClassOf rdf:resource="#PrimitiveCapability"/>
+        <rdfs:comment
+            >CAUTION:
+ROS action lib packages do not have to be consistent (in level of detail), non-redundant and intersectionfree</rdfs:comment>
+        <rdfs:comment
+            >ROS action lib is used to define primitive capabilities
+Primitive Capability = action lib package</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#StirringCapability -->
+
+    <owl:Class rdf:about="#StirringCapability">
+        <rdfs:subClassOf rdf:resource="#CompositeCapability"/>
+        <rdfs:subClassOf>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasSubCapability"/>
+                        <owl:someValuesFrom rdf:resource="#grasp_execution"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasSubCapability"/>
+                        <owl:someValuesFrom rdf:resource="#move_arm"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </rdfs:subClassOf>
+        <rdfs:comment
+            >Capability to stir the content of a bowl etc</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#TransportationCapability -->
+
+    <owl:Class rdf:about="#TransportationCapability">
+        <rdfs:subClassOf rdf:resource="#CompositeCapability"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasSubCapability"/>
+                <owl:someValuesFrom rdf:resource="#move_base"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:comment
+            >Capability of transporting an object</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#VoluntaryBodyMovement -->
+
+    <owl:Class rdf:about="#VoluntaryBodyMovement">
+        <rdfs:subClassOf rdf:resource="#CapabilityByType"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#WaitForTimeintervallCapability -->
+
+    <owl:Class rdf:about="#WaitForTimeintervallCapability">
+        <rdfs:subClassOf rdf:resource="#NonRosActionLibConcept"/>
+        <dc:contributor
+            >Capability to wait for a predefined time interval</dc:contributor>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#collision_map -->
+
+    <owl:Class rdf:about="#collision_map">
+        <rdfs:subClassOf rdf:resource="#RosActionLibConcepts"/>
+        <rdfs:comment
+            >Capability to create a envirionmental map for collision avoidance</rdfs:comment>
+        <rdfs:comment
+            >ROS action lib package &#39;collision_map&#39;</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#explore -->
+
+    <owl:Class rdf:about="#explore">
+        <rdfs:subClassOf rdf:resource="#RosActionLibConcepts"/>
+        <rdfs:comment
+            >Capability to explore an area and build a map of it</rdfs:comment>
+        <rdfs:comment
+            >ROS action lib package &#39;explore&#39;</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#grasp_execution -->
+
+    <owl:Class rdf:about="#grasp_execution">
+        <rdfs:subClassOf rdf:resource="#ManipulatingWithFingers"/>
+        <rdfs:subClassOf rdf:resource="#RosActionLibConcepts"/>
+        <rdfs:comment
+            >ROS action lib package &#39;grasp_execution&#39;</rdfs:comment>
+        <rdfs:comment
+            >Capability to grasp an object</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#move_arm -->
+
+    <owl:Class rdf:about="#move_arm">
+        <rdfs:subClassOf rdf:resource="#RosActionLibConcepts"/>
+        <rdfs:subClassOf rdf:resource="#VoluntaryBodyMovement"/>
+        <rdfs:comment
+            >Capability of, given a goal in the world, (attempting to) reach it with a robot arm</rdfs:comment>
+        <rdfs:comment
+            >ROS action lib package &#39;move_arm&#39;</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#move_base -->
+
+    <owl:Class rdf:about="#move_base">
+        <rdfs:subClassOf rdf:resource="#RosActionLibConcepts"/>
+        <rdfs:subClassOf rdf:resource="#VoluntaryBodyMovement"/>
+        <rdfs:comment
+            >ROS action lib package &#39;move_base&#39;</rdfs:comment>
+        <rdfs:comment
+            >Capability of, given a goal in the world, (attempting to) reach it with a mobile base</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#pr2_doors_actions -->
+
+    <owl:Class rdf:about="#pr2_doors_actions">
+        <rdfs:subClassOf rdf:resource="#RosActionLibConcepts"/>
+        <rdfs:comment
+            >Capability to handle doors:
+
+Actions:
+detect_door_action
+detect_handle_action
+grasp_handle_action
+unlatch_handle_action
+open_door_action
+move_base_door_action</rdfs:comment>
+        <rdfs:comment
+            >ROS action lib package &#39;pr2_doors_actions&#39;</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#pr2_gripper_action -->
+
+    <owl:Class rdf:about="#pr2_gripper_action">
+        <rdfs:subClassOf rdf:resource="#RosActionLibConcepts"/>
+        <rdfs:subClassOf rdf:resource="#VoluntaryBodyMovement"/>
+        <rdfs:comment
+            >ROS action lib package &#39;pr2_gripper_action&#39;</rdfs:comment>
+        <rdfs:comment
+            >Capability to move the gripper to a desired position</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#skype_bridge -->
+
+    <owl:Class rdf:about="#skype_bridge">
+        <rdfs:subClassOf rdf:resource="#RosActionLibConcepts"/>
+        <rdfs:comment
+            >ROS action lib package &#39;skype_bridge&#39;</rdfs:comment>
+        <rdfs:comment
+            >Capability of using skype</rdfs:comment>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#TemporalThing -->
+
+    <owl:Class rdf:about="&knowrob;TemporalThing"/>
+    
+
+
+    <!-- http://www.w3.org/2002/07/owl#Thing -->
+
+    <owl:Class rdf:about="&owl;Thing"/>
+</rdf:RDF>
+
+
+
+<!-- Generated by the OWL API (version 2.2.1.1138) http://owlapi.sourceforge.net -->
+

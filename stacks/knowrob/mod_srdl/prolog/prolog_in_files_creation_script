@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# delete all *.in-files
+rm *.in
+
+# apply path replacement
+
+# pathes must be specified without 'file://' to be able to apply this script to prolog files also
+LOCAL_IAS_KB_PACKAGE_PATH='\/usr\/stud\/roehm\/ros\/tumros-internal\/stacks\/knowrob\/ias_knowledge_base'
+LOCAL_SRDL_PACKAGE_PATH='\/usr\/stud\/roehm\/ros\/tumros-internal\/stacks\/knowrob\/mod_srdl'
+
+#  update prolog files
+for i in `find . -name "*\.pl"`
+do
+   echo $i
+   sed s/"$LOCAL_IAS_KB_PACKAGE_PATH"/"@IAS_KB_PACKAGE_PATH@"/g $i > "$i.1"
+   cp "$i.1" $i
+   rm "$i.1"
+   sed s/"$LOCAL_SRDL_PACKAGE_PATH"/"@SRDL_PACKAGE_PATH@"/g $i > "$i.1"
+   cp "$i.1" $i
+   rm "$i.1"
+done
+
+# copy all local prolog files to *.in-files 
+for i in `find . -name "*\.pl"`
+do
+   cp $i "$i.in"
+done
+
+# delete all owl files
+rm *.pl

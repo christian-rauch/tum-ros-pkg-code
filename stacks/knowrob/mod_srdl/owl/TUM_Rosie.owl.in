@@ -1,0 +1,507 @@
+<?xml version="1.0"?>
+
+
+<!DOCTYPE rdf:RDF [
+    <!ENTITY owl "http://www.w3.org/2002/07/owl#" >
+    <!ENTITY swrl "http://www.w3.org/2003/11/swrl#" >
+    <!ENTITY dc "http://purl.org/dc/elements/1.1/" >
+    <!ENTITY swrlb "http://www.w3.org/2003/11/swrlb#" >
+    <!ENTITY xsd "http://www.w3.org/2001/XMLSchema#" >
+    <!ENTITY SRDL "http://ias.cs.tum.edu/kb/SRDL.owl#" >
+    <!ENTITY owl2xml "http://www.w3.org/2006/12/owl2-xml#" >
+    <!ENTITY knowrob "http://ias.cs.tum.edu/kb/knowrob.owl#" >
+    <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#" >
+    <!ENTITY TUM_Rosie "http://ias.cs.tum.edu/kb/TUM_Rosie.owl#" >
+    <!ENTITY rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#" >
+    <!ENTITY SRDL_component "http://ias.cs.tum.edu/kb/SRDL_component.owl#" >
+    <!ENTITY SRDL_capability "http://ias.cs.tum.edu/kb/SRDL_capability.owl#" >
+]>
+
+
+<rdf:RDF xmlns="http://ias.cs.tum.edu/kb/TUM_Rosie.owl#"
+     xml:base="http://ias.cs.tum.edu/kb/TUM_Rosie.owl"
+     xmlns:dc="http://purl.org/dc/elements/1.1/"
+     xmlns:SRDL_component="http://ias.cs.tum.edu/kb/SRDL_component.owl#"
+     xmlns:TUM_Rosie="http://ias.cs.tum.edu/kb/TUM_Rosie.owl#"
+     xmlns:knowrob="http://ias.cs.tum.edu/kb/knowrob.owl#"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:swrl="http://www.w3.org/2003/11/swrl#"
+     xmlns:owl2xml="http://www.w3.org/2006/12/owl2-xml#"
+     xmlns:SRDL="http://ias.cs.tum.edu/kb/SRDL.owl#"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:swrlb="http://www.w3.org/2003/11/swrlb#"
+     xmlns:SRDL_capability="http://ias.cs.tum.edu/kb/SRDL_capability.owl#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    <owl:Ontology rdf:about="">
+        <owl:imports rdf:resource="file://@SRDL_PACKAGE_PATH@/owl/SRDL.owl"/>
+    </owl:Ontology>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Object Properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#hasBase -->
+
+    <owl:ObjectProperty rdf:about="&SRDL;hasBase"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#hasCapability -->
+
+    <owl:ObjectProperty rdf:about="&SRDL;hasCapability"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#hasRequirement -->
+
+    <owl:ObjectProperty rdf:about="&SRDL;hasRequirement"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#executedOn -->
+
+    <owl:ObjectProperty rdf:about="&SRDL_component;executedOn"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#hasSuccessorInCinematicChain -->
+
+    <owl:ObjectProperty rdf:about="&SRDL_component;hasSuccessorInCinematicChain"/>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Classes
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#ManipulatingWithFingers -->
+
+    <owl:Class rdf:about="&SRDL_capability;ManipulatingWithFingers"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#ObjectClassificationCapability -->
+
+    <owl:Class rdf:about="&SRDL_capability;ObjectClassificationCapability"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#grasp_execution -->
+
+    <owl:Class rdf:about="&SRDL_capability;grasp_execution"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#move_arm -->
+
+    <owl:Class rdf:about="&SRDL_capability;move_arm"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#move_base -->
+
+    <owl:Class rdf:about="&SRDL_capability;move_base"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#Camera -->
+
+    <owl:Class rdf:about="&SRDL_component;Camera"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#ComputationCore -->
+
+    <owl:Class rdf:about="&SRDL_component;ComputationCore"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#DlrHitHand -->
+
+    <owl:Class rdf:about="&SRDL_component;DlrHitHand"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#HokuyoURG04LX -->
+
+    <owl:Class rdf:about="&SRDL_component;HokuyoURG04LX"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#KukaLwr4 -->
+
+    <owl:Class rdf:about="&SRDL_component;KukaLwr4"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#KukaOmnidirPlatform -->
+
+    <owl:Class rdf:about="&SRDL_component;KukaOmnidirPlatform"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#LocalizationAndNavigation -->
+
+    <owl:Class rdf:about="&SRDL_component;LocalizationAndNavigation"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#PerceptionArchitecture_ObjectPerception -->
+
+    <owl:Class rdf:about="&SRDL_component;PerceptionArchitecture_ObjectPerception"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#PerceptionPipeline_3dSemanticMap -->
+
+    <owl:Class rdf:about="&SRDL_component;PerceptionPipeline_3dSemanticMap"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#PlanBasedController -->
+
+    <owl:Class rdf:about="&SRDL_component;PlanBasedController"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#RedCupClassification_LearningComp -->
+
+    <owl:Class rdf:about="&SRDL_component;RedCupClassification_LearningComp"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#SimpleGraspPlanner -->
+
+    <owl:Class rdf:about="&SRDL_component;SimpleGraspPlanner"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#Simulation -->
+
+    <owl:Class rdf:about="&SRDL_component;Simulation"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#SwissRangerSR4000 -->
+
+    <owl:Class rdf:about="&SRDL_component;SwissRangerSR4000"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#Torso -->
+
+    <owl:Class rdf:about="&SRDL_component;Torso"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#VectorFieldArmController -->
+
+    <owl:Class rdf:about="&SRDL_component;VectorFieldArmController"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#VidereStereoOnChip -->
+
+    <owl:Class rdf:about="&SRDL_component;VidereStereoOnChip"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#Map -->
+
+    <owl:Class rdf:about="&knowrob;Map"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#TUM_Rosie -->
+
+    <owl:Class rdf:about="&knowrob;TUM_Rosie">
+        <rdfs:subClassOf>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="&SRDL;hasCapability"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_capability;ManipulatingWithFingers"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="&SRDL;hasCapability"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_capability;ObjectClassificationCapability"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="&SRDL;hasCapability"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_capability;grasp_execution"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="&SRDL;hasCapability"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_capability;move_arm"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="&SRDL;hasCapability"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_capability;move_base"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://www.w3.org/2002/07/owl#Thing -->
+
+    <owl:Class rdf:about="&owl;Thing"/>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Individuals
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_Camera1_Left -->
+
+    <SRDL_component:Camera rdf:about="#TUM_Rosie_Camera1_Left">
+        <rdf:type rdf:resource="&owl;Thing"/>
+    </SRDL_component:Camera>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_Camera2_Right -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_Camera2_Right">
+        <rdf:type rdf:resource="&SRDL_component;Camera"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_DlrHand1_Left -->
+
+    <SRDL_component:DlrHitHand rdf:about="#TUM_Rosie_DlrHand1_Left">
+        <rdf:type rdf:resource="&owl;Thing"/>
+    </SRDL_component:DlrHitHand>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_DlrHand2_Right -->
+
+    <SRDL_component:DlrHitHand rdf:about="#TUM_Rosie_DlrHand2_Right">
+        <rdf:type rdf:resource="&owl;Thing"/>
+    </SRDL_component:DlrHitHand>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_Head -->
+
+    <SRDL_component:Torso rdf:about="#TUM_Rosie_Head">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_Camera1_Left"/>
+        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_Camera2_Right"/>
+        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_SwissRangerTOF1"/>
+        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_VidereStereoOnChip1"/>
+    </SRDL_component:Torso>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_Hokuyo1_Shoulder -->
+
+    <SRDL_component:HokuyoURG04LX rdf:about="#TUM_Rosie_Hokuyo1_Shoulder">
+        <rdf:type rdf:resource="&owl;Thing"/>
+    </SRDL_component:HokuyoURG04LX>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_Hokuyo2_Rear -->
+
+    <SRDL_component:HokuyoURG04LX rdf:about="#TUM_Rosie_Hokuyo2_Rear">
+        <rdf:type rdf:resource="&owl;Thing"/>
+    </SRDL_component:HokuyoURG04LX>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_Hokuyo3_Front -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_Hokuyo3_Front">
+        <rdf:type rdf:resource="&SRDL_component;HokuyoURG04LX"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_KukaArm1_Left -->
+
+    <SRDL_component:KukaLwr4 rdf:about="#TUM_Rosie_KukaArm1_Left">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_DlrHand1_Left"/>
+    </SRDL_component:KukaLwr4>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_KukaArm2_Right -->
+
+    <SRDL_component:KukaLwr4 rdf:about="#TUM_Rosie_KukaArm2_Right">
+        <rdf:type rdf:resource="&owl;Thing"/>
+    </SRDL_component:KukaLwr4>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_Map -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_Map">
+        <rdf:type rdf:resource="&knowrob;Map"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_PC -->
+
+    <SRDL_component:ComputationCore rdf:about="#TUM_Rosie_PC">
+        <rdf:type rdf:resource="&owl;Thing"/>
+    </SRDL_component:ComputationCore>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_RobotInstance1 -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_RobotInstance1">
+        <rdf:type rdf:resource="&knowrob;TUM_Rosie"/>
+        <SRDL:hasRequirement rdf:resource="#TUM_Rosie_Map"/>
+        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_WheeledOmnidirPlatform1"/>
+        <SRDL:hasBase rdf:resource="#TUM_Rosie_WheeledOmnidirPlatform1"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_SwissRangerTOF1 -->
+
+    <SRDL_component:SwissRangerSR4000 rdf:about="#TUM_Rosie_SwissRangerTOF1">
+        <rdf:type rdf:resource="&owl;Thing"/>
+    </SRDL_component:SwissRangerSR4000>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_Torso1 -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_Torso1">
+        <rdf:type rdf:resource="&SRDL_component;Torso"/>
+        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_Head"/>
+        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_Hokuyo1_Shoulder"/>
+        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_Hokuyo3_Front"/>
+        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_KukaArm1_Left"/>
+        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_KukaArm2_Right"/>
+        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_PC"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_VidereStereoOnChip1 -->
+
+    <SRDL_component:VidereStereoOnChip rdf:about="#TUM_Rosie_VidereStereoOnChip1">
+        <rdf:type rdf:resource="&owl;Thing"/>
+    </SRDL_component:VidereStereoOnChip>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_WheeledOmnidirPlatform1 -->
+
+    <SRDL_component:KukaOmnidirPlatform rdf:about="#TUM_Rosie_WheeledOmnidirPlatform1">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_Torso1"/>
+    </SRDL_component:KukaOmnidirPlatform>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_ros_ArmController1 -->
+
+    <SRDL_component:VectorFieldArmController rdf:about="#TUM_Rosie_ros_ArmController1">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:executedOn rdf:resource="#TUM_Rosie_PC"/>
+    </SRDL_component:VectorFieldArmController>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_ros_LocalizationAndNavigation1 -->
+
+    <SRDL_component:LocalizationAndNavigation rdf:about="#TUM_Rosie_ros_LocalizationAndNavigation1">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:executedOn rdf:resource="#TUM_Rosie_PC"/>
+    </SRDL_component:LocalizationAndNavigation>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_ros_PerceptionArchitecture -->
+
+    <SRDL_component:PerceptionArchitecture_ObjectPerception rdf:about="#TUM_Rosie_ros_PerceptionArchitecture">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:executedOn rdf:resource="#TUM_Rosie_PC"/>
+    </SRDL_component:PerceptionArchitecture_ObjectPerception>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_ros_PerceptionPipeline1 -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_ros_PerceptionPipeline1">
+        <rdf:type rdf:resource="&SRDL_component;PerceptionPipeline_3dSemanticMap"/>
+        <SRDL_component:executedOn rdf:resource="#TUM_Rosie_PC"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_ros_PlanBasedController1 -->
+
+    <SRDL_component:PlanBasedController rdf:about="#TUM_Rosie_ros_PlanBasedController1">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:executedOn rdf:resource="#TUM_Rosie_PC"/>
+    </SRDL_component:PlanBasedController>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_ros_SimpleGraspPlanner1 -->
+
+    <SRDL_component:SimpleGraspPlanner rdf:about="#TUM_Rosie_ros_SimpleGraspPlanner1">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:executedOn rdf:resource="#TUM_Rosie_PC"/>
+    </SRDL_component:SimpleGraspPlanner>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_ros_Simulation1 -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_ros_Simulation1">
+        <rdf:type rdf:resource="&SRDL_component;Simulation"/>
+        <SRDL_component:executedOn rdf:resource="#TUM_Rosie_PC"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#Test_RedCupClassificationLearningComponent1 -->
+
+    <owl:Thing rdf:about="#Test_RedCupClassificationLearningComponent1">
+        <rdf:type rdf:resource="&SRDL_component;RedCupClassification_LearningComp"/>
+        <SRDL_component:executedOn rdf:resource="#TUM_Rosie_PC"/>
+    </owl:Thing>
+</rdf:RDF>
+
+
+
+<!-- Generated by the OWL API (version 2.2.1.1138) http://owlapi.sourceforge.net -->
+

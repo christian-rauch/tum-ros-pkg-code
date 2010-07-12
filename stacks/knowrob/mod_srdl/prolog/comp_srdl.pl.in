@@ -1,0 +1,87 @@
+%%
+%% Copyright (C) 2010 by Tobias Roehm 
+%%
+%% This module contains computables for SRDL Semantic robot description language
+%%
+%% This program is free software; you can redistribute it and/or modify
+%% it under the terms of the GNU General Public License as published by
+%% the Free Software Foundation; either version 3 of the License, or
+%% (at your option) any later version.
+%%
+%% This program is distributed in the hope that it will be useful,
+%% but WITHOUT ANY WARRANTY; without even the implied warranty of
+%% MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%% GNU General Public License for more details.
+%%
+%% You should have received a copy of the GNU General Public License
+%% along with this program.  If not, see <http://www.gnu.org/licenses/>.
+%%
+
+:- module(comp_srdl,
+    [
+        % Computables
+        comp_successProbability/2,   %(Action, SuccessProbability)
+
+        % Helper predicates
+        intValueFromHasValueRestriction/3   %(Subject, Property, IntValue)
+    ]).
+
+:- use_module(library('semweb/rdfs')).
+:- use_module(library('semweb/rdf_db')).
+:- use_module(library('semweb/rdfs_computable')).
+:- use_module(library('thea/owl_parser')).
+
+:- owl_parser:owl_parse('@SRDL_PACKAGE_PATH@/owl/SRDL_computables.owl', false, false, true).
+
+:- rdf_db:rdf_register_ns(knowrob, 'http://ias.cs.tum.edu/kb/knowrob.owl#', [keep(true)]).
+:- rdf_db:rdf_register_ns(comp_srdl, 'http://ias.cs.tum.edu/kb/SRDL_computables.owl#', [keep(true)]).
+:- rdf_db:rdf_register_ns(srdl, 'http://ias.cs.tum.edu/kb/SRDL.owl#', [keep(true)]).
+:- rdf_db:rdf_register_ns(owl, 'http://www.w3.org/2002/07/owl#', [keep(true)]).
+:- rdf_db:rdf_register_ns(rdf, 'http://www.w3.org/1999/02/22-rdf-syntax-ns#', [keep(true)]).
+
+
+:- rdf_meta
+    % Computables
+    comp_successProbability(r, -),
+
+    % Helper predicates
+    intValueFromHasValueRestriction(r, r, -).
+ 
+
+%%%%%%%%%%%%%%%
+% Computables 
+%%%%%%%%%%%%%%%
+
+% Comput successProbability of a cyc:PurposefulAction from its attempt and success numbers
+comp_successProbability(Action, SuccessProbability) :-
+    owl_subclass_of(Action, knowrob:'PurposefulAction'),
+    (
+        % Bind NumAttempts and NumSuccesses
+        intValueFromHasValueRestriction(Action, srdl:'hasNumOfSuccesses', NumSuccesses),
+         intValueFromHasValueRestriction(Action, srdl:'hasNumOfAttempts', NumAttempts)
+    ->
+        % Compute success probability
+        SuccessProbability is NumSuccesses / NumAttempts 
+    ;
+        % some error occurred -> return 0.0 as success probability
+        SuccessProbability = 0.0 
+    ),
+    !. % Commit to first result
+
+
+%%%%%%%%%%%%%%%%%%%%%
+% Helper predicates 
+%%%%%%%%%%%%%%%%%%%%%
+
+% Read integer value from a owl:'hasValue' - restriction on property Property on subject Subject and return it as an atom
+intValueFromHasValueRestriction(Subject, Property, IntValue) :-
+    %owl_subclass_of(Subject, Desc),
+    %owl_has(Desc, owl:'onProperty',  Property),
+    %owl_has(Desc, owl:'hasValue', NumLiteral),
+    rdfs_subclass_of(Subject, Desc),
+    rdf_has(Desc, owl:'onProperty',  Property),
+    rdf_has(Desc, owl:'hasValue', NumLiteral),
+    NumLiteral = literal(NumType),
+    NumType = type(_, NumTerm),
+    term_to_atom(IntValue, NumTerm), 
+    !.

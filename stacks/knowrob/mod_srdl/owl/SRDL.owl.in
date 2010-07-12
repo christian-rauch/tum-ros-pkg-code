@@ -1,0 +1,1157 @@
+<?xml version="1.0"?>
+
+
+<!DOCTYPE rdf:RDF [
+    <!ENTITY owl "http://www.w3.org/2002/07/owl#" >
+    <!ENTITY swrl "http://www.w3.org/2003/11/swrl#" >
+    <!ENTITY dc "http://purl.org/dc/elements/1.1/" >
+    <!ENTITY swrlb "http://www.w3.org/2003/11/swrlb#" >
+    <!ENTITY xsd "http://www.w3.org/2001/XMLSchema#" >
+    <!ENTITY SRDL "http://ias.cs.tum.edu/kb/SRDL.owl#" >
+    <!ENTITY owl2xml "http://www.w3.org/2006/12/owl2-xml#" >
+    <!ENTITY knowrob "http://ias.cs.tum.edu/kb/knowrob.owl#" >
+    <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#" >
+    <!ENTITY SRDL_task "http://ias.cs.tum.edu/kb/SRDL_task.owl#" >
+    <!ENTITY actionmodel "http://ias.cs.tum.edu/kb/actionmodel.owl#" >
+    <!ENTITY rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#" >
+    <!ENTITY SRDL_capability "http://ias.cs.tum.ed/kb/SRDL_capability.owl#" >
+    <!ENTITY SRDL_component "http://ias.cs.tum.edu/kb/SRDL_component.owl#" >
+    <!ENTITY SRDL_capability2 "http://ias.cs.tum.edu/kb/SRDL_capability.owl#" >
+]>
+
+
+<rdf:RDF xmlns="http://ias.cs.tum.edu/kb/SRDL.owl#"
+     xml:base="http://ias.cs.tum.edu/kb/SRDL.owl"
+     xmlns:actionmodel="http://ias.cs.tum.edu/kb/actionmodel.owl#"
+     xmlns:dc="http://purl.org/dc/elements/1.1/"
+     xmlns:SRDL_component="http://ias.cs.tum.edu/kb/SRDL_component.owl#"
+     xmlns:SRDL_capability2="http://ias.cs.tum.edu/kb/SRDL_capability.owl#"
+     xmlns:SRDL_task="http://ias.cs.tum.edu/kb/SRDL_task.owl#"
+     xmlns:knowrob="http://ias.cs.tum.edu/kb/knowrob.owl#"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+     xmlns:swrl="http://www.w3.org/2003/11/swrl#"
+     xmlns:owl2xml="http://www.w3.org/2006/12/owl2-xml#"
+     xmlns:SRDL="http://ias.cs.tum.edu/kb/SRDL.owl#"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:swrlb="http://www.w3.org/2003/11/swrlb#"
+     xmlns:SRDL_capability="http://ias.cs.tum.ed/kb/SRDL_capability.owl#"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+    <owl:Ontology rdf:about="">
+        <rdfs:comment
+            >Main ontology of semlang -  semantic robot description language</rdfs:comment>
+        <rdfs:comment
+            >Combines and relates elements from the component, task and capability ontologies</rdfs:comment>
+        <owl:imports rdf:resource="file://@IAS_KB_PACKAGE_PATH@/owl/knowrob.owl"/>
+        <owl:imports rdf:resource="file://@SRDL_PACKAGE_PATH@/owl/SRDL_capability.owl"/>
+        <owl:imports rdf:resource="file://@SRDL_PACKAGE_PATH@/owl/SRDL_component.owl"/>
+        <owl:imports rdf:resource="file://@SRDL_PACKAGE_PATH@/owl/SRDL_task.owl"/>
+    </owl:Ontology>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Annotation properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    <owl:AnnotationProperty rdf:about="&dc;title"/>
+    <owl:AnnotationProperty rdf:about="&dc;contributor"/>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Object Properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#hasBase -->
+
+    <owl:ObjectProperty rdf:about="#hasBase">
+        <rdf:type rdf:resource="&owl;FunctionalProperty"/>
+        <rdfs:comment
+            >Property that is a pointer from a robot to its base link</rdfs:comment>
+        <rdfs:range rdf:resource="&SRDL_component;HardwareComponent"/>
+        <rdfs:domain rdf:resource="&knowrob;Robot"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#hasBaseCapability -->
+
+    <owl:ObjectProperty rdf:about="#hasBaseCapability">
+        <rdfs:comment
+            >Pointer from Learning component lc to a base capability bc
+Semantics: If robot possesses bc and component lc it can learn the capability cap for which lc is written for (and that is specified by a object property from cap to lc)</rdfs:comment>
+        <rdfs:range rdf:resource="&SRDL_capability2;Capability"/>
+        <rdfs:domain rdf:resource="&SRDL_component;LearningComponent"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#hasCapability -->
+
+    <owl:ObjectProperty rdf:about="#hasCapability">
+        <rdfs:comment
+            >CAUTION:
+This property is only used as an intermediate step to assert capabilities of robots.
+Later capabilities should be inferred automatically from robot components!</rdfs:comment>
+        <rdfs:range rdf:resource="&SRDL_capability2;PrimitiveCapability"/>
+        <rdfs:domain rdf:resource="&knowrob;Robot"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#hasComponent -->
+
+    <owl:ObjectProperty rdf:about="#hasComponent">
+        <rdfs:comment
+            >Not asserted but inferred from cinematic chain (using isFixedOn and hasBaseComponent)</rdfs:comment>
+        <rdfs:subPropertyOf rdf:resource="#hasRequirement"/>
+        <rdfs:range rdf:resource="&SRDL_component;Component"/>
+        <rdfs:domain rdf:resource="&knowrob;Robot"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#hasHardwareComponent -->
+
+    <owl:ObjectProperty rdf:about="#hasHardwareComponent">
+        <rdfs:subPropertyOf rdf:resource="#hasComponent"/>
+        <rdfs:range rdf:resource="&SRDL_component;HardwareComponent"/>
+        <rdfs:domain rdf:resource="&knowrob;Robot"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#hasLearningComponent -->
+
+    <owl:ObjectProperty rdf:about="#hasLearningComponent">
+        <rdfs:comment
+            >Semantics: a capability can be learned with the LearningComponent (given all requirements of the learning component, specified by needsRequirement are fulfilled)</rdfs:comment>
+        <rdfs:domain rdf:resource="&SRDL_capability2;Capability"/>
+        <rdfs:range rdf:resource="&SRDL_component;LearningComponent"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#hasRequirement -->
+
+    <owl:ObjectProperty rdf:about="#hasRequirement"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#hasSoftwareComponent -->
+
+    <owl:ObjectProperty rdf:about="#hasSoftwareComponent">
+        <rdfs:subPropertyOf rdf:resource="#hasComponent"/>
+        <rdfs:range rdf:resource="&SRDL_component;SoftwareComponent"/>
+        <rdfs:domain rdf:resource="&knowrob;Robot"/>
+        <owl:propertyChainAxiom rdf:parseType="Collection">
+            <rdf:Description rdf:about="#hasHardwareComponent"/>
+            <rdf:Description rdf:about="&SRDL_component;executesSoftware"/>
+        </owl:propertyChainAxiom>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#isAbleToDo -->
+
+    <owl:ObjectProperty rdf:about="#isAbleToDo">
+        <rdfs:comment
+            >Not asserted but inferred from Task capabilities and Robot capabilities</rdfs:comment>
+        <rdfs:comment
+            >Property describing if an agent is able to do a task</rdfs:comment>
+        <rdfs:comment
+            >MAIN INFERENCE GOAL</rdfs:comment>
+        <rdfs:range rdf:resource="&SRDL_task;Task"/>
+        <rdfs:domain rdf:resource="&knowrob;Robot"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#needsComponent -->
+
+    <owl:ObjectProperty rdf:about="#needsComponent">
+        <rdfs:comment
+            >Dependency between primitive capability cap and component comp
+Semantic: For capability cap component comp is necessary</rdfs:comment>
+        <rdfs:subPropertyOf rdf:resource="#needsRequirement"/>
+        <rdfs:range rdf:resource="&SRDL_component;Component"/>
+        <rdfs:domain>
+            <owl:Class>
+                <owl:unionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="&SRDL_capability2;PrimitiveCapability"/>
+                    <rdf:Description rdf:about="&SRDL_component;LearningComponent"/>
+                </owl:unionOf>
+            </owl:Class>
+        </rdfs:domain>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#needsRequirement -->
+
+    <owl:ObjectProperty rdf:about="#needsRequirement">
+        <rdfs:comment
+            >Models a requirement of a capability or learning component
+Semantics: all requirements = everything that is necessary (components, ...) to have this capability</rdfs:comment>
+        <rdfs:domain>
+            <owl:Class>
+                <owl:unionOf rdf:parseType="Collection">
+                    <rdf:Description rdf:about="&SRDL_capability2;PrimitiveCapability"/>
+                    <rdf:Description rdf:about="&SRDL_component;LearningComponent"/>
+                </owl:unionOf>
+            </owl:Class>
+        </rdfs:domain>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#requiresCapability -->
+
+    <owl:ObjectProperty rdf:about="#requiresCapability">
+        <rdfs:comment
+            >Dependency between task t and capability c
+Semantics: For task t capability c is necessary/ required</rdfs:comment>
+        <rdfs:range rdf:resource="&SRDL_capability2;Capability"/>
+        <rdfs:domain rdf:resource="&SRDL_task;Task"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#executedOn -->
+
+    <owl:ObjectProperty rdf:about="&SRDL_component;executedOn">
+        <rdfs:comment
+            >Modelling which software runs on which node</rdfs:comment>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#executesSoftware -->
+
+    <owl:ObjectProperty rdf:about="&SRDL_component;executesSoftware"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#hasSuccessorInCinematicChain -->
+
+    <owl:ObjectProperty rdf:about="&SRDL_component;hasSuccessorInCinematicChain">
+        <rdfs:subPropertyOf rdf:resource="#hasHardwareComponent"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#isFixedOn -->
+
+    <owl:ObjectProperty rdf:about="&SRDL_component;isFixedOn">
+        <rdfs:comment
+            >Modelling of joints that fix two hardware parts together</rdfs:comment>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Data properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#hasNumOfAttempts -->
+
+    <owl:DatatypeProperty rdf:about="#hasNumOfAttempts">
+        <rdf:type rdf:resource="&owl;FunctionalProperty"/>
+        <rdfs:domain rdf:resource="&knowrob;PurposefulAction"/>
+        <rdfs:range rdf:resource="&xsd;positiveInteger"/>
+    </owl:DatatypeProperty>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#hasNumOfSuccesses -->
+
+    <owl:DatatypeProperty rdf:about="#hasNumOfSuccesses">
+        <rdf:type rdf:resource="&owl;FunctionalProperty"/>
+        <rdfs:domain rdf:resource="&knowrob;PurposefulAction"/>
+        <rdfs:range rdf:resource="&xsd;positiveInteger"/>
+    </owl:DatatypeProperty>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#hasSuccessProbability -->
+
+    <owl:DatatypeProperty rdf:about="#hasSuccessProbability">
+        <rdf:type rdf:resource="&owl;FunctionalProperty"/>
+        <rdfs:domain rdf:resource="&knowrob;PurposefulAction"/>
+        <rdfs:range>
+            <rdf:Description>
+                <rdf:type rdf:resource="&rdfs;Datatype"/>
+                <owl:onDatatype rdf:resource="&xsd;double"/>
+                <owl:withRestrictions rdf:parseType="Collection">
+                    <rdf:Description>
+                        <xsd:maxInclusive rdf:datatype="&xsd;double">1.0</xsd:maxInclusive>
+                    </rdf:Description>
+                    <rdf:Description>
+                        <xsd:minInclusive rdf:datatype="&xsd;double">0.0</xsd:minInclusive>
+                    </rdf:Description>
+                </owl:withRestrictions>
+            </rdf:Description>
+        </rdfs:range>
+    </owl:DatatypeProperty>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#hasValue -->
+
+    <owl:DatatypeProperty rdf:about="#hasValue"/>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Classes
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#Integer -->
+
+    <owl:Class rdf:about="#Integer">
+        <rdfs:subClassOf rdf:resource="#Number-General"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#Number-General -->
+
+    <owl:Class rdf:about="#Number-General">
+        <rdfs:subClassOf rdf:resource="&knowrob;MathematicalObject"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#PositiveInteger -->
+
+    <owl:Class rdf:about="#PositiveInteger">
+        <rdfs:subClassOf rdf:resource="#Integer"/>
+        <rdfs:subClassOf>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasValue"/>
+                        <owl:allValuesFrom rdf:resource="&xsd;positiveInteger"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasValue"/>
+                        <owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:qualifiedCardinality>
+                        <owl:onDataRange rdf:resource="&xsd;positiveInteger"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#ProbabilityValue -->
+
+    <owl:Class rdf:about="#ProbabilityValue">
+        <rdfs:subClassOf rdf:resource="&knowrob;MathematicalObject"/>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#SuccessProbability -->
+
+    <owl:Class rdf:about="#SuccessProbability">
+        <rdfs:subClassOf rdf:resource="#ProbabilityValue"/>
+        <rdfs:subClassOf>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasValue"/>
+                        <owl:allValuesFrom>
+                            <rdf:Description>
+                                <rdf:type rdf:resource="&rdfs;Datatype"/>
+                                <owl:onDatatype rdf:resource="&xsd;double"/>
+                                <owl:withRestrictions rdf:parseType="Collection">
+                                    <rdf:Description>
+                                        <xsd:maxInclusive rdf:datatype="&xsd;double">1.0</xsd:maxInclusive>
+                                    </rdf:Description>
+                                    <rdf:Description>
+                                        <xsd:minInclusive rdf:datatype="&xsd;double">0.0</xsd:minInclusive>
+                                    </rdf:Description>
+                                </owl:withRestrictions>
+                            </rdf:Description>
+                        </owl:allValuesFrom>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#hasValue"/>
+                        <owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:qualifiedCardinality>
+                        <owl:onDataRange>
+                            <rdf:Description>
+                                <rdf:type rdf:resource="&rdfs;Datatype"/>
+                                <owl:onDatatype rdf:resource="&xsd;double"/>
+                                <owl:withRestrictions rdf:parseType="Collection">
+                                    <rdf:Description>
+                                        <xsd:maxInclusive rdf:datatype="&xsd;double">1.0</xsd:maxInclusive>
+                                    </rdf:Description>
+                                    <rdf:Description>
+                                        <xsd:minInclusive rdf:datatype="&xsd;double">0.0</xsd:minInclusive>
+                                    </rdf:Description>
+                                </owl:withRestrictions>
+                            </rdf:Description>
+                        </owl:onDataRange>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#Capability -->
+
+    <owl:Class rdf:about="&SRDL_capability2;Capability"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#CommunicateWithAgentCapability -->
+
+    <owl:Class rdf:about="&SRDL_capability2;CommunicateWithAgentCapability">
+        <rdfs:subClassOf>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#needsComponent"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_component;CommunicationComponent"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#needsComponent"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_component;CommunicationMechanism"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#ControlDeviceCapability -->
+
+    <owl:Class rdf:about="&SRDL_capability2;ControlDeviceCapability">
+        <rdfs:subClassOf>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#needsComponent"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_component;CommunicationComponent"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#needsComponent"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_component;CommunicationMechanism"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#needsComponent"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_component;OtherDeviceControllingComponent"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#GreenCupClassificationCapability -->
+
+    <owl:Class rdf:about="&SRDL_capability2;GreenCupClassificationCapability"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#HoldAndRotateObjectCapability -->
+
+    <owl:Class rdf:about="&SRDL_capability2;HoldAndRotateObjectCapability">
+        <rdfs:subClassOf>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#needsComponent"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_component;ManipulationEntity"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#needsComponent"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_component;RotatableArm"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#ObjectClassificationCapability -->
+
+    <owl:Class rdf:about="&SRDL_capability2;ObjectClassificationCapability">
+        <rdfs:subClassOf>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#needsComponent"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_component;ClassificationComponent"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#needsComponent"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_component;PerceptionArchitecture_ObjectPerception"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#needsComponent"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_component;VisualSensor"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#OperateOvenCapability -->
+
+    <owl:Class rdf:about="&SRDL_capability2;OperateOvenCapability"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#PickAndPlaceCapability -->
+
+    <owl:Class rdf:about="&SRDL_capability2;PickAndPlaceCapability"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#PourCapability -->
+
+    <owl:Class rdf:about="&SRDL_capability2;PourCapability"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#PressWithForceCapability -->
+
+    <owl:Class rdf:about="&SRDL_capability2;PressWithForceCapability">
+        <rdfs:subClassOf>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#needsComponent"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_component;ControllerComponent"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#needsComponent"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_component;PressingManipulationEntity"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#PrimitiveCapability -->
+
+    <owl:Class rdf:about="&SRDL_capability2;PrimitiveCapability"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#RedCupClassificationCapability -->
+
+    <owl:Class rdf:about="&SRDL_capability2;RedCupClassificationCapability">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasLearningComponent"/>
+                <owl:allValuesFrom rdf:resource="&SRDL_component;RedCupClassification_LearningComp"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#StirringCapability -->
+
+    <owl:Class rdf:about="&SRDL_capability2;StirringCapability"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#TransportationCapability -->
+
+    <owl:Class rdf:about="&SRDL_capability2;TransportationCapability"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#WaitForTimeintervallCapability -->
+
+    <owl:Class rdf:about="&SRDL_capability2;WaitForTimeintervallCapability">
+        <rdfs:subClassOf>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#needsComponent"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_component;Clock"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#needsComponent"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_component;TriggeringActionComponent"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#grasp_execution -->
+
+    <owl:Class rdf:about="&SRDL_capability2;grasp_execution">
+        <rdfs:subClassOf>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#needsComponent"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_component;ManipulationEntity"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#needsComponent"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_component;PerceptionArchitecture_ObjectPerception"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#needsComponent"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_component;SimpleGraspPlanner"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#move_arm -->
+
+    <owl:Class rdf:about="&SRDL_capability2;move_arm">
+        <rdfs:subClassOf>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#needsComponent"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_component;Arm"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#needsComponent"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_component;VectorFieldArmController"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#move_base -->
+
+    <owl:Class rdf:about="&SRDL_capability2;move_base">
+        <rdfs:subClassOf>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#needsComponent"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_component;LocalizationAndNavigation"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#needsComponent"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_component;MobileBase"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#needsComponent"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_component;PlanBasedController"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#needsComponent"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_component;VisualSensor"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#needsRequirement"/>
+                        <owl:someValuesFrom rdf:resource="&knowrob;Map"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#Arm -->
+
+    <owl:Class rdf:about="&SRDL_component;Arm">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#needsComponent"/>
+                <owl:someValuesFrom rdf:resource="&SRDL_component;Arm"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#ClassificationComponent -->
+
+    <owl:Class rdf:about="&SRDL_component;ClassificationComponent"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#Clock -->
+
+    <owl:Class rdf:about="&SRDL_component;Clock"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#CommunicationComponent -->
+
+    <owl:Class rdf:about="&SRDL_component;CommunicationComponent"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#CommunicationMechanism -->
+
+    <owl:Class rdf:about="&SRDL_component;CommunicationMechanism"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#Component -->
+
+    <owl:Class rdf:about="&SRDL_component;Component"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#ControllerComponent -->
+
+    <owl:Class rdf:about="&SRDL_component;ControllerComponent"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#HardwareComponent -->
+
+    <owl:Class rdf:about="&SRDL_component;HardwareComponent"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#LearningComponent -->
+
+    <owl:Class rdf:about="&SRDL_component;LearningComponent">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#needsRequirement"/>
+                <owl:someValuesFrom rdf:resource="&owl;Thing"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+    <rdf:Description>
+        <rdf:type rdf:resource="&owl;Axiom"/>
+        <rdfs:comment
+            >A learning component has to have at least one dependency/ requirement</rdfs:comment>
+        <owl:subject rdf:resource="&SRDL_component;LearningComponent"/>
+        <owl:predicate rdf:resource="&rdfs;subClassOf"/>
+        <owl:object>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#needsRequirement"/>
+                <owl:someValuesFrom rdf:resource="&owl;Thing"/>
+            </owl:Restriction>
+        </owl:object>
+    </rdf:Description>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#LocalizationAndNavigation -->
+
+    <owl:Class rdf:about="&SRDL_component;LocalizationAndNavigation"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#ManipulationEntity -->
+
+    <owl:Class rdf:about="&SRDL_component;ManipulationEntity"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#MobileBase -->
+
+    <owl:Class rdf:about="&SRDL_component;MobileBase"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#OtherDeviceControllingComponent -->
+
+    <owl:Class rdf:about="&SRDL_component;OtherDeviceControllingComponent"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#PerceptionArchitecture_ObjectPerception -->
+
+    <owl:Class rdf:about="&SRDL_component;PerceptionArchitecture_ObjectPerception"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#PlanBasedController -->
+
+    <owl:Class rdf:about="&SRDL_component;PlanBasedController"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#PressingManipulationEntity -->
+
+    <owl:Class rdf:about="&SRDL_component;PressingManipulationEntity"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#RedCupClassification_LearningComp -->
+
+    <owl:Class rdf:about="&SRDL_component;RedCupClassification_LearningComp">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasBaseCapability"/>
+                <owl:someValuesFrom rdf:resource="&SRDL_capability2;GreenCupClassificationCapability"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#RotatableArm -->
+
+    <owl:Class rdf:about="&SRDL_component;RotatableArm"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#SimpleGraspPlanner -->
+
+    <owl:Class rdf:about="&SRDL_component;SimpleGraspPlanner"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#SoftwareComponent -->
+
+    <owl:Class rdf:about="&SRDL_component;SoftwareComponent"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#TriggeringActionComponent -->
+
+    <owl:Class rdf:about="&SRDL_component;TriggeringActionComponent"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#VectorFieldArmController -->
+
+    <owl:Class rdf:about="&SRDL_component;VectorFieldArmController"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#VisualSensor -->
+
+    <owl:Class rdf:about="&SRDL_component;VisualSensor"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_task.owl#Task -->
+
+    <owl:Class rdf:about="&SRDL_task;Task"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#BakingFood -->
+
+    <owl:Class rdf:about="&knowrob;BakingFood">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#requiresCapability"/>
+                <owl:someValuesFrom rdf:resource="&SRDL_capability2;OperateOvenCapability"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#CarryingWhileLocomoting -->
+
+    <owl:Class rdf:about="&knowrob;CarryingWhileLocomoting">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasNumOfAttempts"/>
+                <owl:hasValue rdf:datatype="&xsd;integer">114</owl:hasValue>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasNumOfSuccesses"/>
+                <owl:hasValue rdf:datatype="&xsd;integer">77</owl:hasValue>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#LiftingAnObject -->
+
+    <owl:Class rdf:about="&knowrob;LiftingAnObject">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#requiresCapability"/>
+                <owl:someValuesFrom rdf:resource="&SRDL_capability2;PickAndPlaceCapability"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#LoweringAnObject -->
+
+    <owl:Class rdf:about="&knowrob;LoweringAnObject">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasNumOfAttempts"/>
+                <owl:hasValue rdf:datatype="&xsd;integer">7</owl:hasValue>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasNumOfSuccesses"/>
+                <owl:hasValue rdf:datatype="&xsd;integer">5</owl:hasValue>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#Map -->
+
+    <owl:Class rdf:about="&knowrob;Map"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#MathematicalObject -->
+
+    <owl:Class rdf:about="&knowrob;MathematicalObject"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#OperateOven -->
+
+    <owl:Class rdf:about="&knowrob;OperateOven">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#requiresCapability"/>
+                <owl:someValuesFrom rdf:resource="&SRDL_capability2;OperateOvenCapability"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#PickingUpAnObject -->
+
+    <owl:Class rdf:about="&knowrob;PickingUpAnObject">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#requiresCapability"/>
+                <owl:someValuesFrom rdf:resource="&SRDL_capability2;PickAndPlaceCapability"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#Pouring-PourFromOneContainerIntoAnother -->
+
+    <owl:Class rdf:about="&knowrob;Pouring-PourFromOneContainerIntoAnother">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#requiresCapability"/>
+                <owl:someValuesFrom rdf:resource="&SRDL_capability2;PourCapability"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#PreheatOven -->
+
+    <owl:Class rdf:about="&knowrob;PreheatOven">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#requiresCapability"/>
+                <owl:someValuesFrom rdf:resource="&SRDL_capability2;OperateOvenCapability"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#PurposefulAction -->
+
+    <owl:Class rdf:about="&knowrob;PurposefulAction"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#PuttingDownAnObject -->
+
+    <owl:Class rdf:about="&knowrob;PuttingDownAnObject">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#requiresCapability"/>
+                <owl:someValuesFrom rdf:resource="&SRDL_capability2;PickAndPlaceCapability"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#PuttingSomethingSomewhere -->
+
+    <owl:Class rdf:about="&knowrob;PuttingSomethingSomewhere">
+        <rdfs:subClassOf>
+            <owl:Class>
+                <owl:intersectionOf rdf:parseType="Collection">
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#requiresCapability"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_capability2;PickAndPlaceCapability"/>
+                    </owl:Restriction>
+                    <owl:Restriction>
+                        <owl:onProperty rdf:resource="#requiresCapability"/>
+                        <owl:someValuesFrom rdf:resource="&SRDL_capability2;TransportationCapability"/>
+                    </owl:Restriction>
+                </owl:intersectionOf>
+            </owl:Class>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#Reaching -->
+
+    <owl:Class rdf:about="&knowrob;Reaching">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasNumOfSuccesses"/>
+                <owl:hasValue rdf:datatype="&xsd;integer">10</owl:hasValue>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasNumOfAttempts"/>
+                <owl:hasValue rdf:datatype="&xsd;integer">20</owl:hasValue>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#ReleasingGraspOfSomething -->
+
+    <owl:Class rdf:about="&knowrob;ReleasingGraspOfSomething">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasNumOfSuccesses"/>
+                <owl:hasValue rdf:datatype="&xsd;integer">67</owl:hasValue>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasNumOfAttempts"/>
+                <owl:hasValue rdf:datatype="&xsd;integer">83</owl:hasValue>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#Robot -->
+
+    <owl:Class rdf:about="&knowrob;Robot">
+        <rdfs:subClassOf rdf:resource="&owl;Thing"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasBase"/>
+                <owl:onClass rdf:resource="&SRDL_component;HardwareComponent"/>
+                <owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:qualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#Stirring -->
+
+    <owl:Class rdf:about="&knowrob;Stirring">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#requiresCapability"/>
+                <owl:someValuesFrom rdf:resource="&SRDL_capability2;StirringCapability"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#TakingSomething -->
+
+    <owl:Class rdf:about="&knowrob;TakingSomething">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasNumOfSuccesses"/>
+                <owl:hasValue rdf:datatype="&xsd;integer">5</owl:hasValue>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#hasNumOfAttempts"/>
+                <owl:hasValue rdf:datatype="&xsd;integer">14</owl:hasValue>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#WaitForPredefinedTimeInterval -->
+
+    <owl:Class rdf:about="&knowrob;WaitForPredefinedTimeInterval">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="#requiresCapability"/>
+                <owl:someValuesFrom rdf:resource="&SRDL_capability2;WaitForTimeintervallCapability"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://www.w3.org/2002/07/owl#Thing -->
+
+    <owl:Class rdf:about="&owl;Thing"/>
+</rdf:RDF>
+
+
+
+<!-- Generated by the OWL API (version 2.2.1.1138) http://owlapi.sourceforge.net -->
+
