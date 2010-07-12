@@ -1,0 +1,13 @@
+<package>
+  <description brief="triangle_mesh_msgs">
+     Messages for Triangle Meshes
+  </description>
+  <author name="Nico Blodow"/>
+  <license>BSD</license>
+
+  <depend package="std_msgs" />
+  <depend package="geometry_msgs" />
+  <depend package="sensor_msgs" />
+
+</package>
+
