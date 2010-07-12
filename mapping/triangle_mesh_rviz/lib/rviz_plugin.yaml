@@ -1,8 +1,0 @@
-name: TriangleMesh Display
-library: triangle_mesh
-displays:
-  -
-    class_name: triangle_mesh::TriangleMeshDisplay
-    display_name: Triangle Mesh
-    description: |
-      Displays a triangular mesh from a triangle_mesh::TriangleMesh message
