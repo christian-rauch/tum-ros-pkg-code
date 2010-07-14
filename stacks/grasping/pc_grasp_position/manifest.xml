@@ -1,0 +1,11 @@
+<package>
+<description>Reads a poind clound and parameter describing the gripper and
+selects a valid hand position</description>
+<author>Ulrich F Klank</author>
+<license>GPL</license>
+<depend package="roscpp" />
+<depend package="sensor_msgs"/>
+<depend package="simple_grasp_planner"/>
+<export>
+</export>
+</package>

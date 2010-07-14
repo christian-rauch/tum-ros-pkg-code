@@ -1,0 +1,24 @@
+<launch>
+  <node name="grasp_pcd" pkg="pc_grasp_position" type="grasp_pcd" respawn="false" cwd="node" output="screen">
+    <!-- 
+        the rosparam sgp_config holds the specification of the gripper:
+        all points represent markant points on the surface of the 
+        respective gripper, that most likely to collide with 
+        an obje4ct to grasp
+    -->
+    <rosparam param="sgp_config">
+    [
+     [0.00,  0.000, -0.03],
+     [ 0.06,  0.025,  0.11],
+     [ 0.05,  0.025,  0.00],
+     [-0.06,  0.010,  0.11],
+     [-0.05,  0.010,  0.00],
+     [ 0.06, -0.025,  0.11],
+     [ 0.05, -0.025,  0.00], 
+     [ 0.06, -0.085,  0.11], 
+     [ 0.05, -0.085,  0.00],
+     [ 0.00, -0.010, -0.03]
+    ]
+    </rosparam>
+  </node>
+</launch>
