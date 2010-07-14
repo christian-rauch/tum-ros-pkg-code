@@ -12,4 +12,5 @@ rosbuild_add_library(CopRosPlugin
   src/FaceDetection.cpp
   src/DetectedFace.cpp
   src/PlugInRegister.cpp
+  src/TableObjectDescriptors.cpp
 )

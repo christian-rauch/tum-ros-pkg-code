@@ -8,6 +8,7 @@
   <depend package="opencv2"/>
   <depend package="cognitive_perception"/>
   <depend package="cv_bridge"/>
+  <depend package="ias_table_msgs" />
   <export>
     <cpp cflags="-I${prefix}/include/" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lCopRosPlugin"/>
     <cognitive_perception plugin="${prefix}/plugins.xml"/>
