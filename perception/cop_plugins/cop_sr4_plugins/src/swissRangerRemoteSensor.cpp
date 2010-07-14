@@ -13,6 +13,8 @@
 #include "ClusterDetector.h"
 #include "SegmentPrototype.h"
 
+#define XML_PROPERTY_TOPIC_SR4 "Topic"
+
 class SwissRangerRemoteSensor : public cop::Sensor
 {
 public:
@@ -35,7 +37,7 @@ public:
   {
     Sensor::SetData(tag);
     printf("Set data\n");
-    m_stTopic = tag->GetProperty(XML_PROPERTY_TOPIC, "cloud_sr");
+    m_stTopic = tag->GetProperty(XML_PROPERTY_TOPIC_SR4, "cloud_sr");
 
   }
   /**
@@ -54,14 +56,14 @@ public:
     {
       if(m_grabbing)
       {
-        while(m_grabbing && ((signed)m_images.size() < (Frame - m_deletedOffset + 1) || m_images.size() == 0))
+        while(m_grabbing && (m_images.size() == 0))
         {
           printf("waiting for the camera %s to start grabbing\n", GetSensorID().c_str());
-          sleep(0.2);
+          sleep(1);
         }
         printf("Got a new image: %d\n", (int)m_images.size());
       }
-      if((signed)m_images.size() < (Frame - m_deletedOffset + 1) || m_images.size() == 0)
+      if(m_images.size() == 0)
       {
         printf("unexpected error\n");
         throw "Asking for images from a camera that has no images";
@@ -109,7 +111,7 @@ public:
   {
     ros::NodeHandle nh;
     printf("Subscribe to topic %s \n", m_stTopic.c_str());
-    m_cloudSub = nh.subscribe (m_stTopic, 1, &SwissRangerRemoteSensor::CallBack, this);
+    m_cloudSub = nh.subscribe (m_stTopic, 3, &SwissRangerRemoteSensor::CallBack, this);
     m_grabbing = true;
     return true;
   }

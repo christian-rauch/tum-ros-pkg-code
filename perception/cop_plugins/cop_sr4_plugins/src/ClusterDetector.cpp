@@ -129,7 +129,6 @@ class PlaneClustersSR
     // ROS messages
     PointCloud cloud_in_trans_;
 
-
     PointCloud cloud_down_;
     Point leaf_width_;
     PointCloud cloud_annotated_;
@@ -217,15 +216,15 @@ class PlaneClustersSR
           if(pose1 && pose2)
           {
             pose = RelPoseFactory::GetRelPose(pose1->m_uniqueID, pose2->m_uniqueID);
+            RelPoseFactory::FreeRelPose(pose1);
+            RelPoseFactory::FreeRelPose(pose2);
           }
           if(pose == NULL)
            throw "Cloud trans not possible: Location not clear";
        }
-       Matrix m = pose->GetMatrix();
-       if(pose->m_parentID != ptu_base_jlo_id)
-       {
-          RelPoseFactory::FreeRelPose(pose);
-       }
+       Matrix m = pose->GetMatrix(0);
+
+       RelPoseFactory::FreeRelPose(pose);
 
        Matrix m_tmp = m;
        cloud_in_trans_.points.clear();
@@ -264,7 +263,7 @@ class PlaneClustersSR
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     bool
-      plane_clusters_service (PlaneClusterResult &resp, int swissranger_jlo_id, int ptu_base_jlo_id, const PointCloud& cloud)
+      plane_clusters_service (PlaneClusterResult &resp, int swissranger_jlo_id, int ptu_base_jlo_id, const PointCloud& cloud, bool parallel)
     {
       printf("plane_clusters_service::lock!\n");
       m_mutexUsage.lock();
@@ -276,7 +275,7 @@ class PlaneClustersSR
         Point32 vp;
         vp.x = vp.y = vp.z = 0.0;
         cloud_trans(swissranger_jlo_id, ptu_base_jlo_id, vp, cloud);
-        if(!detectTable (cloud_in_trans_, resp, vp))
+        if(!detectTable (cloud_in_trans_, resp, vp, parallel))
         {
           printf("plane_clusters_service::unlock!\n");
 
@@ -284,7 +283,7 @@ class PlaneClustersSR
           return false;
         }
         ROS_INFO ("Service request terminated.");
-       printf("plane_clusters_service::lock!\n");
+        printf("plane_clusters_service::lock!\n");
         m_mutexUsage.unlock();
         return (true);
       }
@@ -299,7 +298,7 @@ class PlaneClustersSR
 
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     bool
-      detectTable (const PointCloud &cloud, PlaneClusterResult &resp,  Point32 viewpoint_cloud)
+      detectTable (const PointCloud &cloud, PlaneClusterResult &resp,  Point32 viewpoint_cloud,bool parallel)
     {
       ros::Time ts = ros::Time::now ();
 
@@ -318,10 +317,31 @@ class PlaneClustersSR
 
       // ---[ Select points whose normals are perpendicular to the Z-axis
       vector<int> indices_z;
-      cloud_geometry::getPointIndicesAxisParallelNormals (cloud_down_, 0, 1, 2, eps_angle_, axis_, indices_z);
+      if(parallel)
+      {
+        cloud_geometry::getPointIndicesAxisParallelNormals (cloud_down_, 0, 1, 2, eps_angle_, axis_, indices_z);
+      }
+      else
+      {
+        cloud_geometry::getPointIndicesAxisPerpendicularNormals( cloud_down_, 0, 1, 2, eps_angle_, axis_, indices_z);
+      }
 #ifdef DEBUG
       ROS_INFO ("Number of points with normals parallel to Z: %d.", (int)indices_z.size ());
 #endif
+      if(indices_z.size () < 10)
+      {
+       if(parallel)
+       {
+         cloud_geometry::getPointIndicesAxisParallelNormals (cloud_down_, 0, 1, 2, eps_angle_*2, axis_, indices_z);
+       }
+       else
+       {
+         cloud_geometry::getPointIndicesAxisPerpendicularNormals( cloud_down_, 0, 1, 2, eps_angle_*2, axis_, indices_z);
+       }
+#ifdef DEBUG
+       ROS_INFO ("Number of points with normals parallel to Z in second try: %d. with axis (%f %f %f )", (int)indices_z.size (), axis_.x, axis_.y, axis_.z);
+#endif
+      }
       if(indices_z.size () < 10)
          return false;
       // Find the best plane in this cluster (later, we can optimize and process more clusters individually)
@@ -520,6 +540,8 @@ class PlaneClustersSR
         // Project the inliers onto the model
         model->projectPointsInPlace (inliers, coeff);
       }
+      delete model;
+      delete sac;
       return (true);
     }
 };
@@ -554,8 +576,10 @@ void ClusterDetector::SetData(XMLTag* tag)
         if(pose == NULL)
           m_swissranger_jlo_id = 1;
         else
+        {
           m_swissranger_jlo_id =pose->m_uniqueID;
-
+          RelPoseFactory::FreeRelPose(pose);
+        }
       }
       m_ptu_jlo_id = tag->GetPropertyInt(XML_ATTRIBUTE_PTULO, 0);
       if(m_ptu_jlo_id == 0)
@@ -565,7 +589,10 @@ void ClusterDetector::SetData(XMLTag* tag)
         if(pose == NULL)
           m_ptu_jlo_id = 1;
         else
+        {
           m_ptu_jlo_id =pose->m_uniqueID;
+          RelPoseFactory::FreeRelPose(pose);
+        }
       }
   }
 }
@@ -582,6 +609,7 @@ std::vector<RelPose*> ClusterDetector::Perform(std::vector<Sensor*> sensors, Rel
   std::vector<RelPose*> results;
     //Calibration* calib = &cam[0]->m_calibration;
   SegmentPrototype* proto = (SegmentPrototype*)object.GetElement(0, DESCRIPTOR_SEGMPROTO);
+  printf("ClusterDetector::Perform: Got SegmentPrototype\n");
   for(std::vector<Sensor*>::const_iterator it = sensors.begin(); it != sensors.end(); it++)
   {
     if((*it)->GetName().compare(XML_NODE_SWISSRANGER) == 0)
@@ -623,14 +651,14 @@ inline void CrossProduct_l(const double b_x, const double b_y,const double b_z,c
     a_z = b_x*c_y - b_y*c_x;
 }
 
-bool ClusterDetector::CallStaticPlaneClusterExtractor(Sensor* sensor, PlaneClusterResult* response, int m_swissranger_jlo_id, int m_ptu_jlo_id)
+bool ClusterDetector::CallStaticPlaneClusterExtractor(Sensor* sensor, PlaneClusterResult* response, int ptu_jlo_id, bool parallel)
 {
   if(s_planeCluster == NULL)
     s_planeCluster = new PlaneClustersSR(NULL);
   SwissRangerReading* reading = (SwissRangerReading*)sensor->GetReading(-1);
   try
   {
-    bool b =  s_planeCluster->plane_clusters_service(*response, m_swissranger_jlo_id, m_ptu_jlo_id, reading->m_pcd);
+    bool b =  s_planeCluster->plane_clusters_service(*response, reading->m_relPose->m_uniqueID, ptu_jlo_id, reading->m_image, parallel);
     reading->Free();
     return b;
   }
@@ -646,12 +674,16 @@ std::vector<RelPose*> ClusterDetector::Inner(Sensor* sens, SegmentPrototype* obj
   std::vector<RelPose*> results;
   PlaneClusterResult response;
   qualityMeasure = 0.0;
+  bool parallel = true;
   unsigned long ref_frame = m_ptu_jlo_id;
 
   if(obj_descr != NULL)
-    ref_frame = obj_descr->m_frameID;
+  {
+    ref_frame = obj_descr->GetFrameId();
+    parallel = obj_descr->m_parallel;
+  }
 
-  if(!CallStaticPlaneClusterExtractor(sens, &response, m_swissranger_jlo_id, m_ptu_jlo_id))
+  if(!CallStaticPlaneClusterExtractor(sens, &response, ref_frame, parallel))
   {
     return results;
   }
@@ -685,7 +717,7 @@ std::vector<RelPose*> ClusterDetector::Inner(Sensor* sens, SegmentPrototype* obj
   /*Norma v2*/
   normalize(d,e,f);
 
-  /*Create v3*/
+  /*Create v3*5~/
 
   CrossProduct_l(a,b,c,d,e,f, g,h,i);
   /**  Build Matrix:
@@ -697,8 +729,8 @@ std::vector<RelPose*> ClusterDetector::Inner(Sensor* sens, SegmentPrototype* obj
   */
   if(vec.size() == 0)
   {
-    printf("No Clusters found, adding a meaningless cluster");
-     PlaneClusterResult::ObjectOnTable on;
+   /* printf("No Clusters found, adding a meaningless cluster");
+        PlaneClusterResult::ObjectOnTable on;
      on.center.x = pcenter.x;
      on.center.y = pcenter.y;
      on.center.z = pcenter.z;
@@ -710,11 +742,11 @@ std::vector<RelPose*> ClusterDetector::Inner(Sensor* sens, SegmentPrototype* obj
      on.max_bound.x = pcenter.x + 0.5;
      on.max_bound.y = pcenter.y + 0.3;
      on.max_bound.z = pcenter.z + 0.2;
-     vec.push_back(on);
+     vec.push_back(on);*/
   }
   printf("Creating a pose for every cluster\n");
   double prob = 1.0;
-  RelPose* ptu = RelPoseFactory::FRelPose(m_ptu_jlo_id);
+  RelPose* ptu = RelPoseFactory::FRelPose(ref_frame);
 
   for(size_t x = 0; x < vec.size(); x++)
   {
@@ -739,12 +771,24 @@ std::vector<RelPose*> ClusterDetector::Inner(Sensor* sens, SegmentPrototype* obj
 
     double covz = max(fabs(center.z - max_bound.z), fabs(center.z - min_bound.z));
     /*Fill covariance with the cluster size and hardcoded full rotation in normal direction */
+    if(parallel)
+    {
      cov << covx <<0    << 0    << 0   << 0   << 0
          <<   0   << covy  << 0 <<  0  << 0   << 0
          <<0    << 0    << covz << 0   << 0   << 0
          <<0    << 0    << 0    << 0.02 << 0   << 0
          <<0    << 0    << 0    << 0   << 0.02 << 0
          <<0    << 0    << 0    << 0   << 0   << 0.8;
+    }
+    else
+    {
+     cov << covy <<0    << 0    << 0   << 0   << 0
+         <<   0   << covz  << 0 <<  0  << 0   << 0
+         <<0    << 0    << covx << 0   << 0   << 0
+         <<0    << 0    << 0    << 0.02 << 0   << 0
+         <<0    << 0    << 0    << 0   << 0.02 << 0
+         <<0    << 0    << 0    << 0   << 0   << 0.8;
+    }
      RelPose* pose_temp = RelPoseFactory::FRelPose(ptu, rotmat, cov);
      double temp_qual = min(1.0, max(0.0, fabs((covx*covy*covz)) * 500 ));
      if(x == 0)

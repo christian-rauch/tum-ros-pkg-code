@@ -36,18 +36,26 @@ namespace cop
 
     virtual std::string GetNodeName() const{return XML_NODE_SEGMENTPROTOTYPE;}
     virtual ElemType_t GetType() const{return DESCRIPTOR_SEGMPROTO;}
+
+    unsigned long GetFrameId();
+
+    void UpdateRefFrame();
+
+
   protected:
     virtual void SetData(XMLTag* tag);
   public:
     ~SegmentPrototype(void);
 
-  public:
+  private:
     std::string m_relFrame;
     unsigned long m_frameID;
     RelPose* m_relPoseOfRefFrame;
+  public:
     double m_covRotX;
     double m_covRotY;
     double m_covRotZ;
+    bool   m_parallel;
   };
 }
 #endif /*BLOB_H*/

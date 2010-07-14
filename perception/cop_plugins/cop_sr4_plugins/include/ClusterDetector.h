@@ -49,7 +49,7 @@ namespace cop
 
     virtual std::string GetName(){return XML_NODE_CLUSTERDETECTOR;}
 
-    static bool CallStaticPlaneClusterExtractor(Sensor* sens, PlaneClusterResult* response, int m_swissranger_jlo_id, int m_ptu_jlo_id);
+    static bool CallStaticPlaneClusterExtractor(Sensor* sens, PlaneClusterResult* response, int m_ptu_jlo_id, bool parallel);
 
   private:
     int m_swissranger_jlo_id;
