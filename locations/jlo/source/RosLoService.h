@@ -110,8 +110,8 @@ private:
   /**
   *   Handle call
   */
-  ros::ServiceServer located_object_callback_reagister_service;
-
+/*  ros::ServiceServer located_object_callback_reagister_service;
+*/
   std::map<unsigned long, PubParentFilterStruct > m_jlotopicMap;
   std::map<unsigned long, unsigned long> m_parentToRegisteredJlo;
   std::map<std::string, ros::Publisher> m_topicPublisherMap;

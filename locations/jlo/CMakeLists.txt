@@ -27,8 +27,8 @@ add_definitions( ${LIBXML2_CFLAGS} )
 
 
 
-rosbuild_genmsg()
-rosbuild_gensrv() 
+#rosbuild_genmsg()
+#rosbuild_gensrv() 
 
 include_directories(source)
 

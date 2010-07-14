@@ -1,7 +1,7 @@
 /**********************************************************************************************/
 /**********************************************************************************************/
 /**
-*              Jennifer's Located Object
+*              Jennifer's Located Object Service
 *              Copyright  (C) 2008, U. Klank
 *
 *
@@ -47,8 +47,8 @@ std::queue<unsigned long> RosLoService::m_queueOfLosToPublish;
 
 RosLoService::RosLoService(const char* nodename, ros::NodeHandle &n, std::string configFile)
     : jlo::ServiceInterface(configFile.c_str()),
-      located_object_service( n.advertiseService("/located_object", &RosLoService::ServiceCallback, this) ),
-      located_object_callback_reagister_service( n.advertiseService("/register_jlo_callback", &RosLoService::CallbackRegisterService, this) )
+      located_object_service( n.advertiseService("/located_object", &RosLoService::ServiceCallback, this) )/*,
+      located_object_callback_reagister_service( n.advertiseService("/register_jlo_callback", &RosLoService::CallbackRegisterService, this) )*/
 {
   using namespace std;
 
@@ -87,8 +87,8 @@ RosLoService::RosLoService(const char* nodename, ros::NodeHandle &n, std::string
   string tf_topic;
   n.param<string>( "tf_topic", tf_topic, "/tf" );
   printf("Subscribe \"%s\"\n", tf_topic.c_str());
-  tf_subscription = n.subscribe<tf::tfMessage>( tf_topic, 10000, boost::bind(&RosLoService::tf_subscription_callback, this, _1) );
-  boost::thread(boost::bind(&RosLoService::UpdateEventHandler, this));
+  tf_subscription = n.subscribe<tf::tfMessage>( tf_topic, 5, boost::bind(&RosLoService::tf_subscription_callback, this, _1) );
+  /*boost::thread(boost::bind(&RosLoService::UpdateEventHandler, this));*/
 }
 
 RosLoService::~RosLoService()
@@ -141,13 +141,16 @@ bool PutLoIntoResponse( jlo::ServiceLocatedObject* lo, vision_srvs::srvjlo::Resp
 }
 
 std::map<std::string, int> s_tester;
+std::map<std::string, int> s_tester_max;
 
 void IncreaseTester(std::string callerid)
 {
   s_tester[callerid] += 1;
-  if(s_tester[callerid] % 100 == 0)
+  if(s_tester[callerid] >= 100)
   {
-    ROS_WARN("Warning: the jlo caller %s registered %d jlos without deleting", callerid.c_str(), s_tester[callerid] );
+    s_tester_max[callerid] += s_tester[callerid];
+    s_tester[callerid] = 0;
+    ROS_WARN("Warning: the jlo caller %s registered %d jlos without deleting", callerid.c_str(), s_tester_max[callerid] );
   }
 }
 
@@ -169,7 +172,7 @@ std::string callerid = (*request.__connection_header)["callerid"];
      /*printf("Requested ID: %d => %p\n", (int)request.query.id, lo);*/
      if (lo == NULL)
      {
-       PRINTF_DEBUG("Error in IDquery: Id does not exist!\n");
+       ROS_WARN("Error in IDquery: Id %ld does not exist! (Caller: %s)\n", request.query.id, callerid.c_str());
        answer.error = "Error in IDquery: Id does not exist!\n";
        return true;
      }
@@ -184,7 +187,7 @@ std::string callerid = (*request.__connection_header)["callerid"];
        jlo::ServiceLocatedObject* lo = GetServiceLocatedObject(id);
        if (lo == NULL)
        {
-         PRINTF_DEBUG("Error in NameQuery: Id does not exist!\n");
+         ROS_WARN("Error in NameQuery: Id %s does not exist!(Caller: %s)\n", request.query.name.c_str(), callerid.c_str());
          answer.error = "Error in NameQuery: Id does not exist!\n";
          return true;
        }
@@ -192,13 +195,13 @@ std::string callerid = (*request.__connection_header)["callerid"];
      }
      else
      {
-        ROS_WARN("Error in NameQuery: Name %s does not exist!\n", request.query.name.c_str());        
+        ROS_WARN("Error in NameQuery: Name %s does not exist!(Caller: %s)\n", request.query.name.c_str(), callerid.c_str());
         answer.error = std::string("Error in NameQuery: Name does not exist: ").append(request.query.name);
         answer.answer.id = 0;
         return true;
       }
-	}
-	else if (request.command.compare(FRAMEQUERY) == 0)
+  }
+  else if (request.command.compare(FRAMEQUERY) == 0)
   {
     try
     {
@@ -214,7 +217,7 @@ std::string callerid = (*request.__connection_header)["callerid"];
       {
         if (lo == NULL)
         {
-          PRINTF_DEBUG("Error in Framequery: Id does not exist!\n");
+          ROS_WARN("Error in Framequery: Id %ld does not exist! (Caller %s)\n", request.query.id, callerid.c_str());
           answer.error = "Error in Framequery: Id does not exist!\n";
           return true;
         }
@@ -228,7 +231,7 @@ std::string callerid = (*request.__connection_header)["callerid"];
           jlo::ServiceLocatedObject* parent = GetServiceLocatedObject(parentID);
           if (parent == NULL)
           {
-             PRINTF_DEBUG("Error in Framequery: Parent Id does not exist!\n");
+             ROS_WARN("Error in Framequery: Parent Id %ld does not exist! (Caller: %s)\n", parentID, callerid.c_str());
              answer.error = "Error in Framequery: Parent Id does not exist!\n";
              return true;
           }
@@ -253,14 +256,15 @@ std::string callerid = (*request.__connection_header)["callerid"];
       jlo::ServiceLocatedObject* obj  = GetServiceLocatedObject(id);
       if(obj == NULL)
       {
-         PRINTF_DEBUG("Error in delete: Can't delete ID_WORLD!\n");
-         answer.error = "Error in delete: Can't delete ID_WORLD!\n";
+         ROS_WARN("Error in delete: Object %ld does not exist! (Caller: %s)\n", id, callerid.c_str());
+         answer.error = "Error in delete: Object does not exist!\n";
          return true;
       }
       else
       {
         DecreaseTester(callerid);
         unsigned long ref_count = obj->GetReferenceCounter();
+        /*ROS_DEBUG("Delete request from node %s for id %ld, parent %ld", callerid.c_str(), id, obj->m_parentID);*/
         FreeServiceLocatedObject(obj);
         if(ref_count > 1)
         {
@@ -327,18 +331,18 @@ std::string callerid = (*request.__connection_header)["callerid"];
         }
         jlo::ServiceLocatedObject* pose = FServiceLocatedObject(parent, mat, cov, type);
         IncreaseTester(callerid);
-        PutLoIntoResponse(pose, answer);
         if(request.query.name.length() > 0 && GetServiceLocatedObjectID(request.query.name) < ID_WORLD)
         {
           ServiceInterface::AddMapString(pose, request.query.name);
         }
+        PutLoIntoResponse(pose, answer);
       }
       else
       {
         jlo::ServiceLocatedObject* parent = GetServiceLocatedObject(parentID);
         if(parent == NULL || (parent->m_uniqueID == ID_WORLD && pose->m_uniqueID == ID_WORLD))
         {
-          PRINTF_DEBUG("Error in Update: Requested parent does not exist!\n");
+          ROS_WARN("Error in Update: Requested parent %ld does not exist!\n", parentID);
            answer.error = "Error in Update: Requested parent does not exist!\n";
           return true;
         }
@@ -346,6 +350,11 @@ std::string callerid = (*request.__connection_header)["callerid"];
         {
             answer.error = "Error in Update: Asked for world in world\n";
             return true;
+        }
+        if(parent->m_uniqueID != pose->m_parentID)
+        {
+          ROS_WARN("Updated parent, dangerous in terms of circles (Old parent: %ld New Parent %ld)", pose->m_parentID, parent->m_uniqueID);
+          pose->UpdateParent(parent);
         }
         pose->Update(mat, cov, ServiceInterface::FServiceLocatedObjectCopy, ServiceInterface::FreeServiceLocatedObject, &RosLoService::UpdateEventNotifier);
         if(request.query.name.length() > 0 && GetServiceLocatedObjectID(request.query.name) < ID_WORLD)
@@ -365,7 +374,7 @@ std::string callerid = (*request.__connection_header)["callerid"];
       jlo::ServiceLocatedObject* parent = GetServiceLocatedObject(parentID);
       if(parent == NULL)
       {
-        PRINTF_DEBUG("Error in Update: Requested parent does not exist!\n");
+        ROS_WARN("Error in Update: Requested parent %ld does not exist!\n", parentID);
         answer.error = "Error in Update: Requested parent does not exist!\n";
         return true;
       }
@@ -385,7 +394,7 @@ std::string callerid = (*request.__connection_header)["callerid"];
     /*printf("Requested ID: %d => %p\n", (int)request.query.id, lo);*/
     if (lo == NULL)
     {
-      PRINTF_DEBUG("Error Parsing Input: Id does not exist!\n");
+      ROS_WARN("Error Parsing Input: Id %ld does not exist!\n", request.query.id);
       answer.error = "Error Parsing Input: Id does not exist!\n";
       return true;
     }
@@ -397,9 +406,9 @@ std::string callerid = (*request.__connection_header)["callerid"];
   else
   {
     printf("Command %s not accepted\n", request.command.c_str());
-     PRINTF_DEBUG("Error: Requested command does not exist!\n");
-     answer.error = "Error COUTLO: Requested parent does not exist!\n";
-     return true;
+    PRINTF_DEBUG("Error: Requested command does not exist!\n");
+    answer.error = "Erro: Requested command does not exist!\n";
+    return true;
   }
   return true;
  }
@@ -578,7 +587,8 @@ void RosLoService::tf_subscription_callback(const tf::tfMessage::ConstPtr &msg_i
     /*Obsolete: TransformStampedMsgToTF, if you get here an error cause the following function is not defined, pls update tf*/
     transformStampedMsgToTF(msg_in_->transforms[i], trans);
     if( tf_blacklist.find( trans.child_frame_id_ ) != tf_blacklist.end() )
-        continue;
+        continue;
+
 
  /*   printf("got matrix:= \n[");
     for(int i = 0; i < 16; i++)
@@ -681,18 +691,18 @@ void RosLoService::tf_subscription_callback(const tf::tfMessage::ConstPtr &msg_i
       {
           Matrix m = pose->GetMatrix();
           Matrix diff =  mat - m;
-          if((diff.element(0,0) < 0.0000 &&
-             diff.element(0,1) < 0.0000 &&
-             diff.element(0,2) < 0.0000 &&
-              diff.element(0,3) < 0.000 &&
-              diff.element(1,0) < 0.00 &&
-              diff.element(1,1) < 0.0000 &&
-              diff.element(1,2) < 0.0000 &&
-              diff.element(1,3) < 0.000 &&
-              diff.element(2,0) < 0.0000 &&
-              diff.element(2,1) < 0.0000 &&
-              diff.element(2,2) < 0.0000 &&
-              diff.element(2,3) < 0.000) || pose->m_uniqueID == ID_WORLD)
+          if((fabs(diff.element(0,0)) < 0.000001 &&
+              fabs(diff.element(0,0)) < 0.000001 &&
+              fabs(diff.element(0,0)) < 0.000001 &&
+              fabs(diff.element(0,0)) < 0.000001 &&
+              fabs(diff.element(0,0)) < 0.000001 &&
+              fabs(diff.element(0,0)) < 0.000001 &&
+              fabs(diff.element(0,0)) < 0.000001 &&
+              fabs(diff.element(0,0)) < 0.000001 &&
+              fabs(diff.element(0,0)) < 0.000001 &&
+              fabs(diff.element(0,0)) < 0.000001 &&
+              fabs(diff.element(0,0)) < 0.000001 &&
+              fabs(diff.element(0,0)) < 0.000001) || pose->m_uniqueID == ID_WORLD)
           {
             continue;
           }
@@ -710,6 +720,7 @@ void RosLoService::tf_subscription_callback(const tf::tfMessage::ConstPtr &msg_i
           }
           pose = FServiceLocatedObject(parent, mat, cov, type);
           ServiceInterface::AddMapString(pose, trans.child_frame_id_);
+          pose->IncreaseReferenceCounter();
       }
     }
 
