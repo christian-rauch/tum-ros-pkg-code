@@ -1,0 +1,10 @@
+<package>
+<description>Simple Grasp Planer</description>
+<author>U. Klank</author>
+<license>BSD</license>
+<export>
+    <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lsgp"/>
+    <python path="${prefix}/src" />
+</export>
+</package>
+
