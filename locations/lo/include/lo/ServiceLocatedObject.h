@@ -536,100 +536,119 @@ public:
   XMLTag* SaveComplete() ;
 /*	void TransformPointLocally(const double& x_in, const double& y_in, const double& z_in, double& x_out, double& y_out, double& z_out, const double& scale);*/
   XMLTag* Save() ;
+
+  /**
+  *   UpdateParent
+  *
+  *   @brief Sets a new parent to an updated pose. it removes the object from its parents attachment list and adds it to the new parent
+  *   @param new_parent the new parent that should replace the old.
+  */
+  void UpdateParent(ServiceLocatedObject* new_parent);
+  /**
+  *   Update
+  *
+  *    @brief Updates the position of a located object
+  *
+  *    @param m 4x4 matrix containing the complete transformation ( ~ R*t) from the parent to the child
+  *    @param cov the uncertainty in a 6x6 matrix in child coordinates as [covx, covz, covz, covRoll, covPitch, covYaw]^T [covx, covz, covz, covRoll, covPitch, covYaw]
+  *    @param copy a function to copy a ServiceLocatedObject* before update, if there are attached child nodes
+  *    @param del  a function to delete parents that are not needed anymore in case of detachment of all attached children
+  *    @param updated a function to inform subscribers of one of the touched nodes in the tree of an update
+  **/
   void Update(Matrix m, Matrix cov,  ServiceLocatedObject*(* copy)(ServiceLocatedObject*, ServiceLocatedObject*), unsigned long(*del)(ServiceLocatedObject*), void (*updated)(unsigned long));
-  virtual void DecreaseReferenceCounter(){referenceCounter--;}
+  /**
+  *  Functions for Reference Counter
+  */
+  void DecreaseReferenceCounter(){if(referenceCounter>0)referenceCounter--;}
   void IncreaseReferenceCounter(){referenceCounter++;}
   unsigned long GetReferenceCounter(){return referenceCounter;}
-/********************************************************************/
-/**      Destructor notifying the parent
-*********************************************************************
-*
-********************************************************************/
+  /********************************************************************/
+  /**      Destructor notifying the parent
+  *********************************************************************
+  *
+  ********************************************************************/
   virtual ~ServiceLocatedObject ( );
 
-/********************************************************************/
-/**     operator-
-*********************************************************************
-*       \brief Calculates the distance between two objects,
-*
-*	The calculation will be relative to the nearest common
-*	preceeding node in the LocatedObject Tree
-*
-*
-*       \pi     smallObject
-*       \ret    LocatedObject
-********************************************************************/
+  /********************************************************************/
+  /**     operator-
+  *********************************************************************
+  *       \brief Calculates the distance between two objects,
+  *
+  *	The calculation will be relative to the nearest common
+  *	preceeding node in the LocatedObject Tree
+  *
+  *
+  *       \pi     smallObject
+  *       \ret    LocatedObject
+  ********************************************************************/
   ServiceLocatedObject operator- (ServiceLocatedObject &smallObject ) ;
 
-
-
-/********************************************************************/
-/**	 SetParent
-*********************************************************************
-*
-*	The preeceding node in the LocatedObject Tree
-*
-********************************************************************/
-  void SetParent(ServiceLocatedObject* relation){m_relation = relation;m_parentID = relation->m_parentID;}
-
-/********************************************************************/
-/**     AddAttachedObject
-*********************************************************************
-*       \brief Adds an object to the list of dependant objects
-*               In case of the object beeing moved, all attached objects
-*               will be put to a copy *this
-*       \remarks if such an object is of type LO_TYPE_PHYSICAL
-*                  it will stay attached even if
-********************************************************************/
+  /********************************************************************/
+  /**     AddAttachedObject
+  *********************************************************************
+  *       \brief Adds an object to the list of dependant objects
+  *               In case of the object beeing moved, all attached objects
+  *               will be put to a copy *this
+  *       \remarks if such an object is of type LO_TYPE_PHYSICAL
+  *                  it will stay attached even if
+  ********************************************************************/
   virtual void AddAttachedObject(ServiceLocatedObject* lo){IncreaseReferenceCounter();}
 
-/********************************************************************/
-/**     RemoveAttachedObject
-*********************************************************************
-*       \brief Removes an object from the list of dependant objects
-********************************************************************/
+  /********************************************************************/
+  /**     RemoveAttachedObject
+  *********************************************************************
+  *       \brief Removes an object from the list of dependant objects
+  ********************************************************************/
   virtual void RemoveAttachedObject(ServiceLocatedObject* lo){DecreaseReferenceCounter();}
-/********************************************************************/
-/**     Move this
-*********************************************************************
-*       \brief Adds an object to the list of dependant objects
-*               In case of the object beeing moved, all attached objects
-*               will be put to a copy *this
-*       \remarks if such an object is of type LO_TYPE_PHYSICAL
-*                  it will stay attached even if
-********************************************************************/
-  virtual void PropagateMovement(ServiceLocatedObject*(* copy)(ServiceLocatedObject*, ServiceLocatedObject*), unsigned long (*del)(ServiceLocatedObject*), void (*updated)(unsigned long), ServiceLocatedObject*){updated(m_uniqueID);}
+  /********************************************************************/
+  /**     Move this
+  *********************************************************************
+  *       \brief Adds an object to the list of dependant objects
+  *               In case of the object beeing moved, all attached objects
+  *               will be put to a copy *this
+  *       \remarks if such an object is of type LO_TYPE_PHYSICAL
+  *                  it will stay attached even if
+  ********************************************************************/
+  virtual void PropagateMovement(ServiceLocatedObject*(* copy)(ServiceLocatedObject*, ServiceLocatedObject*),
+                                unsigned long (*del)(ServiceLocatedObject*), void (*updated)(unsigned long), ServiceLocatedObject*)
+  {
+    updated(m_uniqueID);
+  }
+
   virtual bool NeedCopy (){return false;}
-/********************************************************************/
-/**     GetLOType
-*********************************************************************
-*       \brief returns if the object needs its children to be moved
-********************************************************************/
+  virtual void TellParentNeedCopy(){return;}
+  virtual void TellParentNeedNoCopy(){return;}
+
+  /********************************************************************/
+  /**     GetLOType
+  *********************************************************************
+  *       \brief returns if the object needs its children to be moved
+  ********************************************************************/
   virtual unsigned long GetLOType(){return LO_TYPE_PERCEIVED;}
 
 
-/********************************************************************/
-/**	 m_relation
-*********************************************************************
-*
-*	The preeceding node in the LocatedObject Tree
-*
-********************************************************************/
+  /********************************************************************/
+  /**	 m_relation
+  *********************************************************************
+  *
+  *	The preeceding node in the LocatedObject Tree
+  *
+  ********************************************************************/
   ServiceLocatedObject* m_relation;
- /********************************************************************/
- /**	Loading: set lastid
- *********************************************************************
- *
- * 	\pi lastid
- ********************************************************************/
- static void SetLastID(unsigned long lastID){if(lastID >= s_lastID) s_lastID = lastID + 1;}
- /**
- *  Maps a string also to this index, TODO build a map out of this information
- */
+  /********************************************************************/
+  /**	Loading: set lastid
+  *********************************************************************
+  *
+  * 	\pi lastid
+  ********************************************************************/
+  static void SetLastID(unsigned long lastID){if(lastID >= s_lastID) s_lastID = lastID + 1;}
+  /**
+  *  Maps a string also to this index
+  */
   std::string m_mapstring;
-
 protected:
   unsigned long referenceCounter;
+  long m_needCopy;
 private:
   friend class ServiceInterface;
   static unsigned long s_lastID;

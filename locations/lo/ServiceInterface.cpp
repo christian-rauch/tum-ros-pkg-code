@@ -496,8 +496,19 @@ unsigned long ServiceInterface::SetServiceLocatedObject(jlo::ServiceLocatedObjec
   return (unsigned long)pose->m_uniqueID;
 }
 
+void jlo::ServiceLocatedObject::UpdateParent(jlo::ServiceLocatedObject* new_parent)
+{
+
+  ServiceLocatedObject* old_parent = ServiceInterface::GetServiceLocatedObject(m_parentID);
+  old_parent->RemoveAttachedObject(this);
+  m_parentID = new_parent->m_uniqueID;
+  new_parent->AddAttachedObject(this);
+}
+
+
 void jlo::ServiceLocatedObject::Update(Matrix m, Matrix cov, ServiceLocatedObject*(* copy)(ServiceLocatedObject*, ServiceLocatedObject*), unsigned long (*del)(ServiceLocatedObject*), void (*updated)(unsigned long))
 {
+  m_relation->TellParentNeedNoCopy();
   PropagateMovement(copy, del, updated, NULL);
   Set(m, cov);
 }
@@ -550,50 +561,36 @@ unsigned long ServiceInterface::FreeServiceLocatedObject(jlo::ServiceLocatedObje
   unsigned long id = pose->m_uniqueID;
   if(id != ID_WORLD)
   {
-
-
-    /*printf("Delete with List of length %d\n", s_ServiceLocatedObjects.size());
-    for(std::vector<jlo::ServiceLocatedObject*>::iterator iter = s_ServiceLocatedObjects.begin();
-        iter != s_ServiceLocatedObjects.end(); iter++)
-    {*/
-      if(pose != NULL)
+    pose->DecreaseReferenceCounter();
+    if(pose->GetReferenceCounter() <= 0)
+    {
+      if(pose->m_mapstring.length() >  0)
       {
-        pose->DecreaseReferenceCounter();
-        if(pose->GetReferenceCounter() <= 0)
-        {
-          /*printf("Release jlo::ServiceLocatedObject id: %d\n", id);*/
-          if(pose->m_mapstring.length() >  0)
-          {
-             printf("Deleting named object: %s (id: %ld)\n", pose->m_mapstring.c_str(), id);
-             ServiceInterface::RemoveMapString(pose->m_mapstring);
-          }
-          /**
-            free also the parent, if and only if they are movement artefacts
-          **/
-          jlo::ServiceLocatedObject* parent = GetServiceLocatedObject(pose->m_parentID);
-          if(parent != NULL)
-          {
-            ((ObjectContainer*)parent)->RemoveAttachedObject(pose);
-          }
-          delete pose;
-          s_ServiceLocatedObjectMap.erase(s_ServiceLocatedObjectMap.find(id));
-          pose = NULL;
-          if(parent != NULL)
-          {
-            if(parent->GetReferenceCounter() <= 0)
-            {
-              FreeServiceLocatedObject(parent);
-            }
-            else
-            {
-               printf("Not deleting a parent of %ld cause it is still in use: %ld\n", id, parent->m_uniqueID);
-            }
-          }
-          /*s_ServiceLocatedObjects.erase(iter);*/
-        }
-        /*break;*/
+         ServiceInterface::RemoveMapString(pose->m_mapstring);
       }
-    /*}*/
+      /**
+        free also the parent, if and only if they are movement artefacts
+      **/
+      jlo::ServiceLocatedObject* parent = GetServiceLocatedObject(pose->m_parentID);
+      if(parent != NULL)
+      {
+        parent->RemoveAttachedObject(pose);
+      }
+      delete pose;
+      s_ServiceLocatedObjectMap.erase(s_ServiceLocatedObjectMap.find(id));
+      pose = NULL;
+      if(parent != NULL)
+      {
+        if(parent->GetReferenceCounter() <= 0)
+        {
+          FreeServiceLocatedObject(parent);
+        }
+        else
+        {
+           /*printf("Not deleting a parent of %ld cause it is still in use: %ld\n", id, parent->m_uniqueID);*/
+        }
+      }
+    }
   }
   return id;
 }
@@ -739,6 +736,7 @@ unsigned long jlo::ServiceLocatedObject::s_lastID = ID_WORLD;
 jlo::ServiceLocatedObject::ServiceLocatedObject ( ) :
     LocatedObject(&s_loadLocatedObjectParent),
     m_relation(NULL),
+    m_needCopy(0),
     referenceCounter(0)
 {
   s_lastID = s_lastID > ID_WORLD ? s_lastID : ID_WORLD + 1 ;
@@ -751,6 +749,7 @@ jlo::ServiceLocatedObject::ServiceLocatedObject (jlo::ServiceLocatedObject* loca
                           double sigmaRoll, double sigmaPitch , double sigmaYaw) :
     LocatedObject(&s_loadLocatedObjectParent, s_lastID, locatedObject->m_uniqueID, x,y,z,roll,pitch,yaw,sigmaX, sigmaY, sigmaZ,sigmaRoll,sigmaPitch, sigmaYaw),
     m_relation(locatedObject),
+    m_needCopy(0),
     referenceCounter(0)
 {
   s_lastID++;
@@ -760,6 +759,7 @@ jlo::ServiceLocatedObject::ServiceLocatedObject (jlo::ServiceLocatedObject* loca
 jlo::ServiceLocatedObject::ServiceLocatedObject (jlo::ServiceLocatedObject* locatedObject, const Matrix &matrix , const Matrix &covariance) :
     LocatedObject(&s_loadLocatedObjectParent, s_lastID, locatedObject->m_uniqueID, matrix, covariance),
     m_relation(locatedObject),
+    m_needCopy(0),
     referenceCounter(0)
 {
         //Check for circular references
@@ -785,9 +785,11 @@ ServiceLocatedObject* ServiceInterface::FServiceLocatedObject(ServiceLocatedObje
 {
   ServiceLocatedObject* ret = NULL;
   if(type == LO_TYPE_PHYSICAL)
-    ret = GetServiceLocatedObject(SetServiceLocatedObject(new ObjectContainer(pose, m, cov)));
+    ret = new ObjectContainer(pose, m, cov);
   else
-    ret = GetServiceLocatedObject(SetServiceLocatedObject(new ServiceLocatedObject(pose, m, cov)));
+    ret = new ServiceLocatedObject(pose, m, cov);
+
+  SetServiceLocatedObject(ret);
   pose->AddAttachedObject(ret);
   return ret;
 }
@@ -826,25 +828,14 @@ ServiceLocatedObject* ServiceInterface::GetServiceLocatedObject(unsigned long id
 }
 
 
-unsigned long ServiceInterface::GetServiceLocatedObjectID(std::string st) /*TODO build map*/
+unsigned long ServiceInterface::GetServiceLocatedObjectID(std::string st)
 {
-  std::string st_ = st[0] == '/' ? st : std::string("/") + st;
   std::map<std::string, unsigned long>::iterator it = s_ServiceLocatedObjectNameMap.find(st);
   if(it == s_ServiceLocatedObjectNameMap.end())
   {
     return 0;
-    /*
-    for(std::vector<ServiceLocatedObject*>::iterator iter = s_ServiceLocatedObjects.begin();
-          iter != s_ServiceLocatedObjects.end(); iter++)
-    {
-      if((*iter)->m_mapstring.compare(st) == 0)
-      {
-        return (*iter)->m_uniqueID;
-      }
-    }
-    return -1;*/
   }
-  return s_ServiceLocatedObjectNameMap[st];
+  return (*it).second;
 }
 
 

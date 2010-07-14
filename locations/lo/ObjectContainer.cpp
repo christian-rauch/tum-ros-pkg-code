@@ -34,24 +34,28 @@ namespace jlo
  */
 ReturnMatrix ObjectContainer::Get ( )
 {
-	if(m_semaStatic)
-		return m_relativePosition;
-	else
-		throw "Not implemented";
+  if(m_semaStatic)
+    return m_relativePosition;
+  else
+    throw "Not implemented";
 }
 
 ReturnMatrix ObjectContainer::GetInv ( )
 {
-	if(m_semaStatic)
-		return m_invRelativePosition;
-	else
-		throw "Not implemented";
+  if(m_semaStatic)
+    return m_invRelativePosition;
+  else
+   throw "Not implemented";
 }
 
 void ObjectContainer::AddAttachedObject(ServiceLocatedObject* lo)
 {
   IncreaseReferenceCounter();
   m_attachedLocatedObjectList.push_back(lo);
+  if(lo->GetLOType() != LO_TYPE_PHYSICAL)
+  {
+    TellParentNeedCopy();
+  }
 }
 
 void ObjectContainer::RemoveAttachedObject(ServiceLocatedObject* lo)
@@ -68,49 +72,56 @@ void ObjectContainer::RemoveAttachedObject(ServiceLocatedObject* lo)
        it++;
   }
 }
+
+
 bool ObjectContainer::NeedCopy()
 {
-  bool needCopy = false;
+  /*bool needCopy = false;
   std::vector<ServiceLocatedObject*>::iterator it = m_attachedLocatedObjectList.begin();
-  for(;it!= m_attachedLocatedObjectList.end(); it++)
+  for(;it!= m_attachedLocatedObjectList.end() && !needCopy; it++)
   {
      if((*it)->GetLOType() == LO_TYPE_PHYSICAL)
-       needCopy = needCopy || (*it)->NeedCopy();
+     {
+       needCopy = (*it)->NeedCopy();
+     }
      else
      {
        needCopy = true;
-       break;
      }
-  }
-  return needCopy;
+  }*/
+  return m_needCopy > 0;
 }
 
 void ObjectContainer::PropagateMovement(ServiceLocatedObject*(*copy)(ServiceLocatedObject*, ServiceLocatedObject*),
                           unsigned long (*del)(ServiceLocatedObject*), void (*updated)(unsigned long), ServiceLocatedObject* parent)
 {
   updated(m_uniqueID);
-
   ObjectContainer* copyOfThis = NULL;
   bool needCopy = NeedCopy();
   if(!needCopy)
     return;
-
+  m_needCopy = 0;
   std::vector<ServiceLocatedObject*>::iterator it = m_attachedLocatedObjectList.begin();
   for(;it!= m_attachedLocatedObjectList.end(); )
   {
     if((*it)->GetLOType() != LO_TYPE_PHYSICAL)
     {
       if(copyOfThis == NULL)
+      {
         copyOfThis = (ObjectContainer*)(*copy)(this, parent);
-       copyOfThis->AddAttachedObject(*it);
-       (*it)->m_parentID = copyOfThis->m_uniqueID;
-       (*it)->m_relation = copyOfThis;
-       it = m_attachedLocatedObjectList.erase(it);
+      }
+
+      copyOfThis->AddAttachedObject(*it);
+      (*it)->m_parentID = copyOfThis->m_uniqueID;
+      (*it)->m_relation = copyOfThis;
+      it = m_attachedLocatedObjectList.erase(it);
     }
     else
     {
       if(copyOfThis == NULL)
+      {
         copyOfThis = (ObjectContainer*)(*copy)(this, parent);
+      }
       (*it)->PropagateMovement(copy, del, updated, copyOfThis);
       it++;
     }

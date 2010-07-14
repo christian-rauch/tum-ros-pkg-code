@@ -28,7 +28,7 @@
 #include <vector>
 
 /*************************
-* 	include ROBO-BOOB
+* 	include RO-BOOB
 *************************/
 #include "lo/NewMatExhaustive.h"
 
@@ -36,12 +36,8 @@
 #define RELOCATE_OBJECT 1
 #define NO_MOVE		0
 
-/**
-  * class LocatedObject
-  */
 namespace jlo
 {
-
 
 /********************************************************************/
 /**     class LazyLocatedObjectLoader

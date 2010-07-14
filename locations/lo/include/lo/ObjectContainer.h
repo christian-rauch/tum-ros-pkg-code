@@ -38,23 +38,23 @@ namespace jlo
 class ObjectContainer : public ServiceLocatedObject
 {
 public:
-	/********************************************************************/
-	/**      Constructor ObjectContainer
-	*********************************************************************
-	*
-	*      	\param locatedObject The LocatedObject that is passed to this constructor is the
-	*   	preceeding element in the location Tree
-	*		\param x  all other parameters can be looked up in \ref LocatedObject
-	*
-	********************************************************************/
-	ObjectContainer (ServiceLocatedObject* locatedObject,	double x , double y , double z ,
-                    				double roll , double pitch , double yaw ,
-						double sigmaX=0.0, double sigmaY=0.0 , double sigmaZ=0.0,
-						double sigmaRoll=0.0, double sigmaPitch=0.0 , double sigmaYaw=0.0) :
+  /********************************************************************/
+  /**      Constructor ObjectContainer
+  *********************************************************************
+  *
+  *   \param locatedObject The LocatedObject that is passed to this constructor is the
+  *   	  preceeding element in the location Tree
+  *   \param x  all other parameters can be looked up in \ref LocatedObject
+  *
+  ********************************************************************/
+  ObjectContainer (ServiceLocatedObject* locatedObject,	double x , double y , double z ,
+                   double roll , double pitch , double yaw ,
+                   double sigmaX=0.0, double sigmaY=0.0 , double sigmaZ=0.0,
+                   double sigmaRoll=0.0, double sigmaPitch=0.0 , double sigmaYaw=0.0) :
 		ServiceLocatedObject(locatedObject,	x ,  y ,  z ,
-						roll ,  pitch ,  yaw ,
-						sigmaX,  sigmaY ,  sigmaZ,
-						sigmaRoll,  sigmaPitch ,  sigmaYaw),
+                                     roll ,  pitch ,  yaw ,
+				     sigmaX,  sigmaY ,  sigmaZ,
+				     sigmaRoll,  sigmaPitch ,  sigmaYaw),
 		m_semaStatic(true)
 	{
             referenceCounter = 1;
@@ -116,6 +116,9 @@ public:
  virtual  void PropagateMovement(ServiceLocatedObject*(* copy)(ServiceLocatedObject*, ServiceLocatedObject*), unsigned long (*del)(ServiceLocatedObject*), void (*updated)(unsigned long), ServiceLocatedObject* parent_copy = NULL);
 protected:
   virtual bool NeedCopy ();
+  virtual void TellParentNeedCopy(){ m_needCopy++; m_relation->TellParentNeedCopy();}
+  virtual void TellParentNeedNoCopy(){ if(m_needCopy > 0){ m_needCopy--; m_relation->TellParentNeedNoCopy();}}
+      
 public:
 
 
