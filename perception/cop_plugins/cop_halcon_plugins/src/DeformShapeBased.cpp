@@ -67,7 +67,7 @@ std::vector<RelPose*> DeformShapeBased::Perform(std::vector<Sensor*> sensors, Re
     Calibration* calib = &(cam->m_calibration);
     if(img != NULL && camPose != NULL && calib  != NULL)
     {
-      result = Inner(img, camPose, calib, lastKnownPose, object, numOfObjects, qualityMeasure);
+      result = Inner(img, camPose, calib, lastKnownPose, object, numOfObjects, qualityMeasure, cam->GetSensorID());
     }
   }
   return result;
@@ -75,7 +75,7 @@ std::vector<RelPose*> DeformShapeBased::Perform(std::vector<Sensor*> sensors, Re
 /**
   Final algorithm, for call for special images
 */
-std::vector<RelPose*> DeformShapeBased::Inner(Image* img,RelPose* camPose, Calibration* calib, RelPose* lastKnownPose, Signature& object, int &numOfObjects, double& qualityMeasure)
+std::vector<RelPose*> DeformShapeBased::Inner(Image* img,RelPose* camPose, Calibration* calib, RelPose* lastKnownPose, Signature& object, int &numOfObjects, double& qualityMeasure, std::string stSensorName)
 {
   std::vector<RelPose*> result;
 
@@ -101,7 +101,8 @@ std::vector<RelPose*> DeformShapeBased::Inner(Image* img,RelPose* camPose, Calib
       try
       {
         Hobject* imgs = img->GetHImage();
-        int handle = dsm->GetDeformShapeHandle();
+        int handle = dsm->GetDeformShapeHandle(stSensorName);
+        printf("\n\n\nGot handle for Sensor %s: %d\n\n\n", stSensorName.c_str(), handle);
         numMatches = numOfObjects;
         HTuple pose, cov, area_roi = 0;
         Hobject roi_obj;
@@ -120,7 +121,7 @@ std::vector<RelPose*> DeformShapeBased::Inner(Image* img,RelPose* camPose, Calib
               area_roi = 0;
             }
         }
-        if(!trackPossible || true)
+        if(!trackPossible)
         {
           printf("Deform: Not tracking\n");
           rotationAngleStart = -1.0;
@@ -157,24 +158,36 @@ std::vector<RelPose*> DeformShapeBased::Inner(Image* img,RelPose* camPose, Calib
         else
         {
           printf("Reduced search possible\n");
-          rotationAngleStart = -0.8;
-          rotationAngleExtend = 0.8;
+          rotationAngleStart = -0.5;
+          rotationAngleExtend = 0.5;
           minScore = 0.5;
           maxOverlap = 1.0;
           numLevels = 0;
           greediness = 0.9;
-          scaleCMin = 0.9;
-          scaleCMax = 1.1;
-          scaleRMin = 0.7;
-          scaleRMax = 1.3;
+          scaleCMin = 1.0;
+          scaleCMax = 1.0;
+          scaleRMin = 1.0;
+          scaleRMax = 1.0;
           paramName = "subpixel";
           paramValue = "least_squares_very_high";
+          if(area_roi[0].I() > 1000)
+          {
+            Hobject img_reduced;
+            reduce_domain(*imgs, roi_obj, &img_reduced);
+            find_planar_calib_deformable_model(img_reduced, handle,rotationAngleStart, rotationAngleExtend,
+              scaleRMin, scaleRMax, scaleCMin, scaleCMax, minScore,
+              numMatches, maxOverlap, numLevels, greediness, paramName, paramValue,
+              &pose, &cov, &score);
 
-          find_planar_calib_deformable_model(*imgs, handle,rotationAngleStart, rotationAngleExtend,
-            scaleRMin, scaleRMax, scaleCMin, scaleCMax, minScore,
-            numMatches, maxOverlap, numLevels, greediness, paramName, paramValue,
-            &pose, &cov, &score);
-            printf("here\n");
+          }
+          else
+          {
+            find_planar_calib_deformable_model(*imgs, handle,rotationAngleStart, rotationAngleExtend,
+              scaleRMin, scaleRMax, scaleCMin, scaleCMax, minScore,
+              numMatches, maxOverlap, numLevels, greediness, paramName, paramValue,
+              &pose, &cov, &score);
+          }
+          printf("here\n");
         }
         printf("Finished Search (%ld results)\n", score.Num());
         if(score.Num() > 0)

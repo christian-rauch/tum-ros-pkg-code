@@ -57,8 +57,11 @@ Descriptor* RFAColorByShape::Perform(std::vector<Sensor*> sensors, RelPose* pose
       RegionOI* region = new RegionOI(pose, cam->m_relPose->m_uniqueID, &(cam->m_calibration));
       std::string stColor;
 	  /*(Hobject *img, Hobject *region, std::string &color, double& qualityMeasure)*/
-      m_checkColor->Inner(img->GetHImage() , &region->GetRegion(), stColor, hist);
-      cm = new ColorClass(new Class(stColor, Elem::m_LastID), stColor, hist);
+      m_checkColor->Inner(img->GetHImage() , &region->GetRegion(), stColor, hist, qualityMeasure);
+      if(qualityMeasure > 0.2)
+        cm = new ColorClass(new Class(stColor, Elem::m_LastID), stColor, hist);
+      else
+        cm = new ColorClass(new Class("MultiColor", Elem::m_LastID), stColor, hist);
      /* Halcon::Hobject xld = sm->GetContour(*sig->m_relPose);
       int num = 0;
       Halcon::count_obj(xld, (Hlong*)&num);

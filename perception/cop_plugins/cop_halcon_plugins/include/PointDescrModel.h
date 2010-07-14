@@ -60,7 +60,6 @@ namespace cop
     Calibration* GetCurCalibration();
 
     void SaveTo(XMLTag* tag);
-    Halcon::Hobject GetContour(RelPose& pose, Camera* cam= NULL);
     RelPose* GetRelPose() const {return m_objectPose;}
   private:
     int m_DescriptoHandel;

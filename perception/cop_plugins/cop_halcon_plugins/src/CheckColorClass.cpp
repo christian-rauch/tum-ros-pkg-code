@@ -30,6 +30,7 @@
 #include <cpp/HalconCpp.h>
 
 
+
 using namespace cop;
 
 // Procedure declarations
@@ -154,14 +155,14 @@ XMLTag* CheckColorClass::Save()
   return tag;
 }
 
-void CheckColorClass::Inner(Halcon::Hobject *img, Halcon::Hobject *region, std::string &color, std::map<std::string, double> &histo_cmp)
+void CheckColorClass::Inner(Halcon::Hobject *img, Halcon::Hobject *region, std::string &color, std::map<std::string, double> &histo_cmp, double &max_score)
 {
   Halcon::Hobject ClassRegions;
   Halcon::HTuple Color, Score;
   try
   {
     classify_colors_score(*img, *region, &ClassRegions, m_MLPHandle, m_Colors, &Color, &Score);
-    double max_score = -1.0;
+    max_score = -1.0;
     if(Score.Num() > 1)
     {
       for(int i = 0; i < Score.Num(); i++)
@@ -217,8 +218,9 @@ std::vector<RelPose*> CheckColorClass::Perform(std::vector<Sensor*> sensors, Rel
       Halcon::Hobject* obj = img->GetHImage();
       Halcon::Hobject& reg = region->GetRegion();
       std::string st;
+      double max_score;
       std::map<std::string, double> hist;
-      Inner(obj, &reg, st, hist);
+      Inner(obj, &reg, st, hist, max_score);
       for(size_t i = 0; i < possibleColors.size(); i++)
       {
         ColorClass* cl = (ColorClass*)possibleColors[i];

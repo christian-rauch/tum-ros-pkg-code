@@ -16,36 +16,36 @@
  */
 
 
-#ifndef CHECKCOLORCLASS_H
-#define CHECKCOLORCLASS_H
+#ifndef INTERSECTTWORUNS_H
+#define INTERSECTTWORUNS_H
 
 #include "LocateAlgorithm.h"
-#include "cpp/HalconCpp.h"
 
-#define XML_NODE_CHECKCOLORCLASS "CheckColorClass"
+#define XML_NODE_INTERSECTTWORUNS "IntersectTwoRuns"
 namespace cop
 {
-  class CheckColorClass :  public LocateAlgorithm
+
+  class IntersectTwoRuns :  public LocateAlgorithm
   {
   public:
-    CheckColorClass(std::string path);
-    CheckColorClass();
-    ~CheckColorClass(void);
+    IntersectTwoRuns(LocateAlgorithm* first, LocateAlgorithm* second);
+    IntersectTwoRuns();
+    ~IntersectTwoRuns(void);
 
     XMLTag* Save();
     // Public attribute accessor methods
     //
     std::vector<RelPose*> Perform(std::vector<Sensor*> sensors, RelPose* pose, Signature& Object, int &numOfObjects, double& qualityMeasure);
-    void Inner(Halcon::Hobject* img, Halcon::Hobject* region, std::string &color, std::map<std::string, double> &hist, double &max_score);
+
     virtual double CheckSignature(const Signature& object, const std::vector<Sensor*> &sensors);
 
-    virtual std::string GetName(){return XML_NODE_CHECKCOLORCLASS;}
-
+    virtual std::string GetName(){return XML_NODE_INTERSECTTWORUNS;}
     virtual void SetData(XMLTag* tag);
   private:
-    std::string m_stPath;
-    Halcon::HTuple m_Colors;
-    int m_MLPHandle;
+    LocateAlgorithm* m_firstAlg;
+    LocateAlgorithm* m_secondAlg;
+    size_t m_index_sens1;
+    size_t m_index_sens2;
   };
 }
-#endif /*FINDCALTAB_H*/
+#endif // IntersectTwoRuns_H

@@ -12,7 +12,7 @@ m_qualityMeasure(0.0)
 
 using namespace cop;
 
-RelPose* RelPoseHTuple::FRelPose(Halcon::HTuple& poseDesc, Halcon::HTuple& covariance, RelPose* relation, int id)
+RelPose* RelPoseHTuple::FRelPose(Halcon::HTuple& poseDesc, Halcon::HTuple& covariance, RelPose* relation, unsigned long id)
 {
 #ifdef NO_LO_SERVICE_AVAILABLE
   if(id != -1)
@@ -114,17 +114,17 @@ void RelPoseHTuple::Print(RelPose* pose_in)
   printf("%d\n", pose[pose.Num() -1].I());
 }
 #endif
-void RelPoseHTuple::GetHommat(RelPose* pose, Halcon::HTuple* hommat, int poseRel)
+void RelPoseHTuple::GetHommat(RelPose* pose, Halcon::HTuple* hommat, unsigned long poseRel)
 {
   Matrix m(4,4);
   if(poseRel > 0 && (unsigned)poseRel != pose->m_parentID)
   {
       RelPose* pose_rel = RelPoseFactory::GetRelPose(pose->m_uniqueID, poseRel);
-      m = pose_rel->GetMatrix();
+      m = pose_rel->GetMatrix(0);
       RelPoseFactory::FreeRelPose(pose_rel);
   }
   else
-    m = pose->GetMatrix();
+    m = pose->GetMatrix(0);
   Halcon::tuple_gen_const(12,0,hommat);
   (*hommat)[0] = m.element(0,0);
   (*hommat)[1] = m.element(0,1);
@@ -139,7 +139,7 @@ void RelPoseHTuple::GetHommat(RelPose* pose, Halcon::HTuple* hommat, int poseRel
   (*hommat)[10] = m.element(2,2);
   (*hommat)[11] = m.element(2,3);
 }
-void RelPoseHTuple::GetPose(RelPose* pose, Halcon::HTuple* poses, int poseRel)
+void RelPoseHTuple::GetPose(RelPose* pose, Halcon::HTuple* poses, unsigned long poseRel)
 {
   Halcon::HTuple hommat;
   GetHommat(pose, &hommat, poseRel);

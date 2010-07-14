@@ -196,13 +196,13 @@ Reading* StereoSensor::GetReading(const long &Frame)
         Halcon::get_image_pointer1(img_l,&pr,&h,&w,&t);
       m_lastReading = new SwissRangerReading();
 
-      m_lastReading->m_pcd.header.stamp = ros::Time::now();
-      m_lastReading->m_pcd.header.frame_id = "/base_link";
+      m_lastReading->m_image.header.stamp = ros::Time::now();
+      m_lastReading->m_image.header.frame_id = "/base_link";
 
       // resize channels and copy their names
-      m_lastReading->m_pcd.channels.resize (num_channels[0].I());
-      for (unsigned int i = 0; i < m_lastReading->m_pcd.channels.size(); i++)
-        m_lastReading->m_pcd.channels[i].name = i == 0 ? "R" : i == 1 ? "G" : "B";
+      m_lastReading->m_image.channels.resize (num_channels[0].I());
+      for (unsigned int i = 0; i < m_lastReading->m_image.channels.size(); i++)
+        m_lastReading->m_image.channels[i].name = i == 0 ? "R" : i == 1 ? "G" : "B";
       unsigned char* image_pointer_red = (unsigned char*)pr[0].L();
       unsigned char* image_pointer_green = NULL;
       unsigned char* image_pointer_blue = NULL;
@@ -232,13 +232,13 @@ Reading* StereoSensor::GetReading(const long &Frame)
           num_final--;
             continue;
           }
-          m_lastReading->m_pcd.points.push_back (point);
+          m_lastReading->m_image.points.push_back (point);
 
-          m_lastReading->m_pcd.channels[0].values.push_back (image_pointer_red[index]);
+          m_lastReading->m_image.channels[0].values.push_back (image_pointer_red[index]);
           if(num_channels[0].I() == 3)
           {
-            m_lastReading->m_pcd.channels[1].values.push_back (image_pointer_green[index]);
-            m_lastReading->m_pcd.channels[2].values.push_back (image_pointer_blue[index]);
+            m_lastReading->m_image.channels[1].values.push_back (image_pointer_green[index]);
+            m_lastReading->m_image.channels[2].values.push_back (image_pointer_blue[index]);
           }
       }
       PushBack(m_lastReading);
@@ -269,7 +269,7 @@ void StereoSensor::Show(const long frame)
   {
     GetReading(-1);
   }
-  m_cloud_pub.publish(m_lastReading->m_pcd);
+  m_cloud_pub.publish(m_lastReading->m_image);
   /** TODO
         publish results on a topic?,
         static topic?

@@ -88,7 +88,6 @@ std::vector<RelPose*> TwoInOneAlg::Perform(std::vector<Sensor*> cam, RelPose* po
         else
           numOfObjects++;
       }
-
     }
   }
   return results;
@@ -101,6 +100,6 @@ double TwoInOneAlg::CheckSignature(const Signature& object, const std::vector<Se
   double val2 = m_secondAlg->CheckSignature(object, sensors);
   if(val1 < 0.00001 || val2 < 0.00001)
     return 0.0;
-printf("return %f\n", val1 + val2);
+  printf("return %f\n", val1 + val2);
   return  val1 + val2;
 }

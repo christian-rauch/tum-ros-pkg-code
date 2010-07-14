@@ -5,7 +5,7 @@
       This is a plugin to make the halcon framegrabbers available in cop.
     </description>
   </class>
-  
+
    <class name="CameraDriverRelay" type="CameraDriverRelay" base_class_type="Sensor">
     <description>
       This is a plugin to make the halcon framegrabbers available over network, too.
@@ -36,9 +36,14 @@
       This is a plugin reads an image file
     </description>
   </class>
-  
-  <!--Descriptors --> 
+
+  <!--Descriptors -->
   <class name="ShapeModel" type="ShapeModel" base_class_type="Descriptor">
+    <description>
+      Shape Model
+    </description>
+  </class>
+  <class name="NamedClass" type="NamedClass" base_class_type="Descriptor">
     <description>
       Shape Model
     </description>
@@ -68,7 +73,7 @@
       Blob
     </description>
   </class>
-  
+
    <!--LocateAlgorithms -->
   <class name="CheckColorClass" type="CheckColorClass"  base_class_type="LocateAlgorithm">
     <description>
@@ -116,13 +121,26 @@
       For debugging
     </description>
   </class>
+  <class name="IntersectTwoRuns" type="IntersectTwoRuns"  base_class_type="LocateAlgorithm">
+    <description>
+      Takes two different sensors and verifies the results from one algorithm applied on both sensors
+    </description>
+  </class>
+
   <!-- Refine Algorithms -->
+  <class name="RFAClassByDPs" type="RFAClassByDPs"
+               base_class_type="RefineAlgorithm">
+      <description>
+            object classification
+      </description>
+   </class>
   <class name="RFADeformByCluster" type="RFADeformByCluster"
                base_class_type="RefineAlgorithm">
       <description>
             Learns a deformable shape model (texture-edges) from a cluster
       </description>
    </class>
+
   <class name="RFAColorByShape" type="RFAColorByShape"
                base_class_type="RefineAlgorithm">
       <description>
@@ -135,5 +153,5 @@
             Loads new CAD models from the webfor a certain class string
       </description>
    </class>
-                  
+
 </library>

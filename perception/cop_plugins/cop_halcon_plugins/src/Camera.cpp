@@ -24,11 +24,7 @@
 #include "CameraDriver.h"
 #include "SimulatedCamera.h"
 
-#ifdef USE_YARP_COMM
-#include "NetworkCamera.h"
-#else
 #include "ROSCamera.h"
-#endif /*USE_YARP _COMM*/
 
 
 #include "XMLTag.h"
@@ -36,12 +32,8 @@
 
 using namespace Halcon;
 
-#ifdef BOOST_THREAD
 #include <boost/thread/mutex.hpp>
 #define BOOST(A) A
-#else
-#define BOOST(A) ;
-#endif
 
 using namespace cop;
 
@@ -186,7 +178,7 @@ Calibration::Calibration(XMLTag* tag) :
       m_radialDistMap = new Hobject();
       m_camdist = new HTuple();
       Halcon::change_radial_distortion_cam_par("fixed", param, 0.0, m_camdist);
-      Halcon::gen_radial_distortion_map(m_radialDistMap, param, *m_camdist, "bilinear");
+      Halcon::gen_radial_distortion_map(m_radialDistMap, param, *m_camdist, "none");
                         m_radialDistortionHandling = true;
     }
     }
@@ -201,7 +193,7 @@ void Calibration::SetCamParam(HTuple& param)
     m_camdist = new HTuple();
     Halcon::change_radial_distortion_cam_par("fixed", param, 0.0, m_camdist);
     m_radialDistMap = new Hobject();
-    Halcon::gen_radial_distortion_map(m_radialDistMap, param, *m_camdist, "bilinear");
+    Halcon::gen_radial_distortion_map(m_radialDistMap, param, *m_camdist, "none");
                 m_radialDistortionHandling = true;
 
   }
@@ -317,39 +309,57 @@ bool  Camera::CanSee (RelPose &pose) const
 {
   if(m_relPose == NULL)
      return false;
-#ifdef _DEBUG
-  printf("Can a camera %s at Pose %ld See %ld\n",GetSensorID().c_str(),  m_relPose->m_uniqueID, pose.m_uniqueID);
-#endif
   if(pose.m_uniqueID == m_relPose->m_uniqueID) /*lazy people just search in front of the camera, allow it*/
     return true;
   RelPose* pose_rel = RelPoseFactory::GetRelPose(pose.m_uniqueID, m_relPose->m_uniqueID);
-  Matrix m = pose_rel->GetMatrix();
-  RelPoseFactory::FreeRelPose(pose_rel);
-  double x = m.element(0,3);
-  double y = m.element(1,3);
-  double z = m.element(2,3);
-  if(z > 0.0)
+  if(pose_rel != NULL)
   {
+    Matrix m = pose_rel->GetMatrix(0);
+    RelPoseFactory::FreeRelPose(pose_rel);
+    double x = m.element(0,3);
+    double y = m.element(1,3);
+    double z = m.element(2,3);
+    if(z > 0.0)
+    {
 
-    try
-    {
-      Halcon::HTuple R, C;
-      Halcon::project_3d_point(x,y,z, m_calibration.CamParam(), &R , &C);
-      if(R >= 0 && R < m_calibration.m_height
-        && C >= 0 && C < m_calibration.m_width)
-        return true;
-    }
-    catch(Halcon::HException ex)
-    {
-      printf("Error: %s\n", ex.message);
+      try
+      {
+        Halcon::HTuple R, C;
+        Halcon::project_3d_point(x,y,z, m_calibration.CamParam(), &R , &C);
+        if(R >= 0 && R < m_calibration.m_height
+          && C >= 0 && C < m_calibration.m_width)
+          return true;
+      }
+      catch(Halcon::HException ex)
+      {
+        printf("Error: %s\n", ex.message);
+      }
     }
   }
-  //TODO what when the position can be in the image, but not in the center?
-#ifdef _DEBUG
-  printf("A Camera can not see pose (rel to camera): %f %f %f\n", x,y,z);
-#endif
+  else
+  {
+    printf("Queried position does not exist (or position of the camera), so better assume the camera can see this position\n");
+    return true;
+  }
   return false;
 }
+
+void Camera::ProjectPoint3DToSensor(const double &x, const double &y,
+             const double &z, double &row, double &column)
+{
+  Halcon::HTuple R, C;
+  double r, c;
+  Halcon::project_3d_point(x,y,z, m_calibration.CamParam(), &R , &C);
+  Sensor::ProjectPoint3DToSensor(x,y,z,r, c);
+  Halcon::set_color(m_win->WindowHandle(), "green");
+  Halcon::disp_cross(m_win->WindowHandle(), R, C, 8, 0);
+  Halcon::set_color(m_win->WindowHandle(), "red");
+  Halcon::disp_cross(m_win->WindowHandle(), r, c, 8, 0.7);
+  printf("Ros: %f == %f Col %f == %f\n",  R[0].D(), r,  C[0].D(), c);
+  row = R[0].D();
+  column = C[0].D();
+}
+
 
 void Camera::Show(const long frame)
 {

@@ -29,11 +29,12 @@
 
 
 #define XML_ATTRIBUTE_CALIBFILE       "CalibFileName"
-#define XML_ATTRIBUTE_TOPICNAME  "TopicName"
+#define XML_ATTRIBUTE_TOPICNAMEROSCOP  "TopicName"
 using namespace cop;
 
 ROSCOPCamera::ROSCOPCamera()
 {
+  printf("Constructor ROSCOPCamera\n");
 }
 
 void ROSCOPCamera::SetData( XMLTag* ConfigFile)
@@ -74,7 +75,7 @@ void ROSCOPCamera::SetData( XMLTag* ConfigFile)
       {
         printf("RC: error Reading RelPose\n");
       }
-      m_stImageTopic = ConfigFile->GetProperty(XML_ATTRIBUTE_TOPICNAME, "image");
+      m_stImageTopic = ConfigFile->GetProperty(XML_ATTRIBUTE_TOPICNAMEROSCOP, "image");
       m_stCalibName = ConfigFile->GetProperty(XML_ATTRIBUTE_CALIBFILE);
       if(m_stCalibName.length() > 0)
       {
@@ -124,11 +125,11 @@ Reading* ROSCOPCamera::GetReading(const long &Frame)
     {
       while(m_grabbing && ((signed)m_images.size() < (Frame - m_deletedOffset + 1) || m_images.size() == 0))
       {
-        BOOST(printf("Sleeping a while and "));
-        BOOST(boost::xtime t);
-        BOOST(boost::xtime_get(&t, boost::TIME_UTC));
-        BOOST(t.sec += 1);
-        BOOST(boost::thread::sleep(t));
+        printf("Sleeping a while and ");
+        boost::xtime t;
+        boost::xtime_get(&t, boost::TIME_UTC);
+        t.sec += 1;
+        boost::thread::sleep(t);
 
         printf("waiting for %s to start grabbing(Grabbing: %s, NumImages: %ld)\n", GetSensorID().c_str(), m_grabbing ? "true" : false, m_images.size());
       }
@@ -136,7 +137,7 @@ Reading* ROSCOPCamera::GetReading(const long &Frame)
     }
     if((signed)m_images.size() < (Frame - m_deletedOffset + 1) || m_images.size() == 0)
     {
-      printf("ROSCOPCamera: unexspected error\n");
+      printf("ROSCOPCamera: unexpected error\n");
       throw "Asking for images from a camera that has no images";
     }
   }
@@ -157,7 +158,7 @@ XMLTag* ROSCOPCamera::Save()
   if(tag != NULL)
   {
     tag->AddProperty(XML_ATTRIBUTE_CALIBFILE, m_stCalibName);
-    tag->AddProperty(XML_ATTRIBUTE_TOPICNAME, m_stImageTopic);
+    tag->AddProperty(XML_ATTRIBUTE_TOPICNAMEROSCOP, m_stImageTopic);
   }
 
   return tag;
@@ -219,7 +220,6 @@ void ReadImage(const sensor_msgs::ImageConstPtr& m, Halcon::Hobject* obj)
   {
 
     Halcon::Hobject *obj = new Halcon::Hobject();
-    printf("In callback of sensor %s\n", GetSensorID().c_str());
     ReadImage(msg, obj);
     if(false && m_calibration.m_radialDistortionHandling)
     {

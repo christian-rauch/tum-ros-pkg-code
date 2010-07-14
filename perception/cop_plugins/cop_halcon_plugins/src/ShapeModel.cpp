@@ -528,7 +528,7 @@ Mesh_t ShapeModel::GetMesh(RelPose* pose, double measure_adaption)
 {
   ShapeModelParamSet& sm = *m_shapeParams_file[m_curIndex].first;
   int points;
-  Matrix m = pose->GetMatrix();
+  Matrix m = pose->GetMatrix(0);
   m.element(0, 3) *= measure_adaption;
   m.element(1, 3) *= measure_adaption;
   m.element(2, 3) *= measure_adaption;
@@ -544,12 +544,12 @@ double ShapeModel::IntersectWithSupportingPlane(RelPose* planePose, RelPose* mat
   printf("Involved Jlo Ids:\n  Cam: %ld (p:%ld)\n  Plane: %ld (p:%ld)\n  Match: %ld (p:%ld)\n", cameraPose->m_uniqueID, cameraPose->m_parentID, planePose->m_uniqueID, planePose->m_parentID, matchPose->m_uniqueID, matchPose->m_parentID);
   printf("Getting Camera and\n");
   RelPose* pose_rel_c = RelPoseFactory::GetRelPose(cameraPose->m_uniqueID, planePose->m_uniqueID);
-  Matrix m_camera_in_plane = pose_rel_c->GetMatrix();
+  Matrix m_camera_in_plane = pose_rel_c->GetMatrix(0);
   RelPoseFactory::FreeRelPose(pose_rel_c);
   cout << m_camera_in_plane << endl;
   printf("Match in Plane Coordinates\n");
   RelPose* pose_rel_m = RelPoseFactory::GetRelPose(matchPose->m_uniqueID, planePose->m_uniqueID);
-  Matrix m_match_in_plane = pose_rel_m->GetMatrix();
+  Matrix m_match_in_plane = pose_rel_m->GetMatrix(0);
   RelPoseFactory::FreeRelPose(pose_rel_m);
   cout << m_match_in_plane << endl;
   intersectX = m_match_in_plane.element(0,3);
@@ -703,7 +703,7 @@ bool ShapeModel::PoseToRange(RelPose* pose, ShapeModelParamSet &pm, double* grav
   {
       if(pose->m_uniqueID != ID_WORLD)
       {
-          Matrix dings = pose->GetMatrix();
+          Matrix dings = pose->GetMatrix(0);
           if(dings.element(0,0) >= 0.9999 &&
             dings.element(1,1) >= 0.9999 &&
             dings.element(2,2) >= 0.9999 &&
@@ -969,7 +969,7 @@ void ShapeModel::EvalScaling( ShapeModelParamSet* sm,  Calibration* calib, std::
   int points;
   double xcenter,ycenter,zcenter;
   double width,height,depth;
-  Matrix m = pose->GetMatrix();
+  Matrix m = pose->GetMatrix(0);
   double ref_size = m.element(2,3) / 10;
   printf("ref_size : %f \n",ref_size );
   Matrix t(4,4);

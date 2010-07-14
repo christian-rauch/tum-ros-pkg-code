@@ -21,6 +21,8 @@
 /*#ifdef DEFORMSHAPE_AVAILABLE*/
 
 #include "Descriptor.h"
+#include <map>
+#include <stdio.h>
 
 #define XML_NODE_DEFORMSHAPEMODEL "DeformShapeModel"
 
@@ -56,7 +58,18 @@ namespace cop
     virtual std::string GetNodeName() const {return XML_NODE_DEFORMSHAPEMODEL;}
 
 
-    long GetDeformShapeHandle(){return m_handle;}
+    long GetDeformShapeHandle(std::string sensor_id){
+                                                      printf("\n\n Searching for a handle for sensor %s (list length = %ld )\n", sensor_id.c_str(), m_handle.size());
+                                                      if(m_handle.find(sensor_id) != m_handle.end())
+                                                      {
+                                                          printf("Got %ld\n\n", m_handle[sensor_id]);
+                                                         return  m_handle[sensor_id];
+                                                      }
+                                                      else if(m_handle.find("default") != m_handle.end())
+                                                         return  m_handle["default"];
+                                                      else
+                                                         return -1;
+                                                      }
     /*First match, needed for tracking*/
     double DefineDeformShapeModel(Image* img, Halcon::Hobject* region, Camera* cam, RelPose* pose);
 
@@ -70,14 +83,14 @@ namespace cop
     *************************************************************************/
     virtual void Show(RelPose* pose, Sensor* cam);
   protected:
-    bool LoadFromFile(std::string fileName);
+    bool LoadFromFile(std::string fileName, std::string stSensorID);
 
     virtual void SetData(XMLTag* tag);
     virtual void SaveTo(XMLTag* tag);
 
 
   private:
-    long m_handle;
+    std::map<std::string, long> m_handle;
     std::string m_filename;
     bool m_bWritten;
     Halcon::Hobject* m_regionTemp;

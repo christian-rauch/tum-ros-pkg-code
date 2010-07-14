@@ -41,9 +41,7 @@ ROSBUILD_ADD_LIBRARY(VisionPlugins
 ./src/Camera.cpp
 ./src/PRAShapeVsPointDescr.cpp	./src/RFAColorByShape.cpp
 ./src/RFAPointDescrByShape.cpp 	./src/DeformShapeModel.cpp
-
 ./src/RFADeformByCluster.cpp
-
 ./src/PointDescrModel.cpp
 ./src/DeformShapeBased.cpp
 ./src/SearchParams3d.cpp   
@@ -58,7 +56,10 @@ ROSBUILD_ADD_LIBRARY(VisionPlugins
 ./src/CheckColorClass.cpp
 ./src/dxfwriter.cpp
 ./src/TwoInOneAlg.cpp
-./src/File.cpp   
+./src/IntersectTwoRuns.cpp
+./src/File.cpp
+./src/ClassifyObject.cpp
+./src/RFAClassByDPs.cpp  
 ./src/StereoSensor.cpp
 ./src/RelPoseHTuple.cpp
 )

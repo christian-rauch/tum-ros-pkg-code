@@ -12,8 +12,10 @@
   <depend package="cop_ros_plugins" />  
   <depend package="opencv2" />  
   <depend package="cv_bridge" />
+  <depend package="descr_class" />
   <export>
-    <cpp cflags="-I${prefix}/include/" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lVisionPlugins"/>
+    <cpp cflags="-I${prefix}/include/" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib
+    -lVisionPlugins" />
     <!--
     <pluginlib_tutorial_interfaces polygon="${prefix}/polygon_plugins.xml" shape="${prefix}/shape_plugins.xml"/>
     -->

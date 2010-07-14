@@ -58,6 +58,7 @@
 #include "TwoInOneAlg.h"
 #include "SupportingPlaneDetector.h"
 #include "SimulatedLocate.h"
+#include "IntersectTwoRuns.h"
 
 /*Includes for RefineAlgorithm Plugins*/
   /*interface of cognitive_perception*/
@@ -83,42 +84,50 @@ void loadLib(void) __attribute__ ((constructor));
 
 void loadLib(void)
 {
+    printf("Register Image vconversions\n");
     Image::RegisterImageConverter();
+    printf("Register Halcon exception handler\n");
     Halcon::HException::InstallHHandler(&MyHalconExceptionHandler);
 }
 
-/*Sensor Plugins*/
-PLUGINLIB_REGISTER_CLASS(CameraDriver, CameraDriver, Sensor);
-PLUGINLIB_REGISTER_CLASS(CameraDriverRelay, CameraDriverRelay, Sensor);
+#define PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(class_name, class_type, base_class_type) \
+  POCO_BEGIN_NAMED_MANIFEST(class_name, base_class_type) \
+  POCO_EXPORT_CLASS(class_type) \
+  POCO_END_MANIFEST
 
-PLUGINLIB_REGISTER_CLASS(SimulatedCamera, SimulatedCamera, Sensor);
-PLUGINLIB_REGISTER_CLASS(ROSCOPCamera, ROSCOPCamera, Sensor);
-PLUGINLIB_REGISTER_CLASS(StereoSensor, StereoSensor, Sensor);
+/*Sensor Plugins*/
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(CameraDriver, CameraDriver, Sensor);
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(CameraDriverRelay, CameraDriverRelay, Sensor);
+
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(SimulatedCamera, SimulatedCamera, Sensor);
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(ROSCOPCamera, ROSCOPCamera, Sensor);
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(StereoSensor, StereoSensor, Sensor);
 
 /*Reading Plugin*/
-PLUGINLIB_REGISTER_CLASS(ImageFile, Image, Reading);
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(ImageFile, Image, Reading);
 
 /*Descriptor Plugins*/
-PLUGINLIB_REGISTER_CLASS(ShapeModel, ShapeModel, Descriptor);
-PLUGINLIB_REGISTER_CLASS(CalTab, CalTab, Descriptor);
-PLUGINLIB_REGISTER_CLASS(DeformShapeModel, DeformShapeModel, Descriptor);
-PLUGINLIB_REGISTER_CLASS(ColorClass, ColorClass, Descriptor);
-PLUGINLIB_REGISTER_CLASS(Blob, Blob, Descriptor);
-PLUGINLIB_REGISTER_CLASS(SupportingPlaneDescriptor, SupportingPlaneDescriptor, Descriptor);
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(ShapeModel, ShapeModel, Descriptor);
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(CalTab, CalTab, Descriptor);
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(DeformShapeModel, DeformShapeModel, Descriptor);
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(ColorClass, ColorClass, Descriptor);
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(Blob, Blob, Descriptor);
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(SupportingPlaneDescriptor, SupportingPlaneDescriptor, Descriptor);
 
 /*LocateAlgorithm Plugins*/
-PLUGINLIB_REGISTER_CLASS(ShapeBased3DAlg, ShapeBased3D, LocateAlgorithm);
-PLUGINLIB_REGISTER_CLASS(FindCalTab, FindCalTab, LocateAlgorithm);
-PLUGINLIB_REGISTER_CLASS(DeformShapeBased, DeformShapeBased, LocateAlgorithm);
-PLUGINLIB_REGISTER_CLASS(DeformShapeBasedAlg, DeformShapeBased, LocateAlgorithm);
-PLUGINLIB_REGISTER_CLASS(CheckColorClass, CheckColorClass, LocateAlgorithm);
-PLUGINLIB_REGISTER_CLASS(BlobLocalizer, BlobLocalizer, LocateAlgorithm);
-PLUGINLIB_REGISTER_CLASS(TwoInOneAlg, TwoInOneAlg, LocateAlgorithm);
-PLUGINLIB_REGISTER_CLASS(SupportingPlaneDetector, SupportingPlaneDetector, LocateAlgorithm);
-PLUGINLIB_REGISTER_CLASS(SimulatedLocate, SimulatedLocate, LocateAlgorithm);
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(ShapeBased3DAlg, ShapeBased3D, LocateAlgorithm);
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(FindCalTab, FindCalTab, LocateAlgorithm);
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(DeformShapeBased, DeformShapeBased, LocateAlgorithm);
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(DeformShapeBasedAlg, DeformShapeBased, LocateAlgorithm);
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(CheckColorClass, CheckColorClass, LocateAlgorithm);
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(BlobLocalizer, BlobLocalizer, LocateAlgorithm);
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(TwoInOneAlg, TwoInOneAlg, LocateAlgorithm);
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(SupportingPlaneDetector, SupportingPlaneDetector, LocateAlgorithm);
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(SimulatedLocate, SimulatedLocate, LocateAlgorithm);
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(IntersectTwoRuns, IntersectTwoRuns, LocateAlgorithm);
 
 
 /*RefineAlgorithm Plugins*/
-PLUGINLIB_REGISTER_CLASS(RFADeformByCluster, RFADeformByCluster, RefineAlgorithm);
-PLUGINLIB_REGISTER_CLASS(RFAColorByShape, RFAColorByShape, RefineAlgorithm);
-PLUGINLIB_REGISTER_CLASS(ShapeModelDownloader, ShapeModelDownloader, RefineAlgorithm);
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(RFADeformByCluster, RFADeformByCluster, RefineAlgorithm);
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(RFAColorByShape, RFAColorByShape, RefineAlgorithm);
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(ShapeModelDownloader, ShapeModelDownloader, RefineAlgorithm);

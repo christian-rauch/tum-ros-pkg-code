@@ -40,34 +40,43 @@ Descriptor* RFADeformByCluster::Perform(std::vector<Sensor*> cam_vec, RelPose* p
 {
 	DeformShapeModel* deformshape  = NULL;
   Camera *cam = NULL;
+
+
   for(size_t i = 0; i < cam_vec.size(); i++)
   {
-    if(cam_vec[i]->IsCamera())
+    if(cam_vec[i] != NULL && cam_vec[i]->IsCamera())
     {
       cam = (Camera*)cam_vec[i];
-      break;
+      try
+      {
+        if(deformshape == NULL)
+        {
+          Class *cl = new Class();
+          std::stringstream st;
+          st << "Texture_" << cl->m_ID;
+          cl->SetName(st.str());
+          deformshape = new DeformShapeModel(cl);
+        }
+        Image* img = (Image*)cam->GetReading(-1);
+        RegionOI region(pose, img->GetPose()->m_uniqueID, &(cam->m_calibration));
+        try
+        {
+          deformshape->DefineDeformShapeModel(img, &(region.m_reg), cam, pose);
+          deformshape->Evaluate(0.5, 0.5);
+        }
+        catch(char const* ex)
+        {
+          printf("Learning of Descriptorbased model Failed: %s\n", ex);
+        }
+        img->Free();
+       }
+       catch(char const* ex)
+       {
+         printf("Learning of Descriptorbased model Failed: %s\n", ex);
+       }
     }
   }
-  if(cam == NULL)
-    return deformshape;
-  try
-  {
-    Class *cl = new Class();
-    std::stringstream st;
-    st << "Texture_" << cl->m_ID;
-    cl->SetName(st.str());
-    deformshape = new DeformShapeModel(cl);
-    Image* img = (Image*)cam->GetReading(-1);
-    RegionOI region(pose, img->GetPose()->m_uniqueID, &(cam->m_calibration));
-    deformshape->DefineDeformShapeModel(img, &(region.m_reg), cam, pose);
-    img->Free();
-    deformshape->Evaluate(0.5, 0.5);
-   }
-   catch(char const* ex)
-   {
-     printf("Learning of Descriptorbased model Failed: %s\n", ex);
-   }
-   return deformshape;
+  return deformshape;
 }
 
 double RFADeformByCluster::CheckSignature(const Signature& sig, const std::vector<Sensor*> &sensors)

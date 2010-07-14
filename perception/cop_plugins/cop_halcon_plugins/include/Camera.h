@@ -143,6 +143,9 @@ namespace cop
 
       virtual bool CanSee(RelPose& pose) const;
 
+      virtual void ProjectPoint3DToSensor(const double &x, const double &y,    
+             const double &z, double &row, double &column);
+             
 
       /**
       *  GetUnformatedCalibrationValues

@@ -36,58 +36,58 @@ ColorModel::ColorModel()
 void ColorModel::SetData(XMLTag* tag)
 {
   Descriptor::SetData(tag);
-	if(tag != NULL)
-	{
-		XMLTag* patchSize = tag->GetChild(XML_NODE_PATCHSIZE);
-		if(patchSize != NULL)
-			m_patchSize = tag->Load(patchSize,&m_patchSize) ;
-		XMLTag* colorspec = tag->GetChild(XML_NODE_COLORSPEC);
-		if(colorspec != NULL)
-			m_colorSpec = tag->Load(colorspec,&m_colorSpec) ;
-	}
+  if(tag != NULL)
+  {
+    XMLTag* patchSize = tag->GetChild(XML_NODE_PATCHSIZE);
+    if(patchSize != NULL)
+      m_patchSize = tag->Load(patchSize,&m_patchSize);
+    XMLTag* colorspec = tag->GetChild(XML_NODE_COLORSPEC);
+    if(colorspec != NULL)
+      m_colorSpec = tag->Load(colorspec,&m_colorSpec) ;
+  }
 }
 
 ColorModel::ColorModel(Class* classref, Signature* sig)
 : Descriptor(classref)
 {
-	ShapeModel* sm = (ShapeModel*)sig->GetElement(0, DESCRIPTOR_SHAPE);
-	Image* img = (Image*)sm->GetLastMatchedImage();
+  ShapeModel* sm = (ShapeModel*)sig->GetElement(0, DESCRIPTOR_SHAPE);
+  Image* img = (Image*)sm->GetLastMatchedImage();
 
-	try
+  try
+  {
+   Halcon::Hobject xld = sm->GetContour(*sig->m_relPose);
+   int num = 0;
+   Halcon::count_obj(xld, (Hlong*)&num);
+   printf("Point Num Xld: %d\n", num);
+   Halcon::Hobject region;
+   Halcon::gen_empty_region(&region);
+   for(int i = 0; i < num; i++)
+   {
+	Halcon::Hobject obj;
+	Halcon::gen_region_contour_xld(xld, &obj ,"filled");
+	Halcon::union2(obj, region, &region);
+   }
+   Halcon::connection(region, &region);
+   Halcon::fill_up(region, &region);
+   Halcon::Hobject reducedimg;
+   Halcon::union1(region, &region);
+   Halcon::HTuple area, r,c;
+   Halcon::area_center(region, &area, &r, &c);
+   SetSize(area[0].L());
+   Halcon::reduce_domain(*img->GetHImage(), region, &reducedimg);
+   Halcon::count_channels(reducedimg, (Hlong*)&num);
+   for(int i = 0; i < num; i++)
+   {
+	Halcon::HTuple abshisto;
+	Halcon::HTuple relhisto;
+	Halcon::Hobject obj;
+	Halcon::access_channel(reducedimg, &obj, i + 1);
+	Halcon::gray_histo(region, obj, &abshisto, &relhisto);
+	for(int j = 0; j < relhisto.Num(); j++)
 	{
-		Halcon::Hobject xld = sm->GetContour(*sig->m_relPose);
-		int num = 0;
-		Halcon::count_obj(xld, (Hlong*)&num);
-		printf("Point Num Xld: %d\n", num);
-		Halcon::Hobject region;
-		Halcon::gen_empty_region(&region);
-		for(int i = 0; i < num; i++)
-		{
-			Halcon::Hobject obj;
-			Halcon::gen_region_contour_xld(xld, &obj ,"filled");
-			Halcon::union2(obj, region, &region);
-		}
-		Halcon::connection(region, &region);
-		Halcon::fill_up(region, &region);
-		Halcon::Hobject reducedimg;
-		Halcon::union1(region, &region);
-		Halcon::HTuple area, r,c;
-		Halcon::area_center(region, &area, &r, &c);
-		SetSize(area[0].L());
-		Halcon::reduce_domain(*img->GetHImage(), region, &reducedimg);
-		Halcon::count_channels(reducedimg, (Hlong*)&num);
-		for(int i = 0; i < num; i++)
-		{
-			Halcon::HTuple abshisto;
-			Halcon::HTuple relhisto;
-			Halcon::Hobject obj;
-			Halcon::access_channel(reducedimg, &obj, i + 1);
-			Halcon::gray_histo(region, obj, &abshisto, &relhisto);
-			for(int j = 0; j < relhisto.Num(); j++)
-			{
-				AddColorSpec(relhisto[j].D());
-			}
-		}
+		AddColorSpec(relhisto[j].D());
+	}
+    }	
 	}
 	catch(Halcon::HException ex)
 	{

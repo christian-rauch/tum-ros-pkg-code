@@ -11,11 +11,11 @@ namespace cop
   public:
     static void Update(RelPose* pose, Halcon::HTuple& poseDesc, Halcon::HTuple& covariance, RelPose* relation);
     static bool TupleToMat(Halcon::HTuple& poseDesc, Halcon::HTuple&  covariance, Matrix &m, Matrix &d);
-    static void GetPose(RelPose* posein, Halcon::HTuple* pose, int poseRel = 0);
-    static void GetHommat(RelPose* pose, Halcon::HTuple* hommat, int poseRel) ;
+    static void GetPose(RelPose* posein, Halcon::HTuple* pose, unsigned long poseRel = 0);
+    static void GetHommat(RelPose* pose, Halcon::HTuple* hommat, unsigned long poseRel) ;
     static void Print(RelPose* pose);
 
-    static RelPose* FRelPose(Halcon::HTuple& poseDesc, Halcon::HTuple& covariance, RelPose* relation, int id = -1);
+    static RelPose* FRelPose(Halcon::HTuple& poseDesc, Halcon::HTuple& covariance, RelPose* relation, unsigned long id = -1);
 
   };
 }

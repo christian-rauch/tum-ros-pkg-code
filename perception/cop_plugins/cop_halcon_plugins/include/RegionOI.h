@@ -32,6 +32,7 @@ namespace cop
   {
   public:
     RegionOI(RegionRuns row_colStart_colEnd);
+    RegionOI(Halcon::Hobject region) : m_reg(region){};
     RegionOI(std::string stFilename);
     RegionOI(RelPose* pose, int cam_pose_id, Calibration* calib);
 

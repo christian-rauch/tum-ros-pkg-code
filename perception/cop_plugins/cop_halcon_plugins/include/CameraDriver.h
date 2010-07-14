@@ -39,11 +39,8 @@ namespace Halcon
 }
 #define XML_NODE_CAMERADRIVER "CameraDriver"
 
-#ifdef BOOST_THREAD
 #include <boost/thread.hpp>
 using namespace boost;
-#else
-#endif
 
 namespace cop
 {
@@ -113,7 +110,7 @@ namespace cop
       std::string m_field;
       int         m_BitsPerChannel;
       std::string m_colorSpace;
-      int         m_gain;
+      std::string m_generic;
       std::string m_device;
       std::string m_externalTrigger;
       int         m_lineIn;
@@ -122,10 +119,7 @@ namespace cop
       PTUClient* m_ptuClient;
   #endif
 
-  #ifdef BOOST_THREAD
       boost::thread* m_grabbingThread;
-  #else
-  #endif
 
   };
 }
@@ -141,6 +135,7 @@ namespace cop
     CameraDriverRelay() {};
     virtual std::string GetName() const {return XML_NODE_NAME;}
     sensor_msgs::Image ConvertData (Reading* img);
+    
     virtual XMLTag* Save();
     virtual void SetData(XMLTag* tag);
   };
