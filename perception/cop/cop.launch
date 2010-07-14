@@ -2,7 +2,7 @@
   <node name="cop"
         pkg="cognitive_perception" type="cop_srv" args="$(find cop)/resource/cop_config.ini cop"
         launch-prefix="$(find kimp_bringup)/scripts/exec_in_dir.sh  $(find cop)/resource"
-        output="screen"
+        output="log"
         respawn="false"
         machine="leela"/>
 </launch>
