@@ -34,6 +34,8 @@
 #define XML_PROPERTY_ELEMID "ElemID"
 #define XML_NODE_ELEMENT "Elem"
 
+#define FORBIDDEN_ID_RANGE_MIN 700000 
+
 namespace cop
 {
 
@@ -118,14 +120,22 @@ namespace cop
       return m_timestamp;
     }
     void Touch();
+    void SetTimeStamp(unsigned long timestamp)
+    {
+      m_timestamp = timestamp;
+    }
+
+    void SetFullPose(bool fullPose){m_fullPose = fullPose;}
 
     /***********************************************************************
     * Evaluate                                                     */
     /************************************************************************
     * @brief Puts a result to a descriptor to set its quality.
     * @param eval a value from 0.0 (bad) to 1.0 (good)
+    * @param weight a value describing the influence of the former
+    *        m_qualityMeasure
     *************************************************************************/
-    virtual void Evaluate(double eval, double weight){}
+    virtual void Evaluate(const double eval, const double weight){}
 
 
   protected:

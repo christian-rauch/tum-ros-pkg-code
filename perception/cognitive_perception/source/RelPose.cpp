@@ -39,7 +39,7 @@ m_qualityMeasure(0.0)
 {
 
 }
-RelPose::RelPose(jlo::LazyLocatedObjectLoader* loader, int id, int parentID, Matrix m, Matrix cov, std::string name) :
+RelPose::RelPose(jlo::LazyLocatedObjectLoader* loader, unsigned long id, unsigned long parentID, Matrix m, Matrix cov, std::string name) :
 jlo::LocatedObject(loader, id, parentID, m, cov),
 m_qualityMeasure(0.0)
 {
@@ -208,6 +208,7 @@ RelPose RelPose::operator + (const Pose &p) const
   return rel;
 }
 
+
 RelPose RelPose::operator - ( const int &levels ) const
 {
   RelPose rel(this->m_pose, this->m_relation);
@@ -254,3 +255,18 @@ RelPose RelPose::operator - ( const int &levels ) const
 void RelPose::initAttributes ( ) {
 }
 #endif
+
+
+Matrix RelPose::GetMatrix(unsigned long id)
+{
+  if(id == 0 || m_parentID == id)
+    return LocatedObject::GetMatrix();
+  else
+  {
+    RelPose* pose = RelPoseFactory::GetRelPose(m_uniqueID, id);
+    Matrix m =  pose->GetMatrix(0);
+    RelPoseFactory::FreeRelPose(pose);
+    return m;
+  }
+}
+

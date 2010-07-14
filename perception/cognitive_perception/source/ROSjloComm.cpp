@@ -42,7 +42,7 @@ using namespace cop;
 
 void PutPoseIntoAMessage (partial_lo& plo, RelPose* pose)
 {
-  Matrix m = pose->GetMatrix();
+  Matrix m = pose->GetMatrix(0);
   int width = 4;
   for(int r = 0; r < width; r++)
   {
@@ -123,26 +123,34 @@ bool ROSjloComm::GetJloServiceClient(srvjlo &msg)
       throw "Interupted while waiting for jlo";
     ros::service::waitForService(m_service, 0);
     m_client = node.serviceClient<srvjlo>(this->m_service, true);
+    if(!m_client.isValid())
+    {
+      ros::Rate rate(0.5);
+      rate.sleep();
+    }
   }
   {
     boost::mutex::scoped_lock lock(s_serviceCall);
     rv = m_client.call(msg);
   }
-  boost::mutex::scoped_lock lock(s_notDeletedList);
-  if(msg.request.command.compare(JLO_DELETE) == 0)
   {
-    std::set<unsigned long>::iterator iter = not_deleted_jlos.find(msg.request.query.id);
-    if(iter != not_deleted_jlos.end())
-      not_deleted_jlos.erase(iter);
-  }
-  else
-  {
-    std::set<unsigned long>::iterator iter = not_deleted_jlos.find(msg.request.query.id);
-    if(iter == not_deleted_jlos.end())
-      not_deleted_jlos.insert(msg.response.answer.id);
+    boost::mutex::scoped_lock lock(s_notDeletedList);
+    if(msg.request.command.compare(JLO_DELETE) == 0)
+    {
+      std::set<unsigned long>::iterator iter = not_deleted_jlos.find(msg.request.query.id);
+      if(iter != not_deleted_jlos.end())
+        not_deleted_jlos.erase(iter);
+    }
+    else
+    {
+      std::set<unsigned long>::iterator iter = not_deleted_jlos.find(msg.request.query.id);
+      if(iter == not_deleted_jlos.end())
+        not_deleted_jlos.insert(msg.response.answer.id);
+    }
   }
   if(not_deleted_jlos.size() % 100 == 0)
     ROS_WARN("cop knows %ld poses", not_deleted_jlos.size());
+
   return rv;
 }
 
@@ -193,6 +201,128 @@ RelPose* ROSjloComm::CreateNewPose(RelPose* pose, Matrix* mat, Matrix* cov)
   if (!GetJloServiceClient(msg))
   {
     printf("Create New Pose: Error in ROSjloComm: Update of pose information not psossible!\n");
+    printf("Debug out of srvjl::request :\n");
+    printf("command:  %s\n", msg.request.command.c_str());
+    printf("query.id %d query.parent_id %d type %d\n", (int)msg.request.query.id, (int)msg.request.query.parent_id, msg.request.query.type);
+    printf("query.pose: \n%f %f %f %f \n %f %f %f %f \n%f %f %f %f\n%f %f %f %f\n",  msg.request.query.pose[0] ,
+    msg.request.query.pose[1] ,
+    msg.request.query.pose[2] ,
+    msg.request.query.pose[3] ,
+    msg.request.query.pose[4] ,
+    msg.request.query.pose[5] ,
+    msg.request.query.pose[6],
+    msg.request.query.pose[7] ,
+    msg.request.query.pose[8] ,
+    msg.request.query.pose[9] ,
+    msg.request.query.pose[10] ,
+    msg.request.query.pose[11] ,
+    msg.request.query.pose[12] ,
+    msg.request.query.pose[13] ,
+    msg.request.query.pose[14] ,
+    msg.request.query.pose[15] );
+    return NULL;
+  }
+  else if (msg.response.error.length() > 0)
+  {
+    printf("Message from jlo: %s!\n", msg.response.error.c_str());
+  }
+  return GetPoseFromMessage(msg.response.answer, this);
+}
+
+
+RelPose* ROSjloComm::CreateNewPose(LocatedObjectID_t parent, Matrix* mat, Matrix* cov)
+{
+  srvjlo msg;
+  msg.request.command = JLO_UPDATE;
+  msg.request.query.id = 0;
+  if (parent == 0)
+  {
+    ROS_WARN("ROSjloComm::CreateNewPose was called with an invalid parent ID");
+    return NULL;
+  }
+  msg.request.query.parent_id = parent;
+#ifdef _DEBUG
+/*   printf("Parent ID before query: %d\n", (int )  msg.request.query.parent_id);*/
+#endif
+  int width = 4;
+  for(int r = 0; r < width; r++)
+  {
+    for(int c = 0; c < width; c++)
+    {
+      msg.request.query.pose[r * width + c] = mat->element(r,c);
+    }
+  }
+  width = 6;
+  for(int r = 0; r < width; r++)
+  {
+    for(int c = 0; c < width; c++)
+    {
+        msg.request.query.cov[r * width + c] = cov->element(r,c);
+    }
+  }
+  if (!GetJloServiceClient(msg))
+  {
+    ROS_WARN("Create New Pose: Error in ROSjloComm: Update of pose information not possible!\n");
+    printf("command:  %s\n", msg.request.command.c_str());
+    printf("query.id %d query.parent_id %d type %d\n", (int)msg.request.query.id, (int)msg.request.query.parent_id, msg.request.query.type);
+    printf("query.pose: \n%f %f %f %f \n %f %f %f %f \n%f %f %f %f\n%f %f %f %f\n",  msg.request.query.pose[0] ,
+    msg.request.query.pose[1] ,
+    msg.request.query.pose[2] ,
+    msg.request.query.pose[3] ,
+    msg.request.query.pose[4] ,
+    msg.request.query.pose[5] ,
+    msg.request.query.pose[6],
+    msg.request.query.pose[7] ,
+    msg.request.query.pose[8] ,
+    msg.request.query.pose[9] ,
+    msg.request.query.pose[10] ,
+    msg.request.query.pose[11] ,
+    msg.request.query.pose[12] ,
+    msg.request.query.pose[13] ,
+    msg.request.query.pose[14] ,
+    msg.request.query.pose[15] );
+    return NULL;
+  }
+  else if (msg.response.error.length() > 0)
+  {
+    printf("Message from jlo: %s!\n", msg.response.error.c_str());
+  }
+  return GetPoseFromMessage(msg.response.answer, this);
+}
+
+
+
+RelPose* ROSjloComm::UpdatePose(RelPose* pose, LocatedObjectID_t parentID, Matrix* mat, Matrix* cov)
+{
+  srvjlo msg;
+  msg.request.command = JLO_UPDATE;
+  msg.request.query.id = pose->m_uniqueID;
+  if(pose != NULL)
+    msg.request.query.parent_id = parentID;
+  else
+    msg.request.query.parent_id = ID_WORLD;
+#ifdef _DEBUG
+/*   printf("Parent ID before query: %d\n", (int )  msg.request.query.parent_id);*/
+#endif
+  int width = 4;
+  for(int r = 0; r < width; r++)
+  {
+    for(int c = 0; c < width; c++)
+    {
+      msg.request.query.pose[r * width + c] = mat->element(r,c);
+    }
+  }
+  width = 6;
+  for(int r = 0; r < width; r++)
+  {
+    for(int c = 0; c < width; c++)
+    {
+        msg.request.query.cov[r * width + c] = cov->element(r,c);
+    }
+  }
+  if (!GetJloServiceClient(msg))
+  {
+    printf("Create New Pose: Error in ROSjloComm: Update of pose information not possible!\n");
     printf("Debug out of srvjl::request :\n");
     printf("command:  %s\n", msg.request.command.c_str());
     printf("query.id %d query.parent_id %d type %d\n", (int)msg.request.query.id, (int)msg.request.query.parent_id, msg.request.query.type);
@@ -300,7 +430,9 @@ RelPose* ROSjloComm::GetPoseRelative(int poseId, int parentPoseId)
   return GetPoseFromMessage(msg.response.answer, this);
 }
 
-
+/***
+*  TODO  Makre this async
+**/
 void ROSjloComm::FreePose(int poseId)
 {
   srvjlo msg;

@@ -75,6 +75,7 @@ namespace cop
     virtual void SetData(XMLTag* tag){}
 
   };
+
 }
 #endif // ATTENTIONALGORITHM_H
-;
+

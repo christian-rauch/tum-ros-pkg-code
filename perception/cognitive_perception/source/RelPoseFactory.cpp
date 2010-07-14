@@ -115,7 +115,7 @@ RelPose* RelPoseFactory::FRelPose(XMLTag* tag)
   return FRelPoseWorld();
 }
 
-inline RelPose* RelPoseFactory::GetRelPose(int id)
+inline RelPose* RelPoseFactory::GetRelPose(LocatedObjectID_t id)
 {
 #ifdef NO_LO_SERVICE_AVAILABLE
   for(std::vector<RelPose*>::iterator iter = s_relPoses.begin();
@@ -130,7 +130,7 @@ inline RelPose* RelPoseFactory::GetRelPose(int id)
 #endif /*NO_LO_SERVICE_AVAILABLE*/
 }
 
-RelPose* RelPoseFactory::GetRelPose(int poseId, int parentPoseId)
+RelPose* RelPoseFactory::GetRelPose(LocatedObjectID_t poseId, LocatedObjectID_t parentPoseId)
 {
 #ifdef NO_LO_SERVICE_AVAILABLE
   throw "Not yet implemented";
@@ -153,7 +153,7 @@ RelPose* RelPoseFactory::GetRelPose(std::string name)
 }
 
 #ifdef NO_LO_SERVICE_AVAILABLE
-inline RelPose* RelPoseFactory::GetRelPoseIndex(int index)
+inline RelPose* RelPoseFactory::GetRelPoseIndex(LocatedObjectID_t index)
 {
   return s_relPoses[index];
 }
@@ -216,7 +216,7 @@ RelPose* RelPoseFactory::CloneRelPose(RelPose* pose)
 #endif /*NO_LO_SERVICE_AVAILABLE*/
 }
 
-RelPose* RelPoseFactory::CloneRelPose(int uniqueID)
+RelPose* RelPoseFactory::CloneRelPose(LocatedObjectID_t uniqueID)
 {
 #ifdef NO_LO_SERVICE_AVAILABLE
   RelPose* pose = GetRelPose(uniqueID);
@@ -247,7 +247,29 @@ RelPose* RelPoseFactory::FRelPose(RelPose* pose, Matrix m, Matrix cov)
 #endif /*NO_LO_SERVICE_AVAILABLE*/
 }
 
-RelPose* RelPoseFactory::FRelPose(int id)
+
+RelPose* RelPoseFactory::FRelPose(LocatedObjectID_t parent, Matrix m, Matrix cov)
+{
+  #ifdef NO_LO_SERVICE_AVAILABLE
+  throw "Not yet implemeted";
+#else /*NO_LO_SERVICE_AVAILABLE*/
+  return s_loService->CreateNewPose(parent, &m, &cov);
+#endif /*NO_LO_SERVICE_AVAILABLE*/
+
+}
+
+RelPose* RelPoseFactory::FRelPose(RelPose* pose, LocatedObjectID_t parent, Matrix m, Matrix cov)
+{
+#ifdef NO_LO_SERVICE_AVAILABLE
+  throw "Error: not yet implemented";
+#else /*NO_LO_SERVICE_AVAILABLE*/
+  return s_loService->UpdatePose(pose,parent, &m, &cov);
+#endif /*NO_LO_SERVICE_AVAILABLE*/
+}
+
+
+
+RelPose* RelPoseFactory::FRelPose(LocatedObjectID_t id)
 {
   return GetRelPose(id);
 }

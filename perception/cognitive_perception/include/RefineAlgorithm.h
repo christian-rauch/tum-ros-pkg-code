@@ -33,6 +33,13 @@ namespace cop
     RefineAlgorithm(void);
     ~RefineAlgorithm(void);
 
+    /*************************************************************************************
+    *
+    *
+    *
+    *
+    *
+    *************************************************************************************/
     virtual Descriptor* Perform(std::vector<Sensor*> sensors, RelPose* pose, Signature& Object, int &numOfObjects, double& qualityMeasure) = 0;
 
     double CheckSignature(const Signature& object, const std::vector<Sensor*> &sensors) = 0;

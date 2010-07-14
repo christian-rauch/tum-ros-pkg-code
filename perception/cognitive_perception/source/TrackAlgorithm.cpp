@@ -93,7 +93,17 @@ TrackAlgorithm::~TrackAlgorithm ( )
         if(pose.size() > 0)
         {
           pose[0]->m_qualityMeasure = qualityMeasure;
+          if(object.m_relPose != NULL && object.m_relPose->m_uniqueID != ID_WORLD && resultReceived)
+          {
+            RelPose* temp = pose[0];
+            printf("temp id: %ld", pose[0]->m_uniqueID);
+
+            pose[0] = RelPoseFactory::FRelPose(object.m_relPose, temp->m_parentID, temp->GetMatrix(0), temp->GetCovarianceMatrix());
+            pose[0]->m_qualityMeasure = qualityMeasure;
+            //RelPoseFactory::FreeRelPose(temp);
+          }
           object.SetPose(pose[0]);
+          printf("Sent %ld\n", pose[0]->m_uniqueID);
           if(!resultReceived)
           {
             m_curPrim.AddResult(object.m_ID, qualityMeasure, time);

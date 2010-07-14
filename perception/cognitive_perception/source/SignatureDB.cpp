@@ -181,8 +181,12 @@ int SignatureDB::AddSignature(Signature* sig)
 #endif
     if(sig != NULL)
     {
+        if(sig->m_ID > 500000)
+          printf("Trying to add obj %ld\n", sig->m_ID);
         if(!Check(sig->m_ID, error))
         {
+            if(sig->m_ID > 500000)
+                printf("Object is new\n");               
             error = m_dbStarter->AddChild(sig->Save());
             m_ids.push_back(sig->m_ID);
             int indizes = m_index->CountChildren();
@@ -204,6 +208,8 @@ int SignatureDB::AddSignature(Signature* sig)
         else
         {
             UpdateNodes(sig, error);
+           if(sig->m_ID > 500000)
+                printf("Object is to be updated\n");               
         }
         if(error != -1)
         {
@@ -319,7 +325,7 @@ void SignatureDB::CompleteSignature(Signature* sig_max, std::vector<ObjectID_t> 
             sig_max->SetElem(elem);
           else
           {
-            printf("No descriptor could be found or creted for class %ld (=%s)\n", class_ids[k], CheckClass(class_ids[k]).c_str());
+            printf("No descriptor could be found or created for class %ld (=%s)\n", class_ids[k], CheckClass(class_ids[k]).c_str());
             sig_max->SetClass(GetClassByID(class_ids[k]));
           }
         }

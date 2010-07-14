@@ -53,7 +53,7 @@ Elem::Elem ( ObjectID_t id ) :
     m_ID(id),
     m_timestamp((unsigned long)time(NULL))
 {
-        if(m_LastID < m_ID)
+        if(m_LastID < m_ID && m_ID < FORBIDDEN_ID_RANGE_MIN)
             m_LastID = m_ID + 1;
 }
 
@@ -62,7 +62,7 @@ void Elem::SetData ( XMLTag* creator)
   if(creator != NULL)
   {
     m_ID = creator->GetPropertyInt(XML_PROPERTY_ELEMID);
-    if(m_LastID < m_ID)
+    if(m_LastID < m_ID && m_ID < FORBIDDEN_ID_RANGE_MIN)
       m_LastID = m_ID + 1;
 
     m_timestamp = creator->date();
@@ -135,7 +135,9 @@ Elem* Elem::Duplicate(bool bStaticCopy)
   {
     tag->AddProperty(XML_PROPERTY_ELEMID, m_LastID++);
   }
-    return Elem::ElemFactory(tag);
+  Elem* copy = Elem::ElemFactory(tag);
+  delete tag;
+  return copy;
 }
 
 void Elem::Touch()
@@ -153,10 +155,10 @@ Elem::~Elem ( ) { }
 XMLTag* Elem::Save(bool full_pose)
 {
   m_fullPose = full_pose;
-    XMLTag* ret = new XMLTag(GetNodeName());
-    ret->AddProperty(XML_PROPERTY_ELEMID, m_ID);
-    SaveTo(ret);
-    return ret;
+  XMLTag* ret = new XMLTag(GetNodeName());
+  ret->AddProperty(XML_PROPERTY_ELEMID, m_ID);
+  SaveTo(ret);
+  return ret;
 }
 
 // Accessor methods

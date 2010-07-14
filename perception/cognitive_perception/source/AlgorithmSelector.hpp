@@ -69,6 +69,11 @@ Algorithm<T>* AlgorithmSelector<T>::BestAlgorithm(int type, const Signature &sig
       if(it_obj != (*iter).m_objectEval.end())
       {
         earlierExperiences = (*it_obj).second.first / (*it_obj).second.second;
+        if(earlierExperiences == 0.0)
+        {
+          printf("Reject to go with this object ID\n");
+          ROS_WARN("Reject to perform action on object ID %ld with alg %s", sig.m_ID,  (*iter).m_algorithm->GetName().c_str());
+        }
       }
       double currEval = (*iter).m_eval * sig_compatibility * earlierExperiences;
       if(currEval > maxEval)
@@ -87,15 +92,54 @@ Algorithm<T>* AlgorithmSelector<T>::BestAlgorithm(int type, const Signature &sig
 #endif
       }
     }
-    else
+  }
+  return selAlgorithm;
+}
+
+template<typename T>
+std::vector<Algorithm<T>*> AlgorithmSelector<T>::BestAlgorithmList(int type, const Signature &sig, const std::vector<Sensor*> &sensors)
+{
+  std::vector<Algorithm<T>*> selAlgorithm;
+  double maxEval = -1.0;
+  typename std::vector< AlgorithmEval<T> > mv = GetAlgorithmList(&mv);
+  for(typename std::vector< class AlgorithmEval<T> >::const_iterator iter = mv.begin();
+    iter != mv.end(); iter++)
+  {
+    double sig_compatibility = (*iter).m_algorithm->CheckSignature(sig, sensors);
+    if(CheckTypeCompatibility((*iter).m_algorithmType, type) && sig_compatibility > 0.0)
     {
+      double earlierExperiences = 0.5;
+      std::map<ObjectID_t, std::pair<double, int> >::const_iterator it_obj= (*iter).m_objectEval.find(sig.m_ID);
+      if(it_obj != (*iter).m_objectEval.end())
+      {
+        earlierExperiences = (*it_obj).second.first / (*it_obj).second.second;
+        if(earlierExperiences == 0.0)
+        {
+          printf("Reject to go with this object ID\n");
+          ROS_WARN("Reject to perform action on object ID %ld with alg %s", sig.m_ID,  (*iter).m_algorithm->GetName().c_str());
+        }
+      }
+      double currEval = (*iter).m_eval * sig_compatibility * earlierExperiences;
+      if(currEval > 0)
+      {
+
+        maxEval = currEval;
+        selAlgorithm.push_back((*iter).m_algorithm);
 #ifdef _DEBUG
-      printf("The algorithm %s and the signature have a compatibility of %f (which might be too low) or is not compatible with type %d \n", (*iter).m_algorithm->GetName().c_str(), sig_compatibility, type);
+        printf("The algorithm %s has a good probability for the signature (%f)\n", (*iter).m_algorithm->GetName().c_str(), maxEval);
 #endif
+      }
+      else
+      {
+#ifdef _DEBUG
+        printf("The algorithm %s is  worse than others (%f < %f)\n", (*iter).m_algorithm->GetName().c_str(), currEval, maxEval);
+#endif
+      }
     }
   }
   return selAlgorithm;
 }
+
 
 template<typename T>
 void AlgorithmSelector<T>::EvalAlgorithm(Algorithm<T>* alg, double eval, double time, Elem* relatedElem)

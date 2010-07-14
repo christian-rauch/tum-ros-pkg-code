@@ -54,6 +54,41 @@ std::pair<RelPose*, Probability_1D_t> CreatePoseFromMessage(const apriori_positi
     return result;
 }
 
+std::string AlgorihtmTypeToName(int type)
+{
+  std::string name = "Algorithm";
+  switch(type)
+  {
+    case ALGORITHMTYPE_LOCATE:
+    name = "Locate";
+    break;
+    case ALGORITHMTYPE_TRACK:
+    name = "Track";
+    break;
+    case ALGORITHMTYPE_2OBJS:
+    name = "Locate2Obj";
+    break;
+    case ALGORITHMTYPE_REFINE:
+    name = "Refine";
+    break;
+    case ALGORITHMTYPE_RPOVE:
+    name = "Prove";
+    break;
+    case ALGORITHMTYPE_STOPTRACK:
+    name = "StopTrack";
+    break;
+    case ALGORITHMTYPE_STARTATTEND:
+    name = "StartAttend";
+    break;
+    case ALGORITHMTYPE_STOPATTEND:
+    name = "StopAttend";
+    break;
+    case ALGORITHMTYPE_LOOKUP:
+    name = "Database LookUp";
+    break;
+  }
+  return name;
+}
 
 void PutPoseIntoAMessage(cop_answer &answer, SignatureLocations_t new_location)
 {
@@ -63,6 +98,11 @@ void PutPoseIntoAMessage(cop_answer &answer, SignatureLocations_t new_location)
     apo_pose.objectId = new_location[i].second->m_ID;
     apo_pose.probability = new_location[i].first->m_qualityMeasure;
     apo_pose.position = new_location[i].first->m_uniqueID;
+    if(new_location[i].first->m_uniqueID == 0 && new_location[i].second->m_relPose != NULL)
+    {
+      apo_pose.probability = new_location[i].second->m_relPose->m_qualityMeasure;
+      apo_pose.position = new_location[i].second->m_relPose->m_uniqueID;
+    }
     int elems_c = new_location[i].second->CountElems();
     for(int j = 0; j < elems_c; j++)
     {
@@ -70,11 +110,17 @@ void PutPoseIntoAMessage(cop_answer &answer, SignatureLocations_t new_location)
       if(descriptor != NULL)
       {
         vision_msgs::cop_descriptor descr;
-        descr.sem_class = descriptor->GetClass()->GetName();
-        descr.object_id = descriptor->m_ID;
-        descr.type      = descriptor->GetNodeName();
-        descr.quality   = descriptor->GetQuality();
-        apo_pose.models.push_back(descr);
+        if(descriptor->GetClass() != NULL)
+        {
+          descr.sem_class = descriptor->GetClass()->GetName();
+          descr.object_id = descriptor->m_ID;
+          descr.type      = descriptor->GetNodeName();
+          descr.quality   = descriptor->GetQuality();
+          if(descr.type.compare("NamedClass") == 0)
+            apo_pose.models.insert(apo_pose.models.begin(), descr);
+          else
+            apo_pose.models.push_back(descr);
+        }
       }
     }
     answer.found_poses.push_back(apo_pose);
@@ -87,8 +133,8 @@ void PutPoseIntoAMessage(cop_answer &answer, Signature* sig)
   aposteriori_position apo_pose;
   apo_pose.objectId = sig->m_ID;
   int elems_c = sig->CountElems();
-  RelPose* pose = NULL;
-  unsigned long max_timestamp = 0;
+  RelPose* pose = sig->m_relPose;
+  unsigned long max_timestamp = sig->date();
   double pose_qual = 0.0;
   for(int j = 0; j < elems_c; j++)
   {
@@ -96,20 +142,23 @@ void PutPoseIntoAMessage(cop_answer &answer, Signature* sig)
     if(descriptor != NULL)
     {
       vision_msgs::cop_descriptor descr;
-      descr.sem_class = descriptor->GetClass()->GetName();
-      descr.object_id = descriptor->m_ID;
-      descr.type      = descriptor->GetNodeName();
-      descr.quality   = descriptor->GetQuality();
-      if(descriptor->date() > max_timestamp)
+      if( descriptor->GetClass() != NULL)
       {
-        pose = descriptor->GetLastMatchedPose();
-        if(pose != NULL)
+        descr.sem_class = descriptor->GetClass()->GetName();
+        descr.object_id = descriptor->m_ID;
+        descr.type      = descriptor->GetNodeName();
+        descr.quality   = descriptor->GetQuality();
+        if(descriptor->date() > max_timestamp)
         {
-          max_timestamp = descriptor->date();
-          pose_qual = pose->m_qualityMeasure;
+          pose = descriptor->GetLastMatchedPose();
+          if(pose != NULL)
+          {
+            max_timestamp = descriptor->date();
+            pose_qual = pose->m_qualityMeasure;
+          }
         }
+        apo_pose.models.push_back(descr);
       }
-      apo_pose.models.push_back(descr);
     }
   }
   apo_pose.probability = pose_qual;
@@ -223,7 +272,7 @@ void ROSComm::PublishAnswer(cop_answer &answer)
 void ROSComm::ProcessCall()
 {
 #ifdef _DEBUG
-    printf("Answer Thread started for object %ld command %s\n", m_visPrim.GetSignature()->m_ID, ((m_actionType == ALGORITHMTYPE_LOCATE) ? "Locate" : ((m_actionType == ALGORITHMTYPE_TRACK) ? "Track" : "StopTrack or unknown action")));
+    printf("Answer Thread started for object %ld with command %s\n", m_visPrim.GetSignature()->m_ID, AlgorihtmTypeToName(m_actionType).c_str());
 #endif
     bool bFinished = false;
     cop_answer answer;
@@ -270,12 +319,9 @@ void ROSComm::ProcessCall()
         bFinished = true;
         break;
     case ALGORITHMTYPE_STARTATTEND:
-    {
         m_visFinder.m_attentionMan.SetObjectToAttend(&m_visPrim,m_pose, this);
         bFinished = false;
         break;
-    }
-
     case ALGORITHMTYPE_STOPATTEND:
         m_visFinder.m_attentionMan.StopAttend(this);
         bFinished = true;
@@ -315,7 +361,7 @@ void ROSComm::ProcessCall()
        break;
     }
 #ifdef _DEBUG
-    printf("Finished  with action of type \"%s\".\nReturning to listen loop.\n", ((m_actionType == ALGORITHMTYPE_LOCATE) ? "Locate" : ((m_actionType == ALGORITHMTYPE_TRACK) ? "Track" : "StopTrack or unknown action")) );
+    printf("Finished  with action of type \"%s\".\nReturning to listen loop.\n", AlgorihtmTypeToName(m_actionType).c_str());
 #endif
     /*TODO delete this*/
     if(bFinished)
@@ -442,7 +488,12 @@ bool ROSTopicManager::ListenCallBack(cop_call::Request& msg, cop_call::Response&
   }
 #endif
   if(sig == NULL)
-    return false;
+  {
+    ROS_INFO("Reaction on cop_call: Creating an empty signature since no further informtion was passed\n");
+    sig = new Signature();
+    printf("Created new and empty Signature (%ld)\n", sig->m_ID);
+    m_sig.AddSignature(sig);
+  }
   for(unsigned int k = 0; k < msg.list_of_poses.size(); k++)
   {
     try
@@ -523,7 +574,7 @@ void ROSTopicManager::Listen(std::string name, volatile bool &g_stopall, ros::No
    * Now do a custom spin, to demonstrate the difference.
   */
   /*ros::spin();*/
-  ros::Rate r(10 );
+  ros::Rate r(10);
   while (node->ok() && !g_stopall)
   {
     printf("Call ros spin \n");

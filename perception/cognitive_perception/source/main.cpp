@@ -109,18 +109,25 @@ int main(int argc, char* argv[])
 #ifdef USE_YARP_COMM
         copWorld.StartListeningYarpPort((char*)"/tracking/in");
 #else
-        if(copWorld.s_visFinder->CountAlgorithms() == 0)
-           printf("Warning: no algorithm loaded\n");
-        copWorld.StartNodeSubscription((char*)"in");
-
-        printf("Returned successfully\n");
-#endif
-        if(g_stopall == true)
+        if(copWorld.s_visFinder != NULL)
         {
-          if(argc > 1)
-            copWorld.SaveCop(STD_CONFIG_FILENAME);
-          else
-            copWorld.SaveCop(STD_CONFIG_FILENAME);
+          if(copWorld.s_visFinder->CountAlgorithms() == 0)
+             printf("Warning: no algorithm loaded\n");
+          copWorld.StartNodeSubscription((char*)"in");
+
+          printf("Returned successfully\n");
+  #endif
+          if(g_stopall == true)
+          {
+            if(argc > 1)
+              copWorld.SaveCop(STD_CONFIG_FILENAME);
+            else
+              copWorld.SaveCop(STD_CONFIG_FILENAME);
+          }
+        }
+        else
+        {
+            ROS_ERROR("cop: Loading of main modules failed. Check the configuration and the folder cop is executed in!");
         }
       }
     }

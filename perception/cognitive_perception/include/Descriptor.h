@@ -25,15 +25,11 @@
 #ifndef DESCRIPTOR_H
 #define DESCRIPTOR_H
 
+
 #include "Class.h"
 
 #define XML_NODE_DESCRIPTOR "Descriptor"
 #define XML_ATTRIBUTE_MODELID "ModelID"
-
-namespace Halcon
-{
-  class Hobject;
-}
 
 
 namespace cop
@@ -99,8 +95,10 @@ namespace cop
     /************************************************************************
     * @brief Puts a result to a descriptor to set its quality.
     * @param eval a value from 0.0 (bad) to 1.0 (good)
+    * @param weight a value describing the influence of the former
+    *        m_qualityMeasure
     *************************************************************************/
-    virtual void Evaluate(double eval, double weight){m_qualityMeasure = (eval  + m_qualityMeasure * weight) / (1+weight); } //TOCHECK: how to combine and TODO if(m_qualityMeasure == 0.0) delete this;
+    virtual void Evaluate(const double eval, const double weight){m_qualityMeasure = (eval  + m_qualityMeasure * weight) / (1+weight); } //TOCHECK: how to combine and TODO if(m_qualityMeasure == 0.0) delete this;
 
     /***********************************************************************
     * Show                                                     */
@@ -137,6 +135,7 @@ namespace cop
 
     double m_qualityMeasure;
   };
+
 }
 #endif // DESCRIPTOR_H
 

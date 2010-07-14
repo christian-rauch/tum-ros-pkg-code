@@ -23,6 +23,7 @@
 #define STD_LO_RPC_PORT_INTERNAL "/located_object"
 #define XML_PROPERTY_LO_RPC_PORT "LO_SERVICE_PORT"
 class Matrix;
+#include "ElemTypes.h"
 
 namespace cop
 {
@@ -40,6 +41,8 @@ namespace cop
     virtual void NotifyPoseUpdate(RelPose* /*pose*/, bool /*sendObjectRelation = true*/)=0;/*{throw "Comm NotifyPoseUpdate: Not implemented";}*/
     virtual void NotifyNewObject(Signature*, RelPose*){throw "Comm CreateNewPose: Not implemented";};/*{throw "Comm NotifyPoseUpdate: Not implemented";}*/
     virtual RelPose* CreateNewPose(RelPose* /*pose*/, Matrix* /*mat*/, Matrix* /*cov*/){throw "Comm CreateNewPose: Not implemented";}
+    virtual RelPose* CreateNewPose(LocatedObjectID_t /*parent*/, Matrix* /*mat*/, Matrix* /*cov*/){throw "Comm CreateNewPose: Not implemented";}
+    virtual RelPose* UpdatePose(RelPose* /*pose*/, LocatedObjectID_t /*parent*/, Matrix* /*mat*/, Matrix* /*cov*/){throw "Comm CreateNewPose: Not implemented";}
     virtual RelPose* GetPose(int /*poseId*/){throw "Comm GetPose: Not implemented";}
     virtual RelPose* GetPose(const std::string /*poseId*/, bool wait = true){throw "Comm GetPose: Not implemented";}
     virtual RelPose* GetPoseRelative(int /*poseId*/, int /*parentPoseId*/){throw "Comm GetPoseRelative: Not implemented";}

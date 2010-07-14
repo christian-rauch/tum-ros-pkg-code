@@ -76,7 +76,7 @@ void Object::SetPose(RelPose* pose)
     printf("Setting new pose. (%ld)\n", pose->m_uniqueID );
 #endif
     if(m_relPose != NULL && !(pose->m_uniqueID == m_relPose->m_uniqueID))
-      delete m_relPose;
+      RelPoseFactory::FreeRelPose(m_relPose);
     m_relPose = pose;
     Touch();
   }
@@ -94,13 +94,13 @@ void Object::SetPose(RelPose* pose)
 //
 void Object::SaveTo(XMLTag* tag)
 {
-	if(m_relPose != NULL)
-	{
-	  if(!m_fullPose)
+  if(m_relPose != NULL)
+  {
+    if(!m_fullPose)
       tag->AddChild(m_relPose->Save());
-	  else
+    else
       tag->AddChild(m_relPose->SaveComplete());
-	}
+  }
 }
 
 

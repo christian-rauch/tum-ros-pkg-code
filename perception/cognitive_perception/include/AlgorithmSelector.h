@@ -107,6 +107,16 @@ namespace cop
     */
     Algorithm<T>* BestAlgorithm(int type, const Signature& sig, const std::vector<Sensor*> &sensors);
     /**
+    *	BestAlgorithmList
+    *	@brief Selects all algorithm which are applicable
+    *	@param type specifies the type of algorithm that should be searched, normally a multiple of 0x100 modulo a special case
+    *	@param sig specifies the signature that has to be searched
+    * @param sensors the list of available sensors seeing the target region
+    * @return A list of algorithm with score greaer than 0
+    */
+    std::vector<Algorithm<T>*> BestAlgorithmList(int type, const Signature &sig, const std::vector<Sensor*> &sensors);
+
+    /**
     *	Sets the evaluation for an algorithm
     */
     void EvalAlgorithm(Algorithm<T>* alg, double eval, double time, Elem* relatedElemg);

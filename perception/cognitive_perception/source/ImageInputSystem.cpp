@@ -44,7 +44,13 @@ ImageInputSystem::ImageInputSystem (XMLTag* configFile)
 {
   if(configFile != NULL && configFile->CountChildren() > 0)
   {
-    m_cameras = XMLTag::Load(configFile->GetChild(0), &m_cameras);
+    XMLTag* tag = configFile->GetChild(0);
+    if(tag == NULL)
+    {
+      printf("Error Loading Image Acquisiotn modules\n");
+      throw "Error  ImageInputSystem::ImageInputSystem";
+    }
+    m_cameras = XMLTag::Load(tag, &m_cameras);
     for(std::vector<Sensor*>::const_iterator it = m_cameras.begin();
       it != m_cameras.end(); it++)
      {
@@ -54,12 +60,12 @@ ImageInputSystem::ImageInputSystem (XMLTag* configFile)
        }
      }
     printf("Loaded %ld Cameras\n", m_cameras.size());
-  }
-  m_stConverterNames = configFile->GetProperty(XML_ATTIBUTE_READINGCONVERTER, "");
-  if(m_stConverterNames.length() > 0)
-  {
-    ReadingConverter* reading = ReadingConverter::ReadingConverterFactory(m_stConverterNames);
-    Reading::s_conv[std::pair<ReadingType_t, ReadingType_t>(reading->TypeIn(), reading->TypeOut())] = reading;
+    m_stConverterNames = configFile->GetProperty(XML_ATTIBUTE_READINGCONVERTER, "");
+    if(m_stConverterNames.length() > 0)
+    {
+      ReadingConverter* reading = ReadingConverter::ReadingConverterFactory(m_stConverterNames);
+      Reading::s_conv[std::pair<ReadingType_t, ReadingType_t>(reading->TypeIn(), reading->TypeOut())] = reading;
+    }
   }
 }
 
@@ -109,7 +115,6 @@ XMLTag* ImageInputSystem::Save()
  */
 std::vector<Sensor*> ImageInputSystem::GetBestSensor (RelPose &pose)
 {
-  printf("ImageInputSystem::GetBestSensor (num: %ld)\n", m_cameras.size());
 	size_t nSize = m_cameras.size();
   std::vector<Sensor*> sensors_seeing;
 	for(unsigned int i = 0; i < nSize; i++)
@@ -119,10 +124,7 @@ std::vector<Sensor*> ImageInputSystem::GetBestSensor (RelPose &pose)
 		if(m_cameras[i]->CanSee(pose))//TODO: choose best
 		{
 			sensors_seeing.push_back(m_cameras[i]);
-			printf("Yes\n");
 		}
-		else
-      printf("No\n");
 	}
 	return sensors_seeing;
 }

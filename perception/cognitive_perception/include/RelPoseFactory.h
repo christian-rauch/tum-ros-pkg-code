@@ -48,15 +48,17 @@ namespace cop
     static RelPose* FRelPose(jlo::LocatedObject& pose);
     static RelPose* FRelPose(XMLTag* tag);
     static RelPose* FRelPose(RelPose* pose, Matrix m, Matrix cov);
+    static RelPose* FRelPose(LocatedObjectID_t parent, Matrix m, Matrix cov);
+    static RelPose* FRelPose(RelPose* pose, LocatedObjectID_t parent, Matrix m, Matrix cov);
     /**
     *   Create a child of a pose without offset
     */
     static RelPose* FRelPoseIdentityChild(RelPose* parent);
 
-    static RelPose* GetRelPose(int id, int parent_if);
+    static RelPose* GetRelPose(LocatedObjectID_t id, LocatedObjectID_t parent_if);
     static RelPose* GetRelPose(std::string name);
 
-    static RelPose* FRelPose(int id);
+    static RelPose* FRelPose(LocatedObjectID_t id);
 
     static void DisposeList();
     static void FreeRelPose(RelPose* pose);
@@ -64,10 +66,10 @@ namespace cop
     *   Clones a pose, throws exception on passing NULL
     */
     static RelPose* CloneRelPose(RelPose* pose);
-    static RelPose* CloneRelPose(int uniqueID);
+    static RelPose* CloneRelPose(LocatedObjectID_t uniqueID);
 
   private:
-    static RelPose* GetRelPose(int id);
+    static RelPose* GetRelPose(LocatedObjectID_t id);
     static int		SetRelPose(RelPose* pose);
 
   #ifdef NO_LO_SERVICE_AVAILABLE

@@ -29,6 +29,7 @@
 
 
 #include <boost/thread.hpp>
+#include <boost/bind.hpp>
 #include <boost/thread/condition.hpp>
 using namespace boost;
 
@@ -149,6 +150,7 @@ namespace cop
       *  @return a pair of a fomrat string describing the content and a list of doubles
       */
       virtual std::pair<std::string, std::vector<double> > GetUnformatedCalibrationValues(){return std::pair<std::string, std::vector<double> >();}
+      virtual void ProjectPoint3DToSensor(const double &x, const double &y, const double &z, double &row, double &column);
       /**
       * DeleteReading
       *  @brief removes entries of the reading buffer, this function will not release still references functions (@see cop::Reading::Free)
@@ -170,6 +172,7 @@ namespace cop
       *  @brief Wait the condition variable m_mutexImageList
       */
       virtual void WaitForNewData();
+      virtual void PushBackAsync(){};      
   protected:
      virtual void PushBack(Reading* img);
      Reading* GetReading_Lock(size_t index);
@@ -190,7 +193,7 @@ namespace cop
       boost::condition m_newDataArrived;
   };
 }
-#ifndef USE_YARP_COMM
+
 #include <ros/ros.h>
 #include <sensor_msgs/CameraInfo.h>
 
@@ -203,7 +206,9 @@ namespace cop
       /***
       *   @brief Constructor with pose, initializes parameters
       */
-    SensorNetworkRelay() : SensorType()
+    SensorNetworkRelay() 
+       : SensorType(),
+         m_readyToPub(true)
     {m_rateCounter = 0;m_bCameraInfo=false;};
       /***
       *   @brief Constructor with pose, initializes parameters, sets the sensors pose
@@ -227,14 +232,14 @@ namespace cop
 
       virtual MessageType ConvertData(Reading* img) = 0;
   protected:
-     virtual void PushBack(Reading* img)
+     virtual void PushBackAsync()
      {
        try
        {
-         if(m_rateCounter++ >  m_rate)
+         if(++m_rateCounter >  m_rate)
          {
             m_rateCounter = 0;
-            MessageType temp = ConvertData(img);
+            MessageType temp = ConvertData(m_curPubReading);
             m_pub.publish(temp);
             if(m_bCameraInfo)
             {
@@ -251,6 +256,17 @@ namespace cop
        {
          printf("Error publishing data in SensorRelay::PushBack\n");
        }
+       m_readyToPub = true;
+     }
+ 
+     virtual void PushBack(Reading* img)
+     {
+       if(m_readyToPub)
+       {
+         m_readyToPub = false;
+         m_curPubReading = img;
+         SensorNetworkRelay::PushBackAsync();
+       }
        Sensor::PushBack(img);
      }
 
@@ -258,22 +274,51 @@ namespace cop
      std::string m_stTopic;
      ros::Publisher m_pub;
      bool m_bCameraInfo;
+     bool m_readyToPub;
+     Reading* m_curPubReading;
      ros::Publisher m_pubCamInfo;
      sensor_msgs::CameraInfo m_cameraInfoMessage;
      int m_rate;
      int m_rateCounter;
   };
-#endif /*USE_YARP_COMM*/
+
 
   class MinimalCalibration
   {
   public:
-    MinimalCalibration(){};
+    MinimalCalibration(){}
+    MinimalCalibration(std::pair<std::string, std::vector<double> > calib_temp)
+    {
+      if(calib_temp.first.compare("RECTHALCONCALIB") == 0)
+      {
+        focal_length = calib_temp.second[0];
+        pix_size_x = calib_temp.second[1];
+        pix_size_y = calib_temp.second[2];
+        proj_center_x = calib_temp.second[3];
+        proj_center_y = calib_temp.second[4];
+      }
+    };
     double focal_length;
     double pix_size_x;
     double pix_size_y;
     double proj_center_x;
     double proj_center_y;
+    void Project3DPoint(const double &x, const double &y, const double &z, double &row, double &column)
+    {
+      double temp1,temp2;
+      if (focal_length > 0.0)
+      {
+        temp1 = focal_length * (x / z );
+        temp2 = focal_length * (y / z );
+      }
+      else
+      {
+        temp1 = x;
+        temp2 = y;
+      }
+      column = ( temp1 / pix_size_x ) + proj_center_x;
+      row = ( temp2 / pix_size_y ) + proj_center_y;
+    }
   };
 
 template<typename TypeReading, typename DataType> class ScopedImage
@@ -281,24 +326,17 @@ template<typename TypeReading, typename DataType> class ScopedImage
 public:
   ScopedImage(std::vector<Sensor*> sensors, ReadingType_t type) :
    selected_sensor(ExtractSensor(sensors, type)),
+   calib(selected_sensor->GetUnformatedCalibrationValues()),
    original(ExtractOriginal(selected_sensor, type)),
-   sensor_pose_at_capture_time(original->GetPose()),   
+   sensor_pose_at_capture_time(original->GetPose()),
    converted(original->GetType() != type),
    copy(converted ? (TypeReading*)original->ConvertTo(type) : NULL),
    image(converted ? (copy->m_image) : ((TypeReading*)original)->m_image)
   {
     if(copy == NULL)
       throw "ScopedImage: No conversion to the requested type is available";
-    std::pair<std::string,  std::vector<double> > calib_temp = selected_sensor->GetUnformatedCalibrationValues();
-
-    calib.focal_length = calib_temp.second[0];
-    calib.pix_size_x = calib_temp.second[1];
-    calib.pix_size_y = calib_temp.second[2];
-    calib.proj_center_x = calib_temp.second[3];
-    calib.proj_center_y = calib_temp.second[4];
-    
   }
-  
+
   ~ScopedImage()
   {
     if(converted)
@@ -313,18 +351,18 @@ public:
     for(size_t i = 0; i < sensors.size(); i++)
     {
       std::pair<std::string,  std::vector<double> > calib_temp = sensors[i]->GetUnformatedCalibrationValues();
-      // TODO: sensors[i]->IsCamera()  => sensors[i]->ReadingType() == type 
-      
-      if(((sensors[i]->IsCamera() && !(type == ReadingType_PointCloud)) || 
-          (!sensors[i]->IsCamera() && (type == ReadingType_PointCloud))) && 
-         (calib_temp.first.compare("RECTHALCONCALIB")) == 0 && 
+      // TODO: sensors[i]->IsCamera()  => sensors[i]->ReadingType() == type
+
+      if(((sensors[i]->IsCamera() && !(type == ReadingType_PointCloud)) ||
+          (!sensors[i]->IsCamera() && (type == ReadingType_PointCloud))) &&
+         (calib_temp.first.compare("RECTHALCONCALIB")) == 0 &&
          (calib_temp.second.size() == 5) )
       {
         printf("Got another  sensor that givces the necessary data\n");
         return sensors[i];
       }
     }
-    return NULL;    
+    return NULL;
   }
 
 
@@ -335,13 +373,13 @@ public:
     return sensor->GetReading(-1);
   }
 
-  
+
   DataType& operator* () const
   {
     return image;
   }
-  MinimalCalibration calib;
   Sensor* selected_sensor;
+  MinimalCalibration calib;
 private:
   Reading* original;
 public:

@@ -417,6 +417,13 @@ namespace cop
     };
 
 
+    static Algorithm<std::vector<Signature*> >* Load(XMLTag* tag, Algorithm<std::vector<Signature*> >** )
+    {
+      if(tag == NULL)
+        return NULL;
+      return ( Algorithm<std::vector<Signature*> >*)AttentionAlgorithm::AttentionAlgFactory(tag);
+    };
+
     static Sensor* Load(XMLTag* tag, Sensor** )
     {
       if(tag == NULL)

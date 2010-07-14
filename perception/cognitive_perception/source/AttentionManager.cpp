@@ -37,6 +37,7 @@
 
 #define XML_PROPERTY_ATTENDING "IsAttending"
 #define XML_NODE_ATTENTIONALGORITHMS "Attendants"
+#define XML_NODE_ATTENTEDOBJ "AttentedObj"
 
 
 using namespace cop;
@@ -58,13 +59,34 @@ AttentionManager::AttentionManager ( XMLTag* config , SignatureDB& sig_db, Image
 #endif /*LOGFILE*/
     m_sigDB(sig_db)
 {
-#ifdef BOOST_THREAD
-	if(m_Attending)
-		m_learningThread = new boost::thread( boost::bind(&AttentionManager::threadfunc, this) ) ;
-	else
-		m_learningThread = NULL;
-#else
-#endif
+  m_Attending = true;
+  if(config != NULL)
+  {
+#ifdef _DEUBUG
+    printf("Got %s node with %d algorithms\n", config->GetChild(XML_NODE_ATTENTIONALGORITHMS) == NULL ? "no" : "a", m_attendants.CountAlgorithms());
+#endif /*_DEBUG*/
+    XMLTag* objs = config->GetChild(XML_NODE_ATTENTEDOBJ);
+    if(objs != NULL)
+    {
+      for(unsigned int i = 0; i < objs->CountChildren(); i++)
+      {
+        try
+        {
+          Signature* sig = (Signature*)Elem::ElemFactory(objs->GetChild(i));
+          PerceptionPrimitive* p = new PerceptionPrimitive(sig);
+          SetObjectToAttend(p, NULL, NULL);
+        }
+        catch(const char* text)
+        {
+          ROS_ERROR("Error loading object to attend in AttentionManager: %s\n", text);
+        }
+
+      }
+    }
+  }
+
+
+  m_learningThread = new boost::thread( boost::bind(&AttentionManager::threadfunc, this) ) ;
 
   m_attendants.SetName(XML_NODE_ATTENTIONMANAGER);
 }
@@ -72,12 +94,10 @@ AttentionManager::AttentionManager ( XMLTag* config , SignatureDB& sig_db, Image
 AttentionManager::~AttentionManager ( )
 {
 	m_Attending = false;
-#ifdef BOOST_THREAD
+
 	if(m_learningThread != NULL)
 		m_learningThread->join();
 	delete m_learningThread;
-#else
-#endif
 
   for(std::vector<AttendedObjects>::iterator it = m_attendedObjectPrototypes.begin();
     it != m_attendedObjectPrototypes.end(); )
@@ -94,6 +114,7 @@ AttentionManager::~AttentionManager ( )
 void AttentionManager::SetObjectToAttend (PerceptionPrimitive* prototype, PossibleLocations_t* pointOfInterest, Comm* comm)
 {
   AttendedObjects obj(prototype, pointOfInterest, comm);
+  printf("Set an object to Attent\n");
   m_attendedObjectPrototypes.push_back(obj);
 }
 
@@ -103,7 +124,7 @@ void AttentionManager::StopAttend(Comm* comm)
   for(std::vector<AttendedObjects>::iterator it = m_attendedObjectPrototypes.begin();
     it != m_attendedObjectPrototypes.end(); it++)
   {
-    if((*it).comm->GetCommID() == actionToStop)
+    if((*it).comm != NULL && (*it).comm->GetCommID() == actionToStop)
     {
       m_attendedObjectPrototypes.erase(it);
       break;
@@ -113,7 +134,7 @@ void AttentionManager::StopAttend(Comm* comm)
 
 void AttentionManager::PerformAttentionAlg( std::vector<Sensor*> &sensors, RelPose* pose, Signature* sig, AttendedObjects& objProto)
 {
-  AttentionAlgorithm* refalg = (AttentionAlgorithm*)m_attendants.BestAlgorithm(0, *sig, sensors);
+  AttentionAlgorithm* refalg = (AttentionAlgorithm*)m_attendants.BestAlgorithm(4096, *sig, sensors);
   int numOfObjects = 0;
   double qualityMeasure = 0.0;
   if(refalg != NULL)
@@ -126,12 +147,12 @@ void AttentionManager::PerformAttentionAlg( std::vector<Sensor*> &sensors, RelPo
       std::vector<Signature*> results = refalg->Perform(sensors, pose, *sig, numOfObjects, qualityMeasure);
       for(size_t j = 0; j < results.size(); j++)
       {
-         objProto.comm->NotifyNewObject(results[j], results[j]->m_relPose);
-#ifdef BOOST_THREAD
-         m_sigDB.AddAndShowSignatureAsync(results[j], sensors[0]);
-#else
-         m_sigDB.AddSignature(results[j]);
-#endif
+        if(objProto.comm != NULL)
+        {
+           objProto.comm->NotifyNewObject(results[j], results[j]->m_relPose);
+        }
+        printf("Adding new object: Signature with ID %ld\n", results[j]->m_ID);
+        m_sigDB.AddSignature(results[j]);
       }
     }
     catch(char const* error_text)
@@ -144,15 +165,15 @@ void AttentionManager::PerformAttentionAlg( std::vector<Sensor*> &sensors, RelPo
 
 void AttentionManager::threadfunc()
 {
-	while(m_Attending && !g_stopall)
-	{
+  while(!g_stopall)
+  {
     for(size_t i = 0 ; i < m_attendedObjectPrototypes .size(); i++)
     {
       Signature* sig = m_attendedObjectPrototypes[i].proto->GetSignature();
       PossibleLocations_t* area = m_attendedObjectPrototypes[i].poses;
       std::vector<Sensor*> sensors;
 
-      if(area->size() != 0)
+      if(area != NULL  && area->size() != 0)
       {
         PossibleLocations_t::const_iterator iter = area->begin();
         for( ;iter != area->end(); iter++)
@@ -175,11 +196,18 @@ void AttentionManager::threadfunc()
 
 
 
-
 XMLTag* AttentionManager::Save()
 {
 	XMLTag* tag = new XMLTag(XML_NODE_ATTENTIONMANAGER);
   tag->AddChild(m_attendants.Save(XML_NODE_ATTENTIONALGORITHMS));
+  XMLTag* objs = new XMLTag(XML_NODE_ATTENTEDOBJ);
+
+  for(size_t obj = 0; obj< m_attendedObjectPrototypes.size(); obj++)
+  {
+    XMLTag* sig = m_attendedObjectPrototypes[obj].proto->GetSignature(0)->Save();
+    objs->AddChild(sig);
+  }
+  tag->AddChild(objs);
 	return tag;
 }
 

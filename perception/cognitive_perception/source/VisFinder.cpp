@@ -38,11 +38,11 @@ boost::mutex s_mutexDisplay;
 #define BOOST (A) ;
 #endif
 
-#ifdef _DEBUG
+//#ifdef _DEBUG
 #define  DEBUG(A) A
-#else
-#define  DEBUG(A) ;
-#endif
+//#else
+//#define  DEBUG(A) ;
+//#endif
 
 using namespace cop;
 
@@ -205,15 +205,19 @@ SignatureLocations_t VisFinder::Locate (PossibleLocations_t* lastKnownPoses, Per
                 DEBUG(printf("Selected Algorithm: %s\n", alg != NULL ? alg->GetName().c_str() : "None" ));
                 if(alg != NULL)
                 {
-                    BOOST(t0 = boost::get_system_time());
-                    int numOfObjects_tmp = numOfObjects;
-                    std::vector<RelPose*> r = alg->Perform(cameras, lastKnownPose, object, numOfObjects_tmp, qualityMeasure);
-                    printf("Results num = %d\n", numOfObjects_tmp);
-                    alg_fail = alg;
-                    BOOST(t1 = get_system_time());
-                    BOOST(boost::posix_time::time_duration td = t1 - t0);
-                    BOOST(printf("Calc time: %s\n", boost::posix_time::to_simple_string(td).c_str()));
+                  int numOfObjects_tmp = numOfObjects;
+                  BOOST(t0 = boost::get_system_time());
+                  std::vector<RelPose*> r = alg->Perform(cameras, lastKnownPose, object, numOfObjects_tmp, qualityMeasure);
+                  BOOST(t1 = get_system_time());
 
+                  /** Collect results and  measure time*/
+                  numOfObjects_tmp = r.size() < (unsigned)numOfObjects_tmp ?  r.size() : (unsigned)numOfObjects_tmp;
+                  printf("Results num = %d\n", numOfObjects_tmp);
+                  alg_fail = alg;
+                  BOOST(boost::posix_time::time_duration td = t1 - t0);
+                  BOOST(printf("Calc time: %s\n", boost::posix_time::to_simple_string(td).c_str()));
+
+                  /** Make results sortable*/
                   for(std::vector<RelPose*>::const_iterator it_poses = r.begin(); it_poses != r.end(); it_poses++)
                   {
                     Results_t res_tmp;
@@ -235,6 +239,7 @@ SignatureLocations_t VisFinder::Locate (PossibleLocations_t* lastKnownPoses, Per
 
             }
         }
+        /**  Sort results*/
         std::sort(all_matches.begin(), all_matches.end(), comp_qual);
         if(all_matches.size() > 0 && numOfObjects > 0)
         {
@@ -253,13 +258,14 @@ SignatureLocations_t VisFinder::Locate (PossibleLocations_t* lastKnownPoses, Per
             Signature* sig = (Signature*)(object.Duplicate(false));
             sig->SetLastPerceptionPrimitive(visPrim.GetID());
             visPrim.AddResult(sig->m_ID);
-            m_selLocate.EvalAlgorithm(all_matches[i].alg, pose->m_qualityMeasure, ((double)((t1 - t0).total_milliseconds()) /  1000.0), &object);
             sig->SetPose(pose);
+            m_selLocate.EvalAlgorithm(all_matches[i].alg, pose->m_qualityMeasure, ((double)((t1 - t0).total_milliseconds()) /  1000.0), sig);
 
 
             /*pose->m_qualityMeasure = qualityMeasure;*/
             ret.push_back(std::pair<RelPose*, Signature*>(pose, sig));
 #ifdef BOOST_THREAD
+             all_matches[i].camera = cameras[0];
             m_sigdb.AddAndShowSignatureAsync(sig, all_matches[i].camera);
 #else
             try

@@ -7,10 +7,6 @@ include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 
 rosbuild_init()
 
-rosbuild_genmsg()
-rosbuild_gensrv()
-
-
 find_package(PkgConfig)
 
 pkg_check_modules(LIBXML2 REQUIRED libxml-2.0)

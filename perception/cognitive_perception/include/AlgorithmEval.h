@@ -23,6 +23,7 @@
 #include "LocateAlgorithm.h"
 #include "RefineAlgorithm.h"
 #include "ProveAlgorithm.h"
+#include "AttentionAlgorithm.h"
 
 #define XML_NODE_ALGORITHMEVAL "AlgorithmEval"
 #define XML_NODE_EVAL "Eval"
@@ -42,8 +43,8 @@
 #define ALGORITHMTYPE_STOPTRACK         0x800
 
 
-#define ALGORITHMTYPE_STARTATTEND       0x1600
-#define ALGORITHMTYPE_STOPATTEND        0x3200
+#define ALGORITHMTYPE_STARTATTEND       0x1000
+#define ALGORITHMTYPE_STOPATTEND        0x2000
 
 
 #define ALGORITHMTYPE_LOOKUP            0x6400
@@ -69,6 +70,8 @@ namespace cop
       if(alg == NULL)
         printf("Empty Algorithm\n");
     }
+
+
     /******************************************************************************
     * Constructor Algorithm Eval                                                 */
     /******************************************************************************

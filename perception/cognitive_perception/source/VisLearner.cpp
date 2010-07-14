@@ -89,59 +89,58 @@ VisLearner::~VisLearner ( )
 //
  void VisLearner::threadfunc()
 {
-	std::vector<Sensor*> cam = m_imageSys.GetAllSensors();
-
-	while(VisLearner::s_Running && !g_stopall)
-	{
-		size_t n = m_taskList.size();
-		if(n > 0)
-		{
-			s_Learning = true;
-			TaskID type = m_taskList[0].first;
-			Signature* sig = m_taskList[0].second;
-			int numOfObjects = 1;
-			double qualityMeasure = 0.0;
+  std::vector<Sensor*> cam = m_imageSys.GetAllSensors();
+  while(VisLearner::s_Running && !g_stopall)
+  {
+    size_t n = m_taskList.size();
+    if(n > 0)
+    {
+      s_Learning = true; TaskID type = m_taskList[0].first;
+      Signature* sig = m_taskList[0].second;
+      int numOfObjects = 1;
+      double qualityMeasure = 0.0;
 #ifdef _DEBUG
-			printf("New Learning Task\n");
+      printf("New Learning Task\n");
 #endif /*_DEBUG*/
-			RefineAlgorithm* refalg = (RefineAlgorithm*)m_refinements.BestAlgorithm(type, *sig, cam);
-
-			if(refalg != NULL)
-			{
+      RefineAlgorithm* refalg = (RefineAlgorithm*)m_refinements.BestAlgorithm(type, *sig, cam);
+      if(refalg != NULL)
+      {
           printf("Alg selected: %s\n", refalg->GetName().c_str());
           try
           {
-				    Descriptor* d = refalg->Perform(cam, sig->m_relPose, *sig, numOfObjects, qualityMeasure);
-				    sig->SetElem(d);
+            Descriptor* d = refalg->Perform(cam, sig->m_relPose, *sig, numOfObjects, qualityMeasure);
+	    if(d == NULL)
+	      break;
+            sig->SetElem(d);
           }
           catch(char const* error_text)
           {
             printf("Refinement failed due to: %s\n", error_text);
           }
       }
-			else
-			{
-				ProveAlgorithm* provalg = (ProveAlgorithm*)m_checks.BestAlgorithm(type, *sig, cam);
-				if(provalg != NULL)
-				{
-          printf("Alg selected: %s\n", refalg->GetName().c_str());
-          try
-          {
-					  ImprovedPose res = provalg->Perform(cam, sig->m_relPose, *sig, numOfObjects, qualityMeasure);
-					  if(res.first != NULL)
-					  {
-              res.first->m_qualityMeasure = res.second;
-					  }
-					  sig->SetPose(res.first);
+      else
+      {
+         ProveAlgorithm* provalg = (ProveAlgorithm*)m_checks.BestAlgorithm(type, *sig, cam);
+	 if(provalg != NULL)
+	 {
+           printf("Alg selected: %s\n", refalg->GetName().c_str());
+           try
+           {
+	     ImprovedPose res = provalg->Perform(cam, sig->m_relPose, *sig, numOfObjects, qualityMeasure);
+             if(res.first != NULL)
+	     {
+                res.first->m_qualityMeasure = res.second;
+	     }
+	     sig->SetPose(res.first);
 #ifdef _DEBUG
-					  printf("Evaluation results in: %f\n", res.second);
+	     printf("Evaluation results in: %f\n", res.second);
 #endif /*_DEBUG*/
-				  	if(res.second > 0.5)
-					  {
+	     if(res.second > 0.5)
+	     {
 #ifdef _DEBUG
-						  printf("This is good!\n");
+	       printf("This is good!\n");
 #endif /*_DEBUG*/
-					  }
+	     }
            }
            catch(char const* error_text)
            {
@@ -149,35 +148,21 @@ VisLearner::~VisLearner ( )
              printf("Evaluation failed due to: %s\n", error_text);
 #endif /*_DEBUG*/
            }
-				}
-			}
-			m_taskList.erase(m_taskList.begin());
-			s_Learning = false;
-		}
-		else
-		{
-#ifdef BOOST_THREAD
-			//printf("Learning Thread Sleeps \n\n\n");
-			#ifdef BOOST_1_35
-  BOOST(boost::system_time t);
-#else
-  boost::xtime t;
-#endif
-
-#ifdef BOOST_1_35
+	}
+     }
+     m_taskList.erase(m_taskList.begin());
+     s_Learning = false;
+   }
+   else
+   {
+     //printf("Learning Thread Sleeps \n\n\n");
+      BOOST(boost::system_time t);
       BOOST(t = get_system_time());
       t += boost::posix_time::seconds(1);
-#else
-      boost::xtime_get(&t, boost::TIME_UTC);
-			t.sec += 1;
-#endif
-  cout << ",";
-			boost::thread::sleep(t);
-#else
-			return;
-#endif
-		}
-	}
+      boost::thread::sleep(t);
+      return;
+    }
+  }
 }
 
 void VisLearner::AddAlgorithm(Algorithm<Descriptor*>* alg)
@@ -214,10 +199,15 @@ SignatureLocations_t VisLearner::RefineObject (PossibleLocations_t* lastKnownPos
       printf ("Error selecting a camera: %s\n", text);
       continue;
     }
-    RefineAlgorithm* refalg = (RefineAlgorithm*)m_refinements.BestAlgorithm(type, sig, sensors);
-    if(refalg != NULL)
+
+    std::vector<Algorithm<Descriptor*>*> refalg_list = m_refinements.BestAlgorithmList(type, sig, sensors);
+    if(refalg_list.size() > 0)
     {
-        printf("Alg selected: %s\n", refalg->GetName().c_str());
+      /** We found at least one alg, */
+      std::vector<Algorithm<Descriptor*>*>::const_iterator iter = refalg_list.begin();
+      for(;iter != refalg_list.end(); iter++)
+      {
+        RefineAlgorithm* refalg = (RefineAlgorithm*)(*iter);
         try
         {
           double qualityMeasure;
@@ -226,36 +216,31 @@ SignatureLocations_t VisLearner::RefineObject (PossibleLocations_t* lastKnownPos
           if(d != NULL)
           {
             d->SetLastPerceptionPrimitive(visPrim.GetID());
+            d->Evaluate(qualityMeasure, 0.0);
+
             visPrim.AddResult(d->m_ID);
             sig.SetElem(d);
+            RelPose* pose = d->GetLastMatchedPose();
+            if(pose != NULL)
+              lastKnownPose = pose;
+
             /*d->Show(lastKnownPose, sensors[0] );*/
             lastKnownPose->m_qualityMeasure = qualityMeasure;
-
-            /** We found at least one alg, so try  again, and look if there are more actions possible*/
-            refalg = (RefineAlgorithm*)m_refinements.BestAlgorithm(type, sig, sensors);
-            while(refalg != NULL)
-            {
-              Descriptor* dadd = refalg->Perform(sensors, lastKnownPose, sig, numOfObjects, qualityMeasure);
-              if(dadd != NULL)
-              {
-                dadd->SetLastPerceptionPrimitive(visPrim.GetID());
-                visPrim.AddResult(dadd->m_ID);
-                sig.SetElem(dadd);
-
-                /*dadd->Show(lastKnownPose, sensors[0] );*/
-              }
-              else
-                break;
-              refalg = (RefineAlgorithm*)m_refinements.BestAlgorithm(type, sig, sensors);
-            }
           }
-
-          ret_vec.push_back(std::pair<RelPose*, Signature*>(lastKnownPose, &sig));
+          else
+          {
+            /*No result for this object, remeber*/
+            m_refinements.EvalAlgorithm(refalg, 0.0, 1.0, &sig);
+          }
         }
         catch(char const* error_text)
         {
+          /*Crash for this object, remeber*/
+          m_refinements.EvalAlgorithm(refalg, 0.0, 1.0, &sig);
           printf("Refinement failed due to: %s\n", error_text);
         }
+      }
+      ret_vec.push_back(std::pair<RelPose*, Signature*>(lastKnownPose, &sig));
     }
   }
   return ret_vec;

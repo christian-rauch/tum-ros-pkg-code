@@ -60,6 +60,18 @@ namespace cop
     /*****************************************************************************************
     ******************************************************************************************/
     virtual RelPose* CreateNewPose(RelPose* pose, Matrix* mat, Matrix* cov);
+    virtual RelPose* CreateNewPose(LocatedObjectID_t parent, Matrix* mat, Matrix* cov);
+    /*****************************************************************************************
+    *  UpdatePose                                                                           */
+    /*****************************************************************************************
+    *  @brief updates a relpose (sending new information to jlo) including a new parent
+    *  @param pose    the old pose, that should be replaced
+    *  @param parent  the new parent
+    *  @param mat     the new matrix containing the transformation from the parent
+    *  @param cov     the new matrix containing the covariance relative to mat
+    *
+    ******************************************************************************************/
+    virtual RelPose* UpdatePose(RelPose* pose, LocatedObjectID_t parent, Matrix* mat, Matrix* cov);
 
     /*****************************************************************************************
     *  GetPose                                                                              */

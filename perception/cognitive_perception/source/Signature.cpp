@@ -244,6 +244,37 @@ void Signature::SaveTo(XMLTag* tag)
 }
 
 
+Elem* Signature::Duplicate(bool bStaticCopy)
+{
+  Signature* new_sig = new Signature();
+
+  for(std::vector<Elem*>::const_iterator iter = m_elems.begin();
+    iter != m_elems.end(); iter++)
+  {
+    new_sig->SetElem((*iter)->Duplicate(bStaticCopy));
+  }
+  for(std::vector<Class*>::const_iterator iter_c = m_class.begin();
+    iter_c != m_class.end(); iter_c++)
+  {
+    new_sig->SetClass((Class*)(*iter_c)->Duplicate(bStaticCopy));
+  }
+  /** Assign  Object member*/
+  new_sig->m_relPose = RelPoseFactory::FRelPose(m_relPose->m_uniqueID);
+  new_sig->m_bCommunicationCallBack = m_bCommunicationCallBack;
+  new_sig->m_com = m_com;
+
+  /** Assign Elem member*/
+  new_sig->SetTimeStamp(date());
+  new_sig->SetFullPose(m_fullPose);
+  SetLastPerceptionPrimitive(GetLastPerceptionPrimitive());
+
+  if(bStaticCopy)
+    new_sig->m_ID = m_ID;
+
+  return new_sig;
+}
+
+
 // Private static attribute accessor methods
 //
 
@@ -313,7 +344,20 @@ long Signature::SetElem (Elem* elemToSet )
   }
   return -1;
 }
-
+void Signature::RemoveElem(Elem* elemToRemove)
+{
+      BOOST(m_mutexClasses.lock());
+      
+      for(std::vector<Elem*>::iterator iter = m_elems.begin(); m_elems.size(); iter++)
+      {
+        if(*iter == elemToRemove)
+        {
+          m_elems.erase(iter);
+          break;
+        }
+      }
+      BOOST(m_mutexClasses.unlock());  
+}
 long Signature::SetClass (Class* classToSet )
 {
   if(classToSet != NULL)
@@ -331,6 +375,29 @@ long Signature::SetClass (Class* classToSet )
 }
 
 
-void Signature::initAttributes ( ) {
+void Signature::initAttributes ( )
+{
+}
+
+void Signature::Evaluate(const double quality, const double weight)
+{
+  BOOST(m_mutexElems.lock());
+  try
+  {
+    for(std::vector<Elem*>::const_iterator iter = m_elems.begin();
+      iter != m_elems.end(); iter++)
+    {
+      (*iter)->Evaluate(quality, weight);
+    }
+  }
+  catch(const char * text)
+  {
+    printf("Error deleting Elem of Signature: %s\n", text);
+  }
+  catch(...)
+  {
+    printf("Error deleting Elem of Signature\n");
+  }
+  BOOST(m_mutexElems.unlock());
 }
 

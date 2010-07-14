@@ -43,6 +43,7 @@ AttentionAlgorithm* AttentionAlgorithm::AttentionAlgFactory(XMLTag* tag)
   AttentionAlgorithm* alg = NULL;
   try
   {
+    printf("Load AttentionAlgorithm: %s\n", name.c_str());
     alg = s_attalg_loader.createClassInstance(name);
     alg->SetData(tag);
   }
@@ -55,7 +56,17 @@ AttentionAlgorithm* AttentionAlgorithm::AttentionAlgFactory(XMLTag* tag)
 	return alg;
 }
 
-// Other methods
-//
+#include "RemoteAttention.h"
+#include <std_msgs/UInt64.h>
+namespace cop
+{
 
+  template <> std::vector<Signature*>  RemoteAttention<std_msgs::UInt64>::MessageToSignature(boost::shared_ptr<std_msgs::UInt64 const> msg)
+  {
+     std::vector<Signature*> results;
+
+     return results;
+  }
+
+}
 

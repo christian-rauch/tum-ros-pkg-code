@@ -97,28 +97,28 @@ bool Sensor::DeleteReading()
   lock lk(m_mutexImageList);
   try
   {
-  if(m_images.size() == 0)
-    return true;
-  if((*m_images.begin())->m_usageCount == 0)
-  {
-    delete (*m_images.begin());
-    m_images.erase(m_images.begin());
-    m_deletedOffset++;
-    ret = true;
-  }
-  else
-  {
-    m_temp_images.push_back(*m_images.begin());
-    m_images.erase(m_images.begin());
+    if(m_images.size() == 0)
+      return true;
     if((*m_images.begin())->m_usageCount == 0)
     {
       delete (*m_images.begin());
       m_images.erase(m_images.begin());
       m_deletedOffset++;
       ret = true;
-
     }
-  }
+    else
+    {
+      m_temp_images.push_back(*m_images.begin());
+      m_images.erase(m_images.begin());
+      if((*m_images.begin())->m_usageCount == 0)
+      {
+        delete (*m_images.begin());
+        m_images.erase(m_images.begin());
+        m_deletedOffset++;
+        ret = true;
+
+      }
+    }
   }
   catch(...)
   {
@@ -160,8 +160,18 @@ void Sensor::SaveTo(XMLTag* tag)
 Reading* Sensor::GetReading_Lock(size_t index)
 {
   Reading* ret = NULL;
+  RelPose* temp = RelPoseFactory::GetRelPose(m_relPose->m_mapstring);
+  if(temp!= NULL && temp->m_uniqueID != m_relPose->m_uniqueID)
+  {
+    ROS_ERROR("jlo tree was corrupted: id of sensor changed: %s (%ld <- %ld)", m_relPose->m_mapstring.c_str(), temp->m_uniqueID, m_relPose->m_uniqueID);
+    RelPoseFactory::FreeRelPose(m_relPose);
+    m_relPose = temp;
+  }
+  else
+  {
+     RelPoseFactory::FreeRelPose(temp);
+  }
   lock lk(m_mutexImageList);
-
   if(index >= m_images.size())
   {
     printf("Camera skew asked %ldth frame which does not exist, will return %ld\n", index, m_images.size() - 1 );
@@ -173,14 +183,19 @@ Reading* Sensor::GetReading_Lock(size_t index)
   }
   ret = m_images[index];
   ret->Hold();
-  ret->SetPose(m_relPose);
   return ret;
+}
+
+void Sensor::ProjectPoint3DToSensor(const double &x, const double &y, const double &z, double &row, double &column)
+{
+  MinimalCalibration(GetUnformatedCalibrationValues()).Project3DPoint(x,y,z,row, column) ;
 }
 
 void Sensor::PushBack(Reading* img)
 {
   lock lk(m_mutexImageList);
   m_images.push_back(img);
+  img->SetPose(m_relPose);
   m_FrameCount++;
   m_newDataArrived.notify_all();
 }

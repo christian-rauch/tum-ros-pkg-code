@@ -66,7 +66,18 @@ Reading* Reading::ReadingFactory( XMLTag* tag)
 
 void Reading::SetPose(RelPose* parent)
 {
-    m_relPose = RelPoseFactory::FRelPoseIdentityChild(parent);
+  if(m_relPose != NULL)
+  {
+    try
+    {
+      RelPoseFactory::FreeRelPose(m_relPose);
+    }
+    catch(const char* text)
+    {
+      printf("Error while freeing pose of an image: %s\n", text);
+    }
+  }
+  m_relPose = RelPoseFactory::FRelPoseIdentityChild(parent);
 }
 
 std::map<std::pair<ReadingType_t, ReadingType_t> , ReadingConverter*> Reading::s_conv;

@@ -86,6 +86,11 @@ namespace cop
     * @param  type
     */
     Elem* GetElement (const int &id, const ElemType_t &type ) const;
+    /***
+    *    RemoveElem
+    *    @param elemToRemove  Element that shoul be taken out of the list
+    */ 
+    void RemoveElem(Elem* elemToRemove);
 
     size_t CountClasses() const {return m_class.size();}
     size_t CountElems() const {return m_elems.size();}
@@ -101,6 +106,22 @@ namespace cop
     long SetClass ( Class* classToSet);
     void Show(Sensor* cam);
     virtual ElemType_t GetType(){return SIGNATURE;}
+
+    /**
+    *	Duplicates an elem (only possible for elems that can be constructed with ElemFactory or that have overriden this member)
+    */
+    virtual Elem* Duplicate(bool bStaticCopy);
+
+    /***********************************************************************
+    * Evaluate                                                     */
+    /************************************************************************
+    * @brief Puts a result to a descriptor to set its quality.
+    * @param eval a value from 0.0 (bad) to 1.0 (good)
+    * @param weight a value describing the influence of the former
+    *        m_qualityMeasure
+    *************************************************************************/
+    virtual void Evaluate(const double eval, const double weight);
+
   protected:
     virtual void SaveTo(XMLTag* tag);
     /**
