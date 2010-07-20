@@ -1,0 +1,132 @@
+<?xml version="1.0"?>
+<robot xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor"
+       xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller"
+       xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface">
+
+  <include filename="$(find ias_robot_defs)/defs/util_defs.xml"/>
+
+  <property name="base_radius" value="0.259"/>
+  <property name="base_size_z" value="1.265"/>
+  
+  <property name="base_mass" value="50.0"/>
+  <!--
+     Place the center of mass somewhere below the center of the base
+     because of the heavy batteries. Note: just a rough guess. Somebody
+     has to measure and enter correct values.
+     -->
+  <property name="base_cg_x" value="0"/>
+  <property name="base_cg_y" value="0"/>
+  <property name="base_cg_z" value="-15.0"/>
+
+  <property name="wheel_radius" value="0.055"/>
+  <property name="wheel_width" value="0.01"/>
+  <property name="wheel_offset" value="0.19" />
+  <property name="wheel_mass" value="1"/>
+
+  <macro name="b21_wheel" params="parent suffix friction *origin">
+    <joint name="${parent}_${suffix}_wheel_joint" type="revolute">
+      <insert_block name="origin" />
+      <axis xyz="0 1 0"/>
+      <limit effort="100" velocity="100"/>
+      <joint_properties damping="0.0" friction="0.0"/>
+      <parent link="${parent}"/>
+      <child link="${parent}_${suffix}_wheel_link"/>
+    </joint>
+
+    <link name="${parent}_${suffix}_wheel_link">
+      <inertial>
+        <mass value="${wheel_mass}" />
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <cuboid_inertia_def length="${wheel_radius}"
+                            width="${wheel_width}"
+                            height="${wheel_radius}"
+                            mass="${wheel_mass}"/>
+      </inertial>
+
+      <visual>
+        <origin xyz="0 0 0" rpy="${M_PI / 2} 0 0" />
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}" />
+        </geometry>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="${M_PI/2} 0 0" />
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_radius}" />
+        </geometry>
+      </collision>
+    </link>
+
+    <gazebo reference="${parent}_${suffix}_wheel_link">
+      <material value="Gazebo/Black"/>
+      <mu1 value="${friction}" />
+      <mu2 value="${friction}" />
+      <kp value="1000000.0" />
+      <kd value="1.0" />
+    </gazebo>
+
+    <transmission type="SimpleTransmission" name="${parent}_${suffix}_wheel_trans">
+      <actuator name="${parent}_${suffix}_wheel_motor" />
+      <joint name="${parent}_${suffix}_wheel_joint" />
+      <mechanicalReduction>1</mechanicalReduction>
+    </transmission>
+  </macro>
+
+  <macro name="b21_base" params="name *origin">
+    <!-- B21 Synchrodrive -->
+    <joint name="${name}_base_joint" type="floating">
+      <insert_block name="origin" />
+      <parent link="world"/>
+      <child link="${name}_link"/>
+    </joint>
+
+    <link name="${name}_link">
+      <inertial>
+        <mass value="${base_mass}" />
+        <origin rpy="0 0 0" xyz="${base_cg_x} ${base_cg_y} ${base_cg_z}"/>
+        <cuboid_inertia_def length="${2 * base_radius}"
+                            width="${2 * base_radius}"
+                            height="${base_size_z}"
+                            mass="${base_mass}"/>
+      </inertial>
+
+      <visual>
+        <origin xyz="0 0 0.025"
+                rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="b21/b21.stl"/>
+        </geometry>
+      </visual>
+      
+      <collision>
+        <origin xyz="0 0 ${0.5 * base_size_z + 0.025}"
+                rpy="0 0 0"/>
+        <geometry>
+          <cylinder length="${base_size_z}" radius="${base_radius}"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <gazebo reference="${name}_link">
+      <material value="b21.material"/>
+    </gazebo>
+
+    <b21_wheel suffix="front" parent="${name}_link" friction="0"> 
+      <origin xyz="${wheel_offset} 0 ${wheel_radius}" rpy="0 0 0"/>
+    </b21_wheel>
+
+    <b21_wheel suffix="back" parent="${name}_link" friction="100">
+      <origin xyz="${-wheel_offset} 0 ${wheel_radius}"  rpy="0 0 0"/>
+    </b21_wheel>
+
+    <b21_wheel suffix="left" parent="${name}_link" friction="0">
+      <origin xyz="0 ${wheel_offset} ${wheel_radius}" rpy="0 0 0"/>
+    </b21_wheel>
+
+    <b21_wheel suffix="right" parent="${name}_link" friction="100">
+      <origin xyz="0 ${-wheel_offset} ${wheel_radius}" rpy="0 0 0"/>
+    </b21_wheel>
+
+  </macro>
+  
+</robot>

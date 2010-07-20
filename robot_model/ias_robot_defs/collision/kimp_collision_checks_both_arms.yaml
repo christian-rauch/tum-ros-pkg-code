@@ -1,0 +1,55 @@
+## This file should be loaded under <robot description>_collision
+
+
+## links for which collision checking with the environment should be performed
+collision_links:
+  base_link
+  torso_link
+  left_arm_base_link
+  left_arm_0_link
+  left_arm_1_link
+  left_arm_2_link
+  left_arm_3_link
+  left_arm_4_link
+  left_arm_5_link
+  left_arm_6_link
+  left_arm_hand_base_link
+  right_arm_base_link
+  right_arm_0_link
+  right_arm_1_link
+  right_arm_2_link
+  right_arm_3_link
+  right_arm_4_link
+  right_arm_5_link
+  right_arm_6_link
+  right_arm_hand_base_link
+
+
+
+
+
+
+## self collision is performed between groups of links
+self_collision_groups: scg_r scg_l scg_lr
+
+## -- for right arm; self-collision if any link in 'a' collides with some link in 'b'
+scg_r:
+  a: right_arm_base_link right_arm_0_link right_arm_1_link right_arm_2_link right_arm_3_link right_arm_4_link right_arm_5_link right_arm_6_link right_arm_hand_base_link  
+  b: base_link torso_link 
+
+## -- for left arm; self-collision if any link in 'a' collides with some link in 'b'
+scg_l:
+  a: left_arm_base_link left_arm_0_link left_arm_1_link left_arm_2_link left_arm_3_link left_arm_4_link left_arm_5_link left_arm_6_link left_arm_hand_base_link  
+  b: base_link torso_link 
+
+## for arms with each other; self-collision if any link in 'a' collides with some link in 'b'
+scg_lr:
+  a: left_arm_base_link left_arm_0_link left_arm_1_link left_arm_2_link left_arm_3_link left_arm_4_link left_arm_5_link left_arm_6_link left_arm_hand_base_link 
+  b: right_arm_base_link right_arm_0_link right_arm_1_link right_arm_2_link right_arm_3_link right_arm_4_link right_arm_5_link right_arm_6_link right_arm_hand_base_link
+
+
+## The padding for the robot body parts to be considered when collision checking with the environment
+robot_padd: 0.01
+
+## The scaling for the robot body parts to be considered when collision checking with the environment
+robot_scale: 1.0

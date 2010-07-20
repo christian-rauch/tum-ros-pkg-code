@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<robot name="kimp">
+
+  <include filename="$(find ias_robot_defs)/defs/kimp/base_fakedrive_defs.xml"/>
+  <include filename="$(find ias_robot_defs)/defs/kimp/torso_defs.xml"/>
+  <include filename="$(find ias_robot_defs)/defs/kimp/kuka_lwr_arm_defs.xml"/>
+  <include filename="$(find ias_robot_defs)/defs/kimp/head_defs.xml"/>
+  <include filename="$(find ias_robot_defs)/defs/kimp/shoulder_laser_defs.xml"/>  
+  <include filename="$(find ias_robot_defs)/defs/kimp/gazebo_defs.xml"/>
+  <include filename="$(find ias_robot_defs)/defs/materials.xml"/>
+
+  <!-- Use the pr2 grippers for now.... -->
+  <include filename="$(find pr2_description)/urdf/gripper_v0/gripper.urdf.xacro" />
+  
+  <property name="torso_pos_x" value="0.055"/>
+  <property name="arm_offset_z" value="-0.1425"/>
+  
+  <kimp_base_fakedrive name="base">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </kimp_base_fakedrive>
+
+  <kimp_torso name="torso" parent="base"
+              pos_x="${torso_pos_x}"
+              pos_y="0"
+              pos_z="${base_size_z + base_offset_z}"/>
+
+  <kuka_lwr_arm parent="torso" name="left" right="-1">
+    <origin xyz="0 ${0.5 * torso_size_y} ${arm_offset_z}"
+            rpy="${-0.5 * M_PI} 0 0"/>
+  </kuka_lwr_arm>
+  <pr2_gripper_v0 reflect="1" side="l" parent="left_arm_hand_link"
+               screw_reduction="${4.0/1000.0}"
+               gear_ratio="${(729.0/25.0)*(22.0/16.0)}"
+               theta0="${3.6029*M_PI/180.0}"
+               phi0="${29.7089*M_PI/180.0}"
+               t0="${-0.1914/1000.0}"
+               L0="${37.5528/1000.0}"
+               h="${0.0/1000.0}"
+               a="${68.3698/1000.0}"
+               b="${43.3849/1000.0}"
+               r="${91.5/1000.0}" >
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </pr2_gripper_v0>
+
+  <kuka_lwr_arm parent="torso" name="right" right="1">
+    <origin xyz="0 ${-0.5 * torso_size_y} ${arm_offset_z}"
+            rpy="${0.5 * M_PI} ${-120 * M_PI / 180} 0"/>
+  </kuka_lwr_arm>
+  <pr2_gripper_v0 reflect="1" side="r" parent="right_arm_hand_link"
+               screw_reduction="${4.0/1000.0}"
+               gear_ratio="${(729.0/25.0)*(22.0/16.0)}"
+               theta0="${3.6029*M_PI/180.0}"
+               phi0="${29.7089*M_PI/180.0}"
+               t0="${-0.1914/1000.0}"
+               L0="${37.5528/1000.0}"
+               h="${0.0/1000.0}"
+               a="${68.3698/1000.0}"
+               b="${43.3849/1000.0}"
+               r="${91.5/1000.0}" >
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </pr2_gripper_v0>
+
+  <kimp_head parent="base_link"/>
+  <kimp_shoulder_laser parent="torso_link"/>
+
+</robot>

@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<robot xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor"
+       xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller"
+       xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface">
+
+  <property name="arm_elem_70_mass" value="0.85"/>
+  <property name="arm_elem_90_mass" value="1.6"/>
+  <property name="arm_elem_pw_mass" value="1.8"/>
+  <property name="arm_elem_gripper_mass" value="1.0"/>  <!-- Wrong! -->
+  <property name="arm_separator_1_mass" value="0.33"/>
+  <property name="arm_separator_2_mass" value="0.2" /> <!-- Wrong. Need to fix this -->
+  <property name="arm_separator_3_mass" value="0.8" /> <!-- Wrong. Need to fix this -->
+  <property name="arm_separator_4_mass" value="0.5" /> <!-- Wrong. Need to fix this -->
+  <property name="arm_separator_5_mass" value="0.125" />
+
+</robot>
+  

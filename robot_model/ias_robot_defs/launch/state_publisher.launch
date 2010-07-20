@@ -1,0 +1,7 @@
+<launch>
+  <param name="/use_sim_time" value="false" />
+  <param name="robot_description" command="$(find xacro)/xacro.py '$(find ias_robot_defs)/robots/kimp.urdf.xml'"/>  
+
+  <!-- Robot state publisher -->
+  <node pkg="robot_state_chain_publisher" type="state_chain_publisher" name="robot_state_chain_publisher" output="screen" />
+</launch>

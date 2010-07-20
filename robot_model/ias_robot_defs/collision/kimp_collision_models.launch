@@ -1,0 +1,4 @@
+<launch> 
+    <rosparam command="load" ns="robot_description_collision" file="$(find ias_gazebo)/collision/kimp_collision_checks_both_arms.yaml" />
+    <rosparam command="load" ns="robot_description_planning" file="$(find ias_gazebo)/collision/kimp_planning.yaml" />
+</launch>

@@ -1,0 +1,307 @@
+<?xml version="1.0"?>
+
+<robot xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor"
+       xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller"
+       xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface">
+
+  <include filename="$(find ias_robot_defs)/defs/util_defs.xml"/>
+
+  <property name="wheel_offset_x" value="0.38"/>
+  <property name="wheel_offset_y" value="0.145"/>
+  <property name="wheel_radius" value="0.125"/>
+  <property name="wheel_width" value="0.13"/>
+  <property name="wheel_mass" value="3.0"/>
+
+  <property name="base_size_x" value="0.76"/>
+  <property name="base_size_y" value="0.60"/>
+  <property name="base_size_z" value="0.60"/>
+  <property name="base_offset_z" value="0.085"/>
+
+  <property name="laser_front_left_x" value="0.412"/>
+  <property name="laser_front_left_y" value="0.306"/>
+  <property name="laser_front_left_z" value="0.53"/>
+  <property name="laser_front_left_roll" value="0.00"/>
+  <property name="laser_front_left_pitch" value="0.00"/>
+  <property name="laser_front_left_yaw" value="0.765"/>
+
+  <property name="laser_rear_right_x" value="-0.412"/>
+  <property name="laser_rear_right_y" value="-0.300"/>
+  <property name="laser_rear_right_z" value="0.53"/>
+  <property name="laser_rear_right_roll" value="0.00"/>
+  <property name="laser_rear_right_pitch" value="0.00"/>
+  <property name="laser_rear_right_yaw" value="-2.348"/>
+
+  <property name="base_mass" value="200.0"/>
+  <!--
+     Place the center of mass somewhere below the center of the base
+     because of the heavy batteries. Note: just a rough guess. Somebody
+     has to measure and enter correct values.
+     -->
+  <property name="base_cg_x" value="0"/>
+  <property name="base_cg_y" value="0"/>
+  <property name="base_cg_z" value="0.15"/>
+
+  <!--
+     The next two macros are for faking the omnidrive. The code is taken from pr2
+     definitions. Basically, the definitions are the pr2 wheel and caster, but without
+     a visual entry. -->
+  <property name="fake_omni_caster_wheel_offset_y" value="0.049" />
+  <property name="fake_omni_wheel_length" value="0.03" />
+  <property name="fake_omni_wheel_radius" value="0.074792" />
+
+  <property name="fake_omni_caster_offset_x" value="0.2225" />
+  <property name="fake_omni_caster_offset_y" value="0.2225" />
+
+
+  <macro name="kimp_fake_omniwheel" params="suffix parent reflect">
+    <joint name="${parent}_${suffix}_wheel_joint" type="continuous">
+      <origin xyz="0 ${reflect*fake_omni_caster_wheel_offset_y} 0" rpy="0 0 0" />
+      <axis xyz="0 1 0" />
+      <limit effort="100" velocity="100" />
+      <dynamics damping="0.0" friction="0.0" />
+      <parent link="${parent}_rotation_link"/>
+      <child link="${parent}_${suffix}_wheel_link"/>
+    </joint>
+
+    <link name="${parent}_${suffix}_wheel_link">
+      <inertial>
+        <mass value="0.44036" /> <!-- check jmh 20081205 -->
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <inertia  ixx="0.012411765597" ixy="-0.000711733678" ixz="0.00050272983"
+                  iyy="0.015218160428" iyz="-0.000004273467" izz="0.011763977943" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="${M_PI / 2} 0 0" />
+        <geometry>
+          <cylinder radius="0.001" length="0.001" />
+        </geometry>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="${M_PI/2} 0 0" />
+        <geometry>
+          <cylinder radius="${fake_omni_wheel_radius}" length="${fake_omni_wheel_length}" />
+        </geometry>
+      </collision>
+    </link>
+
+    <transmission type="SimpleTransmission" name="${parent}_${suffix}_wheel_trans">
+      <actuator name="${parent}_${suffix}_wheel_motor" />
+      <joint name="${parent}_${suffix}_wheel_joint" />
+      <mechanicalReduction>${reflect}</mechanicalReduction>
+    </transmission>
+
+    <gazebo reference="${parent}_${suffix}_wheel_link">
+      <sensor:contact name="${parent}_${suffix}_wheel_contact_sensor">
+        <geom>${parent}_${suffix}_wheel_link_geom</geom>
+        <updateRate>100.0</updateRate>
+        <controller:gazebo_ros_bumper name="${parent}_${suffix}_wheel_ros_bumper_controller" plugin="libgazebo_ros_bumper.so">
+          <alwaysOn>true</alwaysOn>
+          <updateRate>100.0</updateRate>
+          <bumperTopicName>${parent}_${suffix}_wheel_bumper</bumperTopicName>
+          <interface:bumper name="${parent}_${suffix}_wheel_ros_bumper_iface" />
+        </controller:gazebo_ros_bumper>
+      </sensor:contact>
+      <mu1 value="100.0" />
+      <mu2 value="100.0" />
+      <kp value="1000000.0" />
+      <kd value="1.0" />
+    </gazebo>
+  </macro>
+
+  <macro name="kimp_fake_omniwheel_caster" params="suffix parent *origin">
+    <joint name="${suffix}_caster_rotation_joint" type="continuous">
+      <insert_block name="origin" />
+      <axis xyz="0 0 1" />
+      <limit effort="100" velocity="100" />
+      <dynamics damping="0.0" friction="0.0" />
+      <parent link="${parent}" />
+      <child link="${suffix}_caster_rotation_link" />
+    </joint>
+
+    <link name="${suffix}_caster_rotation_link">
+      <inertial>
+        <mass value="3.473082" />
+        <origin xyz="0 0 0.07" rpy="0 0 0"/>
+        <inertia  ixx="0.012411765597" ixy="-0.000711733678" ixz="0.00050272983"
+                  iyy="0.015218160428" iyz="-0.000004273467" izz="0.011763977943" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0.07" rpy="0 0 0" />
+        <geometry>
+          <box size="0.001 0.001 0.001" />
+        </geometry>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0.07" rpy="0.0 0.0 0.0" />
+        <geometry>
+          <box size="0.192 0.164 0.013" />
+        </geometry>
+      </collision>
+    </link>
+
+    <transmission type="SimpleTransmission" name="${suffix}_caster_rotation_trans">
+      <actuator name="${suffix}_caster_rotation_motor" />
+      <joint name="${suffix}_caster_rotation_joint" />
+      <mechanicalReduction>-1</mechanicalReduction>
+    </transmission>
+
+    <kimp_fake_omniwheel parent="${suffix}_caster" suffix="l" reflect="1" />
+    <kimp_fake_omniwheel parent="${suffix}_caster" suffix="r" reflect="-1" />
+  </macro>
+
+  <!-- Define a wheel. The origin is set to the connection point to the axis/base.
+       Reflect is either -1 or one for left or right. -->
+  <macro name="kimp_wheel" params="suffix parent reflect *origin">
+    <joint name="${suffix}_wheel_fake_joint" type="fixed">
+      <insert_block name="origin"/>
+      <parent link="${parent}_link"/>
+      <child link="${parent}_${suffix}_wheel_link"/>
+    </joint>
+
+    <link name="${parent}_${suffix}_wheel_link">
+      <inertial>
+        <mass value="${wheel_mass}"/>
+        <origin xyz="0 ${reflect * 0.5 * wheel_width} 0" rpy="0 0 0"/>
+        <cylinder_inertia_def radius="${wheel_radius}" length="${wheel_width}"
+                              mass="${wheel_mass}"/>
+      </inertial>
+
+      <visual>
+        <origin xyz="0 ${reflect * -0.5 * wheel_width} 0"
+                rpy="${0.5 * reflect * M_PI} 0 0"/>
+        <geometry>
+          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+        <material name="Black"/>
+      </visual>
+
+      <collision>
+        <origin xyz="0 ${reflect * -0.5 * wheel_width} 0"
+                rpy="${0.5 * reflect * M_PI} 0 0"/>
+        <geometry>
+          <cylinder radius="${0.99 * wheel_radius}" length="${wheel_width}"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <gazebo reference="${parent}_${suffix}_wheel_link">
+      <material value="Gazebo/Black"/>
+      <mu1 value="0.0" />
+      <mu2 value="0.0" />
+    </gazebo>
+
+  </macro>
+
+  <macro name="kimp_base_fakedrive" params="name *origin">
+
+    <link name="world"/>
+    
+    <joint name="${name}_joint" type="planar">
+      <insert_block name="origin" />
+      <parent link="world"/>
+      <child link="${name}_link"/>
+    </joint>
+
+    <link name="${name}_link">
+      <inertial>
+        <mass value="${base_mass}" />
+        <origin xyz="${base_cg_x} ${base_cg_y} ${base_cg_z}" rpy="0 0 0"/>
+        <!-- The inertia matrix of the base is wrong. The specification is with
+             respect to the origin of the base. It's currently not worth it for me
+             to do some exact calculations -->
+        <cuboid_inertia_def length="${0.25 * base_size_x}"
+                            width="${base_size_y}"
+                            height="${0.25 * base_size_z}"
+                            mass="${base_mass}"/>
+      </inertial>
+
+      <visual>
+        <origin xyz="0 0 ${base_offset_z + 0.5 * base_size_z}"
+                rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://ias_robot_defs/meshes/kimp/base.stl"/>
+        </geometry>
+        <material name="DarkGrey"/>
+      </visual>
+
+      <collision>
+        <origin xyz="0 0 ${base_offset_z + 0.5 * base_size_z}"
+                rpy="0 0 0"/>
+        <geometry>
+          <box size="0.76 0.60 0.60"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <gazebo reference="${name}_link">
+      <material value="kimp.material"/>
+    </gazebo>
+
+    <kimp_wheel parent="${name}" suffix="left_front" reflect="-1">
+      <origin xyz="${wheel_offset_x} ${wheel_offset_y} ${wheel_radius}"
+              rpy="0 0 0"/>
+    </kimp_wheel>
+
+    <kimp_wheel parent="${name}" suffix="right_front" reflect="1">
+      <origin xyz="${wheel_offset_x} ${-wheel_offset_y} ${wheel_radius}"
+              rpy="0 0 0"/>
+    </kimp_wheel>
+
+    <kimp_wheel parent="${name}" suffix="left_back" reflect="-1">
+      <origin xyz="${-wheel_offset_x} ${wheel_offset_y} ${wheel_radius}"
+              rpy="0 0 0"/>
+    </kimp_wheel>
+
+    <kimp_wheel parent="${name}" suffix="right_back" reflect="1">
+      <origin xyz="${-wheel_offset_x} ${-wheel_offset_y} ${wheel_radius}"
+              rpy="0 0 0"/>
+    </kimp_wheel>
+
+    <!-- Add the fake omnidrive -->
+    <kimp_fake_omniwheel_caster suffix="left_front_fake_omnidrive" parent="${name}_link">
+      <origin xyz="${fake_omni_caster_offset_x} ${fake_omni_caster_offset_y} ${fake_omni_wheel_radius}"
+              rpy="0 0 0"/>
+    </kimp_fake_omniwheel_caster>
+
+    <kimp_fake_omniwheel_caster suffix="right_front_fake_omnidrive" parent="${name}_link">
+      <origin xyz="${fake_omni_caster_offset_x} ${-fake_omni_caster_offset_y} ${fake_omni_wheel_radius}"
+              rpy="0 0 0"/>
+    </kimp_fake_omniwheel_caster>
+
+    <kimp_fake_omniwheel_caster suffix="left_back_fake_omnidrive" parent="${name}_link">
+      <origin xyz="${-fake_omni_caster_offset_x} ${fake_omni_caster_offset_y} ${fake_omni_wheel_radius}"
+              rpy="0 0 0"/>
+    </kimp_fake_omniwheel_caster>
+
+    <kimp_fake_omniwheel_caster suffix="right_back_fake_omnidrive" parent="${name}_link">
+      <origin xyz="${-fake_omni_caster_offset_x} ${-fake_omni_caster_offset_y} ${fake_omni_wheel_radius}"
+              rpy="0 0 0"/>
+    </kimp_fake_omniwheel_caster>
+
+    <!-- Two laser sensors -->
+    <laser_sensor_urg04lx name="laser_front_left" link="${name}_link">
+      <origin xyz="${laser_front_left_x} ${laser_front_left_y} ${laser_front_left_z}"
+              rpy="${laser_front_left_roll} ${laser_front_left_pitch} ${laser_front_left_yaw}"/>
+    </laser_sensor_urg04lx>
+
+    <laser_sensor_urg04lx name="laser_rear_right" link="${name}_link">
+      <origin xyz="${laser_rear_right_x} ${laser_rear_right_y} ${laser_rear_right_z}"
+              rpy="${laser_rear_right_roll} ${laser_rear_right_pitch} ${laser_rear_right_yaw}"/>
+    </laser_sensor_urg04lx>
+
+    <gazebo>
+      <controller:gazebo_ros_p3d name="p3d_base_controller" plugin="libgazebo_ros_p3d.so">
+        <alwaysOn>true</alwaysOn>
+        <updateRate>100.0</updateRate>
+        <bodyName>${name}_link</bodyName>
+        <topicName>${name}_pose_ground_truth</topicName>
+        <gaussianNoise>0.01</gaussianNoise>
+        <frameName>map</frameName>
+        <xyzOffsets>0 0 0</xyzOffsets> <!-- initialize odometry for fake localization-->
+        <rpyOffsets>0 0 0</rpyOffsets>
+        <interface:position name="p3d_base_position"/>
+      </controller:gazebo_ros_p3d>
+    </gazebo>
+  </macro>
+
+</robot>

@@ -1,0 +1,58 @@
+<?xml version="1.0"?>
+<robot xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor"
+       xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller"
+       xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface">
+
+  <include filename="$(find ias_robot_defs)/defs/util_defs.xml"/>
+  
+  <property name="torso_size_x" value="0.290" />
+  <property name="torso_size_y" value="0.490" />
+  <property name="torso_size_z" value="0.805" />
+
+  <!-- How heavy is our torso? -->
+  <property name="torso_mass" value="5.0" />
+
+  <!--
+     We cannot use *origin here because we need to add the height of
+     the torso to get the origin right -->
+  <macro name="kimp_torso" params="parent name pos_x pos_y pos_z">
+
+    <joint name="${parent}_${name}_joint" type="fixed">
+      <origin rpy="0 0 0" xyz="${pos_x} ${pos_y} ${pos_z + torso_size_z}"/>
+      <parent link="${parent}_link"/>
+      <child link="${name}_link"/>
+    </joint>
+
+    <link name="${name}_link">
+      <inertial>
+        <mass value="${torso_mass}"/>
+        <origin xyz="0 0 ${-0.5 * torso_size_z}"
+                rpy="0 0 0"/>
+        <cuboid_inertia_def length="${torso_size_x}"
+                            width="${torso_size_y}"
+                            height="${torso_size_z}"
+                            mass="${torso_mass}"/>
+      </inertial>
+
+      <visual>
+        <origin xyz="0 0 ${-0.5 * torso_size_z}" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="package://ias_robot_defs/meshes/kimp/torso.stl"/>
+        </geometry>
+        <material name="Grey"/>
+      </visual>
+
+      <collision>
+        <origin xyz="0 0 ${-0.5 * torso_size_z}" rpy="0 0 0"/>
+        <geometry>
+          <box size="${torso_size_x} ${torso_size_y} ${torso_size_z}"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <gazebo reference="${name}_link">
+      <material value="kimp.material"/>
+    </gazebo>
+  </macro>
+  
+</robot>

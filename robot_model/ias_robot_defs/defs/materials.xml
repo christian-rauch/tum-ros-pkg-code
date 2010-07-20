@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<robot>
+  <include filename="$(find pr2_description)/urdf/materials.urdf.xacro" />
+
+  <material name="DarkGrey">
+    <color rgba="0.3 0.3 0.3 1.0"/>
+  </material>
+
+  <material name="Black">
+    <color rgba="0 0 0 1.0"/>
+  </material>
+
+  <material name="Orange">
+    <color rgba="1.0 0.487 0 1.0"/>
+  </material>
+
+  <material name="Silver">
+    <color rgba="1.0 1.0 1.0 1.0"/>
+  </material>
+</robot>

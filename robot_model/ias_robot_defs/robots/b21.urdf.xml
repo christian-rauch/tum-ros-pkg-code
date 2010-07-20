@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<robot name="b21">
+
+  <include filename="$(find ias_robot_defs)/defs/b21/base_defs.xml"/>
+  <include filename="$(find ias_robot_defs)/defs/b21/powercube_right_arm_defs.xml"/>
+  <include filename="$(find ias_robot_defs)/defs/b21/powercube_left_arm_defs.xml"/>
+  <include filename="$(find ias_robot_defs)/defs/b21/gazebo_defs.xml"/>
+  <include filename="$(find ias_robot_defs)/defs/materials.xml"/>
+  
+  <property name="arm_offset_z" value="1.05"/>
+
+  <b21_base name="b21">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </b21_base>
+
+  <right_arm parent="b21" name="right">
+    <origin xyz="0.07 -0.12124 ${arm_offset_z}"
+            rpy="${M_PI/2} 0 ${M_PI/6}"/>
+  </right_arm>
+
+  <left_arm parent="b21" name="left">
+    <origin xyz="0.07 0.12124 ${arm_offset_z}"
+            rpy="${M_PI/2} 0 ${-M_PI/6}"/>
+  </left_arm>
+
+</robot>

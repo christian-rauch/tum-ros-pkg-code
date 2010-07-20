@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+
+<root>
+
+  <!-- ********** Head ********** -->
+  <!-- PTU -> Camera projection center extra offsets-->
+  <property name="cal_ptu_cam_x_offset"   value=" 0.0455" />
+  <property name="cal_ptu_cam_y_offset"  value="-0.0661" />
+  <property name="cal_ptu_cam_z_offset" value="0.0409" />
+
+  <!-- Robot Base -> Ptu base -->
+  <property name="cal_r_base_to_ptu_x"   value="0.159635" />
+  <property name="cal_r_base_to_ptu_y"   value="-0.005792" />
+  <property name="cal_r_base_to_ptu_z"   value="1.47387" />
+  <property name="cal_r_base_to_ptu_roll" value="0.0038971205676946756" />
+  <property name="cal_r_base_to_ptu_pitch" value="0.0075020741509742766" />
+  <property name="cal_r_base_to_ptu_yaw" value="0.026809979470048713" />
+ 
+  <!-- Right Camera -> LeftCamera complete transformation (rpy in degrees) -->
+  <property name="cal_r_cam_to_l_cam_x"   value="-0.123910141126938" />
+  <property name="cal_r_cam_to_l_cam_y"  value="0.000355069835126858" />
+  <property name="cal_r_cam_to_l_cam_z" value="-0.00338830000504571" />
+  <property name="cal_r_cam_to_l_cam_roll"     value="0.00095916631048800001" />
+  <property name="cal_r_cam_to_l_cam_pitch"   value="6.2766014054209256" />
+  <property name="cal_r_cam_to_l_cam_yaw"     value="0.014360163058165143" />
+
+  <!-- Right Camera -> SwissRanger complete transformation (rpy in degrees) -->
+  <property name="cal_r_cam_to_sr4_x"   value="-0.0619785" />
+  <property name="cal_r_cam_to_sr4_y"  value="0.001762617" />
+  <property name="cal_r_cam_to_sr4_z" value="-0.0379636" />
+  <property name="cal_r_cam_to_sr4_roll" value="0.0208719" />
+  <property name="cal_r_cam_to_sr4_pitch"   value="6.27334" />
+  <property name="cal_r_cam_to_sr4_yaw"     value="3.1418" />
+
+  <!-- Right Camera -> Videre  STOC Camera (rpy in degrees) -->
+  <!-- TODO: Replace manually measured values with calibrated ones -->
+  <property name="cal_r_cam_to_stoc_x"   value="-0.07" />
+  <property name="cal_r_cam_to_stoc_y"  value="-0.07" />
+  <property name="cal_r_cam_to_stoc_z" value="0.0" />
+  <property name="cal_r_cam_to_stoc_roll" value="0" />
+  <property name="cal_r_cam_to_stoc_pitch"   value="${-0.5 * M_PI}" />
+  <property name="cal_r_cam_to_stoc_yaw"     value="${-0.5 * M_PI}" />
+
+  
+
+  
+</root>

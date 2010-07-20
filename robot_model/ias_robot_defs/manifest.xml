@@ -1,0 +1,14 @@
+<package>
+  <description brief="ias_robot_defs">
+
+     URDF definitions of the platforms used at TU Muenchen.
+
+  </description>
+  <author>Lorenz Moesenlechner</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <depend package="xacro"/>
+
+</package>
+
+
