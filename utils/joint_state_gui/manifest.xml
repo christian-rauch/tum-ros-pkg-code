@@ -1,0 +1,12 @@
+<package>
+  <description brief="joint_state_gui">
+    small gui to publish joint_states (for debugging robot descriptions)
+  </description>
+  <author>Ingo Kresse</author>
+  <email>kresse@in.tum.de</email>
+  <license>GPL</license>
+  <review status="unreviewed" notes=""/>
+  <depend package="sensor_msgs"/>
+  <rosdep name="wxwidgets"/>
+  <rosdep name="wxpython"/>
+</package>
