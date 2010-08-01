@@ -169,11 +169,11 @@ public:
         pd.classify(s); 
         if ( s->type == 1) 
         {
-          ROS_INFO("People found");
+          printf("People found\n");
         }
         else 
         {
-          ROS_INFO("__NO__ People found");
+          printf("__NO__ People found\n");
           // not a person
         }
      

@@ -9,7 +9,7 @@
   <depend package="roscpp" />
   <depend package="std_msgs" />
   <depend package="sensor_msgs" />
-  <depend package="people_detector" />
+  <depend package="people_detector_2d_laser" />
 </package>
 
 

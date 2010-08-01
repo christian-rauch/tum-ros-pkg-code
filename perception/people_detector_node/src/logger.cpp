@@ -69,7 +69,7 @@ public:
    */
   LoggerNode() : nh_("~")
   {
-    nh_.param("input_scan_topic", input_scan_topic_, std::string("/scan"));
+    nh_.param("input_scan_topic", input_scan_topic_, std::string("/base_scan_front"));
     scan_ = nh_.subscribe<sensor_msgs::LaserScan>(input_scan_topic_, 10, &LoggerNode::scan_cb, this);
   }
   
