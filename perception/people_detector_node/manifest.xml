@@ -1,11 +1,14 @@
 <package>
-  <description brief="people_detector_2d_laser">
-     people_detector_2d_laser
+  <description brief="people_detector_node">
+     people_detector_node wraps around the functionality of the http://tum-ros-pkg.svn.sourceforge.net/viewvc/tum-ros-pkg/3rdparty/people_detector_2d_laser/
+     package in thus provides the hypotheses about the pose of human legs as seen in the 2.5D laser scan. 
+     Classsifer's hypotheses are to be found in training_data subfolder, please also see the README file in people_detector_2d_laser package if you need to train 
+     your own classifier.
   </description>
   <author>Oscar Martinez Mozos, Dejan Pangercic(ROS)</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
-  <url>http://ros.org/wiki/people_detector_2d_laser</url>
+  <url>http://ros.org/wiki/people_detector_node</url>
   <depend package="roscpp" />
   <depend package="std_msgs" />
   <depend package="sensor_msgs" />
