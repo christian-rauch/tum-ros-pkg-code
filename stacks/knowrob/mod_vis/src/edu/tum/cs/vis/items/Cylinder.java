@@ -4,7 +4,6 @@ import edu.tum.cs.util.math.Vector3f;
 import edu.tum.cs.vis.Canvas;
 import edu.tum.cs.vis.Drawable;
 
-import java.lang.*;
 
 public class Cylinder implements Drawable {
 

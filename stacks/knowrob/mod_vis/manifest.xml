@@ -19,6 +19,7 @@
 
   <depend package="ias_knowledge_base"/>
   <depend package="jpl"/>
+  <depend package="rosjava"/>
 
   <export>
     <java classpath="${prefix}/bin:${prefix}/lib/controlP5.jar:${prefix}/lib/core.jar:${prefix}/lib/vecmath.jar"/>

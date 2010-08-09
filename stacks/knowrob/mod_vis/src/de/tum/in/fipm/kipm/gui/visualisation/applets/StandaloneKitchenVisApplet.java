@@ -43,7 +43,7 @@ public class StandaloneKitchenVisApplet extends AnimatedCanvas implements MouseL
 
   ////////////////////////////////////////////////////////////////////////////////
   // SETTINGS
-  private String meshFile = "/home/tenorth/work/kipm/meshdata/unclassified300p.vtk";
+  //private String meshFile = "/home/tenorth/work/kipm/meshdata/unclassified300p.vtk";
 
   
   ////////////////////////////////////////////////////////////////////////////////
@@ -77,7 +77,6 @@ public class StandaloneKitchenVisApplet extends AnimatedCanvas implements MouseL
   private ArrayList<float[]> meshpoints = new ArrayList<float[]>();
   private ArrayList<int[]>   meshtriangles = new ArrayList<int[]>();
   private float[] framesToTimes;
-  private String currentlyActiveItem = null;
 
   
   ////////////////////////////////////////////////////////////////////////////////
@@ -158,7 +157,8 @@ public class StandaloneKitchenVisApplet extends AnimatedCanvas implements MouseL
    * reads the mesh data from a file.
    * @param file
    */
-  private void readMeshData(String file) {
+  @SuppressWarnings("unused")
+private void readMeshData(String file) {
 	    
 	    BufferedReader reader = createReader(file);
 	    try{
@@ -1162,9 +1162,6 @@ public class StandaloneKitchenVisApplet extends AnimatedCanvas implements MouseL
 	  String clickedOn = getItemAt(e.getX(), e.getY());
 	  displayMessage(clickedOn+"");
 	  if(clickedOn != null) {
-		  //if(currentlyActiveItem != null) highlightItem(currentlyActiveItem, false);
-		  currentlyActiveItem = clickedOn;
-		  //highlightItem(clickedOn, true);
 		  prologVisCanvas.displayInfoFor(clickedOn);
 	  }
 	  delay(100);

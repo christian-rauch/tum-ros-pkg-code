@@ -6,11 +6,20 @@ rosbuild_init()
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 set(JAVA_OUTPUT_DIR ${PROJECT_SOURCE_DIR}/bin)
 
+
+
 add_classpath(${PROJECT_SOURCE_DIR}/lib/controlP5.jar)
 add_classpath(${PROJECT_SOURCE_DIR}/lib/core.jar)
 add_classpath(${PROJECT_SOURCE_DIR}/lib/vecmath.jar)
 
+add_runtime_classpath(${PROJECT_SOURCE_DIR}/lib/controlP5.jar)
+add_runtime_classpath(${PROJECT_SOURCE_DIR}/lib/core.jar)
+add_runtime_classpath(${PROJECT_SOURCE_DIR}/lib/vecmath.jar)
+
 rosbuild_find_ros_package(jpl)
 add_classpath(${jpl_PACKAGE_PATH}/jpl/jpl.jar)
+add_runtime_classpath(${jpl_PACKAGE_PATH}/prolog/jpl.jar)
 
 add_java_source_dir(${PROJECT_SOURCE_DIR}/src)
+
+rospack_add_java_executable(communication_vis de.tum.in.fipm.kipm.gui.visualisation.applets.CommunicationVisApplet)

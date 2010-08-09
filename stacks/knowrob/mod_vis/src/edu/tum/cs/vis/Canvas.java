@@ -420,8 +420,6 @@ public class Canvas extends PApplet implements MouseListener, MouseMotionListene
 			GraphicsDevice displayDevice = null;
 			boolean hideStop = false;
 
-			String param = null, value = null;
-
 			// try to get the user folder. if running under java web start,
 			// this may cause a security exception if the code is not signed.
 			// http://processing.org/discourse/yabb_beta/YaBB.cgi?board=Integrate;action=display;num=1159386274

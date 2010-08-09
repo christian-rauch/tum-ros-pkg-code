@@ -264,6 +264,7 @@ public class PrologVisualizationCanvas extends PApplet implements MouseListener,
 	/**
 	 * initializes prolog
 	 */
+	@SuppressWarnings("unused")
 	private static void initProlog() {
 		try {
 			Vector<String> args= new Vector<String>(Arrays.asList(Prolog.get_default_init_args()));
@@ -285,6 +286,7 @@ public class PrologVisualizationCanvas extends PApplet implements MouseListener,
 	  // USER INTERFACE
 	  // 
 
+		@SuppressWarnings("unused")
 		private ArrayList<String[]> readInformationForEntity(String entity) {
 			
 			// read list of attributes from Prolog

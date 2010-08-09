@@ -269,16 +269,16 @@ add_object_perception(Identifier, Canvas) :-
     % highlight based on the source of information
     ((
         % do not highlight pieces of furniture
-        rdfs_individual_of(Identifier, knowrob:'FurniturePiece')
+        rdfs_individual_of(Identifier, knowrob:'FurniturePiece'),!
     ) ; (
         % display perceived objects in light grey
         rdfs_individual_of(NewestDetection, knowrob:'Perceiving'),
-        highlight_object(Identifier, @(true), 160, 160, 160, Canvas)
+        highlight_object(Identifier, @(true), 160, 160, 160, Canvas),!
     ) ; (
         % display inferred objects by their probability
         rdfs_individual_of(NewestDetection, knowrob:'ProbCogReasoning'),
         rdf_has(NewestDetection, knowrob:probability, Prob),
-        highlight_object(Identifier, @(true), 230, 230, 230, Prob, Canvas)
+        highlight_object(Identifier, @(true), 230, 230, 230, Prob, Canvas),!
     ) ).
 
 

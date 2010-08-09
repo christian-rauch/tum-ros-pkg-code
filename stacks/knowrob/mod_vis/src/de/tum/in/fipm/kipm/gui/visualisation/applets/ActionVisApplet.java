@@ -277,8 +277,6 @@ public class ActionVisApplet extends PApplet implements MouseListener, MouseMoti
   // LOADING DATA
   // 
 
-
-  @SuppressWarnings("unused")
   public void setActionInformation(String[][][] pl_list, String hand, int level) {
   	
 	  try{
@@ -563,6 +561,7 @@ public class ActionVisApplet extends PApplet implements MouseListener, MouseMoti
 		}
 
 
+		@SuppressWarnings("unused")
 		public ActionInformation(String label, float time, String[] types, String objecttype, int idColor) {
 			super();
 			this.label = label;
@@ -579,6 +578,7 @@ public class ActionVisApplet extends PApplet implements MouseListener, MouseMoti
 		}
 
 
+		@SuppressWarnings("unused")
 		public void setLabel(String label) {
 			this.label = label;
 		}
@@ -589,6 +589,7 @@ public class ActionVisApplet extends PApplet implements MouseListener, MouseMoti
 		}
 
 
+		@SuppressWarnings("unused")
 		public void setObjecttype(String objecttype) {
 			this.objecttype = objecttype;
 		}
@@ -604,11 +605,13 @@ public class ActionVisApplet extends PApplet implements MouseListener, MouseMoti
 		}
 
 
+		@SuppressWarnings("unused")
 		public void setIdColor(int idColor) {
 			this.idColor = idColor;
 		}
 
 
+		@SuppressWarnings("unused")
 		public void setTime(float time) {
 			this.starttime = time;
 		}
@@ -619,6 +622,7 @@ public class ActionVisApplet extends PApplet implements MouseListener, MouseMoti
 		}
 
 
+		@SuppressWarnings("unused")
 		public void setTypes(String[] types) {
 			this.types = types;
 		}
@@ -629,6 +633,7 @@ public class ActionVisApplet extends PApplet implements MouseListener, MouseMoti
 		}
 
 
+		@SuppressWarnings("unused")
 		public void setEndtime(float endtime) {
 			this.endtime = endtime;
 		}
@@ -639,6 +644,7 @@ public class ActionVisApplet extends PApplet implements MouseListener, MouseMoti
 		}
 
 
+		@SuppressWarnings("unused")
 		public void setStarttime(float starttime) {
 			this.starttime = starttime;
 		}

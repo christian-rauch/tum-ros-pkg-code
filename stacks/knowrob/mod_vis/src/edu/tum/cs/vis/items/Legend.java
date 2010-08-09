@@ -4,8 +4,6 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
 
-import processing.core.PFont;
-
 import edu.tum.cs.vis.Canvas;
 import edu.tum.cs.vis.Drawable;
 

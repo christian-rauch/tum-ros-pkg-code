@@ -45,6 +45,7 @@ public class CollectionFilter<T, CollectionType> implements Iterable<T>, Iterato
 		return item != null;
 	}
 
+	@SuppressWarnings("unchecked")
 	public T next() {
 		T ret = (T)item;
 		findNext();

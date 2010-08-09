@@ -74,18 +74,18 @@ public class TrajectoryApplet extends AnimatedCanvas {
 			traj.center();
 		
 		//traj.smoothLines();
-		if(false) {
-			traj.mergePoints();
-			traj.mergeLines();
-	
-			traj.findOscillations();
-			traj.mergeRepeats();
-			//traj.cleanUp();
-			//traj.findskippedPoints();
-			
-			
-			traj.getTransitionPoints();		
-		}
+//		if(false) {
+//			traj.mergePoints();
+//			traj.mergeLines();
+//	
+//			traj.findOscillations();
+//			traj.mergeRepeats();
+//			//traj.cleanUp();
+//			//traj.findskippedPoints();
+//			
+//			
+//			traj.getTransitionPoints();		
+//		}
 			
 		// add coordinate system
 		float sceneSize = traj.getMaxAbsCoord();
