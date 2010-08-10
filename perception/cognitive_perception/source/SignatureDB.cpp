@@ -26,9 +26,8 @@
 
 #include <time.h>
 
-#ifdef BOOST_THREAD
 #include <boost/bind.hpp>
-#endif
+#include <boost/algorithm/string.hpp>
 
 
 #define XML_NODE_SIGDB_INTERN_DB	"SigDBRoot"
@@ -186,9 +185,14 @@ int SignatureDB::AddSignature(Signature* sig)
         if(!Check(sig->m_ID, error))
         {
             if(sig->m_ID > 500000)
-                printf("Object is new\n");               
+                printf("Object is new\n");
             error = m_dbStarter->AddChild(sig->Save());
             m_ids.push_back(sig->m_ID);
+            for(size_t objsubsc = 0; objsubsc < m_newObjectSubscriber.size(); objsubsc++)
+            {
+              m_newObjectSubscriber[objsubsc]->NotifyNewObject(sig, sig->m_relPose);
+            }
+
             int indizes = m_index->CountChildren();
             for(int i = 0; i < indizes; i++)
             {
@@ -207,9 +211,14 @@ int SignatureDB::AddSignature(Signature* sig)
         }
         else
         {
-            UpdateNodes(sig, error);
+           UpdateNodes(sig, error);
            if(sig->m_ID > 500000)
-                printf("Object is to be updated\n");               
+                printf("Object is to be updated\n");
+
+           for(size_t objsubsc = 0; objsubsc < m_newObjectSubscriber.size(); objsubsc++)
+           {
+             m_newObjectSubscriber[objsubsc]->NotifyNewObject(sig, sig->m_relPose);
+           }
         }
         if(error != -1)
         {
@@ -443,6 +452,27 @@ Elem* SignatureDB::FindCreateDescriptor(ObjectID_t class_id)
   return result;
 }
 
+
+void SignatureDB::SetNewObjectCallback(Comm* comm)
+{
+  for(size_t i = 0; i < m_dbStarter->CountChildren(); i++)
+  {
+    try
+    {
+     Signature* sig = (Signature*)Elem::ElemFactory(m_dbStarter->GetChild(i));
+     if(!sig)
+       continue;
+     comm->NotifyNewObject(sig, sig->m_relPose);
+     delete sig;
+    }
+    catch(...)
+    {
+      continue;
+    }
+  }
+  m_newObjectSubscriber.push_back(comm);
+}
+
 void SignatureDB::FreeActiveSignature(Signature* sig)
 {
   std::vector<std::pair<Signature*, int> >::iterator it = m_currentlyActiveSignatures.begin();
@@ -459,7 +489,7 @@ void SignatureDB::FreeActiveSignature(Signature* sig)
 Class* SignatureDB::GetClassByID(ObjectID_t id)
 {
   std::string st = CheckClass(id);
-  if(st == "")
+  if(st.length() == 0)
     throw "Unknown Class";
   return new Class(st, id);
 }
@@ -471,7 +501,7 @@ ObjectID_t SignatureDB::CheckClass(std::string name)
 	for(it = m_classes.begin(); it != m_classes.end(); it++)
 	{
 		/*cerr<<(*it).first<<endl;*/
-		if((*it).first.compare(name) == 0)
+		if(boost::iequals((*it).first,name))
 			return (*it).second;
 
 	}

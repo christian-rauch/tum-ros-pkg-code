@@ -42,11 +42,16 @@ namespace cop
   /************************************************************************
   *  class PerceptionPrimitive
   *  @brief Describes the entity created by each call of cop in order
-  *         to answer a query and enable later evaluation
+  *         to answer a query and enable later evaluation (short name PP)
   **************************************************************************/
   class PerceptionPrimitive
   {
   public:
+    /**
+    * @param sig Create a PerceptionPrimitive always with a corresponding Signature
+    *
+    *  A PerceptionPrimitive (PP) has at least one Signature it validates
+    */
     PerceptionPrimitive(Signature* sig) :
       m_evaluation(0),
       m_timing(0),
@@ -56,13 +61,24 @@ namespace cop
     {
       m_signatures.push_back(sig);
     }
-
+    /**
+    *  GetSignature
+    *  @return returns the index-th Signature stored in the PP
+    */
     Signature* GetSignature(size_t index = 0){return m_signatures[index];}
     PerceptionPrimitiveID_t GetID(){return m_uniqueID;}
-
-    void AddResult(ObjectID_t id, double quality =  1.0, unsigned long calctime = 0)
+    /**
+    * AddResult
+    * Add resulting descriptors/ignatures to the current list of derived elements.
+    * @param algorithm Algorithm that created this result
+    * @param id  The Object-id this Evaluation is realted to
+    * @param quality Quality assesment between 0.0 and 1.0
+    * @param calctime Any time involved for processing these data
+    */
+    void AddResult(std::string algorithm,  ObjectID_t id, double quality =  1.0, unsigned long calctime = 0)
     {
       m_results.push_back(id);
+      m_AlgorithmIDs.push_back(algorithm);
       m_evaluation += quality;
       m_timing += calctime;
       m_count++;
@@ -88,7 +104,7 @@ namespace cop
 
     PerceptionPrimitiveState GetCurrState(){return m_currState;}
     std::vector<Signature*> m_signatures;
-    std::vector<unsigned long> m_AlgorithmIDs;
+    std::vector<std::string> m_AlgorithmIDs;
     std::vector<Sensor*> m_sensors;
 
     std::vector<ObjectID_t> m_results;

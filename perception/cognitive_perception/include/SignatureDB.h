@@ -159,6 +159,14 @@ namespace cop
     *******************************************************************************/
     Elem* FindCreateDescriptor(ObjectID_t class_id);
 
+     /*******************************************************************************
+    *   SetNewObjectCallback                                                      */
+    /*******************************************************************************
+    *
+    * @param comm       means to communicate every new added signature to a subscriber
+    *
+    *******************************************************************************/
+    void SetNewObjectCallback(Comm* comm);
     // Public attributes
     //
 
@@ -206,6 +214,7 @@ namespace cop
     XMLTag* m_dbStarter;
     XMLTag* m_index;
 
+    std::vector<Comm*>   m_newObjectSubscriber;
 
     std::vector<ObjectID_t> m_ids;
     std::vector<std::pair<std::string, ObjectID_t> > m_classes;

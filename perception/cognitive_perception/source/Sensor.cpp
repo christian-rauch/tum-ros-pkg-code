@@ -191,6 +191,39 @@ void Sensor::ProjectPoint3DToSensor(const double &x, const double &y, const doub
   MinimalCalibration(GetUnformatedCalibrationValues()).Project3DPoint(x,y,z,row, column) ;
 }
 
+#include <ros/ros.h>
+#include <sensor_msgs/PointCloud.h>
+
+bool s_initedPCDPublisher = false;
+ros::Publisher s_sensorPublisher;
+
+
+void Sensor::Publish3DData(std::vector<double> x, std::vector<double> y, std::vector<double> z)
+{
+  if(!s_initedPCDPublisher)
+  {
+    s_initedPCDPublisher = true;
+    ros::NodeHandle nh;
+    printf("Advertise new topic for Displaying results: /cop/pcds\n");
+    s_sensorPublisher = nh.advertise<sensor_msgs::PointCloud>("/cop/pcds", 2, true);
+  }
+  sensor_msgs::PointCloud pcd;
+  pcd.header.frame_id = "/map";
+  pcd.header.stamp = ros::Time::now();
+
+  for(size_t i = 0; i < x.size(); i++)
+  {
+    geometry_msgs::Point32 point;
+    point.x = x[i];
+    point.y = y[i];
+    point.z = z[i];
+    pcd.points.push_back(point);
+  }
+  printf("Call Publish: /cop/pcds\n");
+  s_sensorPublisher.publish(pcd);
+}
+
+
 void Sensor::PushBack(Reading* img)
 {
   lock lk(m_mutexImageList);

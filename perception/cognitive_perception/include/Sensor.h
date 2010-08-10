@@ -31,6 +31,7 @@
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
 #include <boost/thread/condition.hpp>
+
 using namespace boost;
 
 #define XML_NODE_SENSOR "Sensor"
@@ -150,7 +151,16 @@ namespace cop
       *  @return a pair of a fomrat string describing the content and a list of doubles
       */
       virtual std::pair<std::string, std::vector<double> > GetUnformatedCalibrationValues(){return std::pair<std::string, std::vector<double> >();}
+
+      /**
+      *  Helper function for projecting 3D data to the images
+      */
       virtual void ProjectPoint3DToSensor(const double &x, const double &y, const double &z, double &row, double &column);
+      /**
+      *  Helper function for sending 3D display data to rviz
+      *  @remarks only takes points which are in map and from time now
+      */
+      void Publish3DData(std::vector<double> x, std::vector<double> y, std::vector<double> z);
       /**
       * DeleteReading
       *  @brief removes entries of the reading buffer, this function will not release still references functions (@see cop::Reading::Free)
@@ -172,7 +182,7 @@ namespace cop
       *  @brief Wait the condition variable m_mutexImageList
       */
       virtual void WaitForNewData();
-      virtual void PushBackAsync(){};      
+      virtual void PushBackAsync(){};
   protected:
      virtual void PushBack(Reading* img);
      Reading* GetReading_Lock(size_t index);
@@ -206,7 +216,7 @@ namespace cop
       /***
       *   @brief Constructor with pose, initializes parameters
       */
-    SensorNetworkRelay() 
+    SensorNetworkRelay()
        : SensorType(),
          m_readyToPub(true)
     {m_rateCounter = 0;m_bCameraInfo=false;};
@@ -258,7 +268,7 @@ namespace cop
        }
        m_readyToPub = true;
      }
- 
+
      virtual void PushBack(Reading* img)
      {
        if(m_readyToPub)

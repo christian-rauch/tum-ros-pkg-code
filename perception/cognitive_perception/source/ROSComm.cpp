@@ -29,6 +29,7 @@ using namespace vision_srvs;
 
 #ifdef BOOST_THREAD
 #include <boost/thread/mutex.hpp>
+#include <sstream>
 boost::mutex s_mutexAnswer;
 #endif
 
@@ -85,6 +86,9 @@ std::string AlgorihtmTypeToName(int type)
     break;
     case ALGORITHMTYPE_LOOKUP:
     name = "Database LookUp";
+    break;
+    case ALGORITHMTYPE_LOOKUPALL:
+    name = "Database: Subscribe to All";
     break;
   }
   return name;
@@ -169,24 +173,22 @@ void PutPoseIntoAMessage(cop_answer &answer, Signature* sig)
 
 void ROSComm::NotifyPoseUpdate(RelPose* pose, bool sendObjectRelation)
 {
-  BOOST(s_mutexAnswer.lock());
   try
   {
     cop_answer answer;
+
+    PutPoseIntoAMessage(answer, m_visPrim.GetSignature());
     if(pose != NULL)
     {
-      aposteriori_position ap_pose;
-      ap_pose.objectId = m_visPrim.GetSignature()->m_ID;
-      ap_pose.probability = pose->m_qualityMeasure;
-      ap_pose.position = pose->m_uniqueID;
-      answer.found_poses.push_back(ap_pose);
+      answer.found_poses[0].probability = pose->m_qualityMeasure;
+      answer.found_poses[0].position = pose->m_uniqueID;
       answer.perception_primitive = m_visPrim.GetID();
     }
     else
     {
         answer.error = "Object lost";
     }
-    m_publisher->publish(answer);
+    PublishAnswer(answer);
   }
   catch(...)
   {
@@ -195,29 +197,26 @@ void ROSComm::NotifyPoseUpdate(RelPose* pose, bool sendObjectRelation)
 #ifdef _DEBUG
   /*printf("Writing a bottle in Pose Update Notification:  %s\n", new_loc_bottle.toString().c_str());*/
 #endif /*_DEBUG*/
-  BOOST(s_mutexAnswer.unlock());
 }
 
 void ROSComm::NotifyNewObject(Signature* sig, RelPose* pose)
 {
-  BOOST(s_mutexAnswer.lock());
   try
   {
     cop_answer answer;
+    PutPoseIntoAMessage(answer, sig);
     if(pose != NULL)
     {
-      aposteriori_position ap_pose;
-      ap_pose.objectId = sig->m_ID;
-      ap_pose.probability = pose->m_qualityMeasure;
-      ap_pose.position = pose->m_uniqueID;
-      answer.found_poses.push_back(ap_pose);
-      answer.perception_primitive = m_visPrim.GetID();
+      answer.found_poses[0].probability = pose->m_qualityMeasure;
+      answer.found_poses[0].position = pose->m_uniqueID;
     }
     else
     {
-        answer.error = "Object lost";
+      answer.found_poses[0].probability = 0.0;
+      answer.error = "Object not localized";
     }
-    m_publisher->publish(answer);
+    answer.perception_primitive = m_visPrim.GetID();
+    PublishAnswer(answer);
   }
   catch(...)
   {
@@ -226,7 +225,6 @@ void ROSComm::NotifyNewObject(Signature* sig, RelPose* pose)
 #ifdef _DEBUG
   /*printf("Writing a bottle in Pose Update Notification:  %s\n", new_loc_bottle.toString().c_str());*/
 #endif /*_DEBUG*/
-  BOOST(s_mutexAnswer.unlock());
 }
 
 
@@ -234,6 +232,7 @@ ROSComm::~ROSComm()
 {
   /*for(int i = 0; i < m_pose->size(); i++)
     RelPoseFactory::FreeRelPose((*m_pose)[i].first);*/
+  m_visPrim.SetTerminated();
   delete m_pose;
 }
 
@@ -249,11 +248,42 @@ void ROSComm::Start()
 void ROSComm::PublishAnswer(cop_answer &answer)
 {
   int timeout = 0;
-  while(m_publisher->getNumSubscribers() < 1 && timeout < 100)
+  if(m_callerid.length() == 0)
   {
-     printf("No subscribers, waiting\n");
-     Sleeping(10);
-     timeout++;
+    while(m_publisher->getNumSubscribers() < 1 && timeout < 100)
+    {
+       printf("No subscribers, waiting\n");
+       Sleeping(10);
+       timeout++;
+    }
+  }
+  else
+  {
+    while(m_publisher->getNumSubscribers() < 1 && timeout < 100)
+    {
+       printf("No subscribers, waiting\n");
+       Sleeping(10);
+       timeout++;
+    }
+    bool right_publisher = false;
+    while(timeout < 100)
+    {
+
+      for(size_t i = 0;  i < m_calleridMap[m_callerid].size(); i++)
+      {
+        if(m_calleridMap[m_callerid][i].compare(m_publisher->getTopic()) == 0)
+        {
+           right_publisher = true;
+           break;
+        }
+
+      }
+      if(right_publisher)
+        break;
+      printf("Wrong subscribers, waiting for %s\n", m_callerid.c_str());
+      Sleeping(50);
+      timeout++;
+    }
   }
   BOOST(s_mutexAnswer.lock());
   try
@@ -279,6 +309,10 @@ void ROSComm::ProcessCall()
 
     switch(m_actionType)
     {
+    case ALGORITHMTYPE_LOOKUPALL:
+        m_visFinder.m_sigdb.SetNewObjectCallback(this);
+        bFinished = false;
+        break;
     case ALGORITHMTYPE_LOOKUP:
         PutPoseIntoAMessage(answer, m_visPrim.GetSignature());
         PublishAnswer(answer);
@@ -289,7 +323,7 @@ void ROSComm::ProcessCall()
           const SignatureLocations_t &new_location = m_visFinder.m_visLearner.RefineObject(m_pose, m_visPrim, m_numOfObjects);
           if(m_numOfObjects > 0 && new_location.size() > 0)
           {
-                  PutPoseIntoAMessage(answer, new_location);
+            PutPoseIntoAMessage(answer, new_location);
           }
           else
           {
@@ -344,7 +378,9 @@ void ROSComm::ProcessCall()
       catch(char const* text)
       {
         printf("Locate called by ros failed: %s\n", text);
-        answer.error = "Locate failed";
+        stringstream st;
+        st << "Locate failed: " << text;
+        answer.error = st.str();
         PublishAnswer(answer);
       }
       catch(...)
@@ -355,7 +391,7 @@ void ROSComm::ProcessCall()
       bFinished = true;
       break;
     default:
-       answer.error = "Locate failed";
+       answer.error = "Unknown command";
        PublishAnswer(answer);
        bFinished = true;
        break;
@@ -388,6 +424,25 @@ void ROSTopicManager::CloseROSTopic(std::string name)
 {
 }
 
+
+void ROSTopicManager::Subscriber(const ros::SingleSubscriberPublisher& subs)
+{
+  std::string topic = subs.getTopic();
+  std::string subscriber = subs.getSubscriberName();
+  printf("\n\nCop got new subscriber: %s at topic %s\n\n", subscriber.c_str(), topic.c_str());
+  if(m_subscriberPerTopics.find(subscriber) != m_subscriberPerTopics.end())
+  {
+      m_subscriberPerTopics[subscriber].push_back(topic);
+  }
+  else
+  {
+    std::vector<string> vst;
+    vst.push_back(topic);
+    m_subscriberPerTopics[subscriber] = vst;
+  }
+}
+
+
 /*void ROSTopicManager::ListenCallBack(const boost::shared_ptr<const cop_call> &msg)*/
 bool ROSTopicManager::ListenCallBack(cop_call::Request& msg, cop_call::Response&  answer)
 {
@@ -396,6 +451,15 @@ bool ROSTopicManager::ListenCallBack(cop_call::Request& msg, cop_call::Response&
   printf("Got Message: noo %ld \n", msg.number_of_objects);
 #endif
   std::vector<ObjectID_t> class_id;
+  std::string callerid;
+  try
+  {
+    callerid = (*msg.__connection_header)["callerid"];
+  }
+  catch(...)
+  {
+    callerid = "";
+  }
   std::string topicname = msg.outputtopic.length() == 0 ? STD_COP_OUTPUT_PORT : msg.outputtopic;
   Signature* sig = NULL;
   PossibleLocations_t* poses = new PossibleLocations_t();
@@ -511,7 +575,7 @@ bool ROSTopicManager::ListenCallBack(cop_call::Request& msg, cop_call::Response&
     ros::NodeHandle n;
     printf("Publisher pub = n.advertise<cop_answer>(%s, 1000)\n", topicname.c_str());
     ros::Publisher* pub= new ros::Publisher();
-    *pub = n.advertise<cop_answer>(topicname, 5);
+    *pub = n.advertise<cop_answer>(topicname, 5, boost::bind(&ROSTopicManager::Subscriber, this, _1));
 /*     ros::Rate r(1);
      r.sleep();
     cop_answer answer;
@@ -521,9 +585,68 @@ bool ROSTopicManager::ListenCallBack(cop_call::Request& msg, cop_call::Response&
      m_openTopics[topicname] = pub;
   }
   PerceptionPrimitive& vis = m_sig.CreateNewPerceptionPrimitive(sig);
-  ROSComm* comm = new ROSComm(m_visFinder, poses, vis, m_openTopics[topicname], (int)msg.number_of_objects, (int)msg.action_type);
+  ROSComm* comm = new ROSComm(m_visFinder, poses, vis, m_openTopics[topicname], (int)msg.number_of_objects, (int)msg.action_type, callerid, this->m_subscriberPerTopics);
   comm->Start();
   answer.perception_primitive = vis.GetID();
+  return true;
+}
+
+#ifdef WIN32
+#include <direct.h>
+#define GETCWD(A, B) _getcwd(A, B)
+#else
+#include <unistd.h>
+#define GETCWD(A, B) getcwd(A, B)
+#endif
+
+
+bool ROSTopicManager::SaveCallBack(cop_save::Request& msg, cop_save::Response&  answer)
+{
+  try
+  {
+    ObjectID_t id = msg.object_id;
+    char cwd[2048];
+    char * cwdptr;
+    std::ostringstream os;
+    Signature* sig = NULL;
+    int index;
+
+    if(m_sig.CheckClass(id).length() > 0)
+    {
+      std::vector<ObjectID_t> class_id;
+      class_id.push_back(id);
+      sig = m_sig.GetSignature(class_id);
+    }
+    else if(m_sig.Check(id, index))
+    {
+      sig = m_sig.GetSignatureByID(id);
+    }
+    else
+    {
+       ROS_ERROR("Failed to find a specific object (%ld)\n", id);
+       return false;
+    }
+    XMLTag* tag = sig->Save(true);
+
+
+    cwdptr = GETCWD(cwd, 2048);
+
+    printf("cwd:  %s / %s\n", cwdptr, cwd);
+
+    os << cwd << "/signature" << tag->date() << ".xml";
+
+    tag->WriteToFile(os.str());
+
+    answer.xmlfilename = os.str();
+    answer.filenames =  tag->GetSubFilenames();
+
+  }
+  catch(...)
+  {
+    ROS_ERROR("Failed to save an object");
+    return false;
+  }
+
   return true;
 }
 
@@ -532,11 +655,26 @@ void ROSTopicManager::NewSignatureCallBack(std_msgs::String::ConstPtr xmlFilenam
   try
   {
     XMLTag* signature = XMLTag::ReadFromFile(xmlFilename->data);
-    Signature* sig = (Signature*)Elem::ElemFactory(signature);
-    m_sig.AddSignature(sig);
-
-    printf("Signature created remotely. num descriptors: %ld\n", sig->CountElems());
-
+    if(signature != NULL)
+    {
+      if(signature->GetName().compare(XML_NODE_SIGNATURE) == 0)
+      {
+        Signature* sig = (Signature*)Elem::ElemFactory(signature);
+        if(sig != NULL)
+        {
+          m_sig.AddSignature(sig);
+          ROS_INFO("Signature created remotely. num descriptors: %ld\n", sig->CountElems());
+        }
+      }
+      else
+      {
+        ROS_ERROR("Unexpected Type incoming\n");
+      }
+    }
+    else
+    {
+      ROS_ERROR("Failed ot load %s\n", xmlFilename->data.c_str());
+    }
   }
   catch(const char* text)
   {
@@ -546,6 +684,8 @@ void ROSTopicManager::NewSignatureCallBack(std_msgs::String::ConstPtr xmlFilenam
 
 void ROSTopicManager::FeedbackCallBack(vision_msgs::cop_feedback::ConstPtr feedback)
 {
+  for(size_t i = 0; i < feedback->error.size(); i++)
+   printf("got a feedback:\n Error: %ld (node: %s, description: %s) \n", feedback->error[i].error_id, feedback->error[i].node_name.c_str(), feedback->error[i].error_description.c_str());
   m_sig.EvaluatePerceptionPrimitive(feedback->perception_primitive, feedback->evaluation);
 }
 
@@ -559,6 +699,8 @@ void ROSTopicManager::Listen(std::string name, volatile bool &g_stopall, ros::No
   printf("advertiseService<cop_call> (%s, ...)\n", name.c_str());
   ros::ServiceServer srv = node->advertiseService(node->resolveName(name), &ROSTopicManager::ListenCallBack, this);
 
+  printf("advertiseService<cop_save> (%s, ...)\n", node->resolveName("save").c_str());
+  ros::ServiceServer savesrv = node->advertiseService(node->resolveName("save"), &ROSTopicManager::SaveCallBack, this);
 
   ros::Subscriber sub_add_sig =
         node->subscribe<std_msgs::String>(

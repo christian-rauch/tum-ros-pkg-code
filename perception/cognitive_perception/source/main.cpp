@@ -120,9 +120,15 @@ int main(int argc, char* argv[])
           if(g_stopall == true)
           {
             if(argc > 1)
+            {
               copWorld.SaveCop(STD_CONFIG_FILENAME);
+              exit(0);
+            }
             else
+            {
               copWorld.SaveCop(STD_CONFIG_FILENAME);
+              exit(0);
+            }
           }
         }
         else

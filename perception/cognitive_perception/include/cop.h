@@ -296,6 +296,7 @@ namespace cop
       config->AddChild(s_attManager->Save());
       printf("write it\n");
       config->WriteToFile(filename);
+      printf("Written\n");
     }
 
   #ifdef USE_YARP_COMM

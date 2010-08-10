@@ -30,6 +30,7 @@
 #include <map>
 
 #include <vision_srvs/cop_call.h>
+#include <vision_srvs/cop_save.h>
 #include <vision_msgs/cop_answer.h>
 #include <vision_msgs/cop_feedback.h>
 #include <std_msgs/String.h>
@@ -53,13 +54,16 @@ namespace cop
   class ROSComm : public Comm
   {
   public:
-    ROSComm(VisFinder& visFinder, PossibleLocations_t* pose, PerceptionPrimitive& vis, ros::Publisher * pub, int numOfObjects, int actionType) :
+    ROSComm(VisFinder& visFinder, PossibleLocations_t* pose, PerceptionPrimitive& vis, ros::Publisher * pub,
+               int numOfObjects, int actionType, std::string callerid, std::map<std::string, std::vector<std::string> > &callerids) :
       m_visFinder(visFinder),
       m_pose(pose),
       m_visPrim(vis),
       m_publisher(pub),
       m_numOfObjects(numOfObjects),
-      m_actionType(actionType)
+      m_actionType(actionType),
+      m_callerid(callerid),
+      m_calleridMap(callerids)
     {
     }
 
@@ -111,6 +115,8 @@ private:
     ros::Publisher* m_publisher;
     int m_numOfObjects;
     int m_actionType;
+    std::string m_callerid;
+    std::map<std::string, std::vector<std::string> >  &m_calleridMap;
   };
 
   class ROSTopicManager
@@ -124,15 +130,21 @@ private:
     void Listen(std::string name, volatile bool &g_stopall, ros::NodeHandle* node);
     bool ListenCallBack(vision_srvs::cop_call::Request& request, vision_srvs::cop_call::Response&  answer);
 
+    bool SaveCallBack(vision_srvs::cop_save::Request& msg, vision_srvs::cop_save::Response&  answer);
+
     void NewSignatureCallBack(std_msgs::String::ConstPtr xmlFilename);
     void FeedbackCallBack(vision_msgs::cop_feedback::ConstPtr feedback);
 
     /*void ListenCallBack(const boost::shared_ptr<const cop::cop_call> &msg);*/
     bool OpenCommOnROSTopic(std::string st);
 
+    void Subscriber(const ros::SingleSubscriberPublisher& subs);
+
+
     std::map<std::string, ros::Publisher*> m_openTopics;
     VisFinder& m_visFinder;
     SignatureDB& m_sig;
+    std::map<std::string, std::vector<std::string> > m_subscriberPerTopics;
   };
 }
 #endif /* ROSCOMM_H */

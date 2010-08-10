@@ -152,8 +152,8 @@ SignatureLocations_t VisFinder::Locate (PossibleLocations_t* lastKnownPoses, Per
         PossibleLocations_t::const_iterator it = lastKnownPoses->begin();
         std::vector<Results_t> all_matches;
         int maxObjToAdd = numOfObjects;
-                  BOOST(boost::system_time t0);
-                  BOOST(boost::system_time t1);
+        BOOST(boost::system_time t0);
+        BOOST(boost::system_time t1);
         int count_poses = 1;
         if(lastKnownPoses->size() == 0)
         {
@@ -172,6 +172,7 @@ SignatureLocations_t VisFinder::Locate (PossibleLocations_t* lastKnownPoses, Per
           }
         }
         it = lastKnownPoses->begin();
+        Algorithm<std::vector<RelPose*> > * alg = NULL;
         for(;it != lastKnownPoses->end(); it++)
         {
             RelPose* lastKnownPose = (*it).first;
@@ -201,14 +202,14 @@ SignatureLocations_t VisFinder::Locate (PossibleLocations_t* lastKnownPoses, Per
 
 
                 locatertype += numOfObjects > 1 ? ALGORITHMSPEC_SEVERALTARGET : ALGORITHMSPEC_ONETARGET ;
-                Algorithm<std::vector<RelPose*> > * alg = m_selLocate.BestAlgorithm(locatertype, object, cameras);
+                 alg = m_selLocate.BestAlgorithm(locatertype, object, cameras);
                 DEBUG(printf("Selected Algorithm: %s\n", alg != NULL ? alg->GetName().c_str() : "None" ));
                 if(alg != NULL)
                 {
                   int numOfObjects_tmp = numOfObjects;
                   BOOST(t0 = boost::get_system_time());
                   std::vector<RelPose*> r = alg->Perform(cameras, lastKnownPose, object, numOfObjects_tmp, qualityMeasure);
-                  BOOST(t1 = get_system_time());
+                  BOOST(t1 = boost::get_system_time());
 
                   /** Collect results and  measure time*/
                   numOfObjects_tmp = r.size() < (unsigned)numOfObjects_tmp ?  r.size() : (unsigned)numOfObjects_tmp;
@@ -257,7 +258,7 @@ SignatureLocations_t VisFinder::Locate (PossibleLocations_t* lastKnownPoses, Per
             }
             Signature* sig = (Signature*)(object.Duplicate(false));
             sig->SetLastPerceptionPrimitive(visPrim.GetID());
-            visPrim.AddResult(sig->m_ID);
+            visPrim.AddResult(alg != NULL ? alg->GetName() : "NoAlg", sig->m_ID, pose->m_qualityMeasure, ((double)((t1 - t0).total_milliseconds()) /  1000.0));
             sig->SetPose(pose);
             m_selLocate.EvalAlgorithm(all_matches[i].alg, pose->m_qualityMeasure, ((double)((t1 - t0).total_milliseconds()) /  1000.0), sig);
 

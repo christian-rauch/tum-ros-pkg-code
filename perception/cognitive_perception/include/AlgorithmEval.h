@@ -48,6 +48,7 @@
 
 
 #define ALGORITHMTYPE_LOOKUP            0x6400
+#define ALGORITHMTYPE_LOOKUPALL         0x6401
 
 #define ALGORITHMSPEC_ONETARGET         0
 #define ALGORITHMSPEC_SEVERALTARGET     1
@@ -96,11 +97,11 @@ namespace cop
     *******************************************************************************/
     XMLTag* Save(std::string name = "");
 
-    Algorithm<T>*	m_algorithm;
-    int				  m_algorithmType;
-    double			m_eval;
-    double			m_avgRunTime;
-    std::map<ObjectID_t, std::pair<double, int> > m_objectEval;
+    Algorithm<T>*	                           m_algorithm;
+    int				                   m_algorithmType;
+    double			                   m_eval;
+    double			                   m_avgRunTime;
+    std::map<ObjectID_t, std::pair<double, int> >  m_objectEval;
 
   };
 }

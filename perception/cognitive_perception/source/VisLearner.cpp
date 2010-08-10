@@ -201,6 +201,7 @@ SignatureLocations_t VisLearner::RefineObject (PossibleLocations_t* lastKnownPos
     }
 
     std::vector<Algorithm<Descriptor*>*> refalg_list = m_refinements.BestAlgorithmList(type, sig, sensors);
+    printf("The list of algorithms for refinement contains %ld algs\n", refalg_list.size());
     if(refalg_list.size() > 0)
     {
       /** We found at least one alg, */
@@ -211,14 +212,17 @@ SignatureLocations_t VisLearner::RefineObject (PossibleLocations_t* lastKnownPos
         try
         {
           double qualityMeasure;
+          boost::system_time t0;
+          boost::system_time t1;
+          t0 = boost::get_system_time();
           Descriptor* d = refalg->Perform(sensors, lastKnownPose, sig, numOfObjects, qualityMeasure);
+          t1 = boost::get_system_time();
           /*sensors[0]->Show(-1);*/
           if(d != NULL)
           {
             d->SetLastPerceptionPrimitive(visPrim.GetID());
-            d->Evaluate(qualityMeasure, 0.0);
+            d->Evaluate(qualityMeasure, 1.0);
 
-            visPrim.AddResult(d->m_ID);
             sig.SetElem(d);
             RelPose* pose = d->GetLastMatchedPose();
             if(pose != NULL)
@@ -226,11 +230,13 @@ SignatureLocations_t VisLearner::RefineObject (PossibleLocations_t* lastKnownPos
 
             /*d->Show(lastKnownPose, sensors[0] );*/
             lastKnownPose->m_qualityMeasure = qualityMeasure;
+            visPrim.AddResult(refalg->GetName(), d->m_ID, lastKnownPose->m_qualityMeasure,((double)((t1 - t0).total_milliseconds()) /  1000.0));
+            m_refinements.EvalAlgorithm(refalg, lastKnownPose->m_qualityMeasure, ((double)((t1 - t0).total_milliseconds()) /  1000.0), &sig);
           }
           else
           {
             /*No result for this object, remeber*/
-            m_refinements.EvalAlgorithm(refalg, 0.0, 1.0, &sig);
+            m_refinements.EvalAlgorithm(refalg, 0.0, ((double)((t1 - t0).total_milliseconds()) /  1000.0), &sig);
           }
         }
         catch(char const* error_text)

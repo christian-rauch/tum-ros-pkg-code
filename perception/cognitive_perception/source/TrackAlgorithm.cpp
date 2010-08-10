@@ -106,7 +106,7 @@ TrackAlgorithm::~TrackAlgorithm ( )
           printf("Sent %ld\n", pose[0]->m_uniqueID);
           if(!resultReceived)
           {
-            m_curPrim.AddResult(object.m_ID, qualityMeasure, time);
+            m_curPrim.AddResult(m_alg != NULL ? m_alg->GetName().c_str() : "NoName", object.m_ID, qualityMeasure, time);
             resultReceived = true;
           }
         }

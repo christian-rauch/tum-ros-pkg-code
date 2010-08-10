@@ -585,5 +585,48 @@ XMLTag::~XMLTag ( )
         m_lastChanged = (unsigned long)time(NULL);
     }
 
+std::vector<std::string> XMLTag::GetSubFilenames()
+{
+  std::vector<std::string> strings;
+  GetSubFilenames(strings);
+  return strings;
+}
 
 
+void XMLTag::GetSubFilenames(std::vector<std::string> &strings)
+{
+
+  for(std::map<std::string, std::string>::const_iterator iter_pro = m_properties.begin();
+      iter_pro != m_properties.end(); iter_pro++)
+  {
+    if((*iter_pro).first.compare(XML_ATTRIBUTE_FILENAME) == 0)
+    {
+      strings.push_back((*iter_pro).second);
+      printf("Found a filename in %s: %s\n", m_name.c_str(), (*iter_pro).second.c_str());
+    }
+    else if((*iter_pro).first.find(XML_ATTRIBUTE_FILENAME) != (*iter_pro).first.npos)
+    {
+      strings.push_back((*iter_pro).second);
+      printf("Found a filename in %s: %s\n", m_name.c_str(), (*iter_pro).second.c_str());
+    }
+    else if((*iter_pro).first.find("path") != (*iter_pro).first.npos)
+    {
+      strings.push_back((*iter_pro).second);
+      printf("Found a filename in %s: %s\n", m_name.c_str(), (*iter_pro).second.c_str());
+    }
+  }
+
+  if(m_cData.find("dxf")!= m_cData.npos || m_cData.find("DXF") != m_cData.npos|| m_cData.find("Dxf") != m_cData.npos)
+  {
+    strings.push_back(m_cData);
+    printf("Found a filename in %s: %s\n", m_name.c_str(), m_cData.c_str());
+  }
+
+
+  for(std::vector<XMLTag*>::const_iterator iter_child = m_children.begin();
+      iter_child != m_children.end(); iter_child++)
+  {
+    (*iter_child)->GetSubFilenames(strings);
+  }
+
+}
