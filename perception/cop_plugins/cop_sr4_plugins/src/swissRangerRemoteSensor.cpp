@@ -2,6 +2,8 @@
 
 #define BOOST_THREAD
 
+extern volatile bool g_stopall;
+
 #include "Sensor.h"
 #include "XMLTag.h"
 
@@ -56,7 +58,7 @@ public:
     {
       if(m_grabbing)
       {
-        while(m_grabbing && (m_images.size() == 0))
+        while(!g_stopall && m_grabbing && (m_images.size() == 0))
         {
           printf("waiting for the camera %s to start grabbing\n", GetSensorID().c_str());
           sleep(1);

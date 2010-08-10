@@ -107,9 +107,9 @@ bool
     {
 
      public:
-      geometry_msgs::Point32 min_bound;
-      geometry_msgs::Point32  max_bound;
+      std::vector<double> cov33;
       geometry_msgs::Point32 center;
+
     };
 
     public:
@@ -271,7 +271,6 @@ class PlaneClustersSR
       {
         /*ROS_INFO ("Service request initiated.");
         updateParametersFromServer ();*/
-        printf("!\n");
         Point32 vp;
         vp.x = vp.y = vp.z = 0.0;
         cloud_trans(swissranger_jlo_id, ptu_base_jlo_id, vp, cloud);
@@ -301,14 +300,28 @@ class PlaneClustersSR
       detectTable (const PointCloud &cloud, PlaneClusterResult &resp,  Point32 viewpoint_cloud,bool parallel)
     {
       ros::Time ts = ros::Time::now ();
-
+      bool assuming_ar4 = true;
       // Create a downsampled representation of the cloud
       cloud_down_.header = cloud.header;
 
       // Estimate point normals and copy the relevant data
       try
       {
-       cloud_geometry::nearest::computeOrganizedPointCloudNormalsWithFiltering (cloud_down_, cloud, k_, downsample_factor_, SR_COLS, SR_ROWS, max_z_, min_angle_, max_angle_, viewpoint_cloud);
+
+       if (abs((int)cloud.points.size() - SR_COLS*SR_ROWS) < 30)
+       {
+         cloud_geometry::nearest::computeOrganizedPointCloudNormalsWithFiltering (cloud_down_, cloud, k_, downsample_factor_, SR_COLS, SR_ROWS, max_z_, min_angle_, max_angle_, viewpoint_cloud);
+       }
+       else
+       {
+         assuming_ar4 = false;
+         geometry_msgs::PointStamped view;
+         view.point.x = viewpoint_cloud.x;
+         view.point.y = viewpoint_cloud.y;
+         view.point.z = viewpoint_cloud.z;
+         cloud_down_.points = cloud.points;
+         cloud_geometry::nearest::computePointCloudNormals(cloud_down_, k_,  view);
+       }
       }
       catch(std::out_of_range ex)
       {
@@ -347,12 +360,21 @@ class PlaneClustersSR
       // Find the best plane in this cluster (later, we can optimize and process more clusters individually)
       vector<int> inliers_down;
       vector<double> coeff;
+      printf("fitSACPlane \n");
       fitSACPlane (&cloud_down_, indices_z, inliers_down, coeff, viewpoint_cloud, sac_distance_threshold_);
 
+      printf("end fitSACPlane \n");
       // Filter the original pointcloud data with the same min/max angle for jump edges
       PointCloud cloud_filtered;// = cloud;
-      cloud_geometry::nearest::filterJumpEdges (cloud, cloud_filtered, 1, SR_COLS, SR_ROWS, min_angle_, max_angle_, viewpoint_cloud);
-
+      if (assuming_ar4)
+      {
+        cloud_geometry::nearest::filterJumpEdges (cloud, cloud_filtered, 1, SR_COLS, SR_ROWS, min_angle_, max_angle_, viewpoint_cloud);
+      }
+      else
+      {
+        cloud_filtered = cloud;
+        cloud_filtered.points = cloud.points;
+      }
       // Refine plane
       vector<int> inliers (cloud_filtered.points.size ());
       int j = 0;
@@ -366,6 +388,7 @@ class PlaneClustersSR
 
       // Obtain the bounding 2D polygon of the table
       Polygon table;
+      printf("convexHull2D  \n");
       cloud_geometry::areas::convexHull2D (cloud_down_, inliers_down, coeff, table);
 #ifdef DEBUG
       /*PolygonalMap pmap;
@@ -377,8 +400,10 @@ class PlaneClustersSR
 
       // Find the object clusters supported by the table
       Point32 min_p, max_p;
+      printf("getMinMax \n");
       cloud_geometry::statistics::getMinMax (cloud_filtered, inliers, min_p, max_p);
       vector<int> object_inliers;
+      printf("findObjectClusters \n");
       findObjectClusters (cloud_filtered, coeff, table, axis_, min_p, max_p, object_inliers, resp);
 
 #ifdef DEBUG
@@ -490,8 +515,36 @@ class PlaneClustersSR
 #endif
           nr_p++;
         }
-        cloud_geometry::statistics::getMinMax (cloud, object_idx, resp.oclusters[i].min_bound, resp.oclusters[i].max_bound);
         cloud_geometry::nearest::computeCentroid (cloud, object_idx, resp.oclusters[i].center);
+        resp.oclusters[i].cov33.clear();
+        for(unsigned int l = 0; l < 9; l++)
+        {
+          resp.oclusters[i].cov33.push_back(0.0);
+        }
+
+        for(unsigned int k = 0; k < object_idx.size (); k++)
+        {
+            Point32 p = cloud.points.at (object_idx.at (k));
+            p.x = p.x - resp.oclusters[i].center.x;
+            p.y = p.y - resp.oclusters[i].center.y;
+            p.z = p.z - resp.oclusters[i].center.z;
+            resp.oclusters[i].cov33[0] += p.x*p.x;
+            resp.oclusters[i].cov33[1] += p.y*p.x;
+            resp.oclusters[i].cov33[2] += p.z*p.x;
+            resp.oclusters[i].cov33[3] += p.x*p.y;
+            resp.oclusters[i].cov33[4] += p.y*p.y;
+            resp.oclusters[i].cov33[5] += p.z*p.y;
+            resp.oclusters[i].cov33[6] += p.x*p.z;
+            resp.oclusters[i].cov33[7] += p.y*p.z;
+            resp.oclusters[i].cov33[8] += p.z*p.z;
+        }
+        for(unsigned int t = 0; t < resp.oclusters[i].cov33.size(); t++)
+        {
+          resp.oclusters[i].cov33[t] /= object_idx.size ();
+          if(resp.oclusters[i].cov33[t] <= 0.0)
+            resp.oclusters[i].cov33[t] = 0.000000001;
+        }
+        /*cloud_geometry::statistics::getMinMax (cloud, object_idx, resp.oclusters[i].min_bound, resp.oclusters[i].max_bound);*/
       }
       object_indices.resize (nr_p);
 #ifdef DEBUG
@@ -577,6 +630,7 @@ void ClusterDetector::SetData(XMLTag* tag)
           m_swissranger_jlo_id = 1;
         else
         {
+          printf("Read Clusterdetector with %ld as camera position (%s)\n", pose->m_uniqueID, name.c_str());
           m_swissranger_jlo_id =pose->m_uniqueID;
           RelPoseFactory::FreeRelPose(pose);
         }
@@ -692,7 +746,6 @@ std::vector<RelPose*> ClusterDetector::Inner(Sensor* sens, SegmentPrototype* obj
   double b = response.b;
   double c = response.c;
   double s = response.d;
-  geometry_msgs::Point32 &pcenter = response.pcenter;
   std::vector<PlaneClusterResult::ObjectOnTable> &vec = response.oclusters;
   printf("Got plane equation %f x + %f y + %f z + %f = 0\n", a,b,c,s);
    /*Norm v1*/
@@ -717,7 +770,7 @@ std::vector<RelPose*> ClusterDetector::Inner(Sensor* sens, SegmentPrototype* obj
   /*Norma v2*/
   normalize(d,e,f);
 
-  /*Create v3*5~/
+  /*Create v3*/
 
   CrossProduct_l(a,b,c,d,e,f, g,h,i);
   /**  Build Matrix:
@@ -753,51 +806,60 @@ std::vector<RelPose*> ClusterDetector::Inner(Sensor* sens, SegmentPrototype* obj
     prob = prob * 0.9;
     printf("a: %f , b: %f , c: %f\n", a, b, c);
     const geometry_msgs::Point32 &center = vec[x].center;
-    const geometry_msgs::Point32 &min_bound = vec[x].min_bound;
-    const geometry_msgs::Point32 &max_bound = vec[x].max_bound;
     Matrix rotmat(4,4);
-    double covx;
-    double covy;
-    printf("Comparing: x %f with y %f\n", fabs(max_bound.x - min_bound.x), fabs(max_bound.y - min_bound.y) + 0.04);
+
     rotmat << d << g << a << center.x
            << e << h << b << center.y
            << f << i << c << center.z
            << 0 << 0 << 0 << 1;
-    covx = max(fabs(center.x - max_bound.x), fabs(center.x - min_bound.x)) ;
-    covy = max(fabs(center.y - max_bound.y), fabs(center.y - min_bound.y)) ;
 
-    cout << "Matrix from plane_clusters:" << rotmat << endl;
+    cout <<  "Matrix from plane_clusters:" << endl << rotmat << endl;
     Matrix cov (6,6);
-
-    double covz = max(fabs(center.z - max_bound.z), fabs(center.z - min_bound.z));
-    /*Fill covariance with the cluster size and hardcoded full rotation in normal direction */
-    if(parallel)
+    if(vec[x].cov33.size() < 9)
     {
-     cov << covx <<0    << 0    << 0   << 0   << 0
-         <<   0   << covy  << 0 <<  0  << 0   << 0
-         <<0    << 0    << covz << 0   << 0   << 0
-         <<0    << 0    << 0    << 0.02 << 0   << 0
-         <<0    << 0    << 0    << 0   << 0.02 << 0
-         <<0    << 0    << 0    << 0   << 0   << 0.8;
+      ROS_ERROR("Error detectin Clusters: size of cov33 (%ld) smaller than expected: 9\n", vec[x].cov33.size());
     }
     else
     {
-     cov << covy <<0    << 0    << 0   << 0   << 0
-         <<   0   << covz  << 0 <<  0  << 0   << 0
-         <<0    << 0    << covx << 0   << 0   << 0
-         <<0    << 0    << 0    << 0.02 << 0   << 0
-         <<0    << 0    << 0    << 0   << 0.02 << 0
-         <<0    << 0    << 0    << 0   << 0   << 0.8;
-    }
-     RelPose* pose_temp = RelPoseFactory::FRelPose(ptu, rotmat, cov);
-     double temp_qual = min(1.0, max(0.0, fabs((covx*covy*covz)) * 500 ));
-     if(x == 0)
-        qualityMeasure =temp_qual;
+    /*double covz = max(fabs(center.z - max_bound.z), fabs(center.z - min_bound.z ));*/
+    /*Fill covariance with the cluster size and hardcoded full rotation in normal direction */
+     if(parallel)
+     {
+/*      cout << sqrt(vec[x].cov33[0]) << sqrt(vec[x].cov33[1]) << sqrt(vec[x].cov33[2]) << 0   << 0   << 0<< endl;
+      cout << sqrt(vec[x].cov33[3]) << sqrt(vec[x].cov33[4]) << sqrt(vec[x].cov33[5]) <<  0  << 0   << 0<< endl;
+      cout << sqrt(vec[x].cov33[6]) << sqrt(vec[x].cov33[7]) << sqrt(vec[x].cov33[8]) << 0   << 0   << 0<< endl;
+      cout <<0    << 0    << 0    <<  ((obj_descr == NULL) ? 0.2 : obj_descr->m_covRotX) << 0   << 0<< endl;
+      cout <<0    << 0    << 0    << 0   << ((obj_descr == NULL) ? 0.2 :obj_descr->m_covRotY) << 0<< endl;
+      cout <<0    << 0    << 0    << 0   << 0   << ((obj_descr == NULL) ? 0.8 :obj_descr->m_covRotZ)<< endl;*/
 
-     if(pose_temp == NULL)
-       continue;
-     pose_temp->m_qualityMeasure = temp_qual;
-     results.push_back(pose_temp);
+      cov << sqrt(vec[x].cov33[0]) << sqrt(vec[x].cov33[1]) << sqrt(vec[x].cov33[2]) << 0   << 0   << 0
+         << sqrt(vec[x].cov33[3]) << sqrt(vec[x].cov33[4]) << sqrt(vec[x].cov33[5]) <<  0  << 0   << 0
+         << sqrt(vec[x].cov33[6]) << sqrt(vec[x].cov33[7]) << sqrt(vec[x].cov33[8]) << 0   << 0   << 0
+         <<0    << 0    << 0    <<  ((obj_descr == NULL) ? 0.2 : obj_descr->m_covRotX) << 0   << 0
+         <<0    << 0    << 0    << 0   << ((obj_descr == NULL) ? 0.2 :obj_descr->m_covRotY) << 0
+         <<0    << 0    << 0    << 0   << 0   << ((obj_descr == NULL) ? 0.8 :obj_descr->m_covRotZ);
+     }
+     else
+     {
+       cov << sqrt(vec[x].cov33[3]) << vec[x].cov33[4] << vec[x].cov33[5] << 0  << 0   << 0
+         << vec[x].cov33[0] << vec[x].cov33[1] << vec[x].cov33[2] << 0  << 0   << 0
+         << vec[x].cov33[6] << vec[x].cov33[7] << vec[x].cov33[8] << 0   << 0   << 0
+         <<0    << 0    << 0    << ((obj_descr == NULL) ? 0.2 :obj_descr->m_covRotY) << 0   << 0
+         <<0    << 0    << 0    << 0   << ((obj_descr == NULL) ? 0.2 :obj_descr->m_covRotX) << 0
+         <<0    << 0    << 0    << 0   << 0   << ((obj_descr == NULL) ? 0.8 :obj_descr->m_covRotZ);
+      }
+
+      cout << "Cov from pc: "<< endl <<  cov << endl;
+      RelPose* pose_temp = RelPoseFactory::FRelPose(ptu, rotmat, cov);
+      double temp_qual = min(1.0, max(0.0, fabs((sqrt(vec[x].cov33[4])*sqrt(vec[x].cov33[0])*sqrt(vec[x].cov33[8]))) * 500 ));
+      if(x == 0)
+       qualityMeasure =temp_qual;
+
+      if(pose_temp == NULL)
+        continue;
+      pose_temp->m_qualityMeasure = temp_qual;
+      results.push_back(pose_temp);
+    }
   }
   RelPoseFactory::FreeRelPose(ptu);
   return results;
@@ -812,7 +874,7 @@ double ClusterDetector::CheckSignature(const Signature& object, const std::vecto
       if(object.GetElement(0, DESCRIPTOR_SEGMPROTO) != NULL )
         return 0.1;
       else
-        return 0.01;
+        return 0.0;
     }
   }
   return 0.0;
