@@ -126,6 +126,11 @@
       Takes two different sensors and verifies the results from one algorithm applied on both sensors
     </description>
   </class>
+  <class name="HClusterDetector" type="HClusterDetector"  base_class_type="LocateAlgorithm">
+    <description>
+      Takes two different sensors and verifies the results from one algorithm applied on both sensors
+    </description>
+  </class>
 
   <!-- Refine Algorithms -->
   <class name="RFAClassByDPs" type="RFAClassByDPs"

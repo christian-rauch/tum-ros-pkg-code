@@ -322,31 +322,74 @@ std::vector<RelPose*> ShapeBased3D::Perform(std::vector<Sensor*> sensors, RelPos
 {
   std::vector<RelPose*> result;
   printf("GetFirstCam");
+
   Camera* cam = Camera::GetFirstCamera(sensors);
 #ifdef _DEBUG
   printf("Got Camera: %s\n", cam != NULL ? cam->GetName().c_str() : "None");
 #endif // _DEBUG
-  if(cam != NULL)
+  try
   {
-    Calibration* calib = &(cam->m_calibration);
-    Image* img = cam->GetImage(-1);
-    RelPose* camPose = img->GetPose();
-    RelPose* lastKnownPose = RelPoseFactory::GetRelPose(lastKnownPose_in->m_uniqueID, camPose->m_uniqueID);
-    if(object.CountElems() > 1)
+    if(cam != NULL)
     {
-      result = PerformForAll(img, camPose, calib, lastKnownPose,  object, numOfObjects, qualityMeasure);
+      Calibration* calib = &(cam->m_calibration);
+      Image* img = cam->GetImage(-1);
+      RelPose* camPose = img->GetPose();
+      RelPose* lastKnownPose = RelPoseFactory::GetRelPose(lastKnownPose_in->m_uniqueID, camPose->m_uniqueID);
+      if(object.CountElems() > 1)
+      {
+        result = PerformForAll(img, camPose, calib, lastKnownPose,  object, numOfObjects, qualityMeasure);
+      }
+      else
+      {
+        if(img != NULL && camPose != NULL)
+          result = Inner(img, camPose, calib, lastKnownPose,  object, numOfObjects, qualityMeasure);
+      }
+      RelPoseFactory::FreeRelPose(lastKnownPose);
     }
     else
     {
-      if(img != NULL && camPose != NULL)
-        result = Inner(img, camPose, calib, lastKnownPose,  object, numOfObjects, qualityMeasure);
+      numOfObjects = 0;
+      qualityMeasure = 0.0;
     }
-    RelPoseFactory::FreeRelPose(lastKnownPose);
   }
-  else
+  catch(const char *text)
   {
-    numOfObjects = 0;
-    qualityMeasure = 0.0;
+    /** If the model is not too small or too big in one of the views it might be good to check in another view*/
+    ROS_INFO("cop: ShapeBased3D has most probably selected the wrong sensor (%s), trying again with a different\n", cam->GetSensorID().c_str());
+    int num_cam = 0;
+    cam = NULL;
+    for(std::vector<Sensor*>::const_iterator it = sensors.begin(); it != sensors.end(); it++)
+    {
+      if((*it)->IsCamera())
+      {
+        if(num_cam++ > 1)
+        {
+          cam = (Camera*)(*it);
+        }
+      }
+    }
+    if(cam != NULL)
+    {
+      Calibration* calib = &(cam->m_calibration);
+      Image* img = cam->GetImage(-1);
+      RelPose* camPose = img->GetPose();
+      RelPose* lastKnownPose = RelPoseFactory::GetRelPose(lastKnownPose_in->m_uniqueID, camPose->m_uniqueID);
+      if(object.CountElems() > 1)
+      {
+        result = PerformForAll(img, camPose, calib, lastKnownPose,  object, numOfObjects, qualityMeasure);
+      }
+      else
+      {
+        if(img != NULL && camPose != NULL)
+          result = Inner(img, camPose, calib, lastKnownPose,  object, numOfObjects, qualityMeasure);
+      }
+      RelPoseFactory::FreeRelPose(lastKnownPose);
+    }
+    else
+    {
+      numOfObjects = 0;
+      qualityMeasure = 0.0;
+    }
   }
   return result;
 }

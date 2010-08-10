@@ -40,7 +40,7 @@ namespace cop
 
 // Procedure declarations
 void classify_object (Halcon::Hobject Region, Halcon::Hobject Image,
-    Halcon::HTuple DescriptorHandle, Halcon::HTuple SVMHandle, Halcon::HTuple *Class);
+    Halcon::HTuple DescriptorHandle, Halcon::HTuple SVMHandle, Halcon::HTuple *Class, double &score);
 
 using namespace Halcon;
 
@@ -113,8 +113,9 @@ Descriptor* RFAClassByDPs::Perform(std::vector<Sensor*> sensors, RelPose* pose, 
       RegionOI* region = new RegionOI(pose, cam->m_relPose->m_uniqueID, &(cam->m_calibration));
       try
       {
+        double score;
         classify_object (region->GetRegion(), *(img->GetHImage()),
-           m_descrHandle, m_svmHandle, &Class);
+           m_descrHandle, m_svmHandle, &Class, score);
         std_msgs::String st;
         if(Class[0].L() != -1)
         {
@@ -122,6 +123,8 @@ Descriptor* RFAClassByDPs::Perform(std::vector<Sensor*> sensors, RelPose* pose, 
           descr = new NamedClass();
           descr->SetContent(st);
           descr->SetClass(st.data);
+          descr->Evaluate(score, 100.0);
+          qualityMeasure = score;
         }
         else
         {

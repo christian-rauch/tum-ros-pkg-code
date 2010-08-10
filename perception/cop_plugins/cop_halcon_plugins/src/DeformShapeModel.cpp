@@ -125,8 +125,9 @@ void DeformShapeModel::Show(RelPose* pose, Sensor* camin)
       HWindow* hwin = cam->GetWindow();
       hwin->SetColor("red");
       hwin->SetLineWidth(3);
-      HTuple row, col, pose_ht, CamParam = cam->m_calibration.CamParam();
+      HTuple row, col, pose_ht,HomMat3DToWorld, CamParam = cam->m_calibration.CamParam();
       RelPoseHTuple::GetPose(pose, &pose_ht, cam->m_relPose->m_uniqueID);
+      RelPoseHTuple::GetHommat(pose, &HomMat3DToWorld, 1);
       /*TOCHECK why?*/
       /**  The next 4 lines rotate the pose to the training
           pose that is needed to display everything right
@@ -168,19 +169,27 @@ void DeformShapeModel::Show(RelPose* pose, Sensor* camin)
       count_obj (ContoursTrans, &NumberContour);
       pose_to_hom_mat3d (pose_ht, &HomMat3D);
       gen_empty_obj (&FoundContour);
+      std::vector<double> x,y,z;
       for (int index = 1; index <= NumberContour; index++)
       {
-        HTuple X,Y,Z, Xc, Yc, Zc, R, C;
+        HTuple X,Y,Z, Xc, Yc, Zc, R, C, Xworld, Yworld, Zworld;
         Hobject ModelWorld;
         select_obj (ContoursTrans, &ObjectSelected, index);
         get_contour_xld (ObjectSelected, &Y, &X);
         Halcon::tuple_gen_const(X.Num(), 0.0, &Z);
         affine_trans_point_3d (HomMat3D, X, Y, Z, &Xc, &Yc, &Zc);
+        affine_trans_point_3d (HomMat3DToWorld, X, Y, Z, &Xworld, &Yworld, &Zworld);
+        for(int i = 0; i < Xworld.Num(); i++)
+        {
+          x.push_back(Xworld[i].D());
+          y.push_back(Yworld[i].D());
+          z.push_back(Zworld[i].D());
+        }
         project_3d_point (Xc, Yc, Zc, CamParam, &R, &C);
         gen_contour_polygon_xld (&ModelWorld, R, C);
         concat_obj (FoundContour, ModelWorld, &FoundContour);
       }
-
+      cam->Publish3DData(x,y,z);
 
       disp_obj(FoundContour, hwin->WindowHandle());
 
@@ -222,12 +231,10 @@ double DeformShapeModel::DefineDeformShapeModel(Image* image, Halcon::Hobject* r
     Halcon::hom_mat3d_rotate_local(hom, M_PI, "y", &hom_new);
     Halcon::hom_mat3d_to_pose(hom_new, &pose_in);
     img = image->GetHImage();
-
     if(m_handle.find(cam->GetSensorID()) != m_handle.end())
     {
       long handle;
       handle = m_handle[cam->GetSensorID()];
-      printf("Clearing Model for %s\n", cam->GetSensorID().c_str());
       Halcon::clear_deformable_model(handle);
     }
 
@@ -242,9 +249,18 @@ double DeformShapeModel::DefineDeformShapeModel(Image* image, Halcon::Hobject* r
     Halcon::create_planar_calib_deformable_model(imgReduced, cam->m_calibration.CamParam(), pose_in, autoTuple,
         -0.8, 0.8, autoTuple, 0.8 , 1.2, autoTuple, 0.8,1.2,
         autoTuple,"point_reduction_low", "use_polarity", autoTuple,autoTuple, empty,empty,&model_id);
+        printf("creating worked\n");
     /*Calculate the homography that is needed as starting value for tracking*/
     Halcon::find_planar_calib_deformable_model(imgReduced, model_id, -0.01,0.01,0.9,
                           1.1,1.0,1.0,0.8,1,1,0,0.9, empty, empty, &pose_out, &cov, &score);
+    if(pose_out.Num() < 6)
+    {
+        Halcon::find_planar_calib_deformable_model(imgReduced, model_id, -0.01,0.01,0.9,
+                                  1.1,1.0,1.0,0.4,1,1,0,0.9, empty, empty, &pose_out, &cov, &score);
+        if(pose_out.Num() < 6)
+          throw "DeformShape Model not valid";
+    }
+    
     printf("Compare Pose_in with Pose_out:\n %f - %f = %f\n %f - %f = %f\n %f - %f = %f\n", pose_in[0].D(), pose_out[0].D(), pose_in[0].D() - pose_out[0].D(), pose_in[1].D() , pose_out[1].D(), pose_in[1].D() - pose_out[1].D(), pose_in[2].D(), pose_out[2].D(), pose_in[2].D() - pose_out[2].D());
     m_handle[cam->GetSensorID()] = model_id[0].I();
     printf("\n\n\n Created Model for Sensor %s: %d (m_handle.size = %ld)\n\n\n", cam->GetSensorID().c_str(), model_id[0].I(), m_handle.size());
@@ -255,10 +271,10 @@ double DeformShapeModel::DefineDeformShapeModel(Image* image, Halcon::Hobject* r
      ROS_WARN("Error Learning Deform Shape Model: %s\n", ex.message);
      throw "Error Learning Deform Shape Model";
   }
-	if(score.Num() > 0)
-		return score[0].D();
-	else
-		return 0.0;
+  if(score.Num() > 0)
+    return score[0].D();
+  else
+    return 0.0;
 }
 
 

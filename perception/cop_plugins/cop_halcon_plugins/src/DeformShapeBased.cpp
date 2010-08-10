@@ -60,6 +60,7 @@ std::vector<RelPose*> DeformShapeBased::Perform(std::vector<Sensor*> sensors, Re
 {
   std::vector<RelPose*> result;
   Camera* cam = Camera::GetFirstCamera(sensors);
+  numOfObjects = 0;
   if(cam != NULL)
   {
     Image* img = cam->GetImage(-1);
@@ -201,17 +202,26 @@ std::vector<RelPose*> DeformShapeBased::Inner(Image* img,RelPose* camPose, Calib
           printf("%d\n", pose[6].I());
           printf("\n");
           HTuple pose_sel, cov_sel;
+          numOfObjects = score.Num();
           for(i = 0; i < score.Num(); i++)
           {
-            Halcon::HTuple hom, hom_new;
-            tuple_select_range(pose, 0 + 7*i, 6 + 7*i, &pose_sel);
-            tuple_select_range(cov, 0+ 6*i, 5+ 6*i, &cov_sel);
-            Halcon::pose_to_hom_mat3d(pose_sel, &hom);
-            Halcon::hom_mat3d_rotate_local(hom, -M_PI, "y", &hom_new);
-            Halcon::hom_mat3d_to_pose(hom_new, &pose_sel);
-            RelPose* pose = RelPoseHTuple::FRelPose(pose_sel, cov_sel, img->GetPose());
-            pose->m_qualityMeasure = score[i];
-            result.push_back(pose);
+            try
+            {
+              Halcon::HTuple hom, hom_new;
+              tuple_select_range(pose, 0 + 7*i, 6 + 7*i, &pose_sel);
+              tuple_select_range(cov, 0+ 6*i, 5+ 6*i, &cov_sel);
+              Halcon::pose_to_hom_mat3d(pose_sel, &hom);
+              Halcon::hom_mat3d_rotate_local(hom, -M_PI, "y", &hom_new);
+              Halcon::hom_mat3d_to_pose(hom_new, &pose_sel);
+              RelPose* pose = RelPoseHTuple::FRelPose(pose_sel, cov_sel, img->GetPose());
+              pose->m_qualityMeasure = score[i];
+              result.push_back(pose);
+            }
+            catch(HException ex)
+            {
+              printf("Error in DeformShapeBased %s\n", ex.message);
+              numOfObjects--;
+            }
           }
           numOfObjects = score.Num();
           qualityMeasure = score[0].D();
@@ -229,7 +239,10 @@ std::vector<RelPose*> DeformShapeBased::Inner(Image* img,RelPose* camPose, Calib
       catch(Halcon::HException ex)
       {
         printf("Error in DeformShapeBased: %s\n", ex.message);
+        printf("Handle: %d\n");
         qualityMeasure = 0.0;
+        img->Free();
+        numOfObjects = 0;
       }
     }
   }

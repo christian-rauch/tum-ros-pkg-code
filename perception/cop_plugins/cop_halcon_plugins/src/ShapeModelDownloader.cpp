@@ -140,7 +140,9 @@ void DeleteFileIfExist(const char* outputfile2)
     std::string deletestring = std::string("rm -rf ") + std::string(outputfile2);
 #endif
     fclose(ftest);
-    system(deletestring.c_str());
+    int result = system(deletestring.c_str());
+    if(result != 0)
+     printf("Unexpected result in system call: %s : %d", deletestring.c_str(), result);
   }
 }
 
@@ -156,7 +158,10 @@ void RenameFiles(const char* inputname, char* output)
   std::string deletestring = std::string("mv ") + std::string(inputname) + std::string(" ") + std::string(output);
 #endif
   printf("%s\n", deletestring.c_str());
-  system(deletestring.c_str());
+  int i = system(deletestring.c_str());
+  if(i != 0)
+    printf("Unexpected result in system call: %s : %d", deletestring.c_str(), i);
+
 }
 
 
@@ -405,7 +410,11 @@ std::vector<std::string> LoadFiles(int offset, std::string searchstring, std::st
     char  command[4096];
     sprintf(command, "wget \"%s\" -O %s", adresses_to_download[i], outputfile2);
     printf("Sending to system: %s\n", command);
-    system(command);
+    int result = system(command);
+    if(result != 0)
+      printf("Unexpected result in system call: %s : %d", command, result);
+
+
     FILE* ftest = fopen(outputfile2, "r");
     if (ftest == NULL) {
       printf("Can't open output file\n");
@@ -458,12 +467,16 @@ Descriptor*  ShapeModelDownloader::FindModels(std::string searchString)
 #else
     DeleteFileIfExist("unzipped");
 #endif
-    system(unzip_cmd.c_str());
+    int result = system(unzip_cmd.c_str());
+    if(result != 0)
+      printf("Unexpected result calling: %s : %d\n", unzip_cmd.c_str(), result);
 #ifdef WIN32
     RenameFiles("unzipped/*.dae", modelname);
     sprintf(modelname, "unzipped/%s_%d.dae", searchString.c_str(), i);
 #else
-    system("ls unzipped/*.dae");
+    result  = system("ls unzipped/*.dae");
+    if(result != 0)
+      printf("Unexpected result calling: %s : %d\n", unzip_cmd.c_str(), result);
     sprintf(modelname, "unzipped/%s_%ld.dae", searchString.c_str(), i);
     RenameFiles("unzipped/*.dae", modelname);
 #endif

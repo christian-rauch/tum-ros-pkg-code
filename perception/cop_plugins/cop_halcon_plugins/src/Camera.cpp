@@ -411,7 +411,7 @@ void Camera::Show(const long frame)
   }
   catch(Halcon::HException ex)
   {
-    printf("Showing not possible: %s \n", ex.message);
+    printf("Showing not possible (Sensor: %s): %s \n", ex.message, GetSensorID().c_str());
   }
   catch(...)
   {

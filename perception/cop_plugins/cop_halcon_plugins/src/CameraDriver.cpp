@@ -81,6 +81,7 @@ void CameraDriver::SetData( XMLTag* ConfigFile)
   m_grabbing = (false);
   m_isYUV = (false);
 
+
 #ifdef _DEBUG
   printf("In CameraDriverConstructor:\n");
 #endif
@@ -268,7 +269,7 @@ void CameraDriver::threadfunc()
     printf("CameraDriver failed in threadfunc.\n Restart Camera\n");
     ROS_ERROR("Camera %s must be restarted, failed to grab images\n", GetSensorID().c_str());
     m_grabbing = false;
-    return;    
+    return;
   }
   while(m_grabbing && !g_stopall)
   {
@@ -331,7 +332,7 @@ void CameraDriver::threadfunc()
 
             Halcon::grab_image_start (m_fg->GetHandle(), -1);
             continue;
-            
+
           }
         }
         if(m_isSTOC)
@@ -445,6 +446,24 @@ Reading* CameraDriver::GetReading(const long &Frame)
   /*return m_images[Frame - m_deletedOffset];*/
 }
 
+void CameraDriver::SetExposure(int exposure)
+{
+  if(m_grabbing == true && m_fg != NULL && exposure > 5000 && exposure < 100000)
+  {
+    try
+    {
+    m_fg->SetFramegrabberParam("ExposureTimeAbs", exposure);
+    }
+    catch(Halcon::HException ex)
+    {
+      ROS_ERROR("Exceptiuon during setting of new exposure: %s in camera %s", ex.message, m_device.c_str());
+    }
+  }
+  else
+  {
+    ROS_ERROR("Ignoring newly set exposure in Camera: %s", m_device.c_str());
+  }
+}
 
 
 #include <ros/ros.h>
@@ -595,7 +614,7 @@ bool CameraDriver::Stop()
   m_grabbing = false;
   printf("\nTrying to Stop Cemaera Grabbing Thread (Sleeping 1s)\n");
   Sleeping(1000);
-  printf("\nJoining Cemaera Grabbing Thread \n");
+  printf("\nJoining Camera Grabbing Thread \n");
   m_grabbingThread->join();
 
   Halcon::close_all_framegrabbers();
@@ -748,6 +767,27 @@ XMLTag* CameraDriverRelay::Save()
   return tag;
 }
 
+void CameraDriverRelay::ModeCallback(const boost::shared_ptr<const vision_msgs::cop_camera_mode> &modestring)
+{
+  m_stEnvMode = (*modestring).mode;
+  if(m_stEnvMode.compare(vision_msgs::cop_camera_mode::DARK_ENVIRONMENT))
+  {
+    SetExposure(30000);
+  }
+  else if(m_stEnvMode.compare(vision_msgs::cop_camera_mode::AVERAGE_ENVIRONMENT))
+  {
+    SetExposure(15000);
+  }
+  else if(m_stEnvMode.compare(vision_msgs::cop_camera_mode::BRIGHT_ENVIRONMENT))
+  {
+    SetExposure(10000);
+  }
+  else
+  {
+    SetExposure(atoi(m_stEnvMode.c_str()));
+  }
+}
+
 void CameraDriverRelay::SetData(XMLTag* tag)
 {
  try
@@ -757,6 +797,9 @@ void CameraDriverRelay::SetData(XMLTag* tag)
     m_rate = tag->GetPropertyInt(XML_ATTRIBUTE_RATE);
     ros::NodeHandle nh;
     m_pub = nh.advertise<sensor_msgs::Image>(m_stTopic, 5);
+
+
+
     int n = m_stTopic.find("/camera");
     if(n == -1)
     {
@@ -766,6 +809,14 @@ void CameraDriverRelay::SetData(XMLTag* tag)
     {
      std::string stTemp = m_stTopic.replace(n, std::string("/camera").length(), "/camera_info");
      m_pubCamInfo = nh.advertise<sensor_msgs::CameraInfo>(stTemp, 5);
+
+
+     std::string stModeTopic= m_stTopic.replace(n, std::string("/camera").length(), "/camera_mode");
+     ros::NodeHandle nh;
+     m_modeSubscriber = nh.subscribe<vision_msgs::cop_camera_mode>(
+                                stModeTopic, 2,
+                                boost::bind(&CameraDriverRelay::ModeCallback, this, _1));
+
      Halcon::HTuple camMatrix = m_calibration.CamMatrix();
      m_cameraInfoMessage.width = m_calibration.m_width;
      m_cameraInfoMessage.height = m_calibration.m_height;

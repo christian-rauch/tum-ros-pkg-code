@@ -168,49 +168,35 @@ void ReadImage(const sensor_msgs::ImageConstPtr& m, Halcon::Hobject* obj)
 {
   int height = m->height;
   int width = m->width;
-  int channels = m->encoding.substr(0,4).compare("Mono") == 0 ? 1 : 3;
+  int channels = m->encoding.compare("mono8") == 0 ? 1 : 3;
   Halcon::Hobject r, g, b;
   if(channels == 3)
-    Halcon::gen_image_interleaved(obj, (Hlong)&(m->data[0]), "rgb", width, height, 1, "byte", width, height, 0,0,-1,0);
+  {
+    if(m->encoding.compare("bgr8") == 0)
+      Halcon::gen_image_interleaved(obj, (Hlong)&(m->data[0]), "bgr", width, height, 1, "byte", width, height, 0,0,-1,0);
+    else
+      Halcon::gen_image_interleaved(obj, (Hlong)&(m->data[0]), "rgb", width, height, 1, "byte", width, height, 0,0,-1,0);
+  }
   else
   {
-  for(int c = 0; c < channels; c++)
-  {
-    try
-    {
-
-    Halcon::HTuple pointer, emp;
-    switch(c)
-    {
-      case 0:
-        Halcon::gen_image_const(&r, "byte", width, height);
-        Halcon::get_image_pointer1(r, &pointer,  &emp, &emp, &emp);
-        break;
-      case 1:
-        Halcon::gen_image_const(&g, "byte", width, height);
-        Halcon::get_image_pointer1(g, &pointer,  &emp, &emp, &emp);
-        break;
-      default:
-        Halcon::gen_image_const(&b, "byte", width, height);
-        Halcon::get_image_pointer1(b, &pointer,  &emp, &emp, &emp);
-        break;
-    }
-    char* img_ptr = (char*)pointer[0].L();
-    for(int row = 0; row < height; row++)
-    {
-      for(int col = 0; col < width; col++)
+      try
       {
-        img_ptr[row * width + col] = m->data[row * width * channels + col * channels + c];
+        Halcon::HTuple pointer, emp;
+        Halcon::gen_image_const(obj, "byte", width, height);
+        Halcon::get_image_pointer1(*obj, &pointer,  &emp, &emp, &emp);
+        char* img_ptr = (char*)pointer[0].L();
+        for(int row = 0; row < height; row++)
+        {
+          for(int col = 0; col < width; col++)
+          {
+            img_ptr[row * width + col] = m->data[row * width + col];
+          }
+        }
       }
-    }
-    }
-    catch(...)
-    {
-      printf("Big error readiong from roscamera\n");
-    }
-  }
-  if(channels == 3)
-     Halcon::compose3(r, g, b, obj);
+      catch(...)
+      {
+        printf("Big error reading from roscamera\n");
+      }
   }
 
 }

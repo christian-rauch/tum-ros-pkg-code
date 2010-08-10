@@ -48,6 +48,7 @@ ROSBUILD_ADD_LIBRARY(VisionPlugins
 ./src/CalTab.cpp
 ./src/FindCalTab.cpp   
 ./src/ROIGenerator.cpp
+./src/HClusterDetector.cpp
 ./src/ROSCamera.cpp   
 ./src/SupportingPlaneDetector.cpp
 ./src/SupportingPlaneDescriptor.cpp

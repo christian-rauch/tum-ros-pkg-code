@@ -27,9 +27,10 @@
 #define MAX_CAMERA_IMAGES 2
 
 #include "Camera.h"
-#ifdef PTU_USED
-#include "PTUClient.h"
-#endif
+#include <ros/ros.h>
+#include <sensor_msgs/Image.h>
+#include <vision_msgs/cop_camera_mode.h>
+
 
 #include <string>
 
@@ -88,6 +89,7 @@ namespace cop
       virtual void Show(const long frame);
   protected:
      void threadfunc();
+     void SetExposure(int exposure);
   private:
       std::string m_stCalibName;
       bool m_hasPTU;
@@ -115,16 +117,11 @@ namespace cop
       std::string m_externalTrigger;
       int         m_lineIn;
 
-  #ifdef PTU_USED
-      PTUClient* m_ptuClient;
-  #endif
 
       boost::thread* m_grabbingThread;
 
   };
 }
-#include <sensor_msgs/Image.h>
-
 
 namespace cop
 {
@@ -135,9 +132,16 @@ namespace cop
     CameraDriverRelay() {};
     virtual std::string GetName() const {return XML_NODE_NAME;}
     sensor_msgs::Image ConvertData (Reading* img);
-    
+
     virtual XMLTag* Save();
     virtual void SetData(XMLTag* tag);
+
+  private:
+
+    void ModeCallback(const boost::shared_ptr<const vision_msgs::cop_camera_mode> &modestring);
+
+    ros::Subscriber m_modeSubscriber;
+    string          m_stEnvMode;
   };
 }
 #endif // CAMERADRIVER_H

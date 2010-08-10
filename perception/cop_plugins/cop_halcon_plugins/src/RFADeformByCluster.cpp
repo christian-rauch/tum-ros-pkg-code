@@ -61,18 +61,25 @@ Descriptor* RFADeformByCluster::Perform(std::vector<Sensor*> cam_vec, RelPose* p
         RegionOI region(pose, img->GetPose()->m_uniqueID, &(cam->m_calibration));
         try
         {
-          deformshape->DefineDeformShapeModel(img, &(region.m_reg), cam, pose);
-          deformshape->Evaluate(0.5, 0.5);
+          qualityMeasure = deformshape->DefineDeformShapeModel(img, &(region.m_reg), cam, pose);
+          deformshape->Evaluate(qualityMeasure, 100.0);
         }
         catch(char const* ex)
         {
           printf("Learning of Descriptorbased model Failed: %s\n", ex);
+          delete deformshape;
+          deformshape = NULL;
         }
         img->Free();
        }
        catch(char const* ex)
        {
          printf("Learning of Descriptorbased model Failed: %s\n", ex);
+         if(deformshape != NULL)
+         {
+           delete deformshape;
+         }
+         deformshape = NULL;
        }
     }
   }

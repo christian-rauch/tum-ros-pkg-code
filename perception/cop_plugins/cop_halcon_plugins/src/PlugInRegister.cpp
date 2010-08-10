@@ -59,6 +59,7 @@
 #include "SupportingPlaneDetector.h"
 #include "SimulatedLocate.h"
 #include "IntersectTwoRuns.h"
+#include "HClusterDetector.h"
 
 /*Includes for RefineAlgorithm Plugins*/
   /*interface of cognitive_perception*/
@@ -125,6 +126,7 @@ PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(TwoInOneAlg, TwoInOneAlg, LocateAlgorithm)
 PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(SupportingPlaneDetector, SupportingPlaneDetector, LocateAlgorithm);
 PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(SimulatedLocate, SimulatedLocate, LocateAlgorithm);
 PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(IntersectTwoRuns, IntersectTwoRuns, LocateAlgorithm);
+PLUGINLIB_REGISTER_NO_NAMESPACE_CLASS(HClusterDetector, HClusterDetector, LocateAlgorithm);
 
 
 /*RefineAlgorithm Plugins*/

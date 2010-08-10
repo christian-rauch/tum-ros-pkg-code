@@ -11,10 +11,10 @@
 
 // Procedure declarations
 void classify_object (Halcon::Hobject Region, Halcon::Hobject Image,
-    Halcon::HTuple DescriptorHandle, Halcon::HTuple SVMHandle, Halcon::HTuple *Class);
+    Halcon::HTuple DescriptorHandle, Halcon::HTuple SVMHandle, Halcon::HTuple *Class, double &score);
 // Procedures
 void classify_object (Halcon::Hobject Region, Halcon::Hobject Image,
-    Halcon::HTuple DescriptorHandle, Halcon::HTuple SVMHandle, Halcon::HTuple *Class)
+    Halcon::HTuple DescriptorHandle, Halcon::HTuple SVMHandle, Halcon::HTuple *Class, double &score)
 {
   using namespace Halcon;
 
@@ -36,8 +36,10 @@ void classify_object (Halcon::Hobject Region, Halcon::Hobject Image,
   reduce_domain(Image, Region, &ImageReduced);
   classify_descriptor_points(ImageReduced, DescriptorHandle, 2, &ClassDescriptorSource,
       &RowDescriptorTarget, &ColDescriptorTarget);
+  score = 0.0;
   if(ClassDescriptorSource.Num() < 80)
     return;
+  score = MAX(ClassDescriptorSource.Num() / 500, 1.0);
   tuple_gen_const(500, 0, &Histo);
   for (Index2=0; Index2<ClassDescriptorSource.Num(); Index2+=1)
   {

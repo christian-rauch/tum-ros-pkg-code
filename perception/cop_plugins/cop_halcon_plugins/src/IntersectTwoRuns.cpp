@@ -94,8 +94,12 @@ std::vector<RelPose*> IntersectTwoRuns::Perform(std::vector<Sensor*> cam, RelPos
     for(unsigned int i = 0; i < result_first.size(); i++)
     {
       std::vector<RelPose*> result_second = m_secondAlg->Perform(sens_set_2, result_first[i], object, numOfObjects_second, qualityMeasure_second);
-      if(numOfObjects_second > 0)
+      if(numOfObjects_second > 0 )
       {
+        if(result_second.size() != numOfObjects_second)
+        {
+          printf("Error in alg %s! wrongly set number of objects\n", m_secondAlg->GetName().c_str());
+        }
         Halcon::HTuple pose1, pose2, row1, column1,pose_rel_sens_tup,
                       row2, column2, cam1 =  ((Camera*)sens_set_1[0])->m_calibration.CamParam(),
                        cam2 =  ((Camera*)sens_set_1[0])->m_calibration.CamParam(),X,Y,Z, Dist;

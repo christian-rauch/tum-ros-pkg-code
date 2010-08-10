@@ -46,46 +46,32 @@ RFAColorByShape::~RFAColorByShape(void)
 
 Descriptor* RFAColorByShape::Perform(std::vector<Sensor*> sensors, RelPose* pose, Signature& sig, int &numOfObjects, double& qualityMeasure)
 {
-	ColorClass* cm = NULL;
-	Camera* cam = Camera::GetFirstCamera(sensors);
-	if(cam != NULL)
-	{
-    if(cam->CanSee(*pose))
+  ColorClass* cm = NULL;
+  for(size_t i = 0; i < sensors.size(); i++)
+  {
+    if(sensors[i]->IsCamera())
     {
+      Camera* cam = ((Camera*)sensors[i]);
       Image* img = cam->GetImage(-1);
+      Halcon::HTuple count;
+      Halcon::Hobject* himg = img->GetHImage(); 
+      Halcon::count_channels(*himg, &count);
+      if(count < 3)
+        continue;
       std::map<std::string, double> hist;
-      RegionOI* region = new RegionOI(pose, cam->m_relPose->m_uniqueID, &(cam->m_calibration));
+      RegionOI* region = new RegionOI(pose,cam->m_relPose->m_uniqueID, &(cam->m_calibration));
       std::string stColor;
 	  /*(Hobject *img, Hobject *region, std::string &color, double& qualityMeasure)*/
-      m_checkColor->Inner(img->GetHImage() , &region->GetRegion(), stColor, hist, qualityMeasure);
+      m_checkColor->Inner(himg , &region->GetRegion(), stColor, hist, qualityMeasure);
       if(qualityMeasure > 0.2)
         cm = new ColorClass(new Class(stColor, Elem::m_LastID), stColor, hist);
       else
         cm = new ColorClass(new Class("MultiColor", Elem::m_LastID), stColor, hist);
-     /* Halcon::Hobject xld = sm->GetContour(*sig->m_relPose);
-      int num = 0;
-      Halcon::count_obj(xld, (Hlong*)&num);
-
-      Halcon::Hobject region;*/
-      /* Generate region for descriptor extraction*/
-      /*Halcon::gen_empty_region(&region);
-      for(int i = 0; i < num; i++)
-      {
-        Halcon::Hobject obj;
-        Halcon::gen_region_contour_xld(xld, &obj ,"filled");
-        Halcon::union2(obj, region, &region);
-      }
-      Halcon::connection(region, &region);
-      Halcon::fill_up(region, &region);
-      Halcon::Hobject* obj = img->GetHImage()
-      CheckColorClass
-      std::string color
-      Inner(img->GetHImage(), &region, color, qualityMeasure);
-      cm = new ColorClass(color);*/
+      cm->Evaluate(qualityMeasure, 100.0);
+      break;
     }
-
-	}
-	return cm;
+  }
+  return cm;
 
 }
 

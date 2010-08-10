@@ -1,4 +1,4 @@
-/*
+/**
  * Copyright (C) 2009 by Ulrich Friedrich Klank <klank@in.tum.de>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -636,6 +636,13 @@ void ShapeModel::SaveTo(XMLTag* tag)
   tag->AddChild(tag_spl);
 }
 
+double dist(const Point3d_t &a, const Point3d_t &b)
+{
+  return sqrt((a.x - b.x)*(a.x - b.x)+
+              (a.y - b.y)*(a.y - b.y)+
+              (a.z - b.z)*(a.z - b.z));
+}
+
 void ShapeModel::Show(RelPose* pose, Sensor* camin)
 {
   if(camin != NULL && camin->IsCamera())
@@ -643,7 +650,7 @@ void ShapeModel::Show(RelPose* pose, Sensor* camin)
      Camera* cam = (Camera*)camin;
      if(m_showNow && pose != NULL)
      {
-        Halcon::HTuple handle = 600;
+        Halcon::HTuple handle = 600, hommat;
         if(cam != NULL)
         {
           handle = cam->GetWindow()->WindowHandle();
@@ -655,6 +662,44 @@ void ShapeModel::Show(RelPose* pose, Sensor* camin)
          Halcon::disp_xld(xld, handle);
         //ShapeModelParamSet* pm = GetParamSet();
          /*ShowRegion(cam);*/
+         Matrix m = pose->GetMatrix(1);
+         cout << "displaying 3d points at "<< endl << m << endl;
+         int points;
+         if(cam != NULL)
+         {
+            Mesh_t mesh = ReadMesh(m_shapeParams_file[m_curIndex].second.first, m_shapeParams_file[m_curIndex].first->m_measure, m, points);
+            std::vector<double> x, y, z;
+            for(size_t i = 0; i < mesh.size(); i++)
+            {
+              for(size_t j = 0; j < mesh[i].first.size(); j++)
+              {
+                x.push_back(mesh[i].first[j].x);
+                y.push_back(mesh[i].first[j].y);
+                z.push_back(mesh[i].first[j].z);
+                int index = (j+1) % mesh[i].first.size();
+                if(index < 0 || (unsigned)index > mesh[i].first.size())
+                {
+                  printf("!!! wrong index calculation\n");
+                  continue;
+                }
+                if(dist(mesh[i].first[j], mesh[i].first[index]) > 0.05)
+                {
+                  x.push_back(mesh[i].first[j].x *0.25 + mesh[i].first[index].x * 0.75);
+                  y.push_back(mesh[i].first[j].y *0.25 + mesh[i].first[index].y * 0.75);
+                  z.push_back(mesh[i].first[j].z *0.25 + mesh[i].first[index].z * 0.75);
+                  x.push_back(mesh[i].first[j].x *0.5 + mesh[i].first[index].x * 0.5);
+                  y.push_back(mesh[i].first[j].y *0.5 + mesh[i].first[index].y * 0.5);
+                  z.push_back(mesh[i].first[j].z *0.5 + mesh[i].first[index].z * 0.5);
+                  x.push_back(mesh[i].first[j].x *0.75 + mesh[i].first[index].x * 0.25);
+                  y.push_back(mesh[i].first[j].y *0.75 + mesh[i].first[index].y * 0.25);
+                  z.push_back(mesh[i].first[j].z *0.75 + mesh[i].first[index].z * 0.25);
+                }
+              }
+
+            }
+            printf("Publish 3d data now of size %ld\n", x.size());
+            cam->Publish3DData(x,y,z);
+         }
      }
   }
 
@@ -887,7 +932,7 @@ double* ShapeModelParamSet::GetGravPoint(std::string st)
     }
     catch (Halcon::HException ex)
     {
-      printf("ShapeParamSet: GetGravPoint: %s\n", ex.message);
+      printf("ShapeParamSet: GetGravPoint: %s (regarding filename: %s)\n", ex.message, st.c_str());
      throw "No Filename";
     }
     m_gravPointInited = true;
