@@ -773,10 +773,10 @@ jlo::ServiceLocatedObject::ServiceLocatedObject (jlo::ServiceLocatedObject* loca
 
 jlo::ServiceLocatedObject::~ServiceLocatedObject ( )
 {
-   if(m_relation != NULL)
-   {
-      m_relation->RemoveAttachedObject(this);
-   }
+  //if(m_relation != NULL)
+  // {
+  //    m_relation->RemoveAttachedObject(this);
+  // }
 }
 
 
