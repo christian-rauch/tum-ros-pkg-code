@@ -1,0 +1,6 @@
+# Cop call,  U. Klank klank@in.tum.de
+# Message to query cop to save a specific object and return the location of the file
+uint64 object_id          #id of an previously seen object
+---
+string   xmlfilename      # The filename of the xml-file that contains the signature
+string[] filenames        # All additional files required to use this object
