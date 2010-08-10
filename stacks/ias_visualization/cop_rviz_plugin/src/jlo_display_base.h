@@ -153,134 +153,149 @@ protected:
 template<typename itT>
 std::list<std::pair<Ogre::SceneNode *, vision_msgs::partial_lo> >& JloDisplayBase::displayJloSet(itT start, itT end, bool render=true)
 {
-  Ogre::Quaternion orientation;
-  const double matid[] = {1, 0, 0, 0,
-                          0, 1, 0, 0,
-                          0, 0, 1, 0,
-                          0, 0, 0, 1};
-
-  setSceneNodePose(scene_node_, matid, orientation);
-
-  jlo_nodes_.push_back(std::list<std::pair<Ogre::SceneNode *, vision_msgs::partial_lo> >());
-  while(jlo_nodes_.size() > keep_)
-    popJloSet();
-
-  for(itT it=start; it!=end; it++)
+  if(m_binited)
   {
-    Ogre::SceneNode* node = scene_node_->createChildSceneNode();
+    Ogre::Quaternion orientation;
+    const double matid[] = {1, 0, 0, 0,
+                            0, 1, 0, 0,
+                            0, 0, 1, 0,
+                            0, 0, 0, 1};
 
-    vision_msgs::partial_lo lo;
-    vision_msgs::partial_lo::_pose_type mat;
-    vision_msgs::partial_lo::_cov_type cov;
+    setSceneNodePose(scene_node_, matid, orientation);
 
-    if(it->pose == 1)
+    jlo_nodes_.push_back(std::list<std::pair<Ogre::SceneNode *, vision_msgs::partial_lo> >());
+    while(jlo_nodes_.size() > keep_)
+      popJloSet();
+
+    for(itT it=start; it!=end; it++)
     {
-      cov[ 0] = 0.0;
-      cov[ 7] = 0.0;
-      cov[14] = 0.0;
-      cov[21] = 0.0;
-      cov[28] = 0.0;
-      cov[35] = 0.0;
-      std::copy(&matid[0], &matid[16], mat.begin());
-      lo.pose = mat;
-    }
-    else
-    {
-      unsigned long reference_frame_id = 1; /**1 := /map*/
-      reference_frame_id = NameQueryJlo(fixed_frame_);
-      printf("NAmeQuery %s resolved to id: %ld\n", fixed_frame_.c_str(), reference_frame_id);
-      if(!GetJlo(it->pose, reference_frame_id, lo))
-        continue;
-      mat = lo.pose;
-      cov = lo.cov;
-    }
-    jlo_nodes_.back().push_back(std::pair<Ogre::SceneNode *, vision_msgs::partial_lo>(node, lo));
-    setSceneNodePose(node , mat, orientation);
-    if(show_axis_)
-    {
-      ogre_tools::Axes* axes_ = new ogre_tools::Axes( scene_manager_, node, axis_length_, axis_thickness_);
-      axes_->getSceneNode()->setVisible( true);
-      axes_->setOrientation(orientation);
-    }
-    Ogre::Matrix3 rotMat;
-    orientation.ToRotationMatrix(rotMat);
-    if(show_cov_)
-    {
-      for(int j = 0; j< 12; j++)
+      Ogre::SceneNode* node = scene_node_->createChildSceneNode();
+
+      vision_msgs::partial_lo lo;
+      vision_msgs::partial_lo::_pose_type mat;
+      vision_msgs::partial_lo::_cov_type cov;
+
+      if(it->pose == 1)
       {
-        ogre_tools::Axes* axes_cov = new ogre_tools::Axes( scene_manager_, node, cov_length_, cov_thickness_ );
-        Ogre::SceneNode* axis_tmp = axes_cov->getSceneNode();
-
-        Ogre::Vector3 vec(  cov[0] * (j%6 == 0 ? 1 : 0) * (j>5?-1:1),
-                            cov[7] * (j%6 == 1 ? 1 : 0) * (j>5?-1:1),
-                            cov[14] * (j%6 == 2 ? 1 : 0) * (j>5?-1:1));
-
-        /**  Position is relative but always in ogre coordinates */
-         Ogre::Matrix3 rot (mat[0],mat[1],mat[2],
-                            mat[4],mat[5],mat[6],
-                            mat[8],mat[9],mat[10]);
-        /*    normal -> ogre: x = -y, y = z, z = -x*/
-        Ogre::Vector3 vec_trans = rot * vec;
-        axis_tmp->setPosition(Ogre::Vector3(-vec_trans.y, vec_trans.z, -vec_trans.x));
-        Ogre::Matrix3  temp;
-        temp.FromEulerAnglesZYX(Ogre::Radian(cov[21] * (j%6 == 3 ? 1 : 0) * (j>5?-1:1)),
-                                Ogre::Radian(cov[28] * (j%6 == 4 ? 1 : 0) * (j>5?-1:1)),
-                                Ogre::Radian(cov[35] * (j%6 == 5 ? 1 : 0) * (j>5?-1:1)));
-        Ogre::Quaternion temp_quat;
-        temp = rotMat * temp;
-        temp_quat.FromRotationMatrix(temp);
-        axes_cov->setOrientation(temp_quat);
-        axis_tmp->setVisible( true);
+        cov[ 0] = 0.0;
+        cov[ 7] = 0.0;
+        cov[14] = 0.0;
+        cov[21] = 0.0;
+        cov[28] = 0.0;
+        cov[35] = 0.0;
+        std::copy(&matid[0], &matid[16], mat.begin());
+        lo.pose = mat;
       }
+      else
+      {
+        unsigned long reference_frame_id = 1; /**1 := /map*/
+        reference_frame_id = NameQueryJlo(fixed_frame_);
+        printf("NAmeQuery %s resolved to id: %ld\n", fixed_frame_.c_str(), reference_frame_id);
+        if(!GetJlo(it->pose, reference_frame_id, lo))
+          continue;
+        mat = lo.pose;
+        cov = lo.cov;
+      }
+      jlo_nodes_.back().push_back(std::pair<Ogre::SceneNode *, vision_msgs::partial_lo>(node, lo));
+      setSceneNodePose(node , mat, orientation);
+      if(show_axis_)
+      {
+        ogre_tools::Axes* axes_ = new ogre_tools::Axes( scene_manager_, node, axis_length_, axis_thickness_);
+        axes_->getSceneNode()->setVisible( true);
+        axes_->setOrientation(orientation);
+      }
+      Ogre::Matrix3 rotMat;
+      orientation.ToRotationMatrix(rotMat);
+      if(show_cov_)
+      {
+        for(int j = 0; j< 12; j++)
+        {
+          ogre_tools::Axes* axes_cov = new ogre_tools::Axes( scene_manager_, node, cov_length_, cov_thickness_ );
+          Ogre::SceneNode* axis_tmp = axes_cov->getSceneNode();
+
+          Ogre::Vector3 vec(  cov[0] * (j%6 == 0 ? 1 : 0) * (j>5?-1:1),
+                              cov[7] * (j%6 == 1 ? 1 : 0) * (j>5?-1:1),
+                              cov[14] * (j%6 == 2 ? 1 : 0) * (j>5?-1:1));
+
+          /**  Position is relative but always in ogre coordinates */
+           Ogre::Matrix3 rot (mat[0],mat[1],mat[2],
+                              mat[4],mat[5],mat[6],
+                              mat[8],mat[9],mat[10]);
+          /*    normal -> ogre: x = -y, y = z, z = -x*/
+          Ogre::Vector3 vec_trans = rot * vec;
+          axis_tmp->setPosition(Ogre::Vector3(-vec_trans.y, vec_trans.z, -vec_trans.x));
+          Ogre::Matrix3  temp;
+          temp.FromEulerAnglesZYX(Ogre::Radian(cov[21] * (j%6 == 3 ? 1 : 0) * (j>5?-1:1)),
+                                  Ogre::Radian(cov[28] * (j%6 == 4 ? 1 : 0) * (j>5?-1:1)),
+                                  Ogre::Radian(cov[35] * (j%6 == 5 ? 1 : 0) * (j>5?-1:1)));
+          Ogre::Quaternion temp_quat;
+          temp = rotMat * temp;
+          temp_quat.FromRotationMatrix(temp);
+          axes_cov->setOrientation(temp_quat);
+          axis_tmp->setVisible( true);
+        }
+      }
+      if(show_text_)
+      {
+        ogre_tools::MovableText* text = new ogre_tools::MovableText(it->label, "Arial",0.1, Ogre::ColourValue::White);
+        Ogre::SceneNode *text_node= node->createChildSceneNode();
+        text_node->attachObject(text);
+        text_node->setVisible( true);
+      }
+      node->setVisible(true);
     }
-    if(show_text_)
-    {
-      ogre_tools::MovableText* text = new ogre_tools::MovableText(it->label, "Arial",0.1, Ogre::ColourValue::White);
-      Ogre::SceneNode *text_node= node->createChildSceneNode();
-      text_node->attachObject(text);
-      text_node->setVisible( true);
-    }
-    node->setVisible(true);
+    if(render)
+      causeRender();
   }
-  if(render)
-    causeRender();
   return jlo_nodes_.back();
 }
 
 template<typename T>
 void JloDisplayBase::setSceneNodePose(Ogre::SceneNode* scene_node, T mat, Ogre::Quaternion &orientation)
 {
-   std::string fxFrame = fixed_frame_;
-   if(fixed_frame_.length() < 2)
-     fxFrame = "/map";
-   tf::Stamped<tf::Pose> pose_w(btTransform(btMatrix3x3(mat[0],mat[1],mat[2],
-                                                       mat[4],mat[5],mat[6],
-                                                       mat[8],mat[9],mat[10]),
-                                btVector3(mat[3], mat[7], mat[11])), ros::Time(),
-                                "/map");
+  if(m_binited)
+  {
+     std::string fxFrame = fixed_frame_;
+     if(fixed_frame_.length() < 2)
+       fxFrame = "/map";
+     try
+     {
+       tf::Stamped<tf::Pose> pose_w(btTransform(btMatrix3x3(mat[0],mat[1],mat[2],
+                                                         mat[4],mat[5],mat[6],
+                                                         mat[8],mat[9],mat[10]),
+                                  btVector3(mat[3], mat[7], mat[11])), ros::Time(),
+                                  "/map");
 
-  Ogre::Vector3 position;
+      Ogre::Vector3 position;
+      if(!vis_manager_->getFrameManager()->getTransform(fxFrame, ros::Time(), position, orientation, false))
+      {
+          ROS_ERROR("Error getting transforming frame '%s'",
+            fxFrame.c_str());
+            return;
+      }
+        /*vis_manager_->getTFClient()->transformPose(fixed_frame_, pose_w, pose_w);*/
+      Ogre::Vector3 position_w = Ogre::Vector3(pose_w.getOrigin().x(),
+        pose_w.getOrigin().y(), pose_w.getOrigin().z());
+      rviz::robotToOgre(position_w);
+      position_w.x += position.x;
+      position_w.y += position.y;
+      position_w.z += position.z;
+      Ogre::Matrix3 rot, rot2;
+      orientation.ToRotationMatrix(rot);
 
-    if(!vis_manager_->getFrameManager()->getTransform(fxFrame, ros::Time(), position, orientation, false))
-        ROS_ERROR("Error getting transforming frame '%s'",
-        fxFrame.c_str());
-    /*vis_manager_->getTFClient()->transformPose(fixed_frame_, pose_w, pose_w);*/
-  Ogre::Vector3 position_w = Ogre::Vector3(pose_w.getOrigin().x(),
-    pose_w.getOrigin().y(), pose_w.getOrigin().z());
-  rviz::robotToOgre(position_w);
-  position_w.x += position.x;
-  position_w.y += position.y;
-  position_w.z += position.z;
-  Ogre::Matrix3 rot, rot2;
-  orientation.ToRotationMatrix(rot);
+      rot2 = rot * Ogre::Matrix3(mat[0],mat[1],mat[2],mat[4],mat[5],mat[6],mat[8],mat[9],mat[10]);
+      orientation.FromRotationMatrix(rot2);
+      btScalar yaw_w, pitch_w, roll_w;
+      pose_w.getBasis().getEulerYPR(yaw_w, pitch_w, roll_w);
 
-  rot2 = rot * Ogre::Matrix3(mat[0],mat[1],mat[2],mat[4],mat[5],mat[6],mat[8],mat[9],mat[10]);
-  orientation.FromRotationMatrix(rot2);
-  btScalar yaw_w, pitch_w, roll_w;
-  pose_w.getBasis().getEulerYPR(yaw_w, pitch_w, roll_w);
-
-  Ogre::Matrix3 orientation_w(1,0,0,0,1,0,0,0,1);
-  scene_node->setPosition(position_w);
+      Ogre::Matrix3 orientation_w(1,0,0,0,1,0,0,0,1);
+      scene_node->setPosition(position_w);
+    }
+    catch(...)
+    {
+      return;
+    }
+  }
 }
 
 } // namespace mapping_rviz_plugin

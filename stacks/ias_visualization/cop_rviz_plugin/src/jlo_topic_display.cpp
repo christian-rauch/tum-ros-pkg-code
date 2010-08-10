@@ -65,8 +65,11 @@ void JloTopicDisplay::setTopic(const std::string & topic)
 void JloTopicDisplay::subscribe()
 {
   if (!isEnabled() || topic_.length() < 2)
+  {
+    m_binited = false;
     return;
-
+  }
+  m_binited = true;
   jlo_subscriber = update_nh_.subscribe<std_msgs::UInt32>(topic_,1, boost::bind(&JloTopicDisplay::incomingMessage, this, _1));
 }
 

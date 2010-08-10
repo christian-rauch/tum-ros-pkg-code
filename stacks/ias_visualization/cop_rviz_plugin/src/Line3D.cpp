@@ -22,7 +22,7 @@ void Line3D::addPoint(const Vector3 &p)
 
 const Vector3 &Line3D::getPoint(unsigned short index) const
 {
-   assert(index < mPoints.size() && "Point index is out of bounds!!");
+   assert(index < mPoints.size());
 
    return mPoints[index];
 }

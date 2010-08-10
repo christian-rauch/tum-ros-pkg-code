@@ -68,7 +68,9 @@ CopAnswerDisplay::~CopAnswerDisplay()
 
 void CopAnswerDisplay::setTopic(const std::string & topic)
 {
-  unsubscribe();
+  if(m_binited)
+    unsubscribe();
+
   JloDisplayBase::setTopic(topic);
   subscribe();
 }
@@ -147,13 +149,13 @@ void CopAnswerDisplay::setD(float table_height)
 
 void CopAnswerDisplay::subscribe()
 {
-  printf("subscribe to %s\n", getTopic().c_str());
   if (getTopic().length() < 2 || !isEnabled())
   {
     m_binited = false;
     return;
   }
   m_binited = true;
+  printf("subscribe to %s\n", getTopic().c_str());
   cop_subscriber = update_nh_.subscribe<vision_msgs::cop_answer>(getTopic(),1, boost::bind(&CopAnswerDisplay::incomingMessage, this, _1));
 }
 
@@ -285,7 +287,7 @@ void CopAnswerDisplay::AttachSGPPoints(Ogre::SceneNode* object, std::vector<visi
 
   /*m_manualObject->estimateVertexCount(2* NUM_HAND_POINTS );
   m_manualObject->begin( "BaseWhiteNoLighting", Ogre::RenderOperation::OT_LINE_STRIP );*/
-  
+
   for(size_t j = 0; j< NUM_HAND_POINTS; j++)
   {
 
@@ -374,53 +376,56 @@ void CopAnswerDisplay::AttachSGPPoints(Ogre::SceneNode* object, std::vector<visi
     tmpnode->setPosition(Ogre::Vector3(-vec_trans.y, vec_trans.z, -vec_trans.x));
     tmpnode->setVisible(true);
   }
-  
+
 
  /* lines->setVisible(true);*/
 }
 
 void CopAnswerDisplay::processMessage (vision_msgs::cop_answer& msg)
 {
-  std::vector<vision_msgs::partial_lo::_pose_type > matrices;
-  std::vector<vision_msgs::partial_lo::_cov_type> covs;
-
-  if (msg.error.length() > 0)
+  if(m_binited)
   {
-    return;
-  }
+    std::vector<vision_msgs::partial_lo::_pose_type > matrices;
+    std::vector<vision_msgs::partial_lo::_cov_type> covs;
 
-  std::vector<JloDisplayBase::JloDescription> jloSet(msg.found_poses.size());
-
-  for(unsigned int i = 0; i < msg.found_poses.size(); i++)
-  {
-    std::stringstream strm;
-
-    jloSet[i].pose = msg.found_poses[i].position;
-
-    if(msg.found_poses[i].models.size() > 0)
+    if (msg.error.length() > 0)
     {
-      strm << msg.found_poses[i].models[0].sem_class << " ";
+      return;
     }
-    strm << "(" << msg.found_poses[i].objectId << " at " << msg.found_poses[i].position << ")";
-    jloSet[i].label = strm.str();
-  }
-  std::list<std::pair<Ogre::SceneNode*, vision_msgs::partial_lo> > &list =  displayJloSet(jloSet.begin(), jloSet.end(), false);
-  std::list<std::pair<Ogre::SceneNode*, vision_msgs::partial_lo> >::iterator iter = list.begin();
-  for(; iter != list.end(); iter++)
-  {
-    matrices.push_back((*iter).second.pose);
-    covs.push_back((*iter).second.cov);
-  }
-  iter = list.begin();
-  if(m_sgp)
-  {
-    for(size_t i = 0; i < msg.found_poses.size(); i++)
+
+    std::vector<JloDisplayBase::JloDescription> jloSet(msg.found_poses.size());
+
+    for(unsigned int i = 0; i < msg.found_poses.size(); i++)
     {
-      AttachSGPPoints((*iter).first, matrices, covs, i);
-      iter++;
+      std::stringstream strm;
+
+      jloSet[i].pose = msg.found_poses[i].position;
+
+      if(msg.found_poses[i].models.size() > 0)
+      {
+        strm << msg.found_poses[i].models[0].sem_class << " ";
+      }
+      strm << "(" << msg.found_poses[i].objectId << " at " << msg.found_poses[i].position << ")";
+      jloSet[i].label = strm.str();
     }
+    std::list<std::pair<Ogre::SceneNode*, vision_msgs::partial_lo> > &list =  displayJloSet(jloSet.begin(), jloSet.end(), false);
+    std::list<std::pair<Ogre::SceneNode*, vision_msgs::partial_lo> >::iterator iter = list.begin();
+    for(; iter != list.end(); iter++)
+    {
+      matrices.push_back((*iter).second.pose);
+      covs.push_back((*iter).second.cov);
+    }
+    iter = list.begin();
+    if(m_sgp)
+    {
+      for(size_t i = 0; i < msg.found_poses.size(); i++)
+      {
+        AttachSGPPoints((*iter).first, matrices, covs, i);
+        iter++;
+      }
+    }
+    causeRender();
   }
-  causeRender();
 }
 
 void CopAnswerDisplay::incomingMessage(const vision_msgs::cop_answer::ConstPtr& msg)

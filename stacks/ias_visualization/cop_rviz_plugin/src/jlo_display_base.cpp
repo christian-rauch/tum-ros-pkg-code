@@ -59,7 +59,8 @@ JloDisplayBase::JloDisplayBase(const std::string & name,
 
 JloDisplayBase::~JloDisplayBase()
 {
-  clear();
+  if(m_binited)
+    clear();
 }
 
 void JloDisplayBase::clear()
@@ -74,10 +75,12 @@ void JloDisplayBase::clear()
 void JloDisplayBase::setTopic(const std::string & topic)
 {
   topic_ = topic;
-
   propertyChanged(topic_property_);
-  clear();
-  causeRender();
+  if(m_binited)
+  {
+    clear();
+    causeRender();
+  }
 }
 
 
@@ -97,13 +100,15 @@ void JloDisplayBase::onEnable()
 
 void JloDisplayBase::onDisable()
 {
-  clear();
   scene_node_->setVisible(false);
+  if(m_binited)
+    clear();
 }
 
 void JloDisplayBase::fixedFrameChanged()
 {
-  clear();
+  if(m_binited)
+    clear();
 }
 
 void JloDisplayBase::update(float wall_dt, float ros_dt)
@@ -177,7 +182,8 @@ unsigned  long JloDisplayBase::NameQueryJlo(std::string name)
 
 void JloDisplayBase::reset()
 {
-  clear();
+  if(m_binited)
+    clear();
 }
 
 void JloDisplayBase::targetFrameChanged()
