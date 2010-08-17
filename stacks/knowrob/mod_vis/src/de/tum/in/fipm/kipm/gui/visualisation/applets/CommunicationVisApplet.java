@@ -5,6 +5,7 @@ import processing.core.*;
 import ros.NodeHandle;
 import ros.Ros;
 import ros.RosException;
+import ros.ServiceClient;
 import ros.ServiceServer;
 import ros.pkg.mod_vis.srv.CommVisSetLeftImg;
 import ros.pkg.mod_vis.srv.CommVisSetRightImg;
@@ -26,8 +27,6 @@ public class CommunicationVisApplet extends PApplet {
 
   PImage leftImg, rightImg;
   
-  Ros ros;
-  NodeHandle n;
 
   
   ////////////////////////////////////////////////////////////////////////////////
@@ -70,6 +69,25 @@ public class CommunicationVisApplet extends PApplet {
 			  		"A = 'http://ias.cs.tum.edu/kb/knowrob.owl#Tea-Beverage' ;\n" +
 			  		"A = 'http://ias.cs.tum.edu/kb/knowrob.owl#Tea-Iced' ";
 
+  
+	static Ros ros;
+	static NodeHandle n;
+	
+
+	/**
+	 * Thread-safe ROS initialization
+	 */
+	protected static void initRos() {
+
+    	ros = Ros.getInstance();
+
+		if(!Ros.getInstance().isInitialized()) {
+	    	ros.init("knowrob_comm_vis_applet");
+		}
+		n = ros.createNodeHandle();
+
+	}
+  
 
   /**
    * Applet setup routine
@@ -262,9 +280,7 @@ public class CommunicationVisApplet extends PApplet {
   		
   		try {
 
-  			ros = Ros.getInstance();
-  			ros.init("communication_vis");
-  			n = ros.createNodeHandle();
+  			initRos();
   			
 			n.advertiseService("comm_vis_set_left_img",  new CommVisSetLeftImg(),  new SetLeftImgCallback());
 			n.advertiseService("comm_vis_set_right_img", new CommVisSetRightImg(), new SetRightImgCallback());
@@ -372,6 +388,71 @@ public class CommunicationVisApplet extends PApplet {
 	}
 	
   
+
+	/**
+	 * Helper functions for visualization: send visualization strings to an instance of the
+	 * CommunicationVisApplet to display the ongoing communication.
+	 * 
+	 * @param req The  String to be displayed in the 'request' field of the visualization
+	 * @param res The  String to be displayed in the 'response' field of the visualization
+	 * @param leftImg  Image to be displayed on the left side of the visualization
+	 * @param rightImg Image to be displayed on the right side of the visualization 
+	 * @author Moritz Tenorth, tenorth@cs.tum.edu
+	 */
+	public static void visualizeCommunication(String req, String res, String leftImg, String rightImg) {
+	
+		try {
+
+  			initRos();
+  			
+			if(leftImg!=null) {
+
+				CommVisSetLeftImg.Request vis_req = new CommVisSetLeftImg.Request();
+				vis_req.filename = leftImg;
+				ServiceClient<CommVisSetLeftImg.Request, CommVisSetLeftImg.Response, CommVisSetLeftImg> cl = 
+					n.serviceClient("/comm_vis_set_left_img", new CommVisSetLeftImg());
+				cl.call(vis_req);
+				cl.shutdown();
+			}
+			
+			if(rightImg!=null) {
+
+				CommVisSetRightImg.Request vis_req = new CommVisSetRightImg.Request();
+				vis_req.filename = rightImg;
+				ServiceClient<CommVisSetRightImg.Request, CommVisSetRightImg.Response, CommVisSetRightImg> cl = 
+					n.serviceClient("/comm_vis_set_right_img", new CommVisSetRightImg());
+				cl.call(vis_req);
+				cl.shutdown();
+			}
+			
+			if(req!=null) {
+
+				CommVisSetReqText.Request vis_req = new CommVisSetReqText.Request();
+				vis_req.request = req;
+				ServiceClient<CommVisSetReqText.Request, CommVisSetReqText.Response, CommVisSetReqText> cl = 
+					n.serviceClient("/comm_vis_set_req_text", new CommVisSetReqText());
+				cl.call(vis_req);
+				cl.shutdown();
+			}
+			
+			if(res!=null) {
+
+				CommVisSetResText.Request vis_req = new CommVisSetResText.Request();
+				vis_req.response = res;
+				ServiceClient<CommVisSetResText.Request, CommVisSetResText.Response, CommVisSetResText> cl = 
+					n.serviceClient("/comm_vis_set_res_text", new CommVisSetResText());
+				cl.call(vis_req);
+				cl.shutdown();
+
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+	
+
+	
   
   public void setPrologVisCanvas(PrologVisualizationCanvas c){
 	  prologVisCanvas = c;
