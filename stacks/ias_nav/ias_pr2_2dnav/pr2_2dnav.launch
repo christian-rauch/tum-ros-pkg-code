@@ -1,0 +1,11 @@
+<launch>
+  <include file="$(find pr2_machine)/$(env ROBOT).machine" />
+  <include file="$(find pr2_navigation_global)/amcl_node.xml" />
+  <include file="$(find pr2_navigation_teleop)/teleop.xml" />
+  <include file="$(find pr2_navigation_perception)/lasers_and_filters.xml" />
+  <include file="$(find pr2_navigation_perception)/ground_plane.xml" />
+  <include file="$(find pr2_navigation_global)/move_base.xml" />
+  <node name="map_server" pkg="map_server" type="map_server" args="$(find ias_maps)/ias_karlstrasse_20100730.yaml" machine="c2" />
+
+  <param name="/move_base_node/footprint_padding" value="0.03"/>
+</launch>

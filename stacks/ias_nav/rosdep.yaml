@@ -1,0 +1,3 @@
+imagemagick:
+  debian: imagemagick
+  ubuntu: imagemagick

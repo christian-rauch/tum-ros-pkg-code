@@ -1,0 +1,12 @@
+<stack>
+  <description brief="ias_nav">ias_nav</description>
+  <author>Maintained by Lorenz Moesenlechner</author>
+  <license>BSD</license>  
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/ias_nav</url>
+  <depend stack="navigation" /> <!-- map_server -->
+  <depend stack="pr2_common" /> <!-- pr2_machine -->
+  <depend stack="pr2_navigation" /> <!-- pr2_navigation_global, pr2_navigation_perception, pr2_navigation_teleop -->
+  <depend stack="ros" />
+
+</stack>

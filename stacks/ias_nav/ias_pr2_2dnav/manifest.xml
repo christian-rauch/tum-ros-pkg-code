@@ -1,0 +1,20 @@
+<package>
+  <description brief="ias_pr2_2dnav">
+
+     ias_pr2_2dnav
+
+  </description>
+  <author>Lorenz Moesenlechner</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/ias_pr2_2dnav</url>
+  <depend package="ias_maps"/>
+  <depend package="map_server"/>
+  <depend package="pr2_navigation_global"/>
+  <depend package="pr2_navigation_perception"/>
+  <depend package="pr2_navigation_teleop"/>
+  <depend package="pr2_machine"/>
+
+</package>
+
+

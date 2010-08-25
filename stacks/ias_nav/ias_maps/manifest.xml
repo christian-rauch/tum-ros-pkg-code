@@ -1,0 +1,15 @@
+<package>
+  <description brief="ias_maps">
+
+     ias_maps
+
+  </description>
+  <author>Lorenz Moesenlechner</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/ias_maps</url>
+  <rosdep name="imagemagick"/>
+
+</package>
+
+
