@@ -1,0 +1,21 @@
+<package>
+  <description brief="pr2_addons">
+A collection of nodes that multiple apps depend on at runtime.  Eventually, many of these nodes will migrate into pr2_bringup/pr2.launch
+  </description>
+  <author>Brian Gerkey, Eitan Marder-Eppstein</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://pr.willowgarage.com/wiki/pr2_addons</url>
+  <depend package="roslib"/>
+  <depend package="rospy"/>
+  <depend package="webui"/>
+  <depend package="rosweb"/>
+  <depend package="std_msgs"/>
+  <depend package="map_server" />
+  <depend package="willow_maps" />
+  <platform os="ubuntu" version="9.04"/>
+  <platform os="ubuntu" version="9.10"/>
+  <platform os="ubuntu" version="10.04"/>
+</package>
+
+

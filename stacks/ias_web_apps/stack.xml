@@ -1,0 +1,12 @@
+<stack>
+  <description brief="ias_web_apps">ias_web_apps</description>
+  <author>Maintained by Lorenz Moesenlechner</author>
+  <license>BSD</license>  
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/ias_web_apps</url>
+  <depend stack="navigation" /> <!-- map_server -->
+  <depend stack="ros" /> <!-- std_msgs, roslib, rospy -->
+  <depend stack="web_interface" /> <!-- rosweb, webui -->
+  <depend stack="wg_common" /> <!-- willow_maps -->
+
+</stack>
