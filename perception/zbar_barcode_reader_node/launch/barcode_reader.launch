@@ -1,0 +1,5 @@
+<launch>
+  <node pkg="zbar_barcode_reader_node" type="zbar_barcode_reader_node" name="barcode_reader_node" output="screen" respawn="true">
+  <param name="input_image_topic" type="string" value="/image_topic_2" />
+ </node>
+</launch>
