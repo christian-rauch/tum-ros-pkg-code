@@ -1,0 +1,11 @@
+<stack>
+  <description brief="The simple probabilstic grasp planner">
+    A libraries to select grasping positions.
+  </description>
+  <author>Ulrich Klank</author>
+  <license>GPL</license>  
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/sgp</url>
+  <depend stack="ros" />
+
+</stack>

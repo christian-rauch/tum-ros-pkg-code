@@ -1,5 +1,5 @@
 <stack>
-  <description brief="The CRAM framework">
+  <description brief="The CRAM Plan Language stack">
     A set of libraries for implementing AI enabled robot control programs.
   </description>
   <author>Maintained by Lorenz Moesenlechner</author>

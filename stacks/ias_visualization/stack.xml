@@ -1,0 +1,16 @@
+<stack>
+  <description brief="ias_visualization">
+    ias_visualization is a collection of visualization messages and accompanying rviz plugins
+  </description>
+  <author>Maintained by Nico Blodow</author>
+  <license>BSD</license>  
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/ias_visualization</url>
+  <depend stack="common_msgs" /> <!-- sensor_msgs, geometry_msgs -->
+  <depend stack="geometry" /> <!-- tf -->
+  <depend stack="grasping" /> <!-- simple_grasp_planner -->
+  <depend stack="ias_common" /> <!-- vision_msgs, vision_srvs -->
+  <depend stack="ros" /> <!-- std_msgs, roscpp -->
+  <depend stack="visualization" /> <!-- rviz -->
+
+</stack>
