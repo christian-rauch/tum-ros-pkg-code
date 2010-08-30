@@ -12,6 +12,7 @@
   </export>
 
   <rosdep name="libmagickwand-dev"/>
+  <rosdep name="libmagick++-dev"/>
 </package>
 
 
