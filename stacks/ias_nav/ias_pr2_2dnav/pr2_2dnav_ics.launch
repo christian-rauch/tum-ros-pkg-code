@@ -5,7 +5,7 @@
   <include file="$(find pr2_navigation_perception)/lasers_and_filters.xml" />
   <include file="$(find pr2_navigation_perception)/ground_plane.xml" />
   <include file="$(find pr2_navigation_global)/move_base.xml" />
-  <node name="map_server" pkg="map_server" type="map_server" args="$(find ias_maps)/ias_karlstrasse_20100830.yaml" machine="c2" />
+  <node name="map_server" pkg="map_server" type="map_server" args="$(find ias_maps)/ics_karlstrasse_20100825.yaml" machine="c2" />
 
   <param name="/move_base_node/footprint_padding" value="0.03"/>
 </launch>
