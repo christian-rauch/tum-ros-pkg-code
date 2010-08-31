@@ -1,5 +1,5 @@
 <launch>
   <include file="$(find pr2_machine)/$(env ROBOT).machine" />
   <include file="$(find pr2_navigation_global)/amcl_node.xml" />
-  <node name="map_server" pkg="map_server" type="map_server" args="$(find ias_maps)/ias_karlstrasse_20100730.yaml" machine="c2" />
+  <node name="map_server" pkg="map_server" type="map_server" args="$(find ias_maps)/ias_karlstrasse_20100830.yaml" machine="c2" />
 </launch>
