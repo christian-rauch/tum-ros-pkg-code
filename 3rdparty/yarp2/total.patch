@@ -1,0 +1,150 @@
+Index: conf/YarpOptions.cmake
+===================================================================
+--- conf/YarpOptions.cmake	(revision 8126)
++++ conf/YarpOptions.cmake	(working copy)
+@@ -99,10 +99,27 @@
+   include(Dart)
+ endif (ENABLE_DASHBOARD_SUBMIT)
+ 
++
+ #########################################################################
++# Control setting an rpath
++option(ENABLE_FORCE_RPATH "Set an rpath after installing the executables." FALSE)
++mark_as_advanced(ENABLE_FORCE_RPATH)
++
++if (ENABLE_FORCE_RPATH)
++  set(FORCE_RPATH "${CMAKE_INSTALL_PREFIX}/lib" CACHE STRING 
++	"The rpath for the executables.")
++endif ()
++
++
++
++
++#########################################################################
+ # Defunct options to be removed
+ 
+ # set a flag so sub-directories know that are being compiled
+ # en masse as opposed to as individuals
+ set(COMPILING_ALL_YARP TRUE)
+ 
++
++
++
+Index: src/yarprun/CMakeLists.txt
+===================================================================
+--- src/yarprun/CMakeLists.txt	(revision 8126)
++++ src/yarprun/CMakeLists.txt	(working copy)
+@@ -4,9 +4,15 @@
+  
+ 
+ GET_PROPERTY(YARP_TREE_INCLUDE_DIRS TARGET YARP_OS PROPERTY INCLUDE_DIRS)
++SET_TARGET_PROPERTIES( ${name} PROPERTIES INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib" )
+ INCLUDE_DIRECTORIES(${YARP_TREE_INCLUDE_DIRS})
+ include_directories(${ACE_INCLUDE_DIRS})
+ ADD_EXECUTABLE(yarprun yarprun.cpp)
+ TARGET_LINK_LIBRARIES(yarprun YARP_init)
+ 
++if (ENABLE_FORCE_RPATH)
++  set_target_properties( yarprun PROPERTIES INSTALL_RPATH ${FORCE_RPATH} )
++endif ()
++
++
+ INSTALL(TARGETS yarprun COMPONENT utilities DESTINATION bin)
+Index: src/yarpserver/CMakeLists.txt
+===================================================================
+--- src/yarpserver/CMakeLists.txt	(revision 8126)
++++ src/yarpserver/CMakeLists.txt	(working copy)
+@@ -25,6 +25,11 @@
+   add_executable(yarpserver3 ${CMAKE_CURRENT_SOURCE_DIR}/src/yarpserver3.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/NameServiceOnTriples.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/NameServiceOnTriples.h ${CMAKE_CURRENT_SOURCE_DIR}/src/Allocator.h ${CMAKE_CURRENT_SOURCE_DIR}/src/AllocatorOnTriples.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/AllocatorOnTriples.h ${CMAKE_CURRENT_SOURCE_DIR}/src/Subscriber.h ${CMAKE_CURRENT_SOURCE_DIR}/src/SubscriberOnSql.h ${CMAKE_CURRENT_SOURCE_DIR}/src/SubscriberOnSql.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/ComposedNameService.h ${CMAKE_CURRENT_SOURCE_DIR}/src/ConnectThread.h ${CMAKE_CURRENT_SOURCE_DIR}/src/ParseName.h ${CMAKE_CURRENT_SOURCE_DIR}/src/ParseName.cpp)
+   target_link_libraries(yarpserver3 yarpserversql)
+   target_link_libraries(yarpserver3 YARP_init)
++
++  if (ENABLE_FORCE_RPATH)
++    set_target_properties( yarpserver3 PROPERTIES INSTALL_RPATH ${FORCE_RPATH} )
++  endif ()
++
+   install_targets(/lib yarpserversql)
+   install_targets(/bin yarpserver3)
+ 
+Index: src/yarpview/CMakeLists.txt
+===================================================================
+--- src/yarpview/CMakeLists.txt	(revision 8126)
++++ src/yarpview/CMakeLists.txt	(working copy)
+@@ -39,6 +39,10 @@
+ 
+   TARGET_LINK_LIBRARIES(yarpview YARP_sig YARP_init)
+ 
++  if (ENABLE_FORCE_RPATH)
++    set_target_properties( yarpview PROPERTIES INSTALL_RPATH ${FORCE_RPATH} )
++  endif ()
++
+   INSTALL(TARGETS yarpview COMPONENT utilities DESTINATION bin)
+ 
+ endif(CREATE_GUIS)
+Index: src/yarpdev/CMakeLists.txt
+===================================================================
+--- src/yarpdev/CMakeLists.txt	(revision 8126)
++++ src/yarpdev/CMakeLists.txt	(working copy)
+@@ -11,4 +11,8 @@
+   target_link_libraries(yarpdev yarpmod)
+ endif(CREATE_DEVICE_LIBRARY_MODULES)
+ 
++if (ENABLE_FORCE_RPATH)
++  set_target_properties( yarpdev PROPERTIES INSTALL_RPATH ${FORCE_RPATH} )
++endif ()
++
+ install(TARGETS yarpdev COMPONENT utilities DESTINATION bin)
+Index: src/yarp/CMakeLists.txt
+===================================================================
+--- src/yarp/CMakeLists.txt	(revision 8126)
++++ src/yarp/CMakeLists.txt	(working copy)
+@@ -11,4 +11,9 @@
+ ADD_EXECUTABLE(yarpserver yarpserver.cpp)
+ TARGET_LINK_LIBRARIES(yarpserver YARP_init)
+ 
++IF (ENABLE_FORCE_RPATH)
++  SET_TARGET_PROPERTIES( yarp PROPERTIES INSTALL_RPATH ${FORCE_RPATH} )
++  SET_TARGET_PROPERTIES( yarpserver PROPERTIES INSTALL_RPATH ${FORCE_RPATH} )
++ENDIF ()
++
+ INSTALL(TARGETS yarp yarpserver COMPONENT utilities DESTINATION bin)
+Index: src/yarphear/CMakeLists.txt
+===================================================================
+--- src/yarphear/CMakeLists.txt	(revision 8126)
++++ src/yarphear/CMakeLists.txt	(working copy)
+@@ -9,6 +9,11 @@
+   include_directories(${ACE_INCLUDE_DIRS})
+   add_executable(yarphear yarphear.cpp)
+   target_link_libraries(yarphear yarpmod YARP_init)
++
++  if (ENABLE_FORCE_RPATH)
++    set_target_properties( yarphear PROPERTIES INSTALL_RPATH ${FORCE_RPATH} )
++  endif ()
++
+   install(TARGETS yarphear COMPONENT utilities DESTINATION bin)
+ 
+ endif(CREATE_DEVICE_LIBRARY_MODULES)
+Index: example/swig/CMakeLists.txt
+===================================================================
+--- example/swig/CMakeLists.txt	(revision 8126)
++++ example/swig/CMakeLists.txt	(working copy)
+@@ -79,11 +79,15 @@
+ 
+    # installation path is determined reliably on most platforms using distutils
+    FIND_PACKAGE(PythonInterp)
+-   EXECUTE_PROCESS(COMMAND ${PYTHON_EXECUTABLE} 
+-                   -c "from distutils import sysconfig; print(sysconfig.get_python_lib(1,0,prefix='${CMAKE_INSTALL_PREFIX}'))" 
+-                   OUTPUT_VARIABLE PYTHON_INSTDIR OUTPUT_STRIP_TRAILING_WHITESPACE )
+-   INSTALL(FILES ${CMAKE_CURRENT_SOURCE_DIR}/yarp.py ${CMAKE_CURRENT_SOURCE_DIR}/_yarp.so 
++   IF( NOT PYTHON_INSTDIR )
++     EXECUTE_PROCESS(COMMAND ${PYTHON_EXECUTABLE} 
++                     -c "from distutils import sysconfig; print(sysconfig.get_python_lib(1,0,prefix='${CMAKE_INSTALL_PREFIX}'))" 
++                     OUTPUT_VARIABLE PYTHON_INSTDIR OUTPUT_STRIP_TRAILING_WHITESPACE )
++   ENDIF( NOT PYTHON_INSTDIR )
++   SET_TARGET_PROPERTIES( _yarp PROPERTIES INSTALL_RPATH ${CMAKE_INSTALL_PREFIX}/lib )
++   INSTALL(FILES ${CMAKE_BINARY_DIR}/yarp.py ${CMAKE_BINARY_DIR}/_yarp.so 
+            DESTINATION ${PYTHON_INSTDIR} )
++   INSTALL(TARGETS _yarp DESTINATION ${PYTHON_INSTDIR} )
+ ENDIF (CREATE_PYTHON)
+ 
+ IF (CREATE_PERL)

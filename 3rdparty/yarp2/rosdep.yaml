@@ -1,0 +1,9 @@
+libace:
+  debian: libace-5.6.3 libace-dev
+  ubuntu: libace-5.6.3 libace-dev
+libgsl:
+  debian: libgsl0ldbl libgsl0-dev
+  ubuntu: libgsl0ldbl libgsl0-dev
+swig:
+  debian: swig
+  ubuntu: swig

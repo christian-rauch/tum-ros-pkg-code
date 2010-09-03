@@ -1,0 +1,22 @@
+<package>
+  <description>
+    YARP is a library and toolkit for communication and device interfaces,
+    developed by humanoid robotics researchers but useful beyond that field!
+  </description>
+  <author>
+    Paul Fitzpatrick,
+    Giorgio Metta,
+    Lorenzo Natale,
+    Alessandro Scalzo,
+  </author>
+  <license>GPL</license>
+  <export>
+    <cpp cflags="-I${prefix}/yarp2/include/"  lflags="-Wl,-rpath,${prefix}/yarp2/lib -L${prefix}/yarp2/lib -lYARP_OS -lYARP_dev -lYARP_sig -lYARP_init"/>
+    <python path="${prefix}/yarp2/lib/python/site-packages"/>
+  </export>
+
+  <rosdep name="swig"/>
+  <rosdep name="libace"/>
+  <rosdep name="libgsl"/>
+</package>
+
