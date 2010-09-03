@@ -1,0 +1,18 @@
+<package>
+  <description brief="cop_for_external_dependencies">
+
+     package to link against, if not the full functionality of cop is
+     necessary, but still some interfaces should be used.
+
+  </description>
+  <author>Ulrich Friedrich Klank</author>
+  <license>GPL</license>
+  <review status="unreviewed" notes=""/>
+  <depend package="cognitive_perception"/>
+  <export>
+        <cpp lflags="-L${prefix}/lib -lcopext"/>
+  </export>
+                
+</package>
+
+

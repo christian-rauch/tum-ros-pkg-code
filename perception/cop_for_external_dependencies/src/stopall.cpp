@@ -1,0 +1,1 @@
+volatile bool g_stopall = true;
