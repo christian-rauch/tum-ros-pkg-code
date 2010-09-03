@@ -1,8 +1,12 @@
 <launch>
   <node pkg="yarp_to_ros_image" type="yarp_to_ros_image" name="yarp_to_ros_image" output="screen" respawn="false" >
-    <param  name="output_image_topic" type="string" value="yarp_to_ros_image"/>
+    <param  name="output_image_topic" type="string" value="image"/>
     <param  name="port_name" type="string" value="/yarp_to_ros_image"/>
-    <param  name="display" value="false"/>
+    <param  name="camera_parameters_file" type="string" value="$(find yarp_to_ros_image)/camera_parameters.txt"/>
+    <param  name="camera_frame_id" type="string" value="/r_eye3"/>
     </node>
-  <node pkg="yarp_to_ros_image" type="connect_tool.sh" name="connect1" output="screen" respawn="false" args="/icub/cam/left /yarp_to_ros_image"/>
+  <node pkg="yarp_to_ros_image" type="connect_tool.sh" name="connect1" output="screen" respawn="false" args="/icub/cam/right /yarp_to_ros_image"/>
+  <node pkg="image_proc" type="image_proc" name="yarp_image_proc" output="log" respawn="true" ns="/yarp_to_ros_image">
+     <remap from="image_raw" to="image"/>
+  </node>
 </launch>

@@ -5,7 +5,7 @@
      a)cameras on Icub robot and
      b)simulated camera source.
   </description>
-  <author>Dejan Pangercic</author>
+  <author>Dejan Pangercic, Alexis Maldonado</author>
   <license>GPL</license>
   <review status="unreviewed" notes=""/>
   <depend package="yarp2" />
@@ -13,6 +13,7 @@
   <depend package="cv_bridge" />
   <depend package="image_transport" />
   <depend package="sensor_msgs" />
+  <depend package="camera_calibration_parsers" />
 </package>
 
 

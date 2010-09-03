@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 by Dejan Pangercic <dejan.pangercic@cs.tum.edu>
+ * Copyright (C) 2010, Dejan Pangercic <dejan.pangercic@cs.tum.edu>, Alexis Maldonado <maldonado@tum.de>
  * 
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -14,9 +14,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
- 
-// -*- mode:C++; tab-width:4; c-basic-offset:4; indent-tabs-mode:nil -*-
 
 #include <ace/config.h>
 #include <stdio.h>
@@ -36,8 +33,13 @@ using namespace std;
 #include <ros/ros.h>
 #include <ros/node_handle.h>
 #include "sensor_msgs/Image.h"
+#include "sensor_msgs/CameraInfo.h"
+#include "sensor_msgs/SetCameraInfo.h"
 #include "image_transport/image_transport.h"
 #include "cv_bridge/CvBridge.h"
+#include <camera_calibration_parsers/parse_ini.h>
+
+
 
 //namespaces
 using namespace yarp::os;
@@ -53,23 +55,49 @@ public:
     Network yarp_;
     // Make a port for reading and writing images
     BufferedPort<ImageOf<PixelRgb> > port_;
-    bool display_;
-    int ct_;
-    char key_;
     IplImage *cvImage_;
     ImageOf<PixelRgb> *yarpImage;
+    sensor_msgs::CameraInfo camera_info;
+    std::string camera_parameters_file;
+    std::string camera_frame_id;
+
+
+    bool setCameraInfo(sensor_msgs::SetCameraInfo::Request &req, sensor_msgs::SetCameraInfo::Response &rsp) {
+
+      camera_info = req.camera_info;
+      ROS_INFO("New camera info received and accepted");
+
+      if (camera_calibration_parsers::writeCalibrationIni(camera_parameters_file.c_str(), "yarp_to_ros_image", camera_info)) {
+        ROS_INFO( "Camera information written to the camera parameters file: %s", camera_parameters_file.c_str() );
+        return true;
+      }
+      else {
+        ROS_ERROR( "Could not write the camera parameters file: %s", camera_parameters_file.c_str() );
+        return false;
+      }
+    }
+    
+    // Constructor
     YARPToROSImage(ros::NodeHandle &n) :
     n_(n), it_(n_)
     {
         n_.param("port_name", port_name_, std::string("/yarp_to_ros_image"));
-        n_.param("output_image_topic", output_image_topic_, std::string("yarp_to_ros_image"));
-        n_.param("display", display_, true);
+        n_.param("output_image_topic", output_image_topic_, std::string("image"));
+        n_.param("camera_parameters_file", camera_parameters_file, std::string("camera_parameters.txt"));
+        n_.param("camera_frame_id", camera_frame_id, std::string("/r_eye3"));
+
+        std::string camera_name;
+        if (camera_calibration_parsers::readCalibrationIni(camera_parameters_file.c_str(), camera_name, camera_info)) {
+              ROS_INFO("Successfully read camera calibration: \"%s\"  Rerun camera calibrator if it is incorrect.", camera_parameters_file.c_str());
+        } else {
+            ROS_ERROR("No camera parameters file found.  Use default file if no other is available. (This process will publish invalid camera calibration data).");
+        }
+
         ConstString yarp_port_name_(port_name_.c_str());
         yarp_.init();
-        ct_ = 0;
-        key_ = ' ';
         port_.open(yarp_port_name_);
-        image_pub_ = it_.advertise(output_image_topic_, 1);
+        pub_ = it_.advertiseCamera(output_image_topic_, 1);
+        set_camera_info = n_.advertiseService("set_camera_info", &YARPToROSImage::setCameraInfo, this);
     }
   
 
@@ -78,11 +106,10 @@ public:
         yarp_.fini();
     }
     
-    ////////////////////////////////////////////////////////////////////////////////
+
     // Spin (!)
     bool spin ()
     {
-        //double interval = rate_ * 1e+6;
         yarpImage = port_.read();
         cvImage_ = cvCreateImage(cvSize(yarpImage->width(),yarpImage->height()), 
                                  IPL_DEPTH_8U, 3 );
@@ -90,48 +117,42 @@ public:
         {     
             // read an image from the port
             yarpImage = port_.read();
+            ros::Time now = ros::Time::now();
+
             if (yarpImage==NULL) continue;
             
-            // add a blue circle
-            if (display_)
-            {
-                PixelRgb blue(0,0,255);
-                addCircle(*yarpImage,blue,ct_,50,10);
-                ct_ = (ct_+5)%yarpImage->width();
-            }
-            ROS_INFO("Copying YARP image to an OpenCV/IPL image");
             cvCvtColor((IplImage*)yarpImage->getIplImage(), cvImage_, CV_RGB2BGR);
+            camera_info.header.stamp.sec = now.sec;
+            camera_info.header.stamp.nsec = now.nsec;
+            //The other fields of camera_info are already there: loaded from file
+            // or set by the service call
             
-            if (display_)
-            {
-                ROS_INFO("Showing OpenCV/IPL image");
-                cvNamedWindow("yarp_to_ros_image",1);
-                cvShowImage("yarp_to_ros_image",cvImage_);
-            }
             try
             {
-                ROS_INFO ("Publishing data on topic %s.", n_.resolveName ("yarp_to_ros_image").c_str ());
-                image_pub_.publish(bridge_.cvToImgMsg(cvImage_, "passthrough"));
+                sensor_msgs::Image::Ptr pimg = bridge_.cvToImgMsg(cvImage_, "bgr8");
+                pimg->header.stamp.sec = now.sec;
+                pimg->header.stamp.nsec = now.nsec;
+                pimg->header.frame_id = camera_frame_id.c_str();
+                pub_.publish(*pimg, camera_info);
             }
             catch (sensor_msgs::CvBridgeException error)
             {
-                ROS_ERROR("error");
+                ROS_ERROR("CvBridgeException error");
             }
-            if (display_)
-                key_ = cvWaitKey(100);
+
             ros::spinOnce ();
         }
-        return (true);
         cvReleaseImage(&cvImage_);
-        if(display_)
-            cvDestroyWindow("yarp_to_ros_image");
+        return (true);
     }
     
 protected:
   ros::NodeHandle n_;
   image_transport::ImageTransport it_;
   sensor_msgs::CvBridge bridge_;
-  image_transport::Publisher image_pub_;
+  image_transport::CameraPublisher pub_;
+  ros::ServiceServer set_camera_info;
+
 };
 
 
