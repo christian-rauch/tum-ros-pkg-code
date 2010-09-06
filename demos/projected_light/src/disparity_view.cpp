@@ -32,6 +32,7 @@
 #include "opencv/cv.h" // OpenCV
 #include "opencv/highgui.h" // OpenCV's gui functions
 #include "ros/node_handle.h"
+#include "sensor_msgs/Image.h"
 //#include "topic_synchronizer/topic_synchronizer.h" // Synchronizes multiple messages so they arrive at the same time.
 //#include <boost/thread.hpp>
 
