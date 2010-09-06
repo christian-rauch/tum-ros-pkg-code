@@ -1,0 +1,12 @@
+<package>
+  <description>A library for accessing a FLIR thermal camera through libunicap</description>
+  <author>Radu Bogdan Rusu (rusu@cs.tum.edu)</author>
+  <license>BSD</license>
+  <depend package="roscpp" />
+  <depend package="sensor_msgs" />
+  <export>
+    <cpp cflags="-I${prefix}/src" lflags="-L${prefix}/lib -lflir"/>
+  </export>
+  <url></url>
+  <rosdep name="libunicap2-dev"/>
+</package>
