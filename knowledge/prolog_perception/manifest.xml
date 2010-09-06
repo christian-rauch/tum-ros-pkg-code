@@ -7,17 +7,18 @@
   <author>Dejan Pangercic</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
-  <url></url>
+  <url>http://www.ros.org/wiki/prolog_perception</url>
   <depend package="mapping_srvs" />
   <depend package="tabletop_msgs" />
    <depend package="vision_srvs" />
    <depend package="vision_msgs" />
    <depend package="geometry_msgs" />
    <depend package="sensor_msgs" />
-   <depend package="point_cloud_mapping" />
    <depend package="ias_table_srvs" />
    <depend package="ias_table_msgs" />
+   <depend package="ias_table_srvs" />
    <depend package="ias_knowledge_base" />
+   <depend package="comp_temporal" />
 </package>
 
 

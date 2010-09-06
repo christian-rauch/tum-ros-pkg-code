@@ -29,22 +29,22 @@
  */
 
 /**
-@mainpage
+   @mainpage
 
-@htmlinclude manifest.html
+   @htmlinclude manifest.html
 
-@query_table_memory is a middleware between (ros)prolog and ros nodes.
-Compilled into a shared library it
-in general:
-a)accepts prolog foreign function calls and
-b)invokes ros ServiceClient calls
+   @query_table_memory is a middleware between (ros)prolog and ros nodes.
+   Compilled into a shared library it
+   in general:
+   a)accepts prolog foreign function calls and
+   b)invokes ros ServiceClient calls
 
-and in particular:
-c)queries table_memmory node
-(https://tum-ros-pkg.svn.sourceforge.net/svnroot/tum-ros-pkg/mapping/cloud_tools/src/table_memory.cpp)
-for found tables and on them located clusters in PointCloud data.
-Return type:
-[[TableId, TimeStamp1, Tx1, Ty1, Tz1, Obj1, ObjID1, Ox1, Oy1, Oz1], ...]
+   and in particular:
+   c)queries table_memmory node
+   (https://tum-ros-pkg.svn.sourceforge.net/svnroot/tum-ros-pkg/mapping/cloud_tools/src/table_memory.cpp)
+   for found tables and on them located clusters in PointCloud data.
+   Return type:
+   [[TableId, TimeStamp1, Tx1, Ty1, Tz1, Obj1, ObjID1, Ox1, Oy1, Oz1], ...]
 **/
 
 #include <ros/ros.h>
@@ -84,98 +84,156 @@ extern "C"
     /** Subscribe to service */
     ros::service::waitForService(table_memory_srvs);
     ros::ServiceClient client = n.serviceClient<ias_table_clusters_service>(table_memory_srvs, true);
-    float cluster_center[3];
-    float table_center[3];
+    float object_center[3];
+    int table_center_size = 19;
+    float table_center[table_center_size];
+    for (int t = 0; t < 19; t++)
+    {
+      table_center[t] = 0.0;
+    }
     double old_stamp = 0.0;
     int old_stamp_diff = 0;
     if(!client.call(srv))
-      {
-        ROS_ERROR("ERROR Calling %s", table_memory_srvs.c_str());
-	return 0;
-      }
+    {
+      ROS_ERROR("ERROR Calling %s", table_memory_srvs.c_str());
+      return 0;
+    }
     else
-      {
-        ROS_DEBUG("Called %s", table_memory_srvs.c_str());
-      }
+    {
+      ROS_DEBUG("Called %s", table_memory_srvs.c_str());
+    }
     ROS_DEBUG("Calling %s, prolog_return size %ld", table_memory_srvs.c_str(),  srv.response.prolog_return.size());
-    if (srv.response.prolog_return.size() != 0)
-      old_stamp = srv.response.prolog_return[0].stamp.toSec();
+    //if (srv.response.prolog_return.size() != 0)
+    //old_stamp = srv.response.prolog_return[0].stamp.toSec();
     for (unsigned int i = 0; i < srv.response.prolog_return.size(); i++)
 	  { 
 	    //add response variables of choice
 	    //table id
 	    if (!PL_unify_list(l, tmp, l) ||
-		!PL_unify_integer(tmp, srv.response.prolog_return[i].table_id))
+          !PL_unify_integer(tmp, srv.response.prolog_return[i].table_id))
 	      PL_fail;
 	    ROS_DEBUG("table_id");
 
 	    //check if the timestamp changed
-	    ROS_DEBUG("old_stamp_diff: %lf", srv.response.prolog_return[i].stamp.toSec() - old_stamp);
-	    if ((srv.response.prolog_return[i].stamp.toSec() - old_stamp) > 0.0)
-	      {
-		ROS_DEBUG("old_stamp_diff: %f, %d", srv.response.prolog_return[i].stamp.toSec() - old_stamp, old_stamp_diff);
-		old_stamp_diff++;
-	    	old_stamp = srv.response.prolog_return[i].stamp.toSec();
-	      }
+	    // ROS_DEBUG("old_stamp_diff: %lf", srv.response.prolog_return[i].stamp.toSec() - old_stamp);
+// 	    if ((srv.response.prolog_return[i].stamp.toSec() - old_stamp) > 0.0)
+//       {
+//         ROS_DEBUG("old_stamp_diff: %f, %d", srv.response.prolog_return[i].stamp.toSec() - old_stamp, old_stamp_diff);
+//         old_stamp_diff++;
+// 	    	old_stamp = srv.response.prolog_return[i].stamp.toSec();
+//       }
 
-	    //time stamp as an integer
+	    //time stamp as a difference to the beginning of the table memory life cycle
 	    if (!PL_unify_list(l, tmp, l) ||
-		!PL_unify_integer(tmp, old_stamp_diff))
+          !PL_unify_float(tmp, (srv.response.prolog_return[i].stamp.toSec())))
 	      PL_fail;
 	    ROS_DEBUG("stamp: %f", srv.response.prolog_return[i].stamp.toSec());
 
 	    //table center
-	    table_center[0] = srv.response.prolog_return[i].table_center.x;
-	    table_center[1] = srv.response.prolog_return[i].table_center.y;
-	    table_center[2] = srv.response.prolog_return[i].table_center.z;
-	    for (int ii = 0; ii < 3; ii++)
-              {
-		if(!PL_unify_list(l, tmp, l) ||  !PL_unify_float(tmp, table_center[ii]))
-		  {
-		    PL_fail;
-		    break;
-		  }
-	      }
+	    //table_center[0] = srv.response.prolog_return[i].table_center.x;
+	    //table_center[1] = srv.response.prolog_return[i].table_center.y;
+	    //table_center[2] = srv.response.prolog_return[i].table_center.z;
+      for (int j = 0; j < 3; j++)
+      {
+        //orientation
+        table_center[j*4] = srv.response.prolog_return[i].coeff[3*j+6];
+        table_center[j*4 + 1] = srv.response.prolog_return[i].coeff[3*j+7];
+        table_center[j*4 + 2] = srv.response.prolog_return[i].coeff[3*j+8];
+        //position
+        table_center[j*4 + 3] = srv.response.prolog_return[i].coeff[j];
+        //dimensions
+        table_center[j + 16] = srv.response.prolog_return[i].coeff[j+3];
+      }
+      table_center[15] = 1.0;
+	    for (int ii = 0; ii < table_center_size; ii++)
+      {
+        if(!PL_unify_list(l, tmp, l) ||  !PL_unify_float(tmp, table_center[ii]))
+        {
+          PL_fail;
+          break;
+        }
+      }
 	    ROS_DEBUG("table_center");
 	    
 
-	    //ROS_DEBUG("semantic types %s",  srv.response.prolog_return[i].cluster_semantic_types[0].c_str());
-	    //cluster semantic type
-	     if (srv.response.prolog_return[i].cluster_semantic_types.size() != 0)
-	       {
-		 if (!PL_unify_list(l, tmp, l) ||
-		     !PL_unify_string_chars(tmp, srv.response.prolog_return[i].cluster_semantic_types[0].c_str()))
-		   PL_fail;
-		 ROS_DEBUG("semantic types %s",  srv.response.prolog_return[i].cluster_semantic_types[0].c_str());
-	       }
-	     else
-	       {
-		 if (!PL_unify_list(l, tmp, l) ||
-		     !PL_unify_string_chars(tmp, "nn"))
-		   PL_fail;
-		 ROS_DEBUG("semantic types nn");
-	       }
+	    //object type
+      if (srv.response.prolog_return[i].object_type != "")
+      {
+        if (!PL_unify_list(l, tmp, l) ||
+            !PL_unify_string_chars(tmp, srv.response.prolog_return[i].object_type.c_str()))
+          PL_fail;
+        ROS_DEBUG("object type %s",  srv.response.prolog_return[i].object_type.c_str());
+      }
+      else
+      {
+        if (!PL_unify_list(l, tmp, l) ||
+            !PL_unify_string_chars(tmp, "nn"))
+          PL_fail;
+        ROS_DEBUG("object type nn");
+      }
+
+      //object color
+      if (srv.response.prolog_return[i].object_color != "")
+      {
+        if (!PL_unify_list(l, tmp, l) ||
+            !PL_unify_string_chars(tmp, srv.response.prolog_return[i].object_color.c_str()))
+          PL_fail;
+        ROS_DEBUG("object color %s",  srv.response.prolog_return[i].object_color.c_str());
+      }
+      else
+      {
+        if (!PL_unify_list(l, tmp, l) ||
+            !PL_unify_string_chars(tmp, "nn"))
+          PL_fail;
+        ROS_DEBUG("object color nn");
+      }
+
+      //object geometric type
+      if (srv.response.prolog_return[i].object_geometric_type != "")
+      {
+        if (!PL_unify_list(l, tmp, l) ||
+            !PL_unify_string_chars(tmp, srv.response.prolog_return[i].object_geometric_type.c_str()))
+          PL_fail;
+        ROS_DEBUG("object geometric type %s",  srv.response.prolog_return[i].object_geometric_type.c_str());
+      }
+      else
+      {
+        if (!PL_unify_list(l, tmp, l) ||
+            !PL_unify_string_chars(tmp, "nn"))
+          PL_fail;
+        ROS_DEBUG("object geometric type nn");
+      }
 
 	     
-	     //cluster id
-	     if (!PL_unify_list(l, tmp, l) ||
-		 !PL_unify_integer(tmp, srv.response.prolog_return[i].cluster_id))
-	       PL_fail;
-	     ROS_DEBUG("cluster_id");
+      //cluster id
+      if (!PL_unify_list(l, tmp, l) ||
+          !PL_unify_integer(tmp, srv.response.prolog_return[i].object_id))
+        PL_fail;
+      ROS_DEBUG("cluster_id");
+
+      if (!PL_unify_list(l, tmp, l) ||
+          !PL_unify_integer(tmp, srv.response.prolog_return[i].object_cop_id))
+        PL_fail;
+      ROS_DEBUG("object_cop_id");
 	     
+      if (!PL_unify_list(l, tmp, l) ||
+          !PL_unify_integer(tmp, srv.response.prolog_return[i].lo_id))
+        PL_fail;
+      ROS_DEBUG("cluster_id");
+
 	    //cluster center
-	    cluster_center[0] = srv.response.prolog_return[i].cluster_center.x;
-	    cluster_center[1] = srv.response.prolog_return[i].cluster_center.y;
-	    cluster_center[2] = srv.response.prolog_return[i].cluster_center.z;
+	    object_center[0] = srv.response.prolog_return[i].object_center.x;
+	    object_center[1] = srv.response.prolog_return[i].object_center.y;
+	    object_center[2] = srv.response.prolog_return[i].object_center.z;
 	    for (int ii = 0; ii < 3; ii++)
-              {
-		if(!PL_unify_list(l, tmp, l) ||  !PL_unify_float(tmp, cluster_center[ii]))
-		  {
-		    PL_fail;
-		    break;
-		  }
-	      }
-	    ROS_DEBUG("cluster_center");
+      {
+        if(!PL_unify_list(l, tmp, l) ||  !PL_unify_float(tmp, object_center[ii]))
+        {
+          PL_fail;
+          break;
+        }
+      }
+	    ROS_DEBUG("object_center");
 	  }
     free(argv[0]);
     free(argv);

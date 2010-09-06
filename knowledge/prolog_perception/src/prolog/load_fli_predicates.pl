@@ -35,35 +35,36 @@
 %%
 %% Load as following:
 %% cd `rospack find prolog_perception`/src/prolog && prolog
-%% consult('loadlibs.pl').
+%% consult('load_fli_predicates.pl').
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 %% Disables truncation, prettier printing
 :- set_prolog_flag(toplevel_print_anon, false).
 :- set_prolog_flag(toplevel_print_options, [quoted(true), portray(true), max_depth(0), attributes(portray)]).
+:- set_prolog_flag(float_format, '%.15g').
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 %% queries for and returns a plane with its Id and equation's coefficients
 %% in a PointCloud
 %% Return type:
 %% [table_id, a, b, c, d]
-:- unload_foreign_library('../../lib/libros_query_plane').
-:- load_foreign_library('../../lib/libros_query_plane').
+%:- unload_foreign_library('../../lib/libros_query_plane').
+%:- load_foreign_library('../../lib/libros_query_plane').
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 %% queries and returns unique identifiers for found tables and clusters located on tables
 %% in a PointCloud 
 %% Return type:
 %% [table_id, [[cl_x, cl_y, cl_z], [], [], ...]
-:- unload_foreign_library('../../lib/libros_query_table_objects').
-:- load_foreign_library('../../lib/libros_query_table_objects').
+%:- unload_foreign_library('../../lib/libros_query_table_objects').
+%:- load_foreign_library('../../lib/libros_query_table_objects').
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 %% queries COP (https://tum-ros-pkg.svn.sourceforge.net/svnroot/tum-ros-pkg/perception/cop/)
 %% to locate clusters in PointCloud data and checks them against given colors (to the time
 %% RGB and black and white are supported)
-:- unload_foreign_library('../../lib/libros_query_cluster_color').
-:- load_foreign_library('../../lib/libros_query_cluster_color').
+%:- unload_foreign_library('../../lib/libros_query_cluster_color').
+%:- load_foreign_library('../../lib/libros_query_cluster_color').
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 %% queries table_memmory node
@@ -71,7 +72,7 @@
 %% for found tables and on them located clusters in PointCloud data.
 %% Return type:
 %% [[TableId, TimeStamp1, Tx1, Ty1, Tz1, Obj1, ObjID1, Ox1, Oy1, Oz1], ...]
-:- unload_foreign_library('../../lib/libros_query_table_memory').
+% :- unload_foreign_library('../../lib/libros_query_table_memory').
 :- load_foreign_library('../../lib/libros_query_table_memory').
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
@@ -82,5 +83,5 @@
 %%[[TableId, Tx1, Ty1, Tz1, Obj1, Ox1, Oy1, Oz1], ...]
 %%The data is used in another pipeline with knowledge processing 
 %%and reasoning in order to infer the missing objects on the tabletop.
-:- unload_foreign_library('../../lib/libros_query_tabletop_missing_objects').
-:- load_foreign_library('../../lib/libros_query_tabletop_missing_objects').
+%:- unload_foreign_library('../../lib/libros_query_tabletop_missing_objects').
+%:- load_foreign_library('../../lib/libros_query_tabletop_missing_objects').

@@ -26,12 +26,12 @@ else(HAVE_SWI_PROLOG_H)
   message(FATAL_ERROR "Can't proceed without <SWI-Prolog.h>")
 endif(HAVE_SWI_PROLOG_H)
 
-rosbuild_add_executable(query_lo_cop src/cpp/query_lo_cop.cpp)
-rosbuild_add_executable(query_table_memory_write_to_file src/cpp/query_table_memory_write_to_file.cpp)
-rosbuild_add_library(ros_query_tabletop_missing_objects src/cpp/query_tabletop_missing_objects.cpp)
-rosbuild_add_library(ros_query_plane src/cpp/query_plane.cpp)
-rosbuild_add_library(ros_query_table_objects src/cpp/query_table_objects.cpp)
-rosbuild_add_library(ros_query_cluster_color src/cpp/query_cluster_color.cpp)
+#rosbuild_add_executable(query_lo_cop src/cpp/query_lo_cop.cpp)
+#rosbuild_add_executable(query_table_memory_write_to_file src/cpp/query_table_memory_write_to_file.cpp)
+#rosbuild_add_library(ros_query_tabletop_missing_objects src/cpp/query_tabletop_missing_objects.cpp)
+#rosbuild_add_library(ros_query_plane src/cpp/query_plane.cpp)
+#rosbuild_add_library(ros_query_table_objects src/cpp/query_table_objects.cpp)
+#rosbuild_add_library(ros_query_cluster_color src/cpp/query_cluster_color.cpp)
 rosbuild_add_library(ros_query_table_memory src/cpp/query_table_memory.cpp)
 
 

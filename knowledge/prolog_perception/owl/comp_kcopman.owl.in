@@ -22,13 +22,12 @@
   <owl:Ontology rdf:about="">
     <owl:imports rdf:resource="&local_path;knowrob.owl"/>
   </owl:Ontology>
-  
+
   <computable:PrologClass rdf:about="#computeKCopManObject">
     <computable:command rdf:datatype="&xsd;string">comp_kcopman:comp_kcopman</computable:command>
     <computable:cache rdf:datatype="&xsd;string">cache</computable:cache>
     <computable:visible rdf:datatype="&xsd;string">unvisible</computable:visible>
-    <computable:target rdf:resource="&knowrob;#VisualPerception"/>
+    <computable:target rdf:resource="&knowrob;#TableMemory"/>
   </computable:PrologClass>
-
 
 </rdf:RDF>
