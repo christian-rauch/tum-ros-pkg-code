@@ -62,7 +62,8 @@
 using namespace std;
 using namespace perception_srvs;
 
-class David_service{
+class DavidService
+{
 
 private:
   ros::NodeHandle node_handle_;
@@ -84,7 +85,7 @@ private:
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   public:
-    David_service(const ros::NodeHandle& node_handle) : node_handle_(node_handle)
+    DavidService(const ros::NodeHandle& node_handle) : node_handle_(node_handle)
     {
       if ((sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)) < 0) 
       {
@@ -99,7 +100,7 @@ private:
     debug_out = true;	
     node_handle_.param("~ip",david_ip,string("127.0.0.1"));
     node_handle_.param("~port",port_string,string("19919"));
-    service_ = node_handle_.advertiseService("david", &David_service::david, this);	
+    service_ = node_handle_.advertiseService("david", &DavidService::david, this);	
     ROS_INFO("DAVID service has been initialized");	
   }
   
@@ -236,7 +237,7 @@ private:
 	}
 	
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	~David_service()
+	~DavidService()
 	{
 		close(sock);
 	}
@@ -290,7 +291,7 @@ private:
     port = atoi(file_port.c_str());		
   }
 */
-
+};
 
 
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -299,7 +300,7 @@ private:
     //ROS
     ros::init(argc, argv, "david");
     ros::NodeHandle n;	
-    David_service david(n);
+    DavidService david(n);
 		
     david.init(); //Connect to Server
     ros::spin();

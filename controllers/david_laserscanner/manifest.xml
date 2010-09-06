@@ -5,7 +5,7 @@
     running on a windows machine.
   </description>
 
-  <author>Andreas Holzbach</author>
+  <author>Andreas Holzbach, Dejan Pangercic</author>
   <license>BSD</license>
 
   <depend package="roscpp"/>
