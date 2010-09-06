@@ -1,0 +1,17 @@
+<package>
+  <description>
+    A collection of sample consensus models developed at IAS@TUM
+  </description>
+
+  <author>Nico Blodow, Dejan Pangercic, Zoltan-Csaba MArton</author>
+  <license>BSD</license>
+  <review status="experimental" notes="beta"/>
+
+  <depend package="pcl" />
+  <depend package="roscpp" />
+  
+  <export>
+    <cpp cflags="-I${prefix}/include/" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lpcl_ias_sample_consensus"/>
+  </export>
+
+</package>
