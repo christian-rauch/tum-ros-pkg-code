@@ -1,0 +1,12 @@
+<package>
+  <description brief="position_string_rviz_plugin">
+     Message for visualizing strings at certain positions..
+  </description>
+  <author>Nico Blodow</author>
+  <license>BSD</license>
+
+  <depend package="std_msgs" />
+  <depend package="geometry_msgs" />
+  <depend package="sensor_msgs"/>
+</package>
+
