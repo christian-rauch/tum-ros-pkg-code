@@ -1,0 +1,27 @@
+<package>
+  <description brief="ias_drawer_executive">
+
+     ias_drawer_executive
+     opens drawers in the ias kitchen.
+     the robot is driven to a hardcoded location that is know for each drawer.
+     the right goes to a hardcoded joint state so that we see the ar toolkit marker on the drawer handle in the forearm camera.
+     ik is then used to grasp at the marker, and the drawer is opened with some trajectory exploration, following the line of least resistance so to say.
+
+  </description>
+  <author>Thomas Ruehr</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/ias_drawer_executive</url>
+  <depend package="move_arm_msgs"/>
+  <depend package="actionlib"/>
+  <depend package="ar_pose"/>
+  <depend package="kinematics_msgs"/>
+  <depend package="pr2_arm_move_ik"/>
+  <depend package="pr2_controllers_msgs"/>
+  <depend package="tf"/>
+  <depend package="move_base_msgs"/>
+
+</package>
+
+
+

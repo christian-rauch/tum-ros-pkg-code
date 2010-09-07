@@ -1,0 +1,5 @@
+<launch>
+  <include file="$(find ias_drawer_executive)/launch/arm_ik.launch"/>
+  <include file="$(find ias_drawer_executive)/launch/ar_pose_pr2_forearm.launch"/>
+  <include file="$(find ias_pr2_2dnav)/pr2_2dnav.launch"/>
+</launch>
