@@ -1,0 +1,22 @@
+<package>
+  <description brief="table_costmap">
+
+     table_costmap
+
+  </description>
+  <author>Lorenz Moesenlechner</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/polygonal_costmap</url>
+  <depend package="rospy"/>
+  <depend package="std_srvs"/>
+  <depend package="nav_msgs"/>
+  <depend package="geometry_msgs"/>
+  <depend package="sensor_msgs"/>
+  <depend package="pcl"/>
+  <depend package="pcl_ros"/>  
+  <depend package="point_cloud_converter"/>  
+
+</package>
+
+
