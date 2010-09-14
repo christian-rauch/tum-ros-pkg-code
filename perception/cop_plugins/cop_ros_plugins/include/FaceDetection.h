@@ -61,6 +61,9 @@ using namespace cv;
 
 #define XML_NODE_FACEDETECTION "FaceDetection"
 
+
+
+
 namespace cop
 {
   class FaceDetection :  public LocateAlgorithm
@@ -92,3 +95,4 @@ namespace cop
   };
 }
 #endif /*FACEDETECTION_H*/
+

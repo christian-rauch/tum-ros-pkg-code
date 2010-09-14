@@ -30,13 +30,14 @@
 #include "FaceDetection.h"
 #include "XMLTag.h"
 
-
-
 #include <iostream>
 #include <cstdio>
 
+/*  . */
 #include "IplImageReading.h"
+/* */
 #include "ImageSubscription.h"
+/* */ 
 #include "DetectedFace.h"
 
 #define XML_ATTRIBUTE_CASCADE_NAME "cascade_name"
@@ -103,9 +104,11 @@ double angle_two_pixel(double x1, double y1, double x2, double y2, MinimalCalibr
   return ret;
 }
 
-RelPose* distance_to_3d(RelPose *sensor_pose, MinimalCalibration &calib, double length_min, double length_max, double x, double y, double cov_width, double cov_height)
+RelPose* distance_to_3d(RelPose *sensor_pose, MinimalCalibration &calib, double length_min, 
+           double length_max, double x, double y, double cov_width, double cov_height)
 {
-  printf("istance_to_3d with lmin %f  lmax %f x %f y %f co_w %f co_h%f\n ", length_min, length_max, x, y, cov_width, cov_height);
+  printf("istance_to_3d with lmin %f  lmax %f x %f y %f co_w %f co_h%f\n ", 
+  length_min, length_max, x, y, cov_width, cov_height);
   Matrix m(4,4), cov(6,6);
   double X, Y, Z;
   X = (x - calib.proj_center_x)*calib.pix_size_x;
@@ -144,18 +147,19 @@ std::vector<RelPose*> FaceDetection::Perform(std::vector<Sensor*> sensors, RelPo
   double t = 0;
   vector<Rect> faces;
   DetectedFace* face_descr = (DetectedFace*)object.GetElement(0, DESCRIPTOR_DETECTEDFACE);
-  ScopedCvMat_t image (sensors, ReadingType_IplImage);
-  RelPose* sensor_pose = image.sensor_pose_at_capture_time;
-        printf("Start processing reading\n");
+  try
+  {
+    ScopedCvMat_t image (sensors, ReadingType_IplImage);
+  
+    RelPose* sensor_pose = image.sensor_pose_at_capture_time;
 
-      Mat gray, smallImg( cvRound ((*image).rows/scale_), cvRound((*image).cols/scale_), CV_8UC1 );
+    Mat gray, smallImg( cvRound ((*image).rows/scale_), cvRound((*image).cols/scale_), CV_8UC1 );
+    cvtColor( (*image), gray, CV_BGR2GRAY );
+    resize( gray, smallImg, smallImg.size(), 0, 0, INTER_LINEAR );
+    equalizeHist( smallImg, smallImg );
 
-      cvtColor( (*image), gray, CV_BGR2GRAY );
-      resize( gray, smallImg, smallImg.size(), 0, 0, INTER_LINEAR );
-      equalizeHist( smallImg, smallImg );
-
-      t = (double)cvGetTickCount();
-      cascade_.detectMultiScale( smallImg, faces,
+    t = (double)cvGetTickCount();
+    cascade_.detectMultiScale( smallImg, faces,
                                 1.1, 2, 0
                                 //|CV_HAAR_FIND_BIGGEST_OBJECT
                                 //|CV_HAAR_DO_ROUGH_SEARCH
@@ -269,9 +273,14 @@ std::vector<RelPose*> FaceDetection::Perform(std::vector<Sensor*> sensors, RelPo
             break;
         }
       }
+  }
+  catch(const char* exception)
+  {
+    printf("FaceDetection failed: %s\n", exception); 
+  }
   if(results.size() != (unsigned)numOfObjects)
     numOfObjects = results.size();
-
+  
   return results;
 }
 

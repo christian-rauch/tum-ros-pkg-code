@@ -76,6 +76,7 @@ namespace cop
         printf("Returning object with id %ld\n", obj->m_ID);
         return results;
       }
+      virtual std::string GetName(){return "TableObjectAttention";}
    };
    class TableObjectRedetector : public LocateAlgorithm
    {
