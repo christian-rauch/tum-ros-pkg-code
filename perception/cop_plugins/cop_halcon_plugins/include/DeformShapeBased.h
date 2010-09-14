@@ -58,7 +58,7 @@ namespace cop
     /**
       Final algorithm, for call for special images
     */
-    std::vector<RelPose*> Inner(Image* img,RelPose* camPose, Calibration* calib, RelPose* lastKnownPose, Signature& object, int &numOfObjects, double& qualityMeasure, std::string stSensorName);
+    std::vector<RelPose*> Inner(Image* img,RelPose* camPose, Camera* cam, RelPose* lastKnownPose, Signature& object, int &numOfObjects, double& qualityMeasure, std::string stSensorName);
     /**
       Test if the already there are models learned
     */

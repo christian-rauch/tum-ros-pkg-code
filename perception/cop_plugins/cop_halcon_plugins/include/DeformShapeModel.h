@@ -21,6 +21,7 @@
 /*#ifdef DEFORMSHAPE_AVAILABLE*/
 
 #include "Descriptor.h"
+#include "Sensor.h"
 #include <map>
 #include <stdio.h>
 
@@ -59,17 +60,19 @@ namespace cop
 
 
     long GetDeformShapeHandle(std::string sensor_id){
-                                                      printf("\n\n Searching for a handle for sensor %s (list length = %ld )\n", sensor_id.c_str(), m_handle.size());
-                                                      if(m_handle.find(sensor_id) != m_handle.end())
+                                                      if(m_models.find(sensor_id) != m_models.end())
                                                       {
-                                                          printf("Got %ld\n\n", m_handle[sensor_id]);
-                                                         return  m_handle[sensor_id];
+                                                         return  m_models[sensor_id].m_handle;
                                                       }
-                                                      else if(m_handle.find("default") != m_handle.end())
-                                                         return  m_handle["default"];
+                                                      else if(m_models.find("default") != m_models.end())
+                                                         return  m_models["default"].m_handle;
                                                       else
+                                                      {
                                                          return -1;
                                                       }
+                                                    }
+
+
     /*First match, needed for tracking*/
     double DefineDeformShapeModel(Image* img, Halcon::Hobject* region, Camera* cam, RelPose* pose);
 
@@ -82,6 +85,39 @@ namespace cop
     * @param camera that took the picture where the descriptor was displayed
     *************************************************************************/
     virtual void Show(RelPose* pose, Sensor* cam);
+
+
+    class SensorSpecificDeformModel
+    {
+      public:
+        long m_handle;
+        MinimalCalibration m_calib;
+
+        bool IsCompatible(Sensor* sens)
+        {
+          MinimalCalibration *temp = new MinimalCalibration(sens->GetUnformatedCalibrationValues());
+          if(temp->width != m_calib.width || temp->height !=m_calib.height)
+          {
+            delete temp;
+            return false;
+          }
+          else
+          {
+            delete temp;
+            return true;
+          }
+        }
+    };
+
+    SensorSpecificDeformModel& GetDeformShapeModel()
+    {
+      if(m_models.size() > 0)
+        return (*m_models.begin()).second;
+      else
+        throw "No DeformShapeModel Available";
+    }
+
+
   protected:
     bool LoadFromFile(std::string fileName, std::string stSensorID);
 
@@ -90,7 +126,7 @@ namespace cop
 
 
   private:
-    std::map<std::string, long> m_handle;
+    std::map<std::string, SensorSpecificDeformModel> m_models;
     std::string m_filename;
     bool m_bWritten;
     Halcon::Hobject* m_regionTemp;

@@ -98,7 +98,6 @@ bool ROSCOPCamera::Start()
   ros::NodeHandle node;
   printf("Subscribing sensor %s at topic %s\n", GetSensorID().c_str(), m_stImageTopic.c_str());
   m_subsciber = node.subscribe(m_stImageTopic, 1, &ROSCOPCamera::ImageCallback, this);
-  m_grabbing = true;
   return true;
 }
 
@@ -216,6 +215,7 @@ void ReadImage(const sensor_msgs::ImageConstPtr& m, Halcon::Hobject* obj)
         Halcon::map_image(*obj, *m_calibration.m_radialDistMap, obj);
     }
     Image* img = new Image(obj, RGB_IMAGE);
+    m_grabbing = true;
     PushBack(img);
 
     while(m_images.size() > 3)

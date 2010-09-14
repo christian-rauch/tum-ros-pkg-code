@@ -54,7 +54,7 @@ Descriptor* RFAColorByShape::Perform(std::vector<Sensor*> sensors, RelPose* pose
       Camera* cam = ((Camera*)sensors[i]);
       Image* img = cam->GetImage(-1);
       Halcon::HTuple count;
-      Halcon::Hobject* himg = img->GetHImage(); 
+      Halcon::Hobject* himg = img->GetHImage();
       Halcon::count_channels(*himg, &count);
       if(count < 3)
         continue;
@@ -78,7 +78,12 @@ Descriptor* RFAColorByShape::Perform(std::vector<Sensor*> sensors, RelPose* pose
 double RFAColorByShape::CheckSignature(const Signature& sig, const  std::vector<Sensor*> &sens)
 {
   if(sig.GetElement(0,DESCRIPTOR_COLORCLASS) == NULL)
-    return 1.0;
+  {
+    if(sig.GetElement(0, DESCRIPTOR_TRANSPARENTOBJECTCAND) == NULL)
+      return 1.0;
+    else
+      return -0.0;
+  }
   else
     return -0.0;
 }

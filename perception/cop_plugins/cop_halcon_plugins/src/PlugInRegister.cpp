@@ -85,9 +85,9 @@ void loadLib(void) __attribute__ ((constructor));
 
 void loadLib(void)
 {
-    printf("Register Image vconversions\n");
+    printf("Register Image Conversions\n");
     Image::RegisterImageConverter();
-    printf("Register Halcon exception handler\n");
+    printf("Register HALCON Exception Handler\n");
     Halcon::HException::InstallHHandler(&MyHalconExceptionHandler);
 }
 

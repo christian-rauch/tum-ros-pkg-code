@@ -50,13 +50,16 @@ namespace cop
       /**
       * GetImage
       * @param Frame frame number, to specify an offset or a specific file
-      * @throws char* with an error message in case of failure
+      * @throw char* with an error message in case of failure
       */
       virtual Reading*	GetReading(const long &Frame);
 
       virtual XMLTag* Save();
 
       virtual void SetData(XMLTag* tag);
+
+      virtual bool CanSee(RelPose &pose) const {if(!m_grabbing)return false;
+                                                else return Camera::CanSee(pose);}
 
 
   private:

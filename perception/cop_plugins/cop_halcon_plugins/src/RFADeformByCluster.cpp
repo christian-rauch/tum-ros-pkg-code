@@ -38,9 +38,9 @@ RFADeformByCluster::~RFADeformByCluster(void)
 
 Descriptor* RFADeformByCluster::Perform(std::vector<Sensor*> cam_vec, RelPose* pose, Signature& sig, int &numOfObjects, double& qualityMeasure)
 {
-	DeformShapeModel* deformshape  = NULL;
+  DeformShapeModel* deformshape  = NULL;
   Camera *cam = NULL;
-
+  qualityMeasure = 0.0;
 
   for(size_t i = 0; i < cam_vec.size(); i++)
   {
@@ -61,8 +61,12 @@ Descriptor* RFADeformByCluster::Perform(std::vector<Sensor*> cam_vec, RelPose* p
         RegionOI region(pose, img->GetPose()->m_uniqueID, &(cam->m_calibration));
         try
         {
-          qualityMeasure = deformshape->DefineDeformShapeModel(img, &(region.m_reg), cam, pose);
-          deformshape->Evaluate(qualityMeasure, 100.0);
+          double temp = deformshape->DefineDeformShapeModel(img, &(region.m_reg), cam, pose);
+          if(temp > qualityMeasure)
+          {
+            qualityMeasure = temp;
+            deformshape->Evaluate(qualityMeasure, 100.0);
+          }
         }
         catch(char const* ex)
         {

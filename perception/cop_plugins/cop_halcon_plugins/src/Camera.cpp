@@ -301,6 +301,8 @@ std::pair<std::string, std::vector<double> > Camera::GetUnformatedCalibrationVal
   ret.second.push_back( tup[3].D());
   ret.second.push_back( tup[4].D());
   ret.second.push_back( tup[5].D());
+  ret.second.push_back( tup[6].D());
+  ret.second.push_back( tup[7].D());
   return ret;
 }
 
@@ -311,6 +313,8 @@ bool  Camera::CanSee (RelPose &pose) const
      return false;
   if(pose.m_uniqueID == m_relPose->m_uniqueID) /*lazy people just search in front of the camera, allow it*/
     return true;
+
+
   RelPose* pose_rel = RelPoseFactory::GetRelPose(pose.m_uniqueID, m_relPose->m_uniqueID);
   if(pose_rel != NULL)
   {

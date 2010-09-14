@@ -41,7 +41,7 @@ using namespace cop;
 
 Image::Image (int type)  :
   Reading(ReadingType_HalconImage),
- m_image(NULL),
+  m_image(NULL),
   m_type(type)
 {
 }

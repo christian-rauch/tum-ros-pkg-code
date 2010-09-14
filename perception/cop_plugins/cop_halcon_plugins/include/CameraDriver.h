@@ -136,6 +136,7 @@ namespace cop
     virtual XMLTag* Save();
     virtual void SetData(XMLTag* tag);
 
+
   private:
 
     void ModeCallback(const boost::shared_ptr<const vision_msgs::cop_camera_mode> &modestring);

@@ -141,6 +141,23 @@ namespace cop
    *
    *  loads the dxf model and creates the shape model
    *
+   *  \pi     paramset	path to the file
+   *  \pi     st	    calibration matrix is needed for creation of an shape model
+   *	\pi 		shapeModelCreated we are sure, that the file found under
+   *	        GenShapeModelFileName(stFielname,..) exists and it is actual
+   *
+   *  @throws char* with an error message in case of failure
+  *****************************************************************************
+  *
+  *****************************************************************************/
+  int SetShapeModelParamSet(ShapeModelParamSet* paramset, std::string st, bool shapeModelCreated);
+  /****************************************************************************/
+  /**  SetShapeModelParamSet: sets a new parameter set, return the index
+   * it was mapped to
+   ****************************************************************************
+   *
+   *  loads the dxf model and creates the shape model
+   *
    *  \pi     stFileName	path to the file
    *  \pi     calib	    calibration matrix is needed for creation of an shape model
    *	\pi 		shapeModelCreated we are sutrre, that the file found under
@@ -150,8 +167,7 @@ namespace cop
   *****************************************************************************
    *
    *****************************************************************************/
-    int SetShapeModelParamSet(ShapeModelParamSet* paramset, std::string st, bool shapeModelCreated);
-    bool SetShapeModelParamSet(RelPose* pose, Calibration* calib, double prob = 0.8);
+        bool SetShapeModelParamSet(RelPose* pose, Calibration* calib, double prob = 0.8);
 
     virtual std::string GetNodeName() const{return XML_NODE_SHAPEMODEL;}
     virtual ElemType_t GetType() const{return DESCRIPTOR_SHAPE;}

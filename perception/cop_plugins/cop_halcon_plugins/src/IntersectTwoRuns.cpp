@@ -94,15 +94,17 @@ std::vector<RelPose*> IntersectTwoRuns::Perform(std::vector<Sensor*> cam, RelPos
     for(unsigned int i = 0; i < result_first.size(); i++)
     {
       std::vector<RelPose*> result_second = m_secondAlg->Perform(sens_set_2, result_first[i], object, numOfObjects_second, qualityMeasure_second);
-      if(numOfObjects_second > 0 )
+      if(numOfObjects_second > 0 && result_second.size() > 0)
       {
+        if(numOfObjects_second > 1 )
+          printf("strange: NBumber of results greater than parametrized\n");
         if(result_second.size() != numOfObjects_second)
         {
           printf("Error in alg %s! wrongly set number of objects\n", m_secondAlg->GetName().c_str());
         }
         Halcon::HTuple pose1, pose2, row1, column1,pose_rel_sens_tup,
                       row2, column2, cam1 =  ((Camera*)sens_set_1[0])->m_calibration.CamParam(),
-                       cam2 =  ((Camera*)sens_set_1[0])->m_calibration.CamParam(),X,Y,Z, Dist;
+                       cam2 =  ((Camera*)sens_set_2[0])->m_calibration.CamParam(),X,Y,Z, Dist;
         RelPoseHTuple::GetPose(result_first[i], &pose1);
         RelPoseHTuple::GetPose(result_second[0], &pose2);
 
@@ -114,37 +116,31 @@ std::vector<RelPose*> IntersectTwoRuns::Perform(std::vector<Sensor*> cam, RelPos
         {
           Halcon::project_3d_point(pose1[0], pose1[1], pose1[2], cam1, &row1, &column1);
           Halcon::project_3d_point(pose2[0], pose2[1], pose2[2], cam2, &row2, &column2);
+          printf(" calling intersect_line_of_sights([%f %f %f %f %f %f %f],\n\
+                                                    [%f %f %f %f %f %f %f]\n\
+                                                    [%f %f %f %f %f %f]\n\
+                                                    %f, %f, %f, %f)\n", cam1[0].D(), cam1[1].D(), cam1[2].D(), cam1[3].D(), cam1[4].D(), cam1[5].D(), cam1[6].D(),
+                                                    cam2[0].D(), cam2[1].D(), cam2[2].D(), cam2[3].D(), cam2[4].D(), cam2[5].D(), cam2[6].D(),
+                                                    pose_rel_sens_tup[0].D(), pose_rel_sens_tup[1].D(),pose_rel_sens_tup[2].D(),pose_rel_sens_tup[3].D(),pose_rel_sens_tup[4].D(),pose_rel_sens_tup[5].D(),
+                                                    row1[0].D(), column1[0].D(), row2[0].D(),  column2[0].D());
           Halcon::intersect_lines_of_sight(cam1, cam2, pose_rel_sens_tup, row1, column1, row2, column2, &X,&Y,&Z, &Dist);
         }
         catch(Halcon::HException ex)
         {
            printf("Error in IntersectTwoRuns: %s\n", ex.message);
+           continue;
         }
-        if(result_first[i]->m_qualityMeasure > qualityMeasure_second)
-        {
-          Matrix m = result_first[0]->GetMatrix(0);
-          Matrix cov = result_first[0]->GetCovarianceMatrix();
-          m.element(0,3) = X[0].D();
-          m.element(1,3) = Y[0].D();
-          m.element(2,3) = Z[0].D();
-          RelPose* final = RelPoseFactory::FRelPose(result_first[0]->m_parentID, m, cov);
-          qualityMeasure = final->m_qualityMeasure =  result_first[i]->m_qualityMeasure;
-          numOfObjects += 1;
-          results.push_back(final);
-        }
-        else
-        {
-          Matrix m = result_second[0]->GetMatrix(0);
-          Matrix cov = result_second[0]->GetCovarianceMatrix();
 
-          m.element(0,3) = X[0].D();
-          m.element(1,3) = Y[0].D();
-          m.element(2,3) = Z[0].D();
-          RelPose* final = RelPoseFactory::FRelPose(result_second[0]->m_parentID, m, cov);
-          qualityMeasure = final->m_qualityMeasure =  qualityMeasure_second;
-          numOfObjects += 1;
-          results.push_back(final);
-        }
+        Matrix m = result_first[i]->GetMatrix(0);
+        Matrix cov = result_first[i]->GetCovarianceMatrix();
+        m.element(0,3) = X[0].D();
+        m.element(1,3) = Y[0].D();
+        m.element(2,3) = Z[0].D();
+        RelPose* final = RelPoseFactory::FRelPose(result_first[i]->m_parentID, m, cov);
+        qualityMeasure = final->m_qualityMeasure =  result_first[i]->m_qualityMeasure;
+        numOfObjects += 1;
+        results.push_back(final);
+
 
         RelPoseFactory::FreeRelPose(result_second[0]);
 

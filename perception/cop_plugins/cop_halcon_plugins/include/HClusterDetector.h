@@ -38,7 +38,7 @@ namespace cop
 
     std::vector<RelPose*> Perform(std::vector<Sensor*> sensors, RelPose* pose, Signature& object, int &numOfObjects, double& qualityMeasure);
 
-    std::vector<RelPose*> Inner(Sensor* sens, SegmentPrototype* proto, int &numOfObjects, double& qualityMeasure);
+    std::vector<RelPose*> Inner(Sensor* sens,RelPose* innial_pose_estimate,  SegmentPrototype* proto, int &numOfObjects, double& qualityMeasure);
 
     double CheckSignature(const Signature& object, const std::vector<Sensor*> &sensors);
 
@@ -55,6 +55,10 @@ namespace cop
     int m_swissranger_jlo_id;
     int m_ptu_jlo_id;
     std::vector<double> m_camparams;
+
+    double m_table_noise;
+    double m_min_object_size_for_split;
+    double m_min_table_percentage;
   };
 }
 #endif /*CLUSTERDETECTOR_H*/

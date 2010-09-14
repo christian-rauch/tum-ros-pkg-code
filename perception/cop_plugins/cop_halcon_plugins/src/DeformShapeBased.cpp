@@ -60,15 +60,13 @@ std::vector<RelPose*> DeformShapeBased::Perform(std::vector<Sensor*> sensors, Re
 {
   std::vector<RelPose*> result;
   Camera* cam = Camera::GetFirstCamera(sensors);
-  numOfObjects = 0;
   if(cam != NULL)
   {
     Image* img = cam->GetImage(-1);
     RelPose* camPose = cam->m_relPose;
-    Calibration* calib = &(cam->m_calibration);
-    if(img != NULL && camPose != NULL && calib  != NULL)
+    if(img != NULL && camPose != NULL )
     {
-      result = Inner(img, camPose, calib, lastKnownPose, object, numOfObjects, qualityMeasure, cam->GetSensorID());
+      result = Inner(img, camPose, cam, lastKnownPose, object, numOfObjects, qualityMeasure, cam->GetSensorID());
     }
   }
   return result;
@@ -76,12 +74,12 @@ std::vector<RelPose*> DeformShapeBased::Perform(std::vector<Sensor*> sensors, Re
 /**
   Final algorithm, for call for special images
 */
-std::vector<RelPose*> DeformShapeBased::Inner(Image* img,RelPose* camPose, Calibration* calib, RelPose* lastKnownPose, Signature& object, int &numOfObjects, double& qualityMeasure, std::string stSensorName)
+std::vector<RelPose*> DeformShapeBased::Inner(Image* img,RelPose* camPose,Camera* cam, RelPose* lastKnownPose, Signature& object, int &numOfObjects, double& qualityMeasure, std::string stSensorName)
 {
   std::vector<RelPose*> result;
 
-  HTuple camparam = calib->CamParam();
-  HTuple cammatrix = calib->CamMatrix();
+  HTuple camparam = cam->m_calibration.CamParam();
+  HTuple cammatrix = cam->m_calibration.CamMatrix();
 
   if(img->GetType() == ReadingType_HalconImage)
   {
@@ -101,15 +99,37 @@ std::vector<RelPose*> DeformShapeBased::Inner(Image* img,RelPose* camPose, Calib
       //hommatfirst = *dsm->GetHomMatFirst();
       try
       {
-        Hobject* imgs = img->GetHImage();
+        Hobject imgs = *img->GetHImage();
         int handle = dsm->GetDeformShapeHandle(stSensorName);
-        printf("\n\n\nGot handle for Sensor %s: %d\n\n\n", stSensorName.c_str(), handle);
+        if(handle  == -1)
+        {
+          printf("\nIncompatible model\n");
+          DeformShapeModel::SensorSpecificDeformModel& model = dsm->GetDeformShapeModel();
+          if(!model.IsCompatible(cam))
+          {
+            camparam[0] = model.m_calib.focal_length;
+            camparam[2] = model.m_calib.pix_size_x;
+            camparam[3] = model.m_calib.pix_size_y;
+            camparam[4] = model.m_calib.proj_center_x;
+            camparam[5] = model.m_calib.proj_center_y;
+
+            printf("\nAdapting image to %d x %d ->  %f x %f \n", camparam[6].I(), camparam[7].I(), model.m_calib.width, model.m_calib.height);
+
+            camparam[6] = model.m_calib.width;
+            camparam[7] = model.m_calib.height;
+            zoom_image_size (imgs, &imgs, camparam[6], camparam[7], "constant");
+          }
+          handle = model.m_handle;
+        }
+        else
+          printf("\nGot handle for Sensor %s: %d\n\n", stSensorName.c_str(), handle);
         numMatches = numOfObjects;
+        numOfObjects = 0;
         HTuple pose, cov, area_roi = 0;
         Hobject roi_obj;
         if(lastKnownPose != NULL)
         {
-            RegionOI roi(lastKnownPose, img->GetPose()->m_uniqueID, calib);
+            RegionOI roi(lastKnownPose, img->GetPose()->m_uniqueID, &cam->m_calibration);
             try
             {
               HTuple rowtmp, coltmp;
@@ -140,7 +160,7 @@ std::vector<RelPose*> DeformShapeBased::Inner(Image* img,RelPose* camPose, Calib
           if(area_roi[0].I() > 1000)
           {
             Hobject img_reduced;
-            reduce_domain(*imgs, roi_obj, &img_reduced);
+            reduce_domain(imgs, roi_obj, &img_reduced);
             find_planar_calib_deformable_model(img_reduced, handle,rotationAngleStart, rotationAngleExtend,
               scaleRMin, scaleRMax, scaleCMin, scaleCMax, minScore,
               numMatches, maxOverlap, numLevels, greediness, paramName, paramValue,
@@ -150,7 +170,7 @@ std::vector<RelPose*> DeformShapeBased::Inner(Image* img,RelPose* camPose, Calib
           }
           else
           {
-            find_planar_calib_deformable_model(*imgs, handle,rotationAngleStart, rotationAngleExtend,
+            find_planar_calib_deformable_model(imgs, handle,rotationAngleStart, rotationAngleExtend,
               scaleRMin, scaleRMax, scaleCMin, scaleCMax, minScore,
               numMatches, maxOverlap, numLevels, greediness, paramName, paramValue,
               &pose, &cov, &score);
@@ -174,7 +194,7 @@ std::vector<RelPose*> DeformShapeBased::Inner(Image* img,RelPose* camPose, Calib
           if(area_roi[0].I() > 1000)
           {
             Hobject img_reduced;
-            reduce_domain(*imgs, roi_obj, &img_reduced);
+            reduce_domain(imgs, roi_obj, &img_reduced);
             find_planar_calib_deformable_model(img_reduced, handle,rotationAngleStart, rotationAngleExtend,
               scaleRMin, scaleRMax, scaleCMin, scaleCMax, minScore,
               numMatches, maxOverlap, numLevels, greediness, paramName, paramValue,
@@ -183,7 +203,7 @@ std::vector<RelPose*> DeformShapeBased::Inner(Image* img,RelPose* camPose, Calib
           }
           else
           {
-            find_planar_calib_deformable_model(*imgs, handle,rotationAngleStart, rotationAngleExtend,
+            find_planar_calib_deformable_model(imgs, handle,rotationAngleStart, rotationAngleExtend,
               scaleRMin, scaleRMax, scaleCMin, scaleCMax, minScore,
               numMatches, maxOverlap, numLevels, greediness, paramName, paramValue,
               &pose, &cov, &score);
@@ -202,7 +222,6 @@ std::vector<RelPose*> DeformShapeBased::Inner(Image* img,RelPose* camPose, Calib
           printf("%d\n", pose[6].I());
           printf("\n");
           HTuple pose_sel, cov_sel;
-          numOfObjects = score.Num();
           for(i = 0; i < score.Num(); i++)
           {
             try
@@ -216,16 +235,22 @@ std::vector<RelPose*> DeformShapeBased::Inner(Image* img,RelPose* camPose, Calib
               RelPose* pose = RelPoseHTuple::FRelPose(pose_sel, cov_sel, img->GetPose());
               pose->m_qualityMeasure = score[i];
               result.push_back(pose);
+              numOfObjects++;
             }
             catch(HException ex)
             {
               printf("Error in DeformShapeBased %s\n", ex.message);
-              numOfObjects--;
             }
           }
-          numOfObjects = score.Num();
           qualityMeasure = score[0].D();
-          dsm->SetLastMatchedImage(img, result[0]);
+          if(numOfObjects > 0)
+          {
+            dsm->SetLastMatchedImage(img, result[0]);
+          }
+          else
+          {
+            printf("Rejected all solutions\n");
+          }
           img->Free();
         }
         else
@@ -239,9 +264,13 @@ std::vector<RelPose*> DeformShapeBased::Inner(Image* img,RelPose* camPose, Calib
       catch(Halcon::HException ex)
       {
         printf("Error in DeformShapeBased: %s\n", ex.message);
-        printf("Handle: %d\n");
         qualityMeasure = 0.0;
-        img->Free();
+        numOfObjects = 0;
+      }
+      catch(const char* text)
+      {
+        printf("No valid model for this sensor: %s\n", text);
+        qualityMeasure = 0.0;
         numOfObjects = 0;
       }
     }
@@ -273,3 +302,57 @@ XMLTag* DeformShapeBased::Save()
   return tag;
 }
 /*#endif*/ /*DEFORMSHAPE_AVAILABLE*/
+
+
+/**
+   Requires manifest including dependency on
+
+    cop_halcon_plugin   (<- ShapeModel, XMLTag)
+    srd_msgs            (<- String)
+*/
+
+/**
+   This is the required type for the /[cop]/new_signatures
+*/
+#include <std_msgs/String.h>
+
+/**
+   This contains the ShapeModel Class that takes the dxf file
+*/
+#include <ShapeModel.h>
+
+/**
+   Helper Class that save the stuff to a file
+*/
+#include <XMLTag.h>
+
+
+/**
+   @param objectType         annotation for this model (like our famous "IceTea")
+   @param dxfFilename        Absolute path to the dxffile
+   @param targetXMLFilename  name where the xml file should be written.
+
+*/
+std_msgs::String write_shape_model(std::string objectType,
+                                   std::string dxfFilename,
+                                   std::string targetXMLFilename)
+{
+  using namespace cop;
+  std_msgs::String savedModel;
+  /** Create the ShapeModel with an annotation "objectType" */
+  ShapeModel *sm = new ShapeModel(new Class(objectType, 10000001));
+  sm->m_initializationLevel = 1.0;
+
+  /** Add the dxf file */
+  ShapeModelParamSet* pm = new ShapeModelParamSet(NULL,0.0,0.0,0.0);
+  sm->SetShapeModelParamSet(pm, dxfFilename, false);
+
+  /** Save everything to a file*/
+  XMLTag* tag = sm->Save();
+  tag->WriteToFile(targetXMLFilename);
+
+  /** This messages should be passed to /cop/new_signatures */
+  savedModel.data = targetXMLFilename;
+  return savedModel;
+}
+
