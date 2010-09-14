@@ -101,10 +101,9 @@ XMLTag* RelPose::SaveComplete()
   XMLTag* ret = new XMLTag(XML_NODE_RELPOSE);
 
   ret->AddProperty(XML_ATTRIBUTE_LOID, m_uniqueID);
-  if(m_uniqueID != ID_WORLD)
-    ret->AddProperty(XML_ATTRIBUTE_LOIDFATHER, m_relation == NULL ? ID_WORLD : m_relation->m_uniqueID);
-  ret->AddChild(XMLTag::Tag(GetMatrix(0), XML_NODE_MATRIX));
-  ret->AddChild(XMLTag::Tag(GetCovarianceMatrix(0), XML_NODE_COVARIANCE));
+  ret->AddProperty(XML_ATTRIBUTE_LOIDFATHER, ID_WORLD);
+  ret->AddChild(XMLTag::Tag(GetMatrix(ID_WORLD), XML_NODE_MATRIX));
+  ret->AddChild(XMLTag::Tag(GetCovarianceMatrix(ID_WORLD), XML_NODE_COVARIANCE));
 
   return ret;
 }
@@ -270,3 +269,180 @@ Matrix RelPose::GetMatrix(unsigned long id)
   }
 }
 
+Matrix RelPose::GetCovariance(unsigned long id)
+{
+  if(id == 0 || m_parentID == id)
+    return LocatedObject::GetCovariance();
+  else
+  {
+    RelPose* pose = RelPoseFactory::GetRelPose(m_uniqueID, id);
+    Matrix m =  pose->GetCovariance(0);
+    RelPoseFactory::FreeRelPose(pose);
+    return m;
+  }
+}
+
+
+
+namespace sgp_copy
+{
+
+typedef struct
+{
+  double x;
+  double y;
+  double z;
+}
+Point3D;
+
+typedef struct
+{
+  double sx; double sxy; double sxz;
+  double syx; double sy; double syz;
+  double szx; double szy; double sz;
+}
+CovariancePoint;
+
+
+/**
+   Determinant
+        a           b           c
+   double sx; double sxy; double sxz;
+      d            e             f
+    double syx; double sy; double szy;
+      g             h            i
+      double szx; double syz; double sz;
+
+*/
+double det(CovariancePoint cov)
+{
+  return cov.sx * cov.sy * cov.sz -
+         cov.sx * cov.szy * cov.syz +
+         cov.sxy * cov.szy * cov.szx -
+         cov.sxy * cov.syx * cov.sz +
+         cov.sxz * cov.syx * cov.syz -
+         cov.sxz * cov.sy * cov.szx;
+}
+/**
+ Approximation of the probability density
+ Implementation of this formula:
+
+ /%4 (cov_sy cov_sz - cov_syz cov_szy)   %3 (-cov_szx cov_syz + cov_syx cov_sz)
+|------------------------------------ - --------------------------------------
+\                 %2                                      %2
+
+       %1 (cov_szx cov_sy - cov_syx cov_szy)\      /  %4 (cov_sxy cov_sz - cov_sxz cov_szy)
+     - -------------------------------------| %4 + |- -------------------------------------
+                        %2     1.504695             /      \                   %2
+
+       %3 (-cov_szx cov_sxz + cov_sx cov_sz)   %1 (cov_szx cov_sxy - cov_sx cov_szy)\      /
+     + ------------------------------------- + -------------------------------------| %3 + |
+                        %2                                      %2                  /      \
+
+    %4 (cov_sxy cov_syz - cov_sxz cov_sy)   %3 (-cov_syx cov_sxz + cov_sx cov_syz)
+    ------------------------------------- - --------------------------------------
+                     %2                                       %2
+
+       %1 (-cov_syx cov_sxy + cov_sx cov_sy)\
+     + -------------------------------------| %1
+                        %2                  /
+
+1% = dz := point_test_z - mean_z
+
+2% = cov_bla := cov_szx cov_sxy cov_syz - cov_szx cov_sxz cov_sy - cov_syx cov_sxy cov_sz
+
+     + cov_syx cov_sxz cov_szy + cov_sx cov_sy cov_sz - cov_sx cov_syz cov_szy
+
+3% = dy := point_test_y - mean_y
+
+4% = dx := point_test_x - mean_x
+
+*/
+double prob(Point3D point_test, Point3D mean, CovariancePoint cov)
+{
+  double c_temp, expo, det_temp;
+  double dx =  mean.x - point_test.x;
+  double dy =  mean.y - point_test.y;
+  double dz =  mean.z - point_test.z;
+  double cov_bla = cov.szx * cov.sxy * cov.syz - cov.szx * cov.sxz *  cov.sy - cov.syx * cov.sxy * cov.sz
+         + cov.syx * cov.sxz * cov.szy + cov.sx * cov.sy * cov.sz - cov.sx * cov.syz * cov.szy;
+  if(cov_bla == 0.0)
+  {
+    cov.sx = 0.0000001;
+    cov.sy = 0.0000001;
+    cov.sz = 0.0000001;
+    cov_bla = cov.szx * cov.sxy * cov.syz - cov.szx * cov.sxz *  cov.sy - cov.syx * cov.sxy * cov.sz
+         + cov.syx * cov.sxz * cov.szy + cov.sx * cov.sy * cov.sz - cov.sx * cov.syz * cov.szy;
+  }
+  double t1 = (( dx * (cov.sy   * cov.sz  - cov.syz * cov.szy)  / cov_bla)-
+    ( dy * (-cov.szx * cov.syz + cov.syx * cov.sz)   / cov_bla) -
+    ( dz * (cov.szx  * cov.sy  - cov.syx * cov.szy)  / cov_bla)) * dx;
+  double t2 =  ((-dx * (cov.sxy  * cov.sz  - cov.sxz * cov.szy)) / cov_bla +
+    ( dy * (-cov.szx * cov.sxz + cov.sx  * cov.sz)   / cov_bla) +
+    ( dz * (cov.szx  * cov.sxy - cov.sx  * cov.szy)  / cov_bla)) * dy;
+  double t3 = (( dx * (cov.sxy  * cov.syz - cov.sxz * cov.sy)   / cov_bla) -
+    ( dy * (-cov.syx * cov.sxz + cov.sx  * cov.syz)  / cov_bla) +
+    ( dz * (-cov.syx * cov.sxy + cov.sx  * cov.sy)   / cov_bla)) * dz;
+
+
+  /*printf("cov_bla %f, dx %f dy %f dz %f\n",cov_bla,  dx, dy, dz);*/
+  det_temp = det(cov);
+  if(det_temp == 0)
+    det_temp = 0.00000001;
+  c_temp = 1.0 /( pow(2.0 * M_PI, 1.5) * sqrt(fabs(det_temp)));
+  /*printf("t1 %f ,t2 %f, t3 %f, cov_bla = %f\n", t1, t2, t3, cov_bla);*/
+
+  expo = (-1.0/2.0) * (t1 + t2 + t3);
+
+  /*printf("expo = %f\n", expo);*/
+
+  c_temp *= exp(expo);
+  /*printf("ctemp = %f\n", c_temp);*/
+  return c_temp;
+}
+
+}
+
+double RelPose::ProbabilityOfCorrespondence(RelPose* pose, bool no_rotation)
+{
+  using namespace sgp_copy;
+  double equality = 0.0;
+  if(no_rotation)
+  {
+    Point3D pose_this;
+    Point3D pose_in;
+    CovariancePoint cov;
+
+    /** Probability of of pose beeing in this*/
+
+    pose_this.x = 0.0;
+    pose_this.y = 0.0;
+    pose_this.z = 0.0;
+
+    Matrix m = pose->GetMatrix(m_uniqueID);
+
+    pose_in.x = m.element(0,3);
+    pose_in.y = m.element(0,3);
+    pose_in.z = m.element(0,3);
+
+    Matrix cov1 = GetCovariance(m_uniqueID);
+
+    cov.sx  = cov1.element(0,0);
+    cov.sxy = cov1.element(0,1);
+    cov.sxz = cov1.element(0,2);
+
+    cov.syx = cov1.element(1,0);
+    cov.sy  = cov1.element(1,1);
+    cov.syz = cov1.element(1,2);
+
+    cov.szx = cov1.element(2,0);
+    cov.szy = cov1.element(2,1);
+    cov.sz  = cov1.element(2,2);
+
+    equality = prob(pose_in, pose_this, cov);
+  }
+  else
+    throw "RelPose::ProbabilityOfCorrespondence with Rotation is not yet implemented";
+
+  return equality;
+}

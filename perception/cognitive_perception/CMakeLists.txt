@@ -17,36 +17,36 @@ add_definitions( ${LIBXML2_CFLAGS} )
 LINK_LIBRARIES(m lo cop)
 
 
-rosbuild_add_executable(cop_srv ./source/main.cpp)
+rosbuild_add_executable(cop_srv ./src/main.cpp)
 
 ROSBUILD_ADD_LIBRARY(cop
-./source/AlgorithmEval.cpp      
-./source/RelPose.cpp		 
-./source/AttentionManager.cpp   
-./source/AttentionAlgorithm.cpp   
-./source/Signature.cpp
-./source/Class.cpp
-./source/SignatureDB.cpp
-./source/RelPoseFactory.cpp
-./source/Descriptor.cpp         
-./source/Statistics.cpp
-./source/Elem.cpp               
-./source/TrackAlgorithm.cpp
-./source/VisFinder.cpp
-./source/ImageInputSystem.cpp   
-./source/VisLearner.cpp
-./source/XMLTag.cpp
-./source/LocateAlgorithm.cpp  
-./source/Object.cpp       
-./source/RefineAlgorithm.cpp	
-./source/ProveAlgorithm.cpp
-./source/LogFile.cpp
-./source/ROSjloComm.cpp
-./source/ROSComm.cpp             
-./source/File.cpp     
-./source/Reading.cpp
-./source/Sensor.cpp
-./source/PerceptionPrimitive.cpp
+./src/AlgorithmEval.cpp      
+./src/RelPose.cpp		 
+./src/AttentionManager.cpp   
+./src/AttentionAlgorithm.cpp   
+./src/Signature.cpp
+./src/Class.cpp
+./src/SignatureDB.cpp
+./src/RelPoseFactory.cpp
+./src/Descriptor.cpp         
+./src/Statistics.cpp
+./src/Elem.cpp               
+./src/TrackAlgorithm.cpp
+./src/VisFinder.cpp
+./src/ImageInputSystem.cpp   
+./src/VisLearner.cpp
+./src/XMLTag.cpp
+./src/LocateAlgorithm.cpp  
+./src/Object.cpp       
+./src/RefineAlgorithm.cpp	
+./src/ProveAlgorithm.cpp
+./src/LogFile.cpp
+./src/ROSjloComm.cpp
+./src/ROSComm.cpp             
+./src/File.cpp     
+./src/Reading.cpp
+./src/Sensor.cpp
+./src/PerceptionPrimitive.cpp
 )
 
 set(DEBUG TRUE CACHE BOOL TRUE)

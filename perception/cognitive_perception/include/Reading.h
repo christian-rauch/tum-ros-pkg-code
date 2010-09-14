@@ -27,7 +27,7 @@
 
 #include <string>
 #include <map>
-
+#include <stdio.h>
 /**
   * class Reading
   */
@@ -118,7 +118,7 @@ namespace cop
     /**
      *   Type of the image in memory
      */
-    ReadingType_t GetType() const{return m_readingType;}
+    ReadingType_t GetType() const{printf("Requested reading type: %d\n", m_readingType); return m_readingType;}
     /**
     *  Set pose stamp of this image
     */

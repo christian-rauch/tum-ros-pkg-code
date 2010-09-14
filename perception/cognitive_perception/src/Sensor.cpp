@@ -204,7 +204,7 @@ void Sensor::Publish3DData(std::vector<double> x, std::vector<double> y, std::ve
   {
     s_initedPCDPublisher = true;
     ros::NodeHandle nh;
-    printf("Advertise new topic for Displaying results: /cop/pcds\n");
+    printf("\n\n\nAdvertise new topic for Displaying results: /cop/pcds\n\n\n\n");
     s_sensorPublisher = nh.advertise<sensor_msgs::PointCloud>("/cop/pcds", 2, true);
   }
   sensor_msgs::PointCloud pcd;
@@ -232,6 +232,29 @@ void Sensor::PushBack(Reading* img)
   m_FrameCount++;
   m_newDataArrived.notify_all();
 }
+
+MinimalCalibration::MinimalCalibration(XMLTag* tag)
+{
+  focal_length = tag->GetPropertyDouble("MinimalCalibration_focal_length", 1);
+  pix_size_x = tag->GetPropertyDouble("MinimalCalibration_pix_size_x", 1);
+  pix_size_y = tag->GetPropertyDouble("MinimalCalibration_pix_size_y", 1);
+  proj_center_x = tag->GetPropertyDouble("MinimalCalibration_proj_center_x", 0.5);
+  proj_center_y = tag->GetPropertyDouble("MinimalCalibration_proj_center_y", 0.5);
+  width = tag->GetPropertyDouble("MinimalCalibration_width", 0.5);
+  height = tag->GetPropertyDouble("MinimalCalibration_height", 0.5);
+}
+void MinimalCalibration::SetData(XMLTag* tag)
+{
+  tag->AddProperty("MinimalCalibration_focal_length", focal_length);
+  tag->AddProperty("MinimalCalibration_pix_size_x", pix_size_x);
+  tag->AddProperty("MinimalCalibration_pix_size_y", pix_size_y);
+  tag->AddProperty("MinimalCalibration_proj_center_x", proj_center_x);
+  tag->AddProperty("MinimalCalibration_proj_center_y", proj_center_y);
+  tag->AddProperty("MinimalCalibration_width", width);
+  tag->AddProperty("MinimalCalibration_height",height);
+}
+
+
 #ifdef USE_YARP_COMM
 /*
 template <class SensorType, class MessageType>

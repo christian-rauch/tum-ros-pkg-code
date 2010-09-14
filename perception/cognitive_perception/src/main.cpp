@@ -28,39 +28,7 @@
 #include <ros/ros.h>
 #endif
 
-/*#include <pcrecpparg.h>
-namespace pcrecpp
-{
-
-    Arg no_arg((void*)NULL);
-}*/
-#define XML_ATTRIBUTE_HASPTU "HasPTU"
-#define XML_ATTRIBUTE_ISSTOC "IsSTOC"
-#define XML_ATTRIBUTE_GRABBERNAME "GrabberName"
-#define XML_ATTRIBUTE_CAMERATYPE "CameraType"
-#define XML_ATTRIBUTE_CAMCOLOR "CamColor"
-#define XML_ATTRIBUTE_IMGWIDTH "SetImageWidth"
-#define XML_ATTRIBUTE_IMGHEIGHT "SetImageHeight"
-#define XML_ATTRIBUTE_PANTOTILTHEIGHT "PanToTiltHeight"
-#define XML_ATTRIBUTE_PANTOTILTWIDTH  "PanToTiltWidth"
-#define XML_ATTRIBUTE_TILTTOENDHEIGHT "TiltToEndHeight"
-#define XML_ATTRIBUTE_TILTTOENDWIDTH  "TiltToEndWidth"
-#define XML_ATTRIBUTE_CAMPORT         "CamPort"
-#define XML_ATTRIBUTE_CALIBFILE       "CalibFileName"
-#define XML_ATTRIBUTE_HRESOLUTION     "Hresolution"
-#define XML_ATTRIBUTE_VRESOLUTION     "Vresolution"
-#define XML_ATTRIBUTE_STARTROW        "Startrow"
-#define XML_ATTRIBUTE_STARTCOLUMN     "Startcolumn"
-#define XML_ATTRIBUTE_FIELD           "Field"
-#define XML_ATTRIBUTE_BITSPERCHANNEL  "Bitsperchannel"
-#define XML_ATTRIBUTE_COLORSPACE       "Colospace"
-#define XML_ATTRIBUTE_GAIN            "Gain"
-#define XML_ATTRIBUTE_DEVICE          "Device"
-#define XML_ATTRIBUTE_EXTERNALTRIGGER "Externaltrigger"
-#define XML_ATTRIBUTE_LINEIN          "Linein"
-
 using namespace cop;
-
 
 int main(int argc, char* argv[])
 {

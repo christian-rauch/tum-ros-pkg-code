@@ -73,7 +73,7 @@ void LogFile::LogThread(std::string action_name,  std::string caller, double dur
 {
    FILE* file = NULL;
    XMLTag* tag = NULL;
-   printf("Lock for logfile");
+   printf("Lock for logfile\n");
    BOOST(s_mutexLogFile.lock());
     try
     {

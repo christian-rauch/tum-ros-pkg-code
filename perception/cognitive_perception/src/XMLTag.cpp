@@ -621,6 +621,12 @@ void XMLTag::GetSubFilenames(std::vector<std::string> &strings)
     strings.push_back(m_cData);
     printf("Found a filename in %s: %s\n", m_name.c_str(), m_cData.c_str());
   }
+  
+  if(m_name.compare("filename") == 0)
+  {
+    strings.push_back(m_cData);
+    printf("Found a filename in %s: %s\n", m_name.c_str(), m_cData.c_str());
+  }
 
 
   for(std::vector<XMLTag*>::const_iterator iter_child = m_children.begin();

@@ -87,6 +87,9 @@ std::string AlgorihtmTypeToName(int type)
     case ALGORITHMTYPE_LOOKUP:
     name = "Database LookUp";
     break;
+    case ALGORITHMTYPE_LOOKUPDB:
+    name = "Database: Subscribe to All";
+    break;
     case ALGORITHMTYPE_LOOKUPALL:
     name = "Database: Subscribe to All";
     break;
@@ -309,7 +312,11 @@ void ROSComm::ProcessCall()
 
     switch(m_actionType)
     {
-    case ALGORITHMTYPE_LOOKUPALL:
+    case ALGORITHMTYPE_LOOKUPDB:
+        m_visFinder.m_sigdb.SetNewObjectCallback(this, false);
+        bFinished = true;
+        break;
+  case ALGORITHMTYPE_LOOKUPALL:
         m_visFinder.m_sigdb.SetNewObjectCallback(this);
         bFinished = false;
         break;
@@ -610,7 +617,6 @@ bool ROSTopicManager::SaveCallBack(cop_save::Request& msg, cop_save::Response&  
     std::ostringstream os;
     Signature* sig = NULL;
     int index;
-
     if(m_sig.CheckClass(id).length() > 0)
     {
       std::vector<ObjectID_t> class_id;
@@ -640,6 +646,12 @@ bool ROSTopicManager::SaveCallBack(cop_save::Request& msg, cop_save::Response&  
     answer.xmlfilename = os.str();
     answer.filenames =  tag->GetSubFilenames();
 
+  }
+  catch(const char *text)
+  {
+     ROS_ERROR("Failed to save an object: %s", text);
+     return false;
+            
   }
   catch(...)
   {

@@ -108,9 +108,13 @@ ROSjloComm::ROSjloComm(std::string nodeName) :
 ROSjloComm::~ROSjloComm()
 {
   boost::mutex::scoped_lock lock(s_notDeletedList);
+  
   std::set<unsigned long>::iterator iter = not_deleted_jlos.begin();
   for(;iter != not_deleted_jlos.end(); iter++)
-    FreePose((*iter));
+  {
+    if(m_client.isValid())
+      FreePose((*iter));
+  }
 }
 
 bool ROSjloComm::GetJloServiceClient(srvjlo &msg)

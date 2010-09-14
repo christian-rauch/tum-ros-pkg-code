@@ -85,11 +85,12 @@ std::map<std::pair<ReadingType_t, ReadingType_t> , ReadingConverter*> Reading::s
 Reading* Reading::ConvertTo(ReadingType_t type)
 {
   std::pair<ReadingType_t, ReadingType_t> prr(GetType(), type);
+  printf("Searching for a converter from %d to %d\n", GetType(), type);
   if(s_conv.find(prr) != s_conv.end())
   {
     return s_conv[prr]->Convert(this);
   }
-  return NULL;
+  throw "No conversion Available for the requested reading types";
 }
 
 

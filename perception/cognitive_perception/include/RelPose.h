@@ -62,6 +62,9 @@ namespace cop
      double m_qualityMeasure;
      std::string m_mapstring;
     Matrix GetMatrix(unsigned long id);
+    Matrix GetCovariance(unsigned long id);
+
+    double ProbabilityOfCorrespondence(RelPose* pose, bool no_rotation = true);
   private:
     RelPose(jlo::LazyLocatedObjectLoader* );
     RelPose(jlo::LocatedObject& pose);

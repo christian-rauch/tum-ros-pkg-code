@@ -205,6 +205,7 @@ SignatureLocations_t VisLearner::RefineObject (PossibleLocations_t* lastKnownPos
     if(refalg_list.size() > 0)
     {
       /** We found at least one alg, */
+      bool some_success = false;
       std::vector<Algorithm<Descriptor*>*>::const_iterator iter = refalg_list.begin();
       for(;iter != refalg_list.end(); iter++)
       {
@@ -232,6 +233,7 @@ SignatureLocations_t VisLearner::RefineObject (PossibleLocations_t* lastKnownPos
             lastKnownPose->m_qualityMeasure = qualityMeasure;
             visPrim.AddResult(refalg->GetName(), d->m_ID, lastKnownPose->m_qualityMeasure,((double)((t1 - t0).total_milliseconds()) /  1000.0));
             m_refinements.EvalAlgorithm(refalg, lastKnownPose->m_qualityMeasure, ((double)((t1 - t0).total_milliseconds()) /  1000.0), &sig);
+            some_success = true;
           }
           else
           {
@@ -246,7 +248,8 @@ SignatureLocations_t VisLearner::RefineObject (PossibleLocations_t* lastKnownPos
           printf("Refinement failed due to: %s\n", error_text);
         }
       }
-      ret_vec.push_back(std::pair<RelPose*, Signature*>(lastKnownPose, &sig));
+      if(some_success)
+        ret_vec.push_back(std::pair<RelPose*, Signature*>(lastKnownPose, &sig));
     }
   }
   return ret_vec;

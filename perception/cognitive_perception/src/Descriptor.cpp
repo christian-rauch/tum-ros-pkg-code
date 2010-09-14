@@ -126,8 +126,12 @@ void Descriptor::SaveTo(XMLTag* tag)
 
 void Descriptor::SetLastMatchedImage(Reading* img, RelPose* pose)
 {
-	m_imgLastMatchReading = img->Clone();
-	delete m_poseLastMatchReading;
+  if( m_imgLastMatchReading != NULL)
+  {
+    m_imgLastMatchReading->Free();
+  RelPoseFactory::FreeRelPose(m_poseLastMatchReading);
+  }
+    m_imgLastMatchReading = img->Clone();
   try
   {
 	   m_poseLastMatchReading = RelPoseFactory::CloneRelPose(pose);
@@ -137,7 +141,7 @@ void Descriptor::SetLastMatchedImage(Reading* img, RelPose* pose)
     printf("Tying to copy a singular position\n");
     m_poseLastMatchReading = RelPoseFactory::FRelPoseWorld();
   }
-	this->Touch();
+  this->Touch();
 }
 
 

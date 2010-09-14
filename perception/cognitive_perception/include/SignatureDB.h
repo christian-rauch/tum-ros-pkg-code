@@ -87,7 +87,7 @@ namespace cop
     /**
     *	Direct request for an element
     */
-    Signature* GetSignatureByID(int ElemID);
+    Signature* GetSignatureByID(ObjectID_t ElemID);
 
     /*******************************************************************************
     *   GetClassByID                                                              */
@@ -166,7 +166,7 @@ namespace cop
     * @param comm       means to communicate every new added signature to a subscriber
     *
     *******************************************************************************/
-    void SetNewObjectCallback(Comm* comm);
+    void SetNewObjectCallback(Comm* comm, bool wait_for_new = true);
     // Public attributes
     //
 
@@ -183,7 +183,7 @@ namespace cop
     /**
     *	Check if this ID is already in the DB
     */
-    bool Check(int sigID, int& error) const;
+    bool Check(ObjectID_t sigID, int& error) const;
 
 
     XMLTag* Save();

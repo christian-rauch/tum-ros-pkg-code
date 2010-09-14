@@ -47,8 +47,9 @@
 #define LOGFILE_ADDED
 
 #endif /*LOGFILE*/
-
+#ifndef NO_MAIN_PRG
 volatile bool g_stopall = false;
+#endif
 
 #ifdef BOOST_THREAD
 #define BOOST(A) A

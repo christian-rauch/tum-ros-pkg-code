@@ -292,7 +292,7 @@ void SignatureDB::CleanUpActiveSignatureList()
 }
 
 
-Signature* SignatureDB::GetSignatureByID(int ElemID)
+Signature* SignatureDB::GetSignatureByID(ObjectID_t ElemID)
 {
   int index;
   Check(ElemID, index);
@@ -453,7 +453,7 @@ Elem* SignatureDB::FindCreateDescriptor(ObjectID_t class_id)
 }
 
 
-void SignatureDB::SetNewObjectCallback(Comm* comm)
+void SignatureDB::SetNewObjectCallback(Comm* comm, bool wait_for_new)
 {
   for(size_t i = 0; i < m_dbStarter->CountChildren(); i++)
   {
@@ -470,7 +470,8 @@ void SignatureDB::SetNewObjectCallback(Comm* comm)
       continue;
     }
   }
-  m_newObjectSubscriber.push_back(comm);
+  if(wait_for_new)
+    m_newObjectSubscriber.push_back(comm);
 }
 
 void SignatureDB::FreeActiveSignature(Signature* sig)
@@ -598,7 +599,7 @@ XMLTag* SignatureDB::Query(std::string stQueryString)
 	return tag;
 }
 
-bool SignatureDB::Check(int sigID, int& index) const
+bool SignatureDB::Check(ObjectID_t sigID, int& index) const
 {
 	size_t children = m_ids.size();
 	for(unsigned int i = 0; i < children; i++)

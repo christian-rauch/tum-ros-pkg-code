@@ -67,7 +67,7 @@ namespace cop
     *  @param img  an image
     *  @param pose a pose that specifies the result in the given image
     *  of a locating algorithm
-    *  @throws char* with an error message in case of failure
+    *  @throw char* with an error message in case of failure
     **************************************************************************/
     void SetLastMatchedImage(Reading* img, RelPose* pose);
     /**

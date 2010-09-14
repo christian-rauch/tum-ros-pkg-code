@@ -228,7 +228,11 @@ void Signature::SaveTo(XMLTag* tag)
   for(std::vector<Elem*>::const_iterator iter = m_elems.begin();
     iter != m_elems.end(); iter++)
   {
-    delimiter->AddChild((*iter)->Save(m_fullPose));
+    if((*iter) != NULL)
+    {
+      printf("Saving Descriptor of Type %s\n", (*iter)->GetNodeName().c_str());
+      delimiter->AddChild((*iter)->Save(m_fullPose));
+    }
   }
   tag->AddChild(delimiter);
   delimiter = new XMLTag("Classes");

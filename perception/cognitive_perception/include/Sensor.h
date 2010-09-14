@@ -297,6 +297,8 @@ namespace cop
   {
   public:
     MinimalCalibration(){}
+    MinimalCalibration(XMLTag* tag);
+    void SetData(XMLTag* tag);
     MinimalCalibration(std::pair<std::string, std::vector<double> > calib_temp)
     {
       if(calib_temp.first.compare("RECTHALCONCALIB") == 0)
@@ -306,13 +308,19 @@ namespace cop
         pix_size_y = calib_temp.second[2];
         proj_center_x = calib_temp.second[3];
         proj_center_y = calib_temp.second[4];
+        width = calib_temp.second[5];
+        height = calib_temp.second[6];
       }
     };
+
     double focal_length;
     double pix_size_x;
     double pix_size_y;
     double proj_center_x;
     double proj_center_y;
+    double width;
+    double height;
+
     void Project3DPoint(const double &x, const double &y, const double &z, double &row, double &column)
     {
       double temp1,temp2;
@@ -334,26 +342,40 @@ namespace cop
 template<typename TypeReading, typename DataType> class ScopedImage
 {
 public:
-  ScopedImage(std::vector<Sensor*> sensors, ReadingType_t type) :
+  ScopedImage(std::vector<Sensor*> sensors, ReadingType_t type) /*:
    selected_sensor(ExtractSensor(sensors, type)),
    calib(selected_sensor->GetUnformatedCalibrationValues()),
    original(ExtractOriginal(selected_sensor, type)),
    sensor_pose_at_capture_time(original->GetPose()),
    converted(original->GetType() != type),
-   copy(converted ? (TypeReading*)original->ConvertTo(type) : NULL),
-   image(converted ? (copy->m_image) : ((TypeReading*)original)->m_image)
+   copy(converted ? (TypeReading*)original->ConvertTo(type) : NULL)
+   image(converted ? (copy->m_image) : ((TypeReading*)original)->m_image)*/
   {
-    if(copy == NULL)
-      throw "ScopedImage: No conversion to the requested type is available";
+   selected_sensor = ExtractSensor(sensors, type);
+   copy = NULL;
+
+   if(selected_sensor != NULL)
+   {
+     calib = selected_sensor->GetUnformatedCalibrationValues();
+     original = ExtractOriginal(selected_sensor, type);
+     sensor_pose_at_capture_time = original->GetPose();
+     converted = original->GetType() != type;
+     m_type= type;
+    }
+    else
+    {
+      printf("Failed to extract sensor\n");
+      throw "ScopedImage: No sensors hits the requested criteria";
+    }
+   /* if(copy == NULL)
+      throw "ScopedImage: No conversion to the requested type is available";*/
   }
 
   ~ScopedImage()
   {
-    if(converted)
-    {
-      delete copy;
-    }
     original->Free();
+    if(copy != NULL)
+      delete copy;
   }
 
   static Sensor* ExtractSensor(std::vector<Sensor*> sensors, ReadingType_t type)
@@ -366,9 +388,9 @@ public:
       if(((sensors[i]->IsCamera() && !(type == ReadingType_PointCloud)) ||
           (!sensors[i]->IsCamera() && (type == ReadingType_PointCloud))) &&
          (calib_temp.first.compare("RECTHALCONCALIB")) == 0 &&
-         (calib_temp.second.size() == 5) )
+         (calib_temp.second.size() == 7) )
       {
-        printf("Got another  sensor that givces the necessary data\n");
+        printf("Got another  sensor that gives the necessary data\n");
         return sensors[i];
       }
     }
@@ -379,14 +401,25 @@ public:
   static Reading* ExtractOriginal(Sensor* sensor, ReadingType_t type)
   {
     if(sensor == NULL)
-      throw "ScopedImage: No sensors fullfills this algorithm requirements";
+      throw "ScopedImage: No sensors fulfills this algorithm requirements";
     return sensor->GetReading(-1);
   }
 
 
-  DataType& operator* () const
+  DataType& operator* ()
   {
-    return image;
+    if(converted )
+    {
+      if(copy == NULL)
+      {  
+        printf("Conversion to be done\n");
+        copy = (TypeReading*)(original->ConvertTo(m_type));
+        printf("Conversion done\n");
+      }
+      return copy->m_image;
+    }
+    else
+      return ((TypeReading*)original)->m_image;
   }
   Sensor* selected_sensor;
   MinimalCalibration calib;
@@ -396,8 +429,10 @@ public:
   RelPose* sensor_pose_at_capture_time;
 private:
   bool converted;
+  ReadingType_t m_type;
   TypeReading* copy;
-  DataType& image;
+  /*TypeReading* copy;
+    DataType& image;*/
 
 };
 
