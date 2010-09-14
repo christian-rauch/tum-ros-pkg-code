@@ -101,3 +101,17 @@ void SegmentPrototype::Show(RelPose* pose, Sensor* camin)
    }
 }
 
+Elem* SegmentPrototype::Duplicate(bool bStaticCopy)
+{
+  SegmentPrototype* new_obj = (SegmentPrototype*)Descriptor::Duplicate(bStaticCopy);
+  /** Assign TransparentObjectCandidate Memebers*/
+  new_obj->m_mapPCD = m_mapPCD;
+          
+  /** Assign Descriptor Memebers*/
+  new_obj->m_class = m_class;
+  new_obj->m_imgLastMatchReading = m_imgLastMatchReading;
+  new_obj->m_poseLastMatchReading = m_poseLastMatchReading;   
+  new_obj->m_qualityMeasure = m_qualityMeasure;
+  return new_obj;
+}
+                    

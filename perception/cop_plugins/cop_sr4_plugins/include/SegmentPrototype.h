@@ -20,6 +20,7 @@
 #define BLOB_H
 
 #include "Descriptor.h"
+#include <sensor_msgs/PointCloud.h>
 
 #define XML_NODE_SEGMENTPROTOTYPE "SegmentPrototype"
 
@@ -41,6 +42,50 @@ namespace cop
 
     void UpdateRefFrame();
 
+    /** Segment prototype is a special object that holds also most of the collsion info
+      the following function are to provide this capabilities to the cop_collision_interface */
+
+    /***
+    *   SetTable
+    *   @brief stores the table the cluster was detected on
+    *   @param id   a lo id where te table is in space and how is the oriantation
+    *   @param pcd  a point cloud containing all points that were classified as table points
+    */
+    void SetTable(const LocatedObjectID_t &id, const sensor_msgs::PointCloud &pcd){m_LastTableID = id; m_mapPCD[id] = pcd;}
+
+    /***
+    *   GetTable
+    *   @brief Get the current table
+    *   @return the lo aid and a point cloudwith table points from the last detection
+    */
+    std::pair<LocatedObjectID_t, sensor_msgs::PointCloud> GetTable()
+    {
+      std::pair<LocatedObjectID_t, sensor_msgs::PointCloud> pair;
+      pair.first = m_LastTableID;
+      pair.second = m_mapPCD[m_LastTableID];
+      return pair;}
+
+
+    /***
+    *   SetPointCloud
+    *   @brief stores the clusters that was detected, this list is cleared on each search for clusters,
+              so on all detected clusters it will contain all other clusters detected at the same time
+    *   @param id   a lo id where the cluster is in space and how is the oriantation
+    *   @param pcd  a point cloud containing all points that were classified as cluster points
+    */
+    void SetPointCloud(const LocatedObjectID_t &id, const sensor_msgs::PointCloud &pcd){m_mapPCD[id] = pcd;}
+    /**
+    *   GetPointCloud
+    *   @param id   the location this cluster is located to identify which is right point cloud (retireve this from the signature)
+    */
+    sensor_msgs::PointCloud GetPointCloud(LocatedObjectID_t id){if(m_mapPCD.find(id) != m_mapPCD.end())return m_mapPCD[id]; else return sensor_msgs::PointCloud();}
+
+    /**
+     *  @brief Clear the list for a new detection tun
+    */
+    void ClearPointClouds(){m_mapPCD.clear();}
+
+    virtual Elem* Duplicate(bool bStaticCopy);
 
   protected:
     virtual void SetData(XMLTag* tag);
@@ -48,8 +93,11 @@ namespace cop
     ~SegmentPrototype(void);
 
   private:
+    std::map<LocatedObjectID_t, sensor_msgs::PointCloud> m_mapPCD;
+    LocatedObjectID_t  m_LastTableID;
+
     std::string m_relFrame;
-    unsigned long m_frameID;
+    LocatedObjectID_t  m_frameID;
     RelPose* m_relPoseOfRefFrame;
   public:
     double m_covRotX;
