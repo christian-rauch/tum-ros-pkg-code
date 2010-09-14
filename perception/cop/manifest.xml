@@ -8,7 +8,7 @@
   <depend package="sensor_msgs" />  
   <depend package="cop_sr4_plugins" />  
   <depend package="cop_halcon_plugins" />  
-  <depend package="cop_transparent_objects_plugin" />  
+   <depend package="ias_gscam" />
 </package>
 
 
