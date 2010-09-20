@@ -1,0 +1,18 @@
+<package>
+  <description brief="This package allows you to publish the state of a robot to the transform library topic. In contrast to robot_state_publisher, it publishes the complete kinematic chain."/>
+  <author>Lorenz Moesenlechner</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+
+  <depend package="kdl_parser" />
+  <depend package="sensor_msgs" />
+  <depend package="roscpp" />
+  <depend package="tf" />
+  <depend package="tf_conversions" />
+  
+  <export>
+    <cpp cflags="-I${prefix}/include/"/>
+  </export>
+</package>
+
+
