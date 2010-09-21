@@ -1,0 +1,21 @@
+<package>
+  <description brief="objects_of_daily_use_finder">
+
+     objects_of_daily_use_finder
+
+  </description>
+  <author>Vladimir Haltakov</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/objects_of_daily_use_finder</url>
+  <depend package="roscpp"/>
+  <depend package="libsiftfast"/>
+  <depend package="cv_bridge"/>
+  <depend package="opencv2"/>
+  <depend package="vocabulary_tree"/>
+  <depend package="eigen"/>
+  <depend package="ann"/>
+
+</package>
+
+
