@@ -89,11 +89,11 @@ class LMS400Node
     ////////////////////////////////////////////////////////////////////////////////
     LMS400Node () : debug_ (0)
     {
-      nh_.param ("~hostname", hostname_, string ("192.168.0.1"));
+      nh_.param ("hostname", hostname_, string ("192.168.0.1"));
       // Userlevel 3 password (hashed). Default: servicelevel/81BE23AA (Service (userlevel 3) password. Used for enabling/disabling and/or setting the filter parameters.
 
-      nh_.param ("~password", password_, string ("81BE23AA"));
-      nh_.param ("~port", port_, 2111);
+      nh_.param ("password", password_, string ("81BE23AA"));
+      nh_.param ("port", port_, 2111);
 
       // Filter settings. Valid values are:
       // 0 (disabled)
@@ -107,32 +107,32 @@ class LMS400Node
       //            filters are stored in a float array in the sequence mentioned above. Since the current LMS400 firmware version (1.20) supports setting the
       //            parameters for the range and mean filters, the order of the parameters in the (player_laser_set_filter_config_t - float parameters[]) array,
       //            provided that both range and mean are enabled is: [BottomLimit TopLimit Mean]
-      nh_.param ("~filter", filter_, 11);     // Enable median, edge and mean filter
+      nh_.param ("filter", filter_, 11);     // Enable median, edge and mean filter
 
       // Enable extended RIS detectivity. If you want to measure objects with remission values < 10%,
       // you can extend the so-called Remission Information System (RIS) on the LMS4000.
-      nh_.param ("~enable_eRIS", eRIS_, 1);
+      nh_.param ("enable_eRIS", eRIS_, 1);
 
       // Define the number of means for the mean filter. Possible values: 2..200.
-      nh_.param ("~mean_filter_parameter", mean_filter_params_, 3);
+      nh_.param ("mean_filter_parameter", mean_filter_params_, 3);
 
       // Define a specific range within which measured values are valid and are output. Possible values: [+700.0...+3000.0 <bottom limit>...+3000.0]
-      nh_.param ("~range_filter_parameter_min", range_filter_params_min_, 700.0);
-      nh_.param ("~range_filter_parameter_max", range_filter_params_max_, 3000.0);
+      nh_.param ("range_filter_parameter_min", range_filter_params_min_, 700.0);
+      nh_.param ("range_filter_parameter_max", range_filter_params_max_, 3000.0);
 
       {
         // Angular resolution. Valid values are: 0.1 ..1 (with 0.1 degree increments)
-        nh_.param ("~angular_resolution", angular_resolution_, 0.1);
+        nh_.param ("angular_resolution", angular_resolution_, 0.1);
 
         // Scanning frequency. Valid values are: - 200..500Hz (on the LMS400-0000) / 360..500Hz (on the LMS400-1000)
-        nh_.param ("~scanning_frequency", scanning_frequency_, 360.0);
+        nh_.param ("scanning_frequency", scanning_frequency_, 360.0);
 
-        nh_.param ("~enable_laser", laser_enabled_, true);
-        nh_.param ("~enable_intensity", intensity_, true);
+        nh_.param ("enable_laser", laser_enabled_, true);
+        nh_.param ("enable_intensity", intensity_, true);
 
         // Defines the minimum / maximum angle of the laser unit (where the scan should start / end). Valid values: 55-125 degrees.
-        nh_.param ("~min_angle", min_angle_, 55.0);
-        nh_.param ("~max_angle", max_angle_, 125.0);
+        nh_.param ("min_angle", min_angle_, 55.0);
+        nh_.param ("max_angle", max_angle_, 125.0);
       }
 
       scan_pub_ = nh_.advertise<LaserScan>("laser_scan", 1);
@@ -255,7 +255,7 @@ class LMS400Node
     {
       // LMS400 related parameters
       bool laser_enabled;
-      nh_.getParam ("~enable_laser", laser_enabled);
+      nh_.getParam ("enable_laser", laser_enabled);
       // New value specified
       if (laser_enabled != laser_enabled_)
       {
@@ -269,7 +269,7 @@ class LMS400Node
       }
 
       bool intensity;
-      nh_.getParam ("~enable_intensity", intensity);
+      nh_.getParam ("enable_intensity", intensity);
       // New value specified
       if (intensity != intensity_)
       {
@@ -278,7 +278,7 @@ class LMS400Node
       }
 
       double angular_resolution;
-      nh_.getParam ("~angular_resolution", angular_resolution);
+      nh_.getParam ("angular_resolution", angular_resolution);
       // New value specified
       if (angular_resolution != angular_resolution_)
       {
@@ -288,7 +288,7 @@ class LMS400Node
       }
 
       double min_angle;
-      nh_.getParam ("~min_angle", min_angle);
+      nh_.getParam ("min_angle", min_angle);
       // New value specified
       if (min_angle != min_angle_)
       {
@@ -298,7 +298,7 @@ class LMS400Node
       }
 
       double max_angle;
-      nh_.getParam ("~max_angle", max_angle);
+      nh_.getParam ("max_angle", max_angle);
       // New value specified
       if (max_angle != max_angle_)
       {
@@ -308,7 +308,7 @@ class LMS400Node
       }
 
       double scanning_frequency;
-      nh_.getParam ("~scanning_frequency", scanning_frequency);
+      nh_.getParam ("scanning_frequency", scanning_frequency);
       // New value specified
       if (scanning_frequency != scanning_frequency_)
       {
