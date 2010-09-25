@@ -1,0 +1,13 @@
+<launch>
+<node pkg="point_cloud_converter" type="point_cloud_converter" name="point_cloud_converter" output="screen" respawn="true" >
+  <remap from="/points_in" to="/shoulder_cloud"/>
+</node>
+
+  <node pkg="image_algos" type="pointcloud_colorizer_node" name="pointcloud_colorizer_node" output="screen" respawn="true" >
+    <param name="input_image_topic" value="/narrow_stereo/left/image_rect" />
+    <param name="input_cloud_topic" value="/points2_out" />
+    <param name="monochrome" value="true" />
+    <param name="save_image" value="false" />	
+  </node>
+<!--   launch-prefix="xterm -e gdb -args" -->
+</launch>

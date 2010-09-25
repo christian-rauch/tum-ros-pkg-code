@@ -1,0 +1,39 @@
+<launch>
+  <node pkg="cloud_tools" type="table_object_detector_sr_node" name="table_object_detector_sr_node" output="screen" respawn="true">
+    <param  name="input_cloud_topic" value="/swissranger_test/cloud_sr" />;
+    <param name="global_frame" value="base_link" />	
+  </node>
+
+
+  <!-- Right SVISTEC Camera -->
+  <node pkg="tf" type="static_transform_publisher" name="RightEye" args="0.03 0 0 0 0 0 /RightEyeCalc /RightEyeCalcOff 100"/>
+  <node name="pointcloud_to_image_projector_node" pkg="image_algos" type="pointcloud_to_image_projector_node" output="screen">
+    <param name="origin" value="/RightEyeCalcOff" />
+    <param name="child" value="/sr4" />
+    <param name="input_image_topic" value="/cop/right/camera" />
+    <param name="input_cloud_topic" value="/table_object_detector_sr_node/cloud_table" />
+    <param name="focal_length" value="0.00641331974023884" />
+    <param name="proj_center_x" value="833.248646581603" />
+    <param name="proj_center_y" value="661.107370424523" />
+    <param name="pix_size_x" value="7.43100103980579e-06" />
+    <param name="pix_size_x" value="7.4e-06" />
+  </node>
+
+
+
+  <!-- Left SVISTEC Camera -->
+<!--   <node pkg="tf" type="static_transform_publisher" name="LeftEye" args="0.03 0 0 0 0 0 /LeftEyeCalc /LeftEyeCalcOff 100"/> -->
+<!--   <node name="pointcloud_to_image_projector_node" pkg="image_algos" type="pointcloud_to_image_projector_node" output="screen"> -->
+<!--     <param name="input_image_topic" value="/cop/left/camera" /> -->
+<!--     <param name="input_cloud_topic" value="/table_object_detector_sr_node/cloud_clusters" /> -->
+<!--     <param name="origin" value="/LeftEyeCalcOff" /> -->
+<!--     <param name="child" value="/sr4" /> -->
+<!--     <param name="focal_length" value="0.00633478056136406" /> -->
+<!--     <param name="proj_center_x" value="836.314838205429" /> -->
+<!--     <param name="proj_center_y" value="618.971408927134" /> -->
+<!--     <param name="pix_size_x" value="7.42803760629328e-06" /> -->
+<!--     <param name="pix_size_x" value="7.4e-06" /> -->
+<!--   </node> -->
+
+  <node pkg="topic_tools" type="relay" name="relay_to_color_find" args="/pointcloud_to_image_projector_node/image_with_projected_cluster /find_color_hsv_node/image"/>
+</launch>

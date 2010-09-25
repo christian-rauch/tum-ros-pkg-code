@@ -1,0 +1,9 @@
+<launch>
+  <node pkg="image_algos" type="pointcloud_to_image_projector_opencv_node" name="pointcloud_to_image_projector_opencv_node" output="screen" respawn="true" >
+    <param name="input_image_topic" value="/wide_stereo/right/image_rect_color" />
+    <param name="input_cloud_topic" value="/laser_table_detector/extract_object_clusters/output" />
+    <param name="output_image_topic" value="image_with_projected_cluster" />
+    <param name="output_cluster_topic" value="output_cluster" />
+  </node>
+<!--   launch-prefix="xterm -e gdb -args" -->
+</launch>

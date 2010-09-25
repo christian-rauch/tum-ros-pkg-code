@@ -7,26 +7,39 @@ set(ROS_BUILD_TYPE Debug)
 #gensrv()
 rosbuild_init()
 rosbuild_add_boost_directories()
-#download test video
-#file(DOWNLOAD http://www9.cs.tum.edu/~pangerci/test.avi ${PROJECT_SOURCE_DIR}/test.avi)
-#include_directories(src/segment)
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
+ROSBUILD_ADD_LIBRARY (image_algos
+  src/color_find_hsv.cpp
+  src/pcd_to_image_projector_algo.cpp
+  src/register_plugins.cpp
+)
 
-#rosbuild_add_executable (play_video src/play_video.cpp)
-#rosbuild_add_executable (capture_image src/capture_image.cpp)
-#rosbuild_add_executable (convexhull_2d src/convexhull_2d.cpp)
-#rosbuild_add_executable (get_sub_img src/get_sub_img.cpp)
-#rosbuild_add_executable (watershed src/watershed.cpp)
-#rosbuild_add_executable (segment src/segment/segment.cpp)
-#rosbuild_add_executable (ros_to_openCv_to_ros src/ros_to_openCv_to_ros.cpp)
-#rosbuild_add_executable (ros_to_openCv src/ros_to_openCv.cpp)
+
+rosbuild_add_executable (find_color_hsv_node src/color_find_hsv.cpp)
+set_target_properties (find_color_hsv_node PROPERTIES COMPILE_FLAGS -DCREATE_NODE)
+
+#TODO: make this one run as node
+#rosbuild_add_executable (pcd_to_image_projector_node src/pcd_to_image_projector_algo.cpp)
+#set_target_properties (pcd_to_image_projector_node PROPERTIES COMPILE_FLAGS -DCREATE_NODE)
+rosbuild_add_executable (pointcloud_to_image_projector_halcon_node src/pointcloud_to_image_projector_halcon.cpp)
+rosbuild_add_executable (pointcloud_to_image_projector_opencv_node src/pointcloud_to_image_projector_opencv.cpp)
+rosbuild_add_executable (pointcloud_colorizer_node src/pointcloud_colorizer.cpp)
+#rosbuild_add_executable (pointcloud_colorizer_with_head_movement_node src/pointcloud_colorizer_with_head_movement.cpp)
+
 rosbuild_add_executable (openCv_to_ros utils/openCV_to_ros.cpp)
-rosbuild_add_compile_flags(openCv_to_ros "-pg")
-#rosbuild_add_executable (edge src/edge.cpp)
-#rosbuild_link_boost(get_sub_img filesystem)
+rosbuild_add_executable (bgfg_codebook_node src/bgfg_codebook_node.cpp)
+#rosbuild_add_compile_flags(openCv_to_ros "-pg")
+#rosbuild_add_link_flags(openCv_to_ros "-pg")
 
-#rosbuild_add_library(testlib src/play_video_class.cpp src/register_class_list.cpp)
-#rosbuild_add_executable (play_video_node src/play_video_node.cpp)
 
-#rosbuild_add_executable(test_node src/test_node.cpp)
+
+# rosbuild_add_executable(cmvision
+#   src/cmvision.cc
+#   src/conversions.c
+#   src/cmvision_color_blob_finder.cpp
+#   src/main.cpp)
+# rosbuild_add_executable(blob src/blob_detection_hsv.cpp)
+
+rosbuild_add_executable (image_algos_main src/image_algos_main.cpp)
+target_link_libraries (image_algos_main image_algos)

@@ -24,5 +24,20 @@
   <depend package="pluginlib"/>
 <!--   <depend package="detect_objects_chamfer"/> -->
   <depend package="compressed_image_transport"/>
+  <depend package="dynamic_reconfigure"/>
+  <depend package="tf"/>
+  <depend package="image_geometry"/>
+  <depend package="angles" />
+  <depend package="cmvision" />
+  <depend package="yaml_cpp" />
+  <depend package="ias_table_msgs" />
+  <depend package="pcl_tf" />
+  <depend package="pcl" />
+  <depend package="actionlib" />
+  <depend package="pr2_controllers_msgs" />
+  <export>
+    <cpp cflags="-I${prefix}/include/" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -limage_algos"/>
+    <image_algos plugin="${prefix}/plugins.xml"/>
+  </export>
 </package>
 

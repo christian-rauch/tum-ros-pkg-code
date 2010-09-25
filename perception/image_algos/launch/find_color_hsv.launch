@@ -1,0 +1,76 @@
+<launch>
+<!--   <node pkg="cloud_tools" type="table_object_detector_sr_node" name="table_object_detector_sr_node" output="screen" respawn="true"> -->
+<!--     <param  name="input_cloud_topic" value="/swissranger_test/cloud_sr" />; -->
+<!--     <param name="global_frame" value="base_link" />	 -->
+<!--   </node> -->
+
+<node pkg="cloud_tools" type="box_filter_node" name="box_filter_node_d" output="screen" respawn="true">
+  <remap from="~cloud_pcd" to="/shoulder_cloud" />
+  <param name="output_cloud_topic" value="cloud_clipped" />
+  <param name="box_min_x" value="-3.0" />
+  <param name="box_max_x" value="3.0" />
+  <param name="box_min_y" value="-3.0" />
+  <param name="box_max_y" value="3.0" />
+  <param name="box_min_z" value="0.0" />
+  <param name="box_max_z" value="3.0" />
+</node>
+
+
+<!-- Table Object Detector (passive version) -->
+<!--input: /shoulder_cloud_clipped -->
+<!--output: 
+    /table_with_objects -  
+    /table_object_detector_passive_node/cloud_annotated - clusters
+    /table_object_detector_passive_node/semantic_polygonal_map - table polygon
+-->
+<node pkg="cloud_tools" type="table_object_detector_passive_node" name="table_object_detector_passive_node_d" output="screen"  respawn="true">
+  <remap from="~cloud_pcd" to="box_filter_node_d/cloud_clipped" />
+  <param name="table_delta_z" value="0.02" />
+  <param name="output_table_topic" value="table_with_objects" />
+  <param name="sac_distance_threshold" value="0.015" />
+  <param name="normal_eps_angle" value="5" />
+  <param name="table_min_height" value="0.5" />
+  <param name="table_max_height" value="1.0" />
+  <param name="table_delta_z" value="0.01" />
+</node>
+
+<!--   Table Message Splitter -->
+<node pkg="cloud_tools" type="table_msg_split_node" name="table_msg_split_node" output="screen">
+    <param name="input_table_topic" value="/table_object_detector_passive_node_d/table_with_objects" />
+    <param name="output_pcds_topic" value="table_objects" />
+    <param name="output_polygon_topic" value="table_polygon" />
+  </node>
+
+  <!-- Right SVISTEC Camera -->
+  <node pkg="tf" type="static_transform_publisher" name="RightEye" args="0.03 0 0 0 0 0 /RightEyeCalc /RightEyeCalcOff 100"/>
+  <node name="pointcloud_to_image_projector_node" pkg="image_algos" type="pointcloud_to_image_projector_node" output="screen"  respawn="true">
+    <param name="origin" value="/RightEyeCalcOff" />
+    <param name="child" value="/map" />
+    <param name="input_image_topic" value="/cop/right/camera" />
+    <param name="input_cloud_topic" value="/table_msg_split_node/table_objects" />
+    <param name="focal_length" value="0.00641331974023884" />
+    <param name="proj_center_x" value="833.248646581603" />
+    <param name="proj_center_y" value="661.107370424523" />
+    <param name="pix_size_x" value="7.43100103980579e-06" />
+    <param name="pix_size_x" value="7.4e-06" />
+  </node>
+
+  <!-- Left SVISTEC Camera -->
+<!--   <node pkg="tf" type="static_transform_publisher" name="LeftEye" args="0.03 0 0 0 0 0 /LeftEyeCalc /LeftEyeCalcOff 100"/> -->
+<!--   <node name="pointcloud_to_image_projector_node" pkg="image_algos" type="pointcloud_to_image_projector_node" output="screen"> -->
+<!--     <param name="input_image_topic" value="/cop/left/camera" /> -->
+<!--     <param name="input_cloud_topic" value="/table_object_detector_sr_node/cloud_clusters" /> -->
+<!--     <param name="origin" value="/LeftEyeCalcOff" /> -->
+<!--     <param name="child" value="/sr4" /> -->
+<!--     <param name="focal_length" value="0.00633478056136406" /> -->
+<!--     <param name="proj_center_x" value="836.314838205429" /> -->
+<!--     <param name="proj_center_y" value="618.971408927134" /> -->
+<!--     <param name="pix_size_x" value="7.42803760629328e-06" /> -->
+<!--     <param name="pix_size_x" value="7.4e-06" /> -->
+<!--   </node> -->
+
+<node pkg="image_algos" type="find_color_hsv_node" name="find_color_hsv_node" output="screen" respawn="true">
+  <remap from="~image" to="/pointcloud_to_image_projector_node/image_with_projected_cluster"/>
+  <param name="colors_yaml_file" value="$(find image_algos)/data/colors.yaml" />
+</node>
+</launch>

@@ -1,0 +1,13 @@
+<library path="lib/libimage_algos">
+  <!--Sensors -->
+  <class name="image_algos/ColorFindHSV" type="image_algos::ColorFindHSV" base_class_type="image_algos::ImageAlgo">
+    <description>
+      This plugin finds object's color.
+    </description>
+  </class>
+  <class name="image_algos/PCDToImageProjector" type="image_algos::PCDToImageProjector" base_class_type="image_algos::ImageAlgo">
+    <description>
+      This plugin finds projects 3D points onto the image and extract the bounding box.
+    </description>
+  </class>
+</library>

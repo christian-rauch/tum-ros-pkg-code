@@ -69,7 +69,7 @@ public:
         ROS_INFO ("Publishing data on topic %s.", n_.resolveName ("image_topic_2").c_str ());
         try
           {
-            image_pub_.publish(bridge_.cvToImgMsg(cv_image_, "passthrough"));
+            image_pub_.publish(bridge_.cvToImgMsg(cv_image_));
           }
         catch (sensor_msgs::CvBridgeException error)
           {

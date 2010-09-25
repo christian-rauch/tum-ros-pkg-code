@@ -1,5 +1,5 @@
 <launch>                                      
-  <node pkg="opencv_test" type="openCv_to_ros" name="openCv_to_ros" args="$(find test_client)/test_resource/IceTea-1.jpg 50" output="screen"> 
+  <node pkg="image_algos" type="openCv_to_ros" name="openCv_to_ros" args="$(find test_client)/test_resource/IceTea-1.jpg 30" output="screen"> 
     <param name="compressed_image_transport_format" value="jpeg"/>
     <param name="compressed_image_transport_jpeg_quality" value="90"/>
     <!--     <param name="compressed_image_transport_png_level" value="9"/> -->
@@ -9,6 +9,6 @@
 -->
   <node pkg="image_view" type="image_view" name="image_view"  output="screen">
     <remap from="image" to="image_topic_2" />
-    <remap from="_image_transport" to="compressed" />
-  </node>                                                                                                                                                    
+<!--     <remap from="_image_transport" to="compressed" /> -->
+  </node>
 </launch>
