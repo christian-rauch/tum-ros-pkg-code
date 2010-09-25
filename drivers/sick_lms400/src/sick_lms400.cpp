@@ -495,7 +495,7 @@ sensor_msgs::LaserScan
       ROS_DEBUG (" >>> [%i] dist: %i\t remission: %i", i, distance * meas_header.DistanceScaling, remission * meas_header.RemissionScaling);
   }
 
-  scan.header.frame_id = "FRAMEID_LASER";
+  scan.header.frame_id = "lms400_tilt_laser";
   scan.header.stamp = ros::Time::now ();
 
   return (scan);

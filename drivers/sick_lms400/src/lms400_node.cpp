@@ -87,7 +87,7 @@ class LMS400Node
     int debug_;
 
     ////////////////////////////////////////////////////////////////////////////////
-    LMS400Node () : debug_ (0)
+    LMS400Node (ros::NodeHandle &n) : nh_(n), debug_ (0)
     {
       nh_.param ("hostname", hostname_, string ("192.168.0.1"));
       // Userlevel 3 password (hashed). Default: servicelevel/81BE23AA (Service (userlevel 3) password. Used for enabling/disabling and/or setting the filter parameters.
@@ -194,7 +194,6 @@ class LMS400Node
         lms_.EnableRIS (1);
         ROS_INFO ("> [SickLMS400] Enabling extended RIS detectivity... [done]");
       }
-
       // Set scanning parameters
       if (lms_.SetResolutionAndFrequency (scanning_frequency_, angular_resolution_, min_angle_, max_angle_ - min_angle_) != 0)
         ROS_ERROR ("> [SickLMS400] Couldn't set values for resolution, frequency, and min/max angle. Using previously set values.");
@@ -352,8 +351,8 @@ int
   main (int argc, char** argv)
 {
   ros::init (argc, argv, "lms400_node");
-
-  LMS400Node c;
+  ros::NodeHandle n("~");
+  LMS400Node c(n);
 
   if (c.start () == 0)
     c.spin ();
