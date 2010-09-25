@@ -28,6 +28,7 @@
 #include <ros/node_handle.h>
 #include "sensor_msgs/Image.h"
 #include "image_transport/image_transport.h"
+#include "face_detector_mono/RectArray.h"
 #include "cv_bridge/CvBridge.h"
 
 //yarp
@@ -82,6 +83,7 @@ public:
     ts_ = ros::Time::now ();
 
     image_sub_ = it_.subscribe(input_image_topic_, 1, &FaceDetect::image_callback, this);
+    face_pub_ = n_.advertise<face_detector_mono::RectArray>("faces",1);
 
     if (cascade_name_ == "" || nested_cascade_name_ == "")
       ROS_ERROR("Classification files missing!");
@@ -156,6 +158,7 @@ public:
     int i = 0;
     double t = 0;
     vector<Rect> faces;
+    face_detector_mono::RectArray faces_msgs;
     const static Scalar colors[] =  { CV_RGB(0,0,255),
                                       CV_RGB(0,128,255),
                                       CV_RGB(0,255,255),
@@ -174,12 +177,16 @@ public:
     cascade.detectMultiScale( smallImg, faces,
                               1.1, 5, 0
                               //|CV_HAAR_FIND_BIGGEST_OBJECT
+
                               //|CV_HAAR_DO_ROUGH_SEARCH
                               |CV_HAAR_SCALE_IMAGE
                               ,
                               Size(30, 30) );
     t = (double)cvGetTickCount() - t;
     ROS_INFO( "detection time = %g ms", t/((double)cvGetTickFrequency()*1000.) );
+    faces_msgs.header.stamp = ros::Time::now();
+    faces_msgs.header.frame_id = "";
+
     for( vector<Rect>::const_iterator r = faces.begin(); r != faces.end(); r++, i++ )
     {
       Mat smallImgROI;
@@ -194,7 +201,12 @@ public:
       if(yarp_image_)
 	send_face_center_to_yarp_port(center.x, center.y);
 #else
-      //send center coordinates with <geometry_msg::PointStamped> ????
+      face_detector_mono::Rect rect;
+      rect.x = center.x;
+      rect.y = center.y;
+      rect.width = r->width;
+      rect.height = r->height;
+      faces_msgs.rects.push_back(rect);
 #endif      
       radius = cvRound((r->width + r->height)*0.25*scale);
       circle( img, center, radius, color, 3, 8, 0 );
@@ -226,6 +238,10 @@ public:
         circle( img, center, radius, color, 3, 8, 0 );
       }
     }  
+#ifndef YARP
+    reverse(faces_msgs.rects.begin(),faces_msgs.rects.end());
+    face_pub_.publish(faces_msgs);
+#endif
     if(display_)
       cv::imshow( "result", img );    
   }
@@ -248,6 +264,7 @@ protected:
   ros::NodeHandle n_;
   image_transport::ImageTransport it_;
   image_transport::Subscriber image_sub_;
+  ros::Publisher face_pub_;
   sensor_msgs::CvBridge bridge_;
 };
 
