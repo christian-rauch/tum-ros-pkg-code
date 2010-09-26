@@ -52,8 +52,10 @@ class PointCloudColorizer
   //point head client
   PointHeadClient* point_head_client_;
   //move offset
-  double move_offset_;
-
+  double move_offset_y_min_, move_offset_y_max_, step_y_; 
+  double move_offset_z_min_, move_offset_z_max_, step_z_;
+  double move_offset_x_;
+  ros::Time stamp_;
   boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > cloud_xyzrgb_;
 public:
   PointCloudColorizer(ros::NodeHandle &n)
@@ -74,11 +76,20 @@ public:
     point_head_client_ = new PointHeadClient("/head_traj_controller/point_head_action", true);
     //wait for head controller action server to come up 
     while(!point_head_client_->waitForServer(ros::Duration(5.0)) && ros::ok())
-      {
-	ROS_INFO("Waiting for the point_head_action server to come up");
-      }
+    {
+      ROS_INFO("Waiting for the point_head_action server to come up");
+    }
     cloud_received_ = false;
-    move_offset_ = -0.5;
+
+    //TODO: parametrize
+    move_offset_y_min_ = -0.5;
+    move_offset_y_max_ = 0.5;
+    step_y_ = 0.1;
+    move_offset_z_max_ = 1.2;
+    move_offset_z_min_ = 0.0;
+    step_z_ = 0.3;
+    move_offset_x_ = 1.0;
+    move_head("base_link", move_offset_x_, move_offset_y_max_, move_offset_z_max_);
   }
 
   ~PointCloudColorizer()
@@ -89,23 +100,33 @@ public:
   void cloud_cb (const sensor_msgs::PointCloud2ConstPtr& pc)
   {
     if (!cloud_received_)
+    {
+      pcl::PointXYZRGB point_xyzrgb;
+      unsigned long size = pc->height*pc->width;
+      ROS_INFO("[PointCloudColorizer: ] cloud received with points: %ld in frame %s", 
+               size, pc->header.frame_id.c_str());
+      pcl::fromROSMsg(*pc, cloud_in_);
+      //TODO: check that the frame is valid
+      
+      cloud_xyzrgb_ = boost::shared_ptr< pcl::PointCloud<pcl::PointXYZRGB> >(new pcl::PointCloud<pcl::PointXYZRGB>());
+      cloud_xyzrgb_->width    = cloud_in_.points.size();
+      cloud_xyzrgb_->height   = 1;
+      cloud_xyzrgb_->is_dense = true;
+      cloud_xyzrgb_->header = cloud_in_.header;
+      for (unsigned long i = 0; i < cloud_in_.points.size(); i++)
       {
-	unsigned long size = pc->height*pc->width;
-	ROS_INFO("[PointCloudColorizer: ] cloud received with points: %ld in frame %s", 
-		 size, pc->header.frame_id.c_str());
-	pcl::fromROSMsg(*pc, cloud_in_);
-	//TODO: check that the frame is valid
-	pcl::transformPointCloud(cam_model_.tfFrame(), cloud_in, cloud_in_tranformed_, tf_listener_);
-	ROS_INFO("[PointCloudColorizer:] cloud transformed to %s", cam_model_.tfFrame().c_str());
-
-	cloud_xyzrgb_ = boost::shared_ptr< pcl::PointCloud<pcl::PointXYZRGB> >(new pcl::PointCloud<pcl::PointXYZRGB>());
-	cloud_xyzrgb_->width    = cloud_in_tranformed_.points.size();
-	cloud_xyzrgb_->height   = 1;
-	cloud_xyzrgb_->is_dense = true;
-	cloud_xyzrgb_->header = cloud_in_tranformed_.header;
-
-	cloud_received_ = true;
+        point_xyzrgb.x = cloud_in_.points[i].x;
+        point_xyzrgb.y = cloud_in_.points[i].y;
+        point_xyzrgb.z = cloud_in_.points[i].z;
+        //initialize RGB channel to red
+        point_xyzrgb.rgb == getRGB(0.9, 0.0, 0.0);
+        cloud_xyzrgb_->points.push_back(point_xyzrgb);
       }
+      cloud_xyzrgb_->width =  cloud_xyzrgb_->points.size();
+      ROS_INFO_STREAM("width, height: " << cloud_xyzrgb_->width << ", " << cloud_xyzrgb_->width 
+                      << " is dense: " << cloud_xyzrgb_->is_dense);
+      cloud_received_ = true;
+    }
   }
 
   float
@@ -120,8 +141,6 @@ public:
   {
     //    ROS_INFO("[PointCloudColorizer: ] Image received in frame %s", 
     //        image_msg->header.frame_id.c_str());
-    if (cloud_received_)
-    {
       ROS_INFO("[PointCloudColorizer:] Image encoding %s", image_msg->encoding.c_str());
       //image_ = NULL;
       try 
@@ -133,21 +152,27 @@ public:
         return;
       }
       cam_model_.fromCameraInfo(info_msg);
-      process(image_);
-      move_offset_ = move_offset_ + 0.1;
-      if (move_offset_ <= 0.5)
-	move_head("base_link", 2.0, move_offset_, 1.2);
+
+      //HEAD moving part
+      if (cloud_received_ && move_offset_y_max_ >= move_offset_y_min_ && move_offset_z_max_ >= move_offset_z_min_)
+      {
+        stamp_ = info_msg->header.stamp;
+        process(image_);
+        move_offset_y_max_ = move_offset_y_max_ - step_y_;
+        move_head("base_link", 1.0, move_offset_y_max_, move_offset_z_max_);
+        if (move_offset_y_max_ == move_offset_y_min_ && move_offset_z_max_ != move_offset_z_min_)
+        {
+          move_offset_z_max_ = move_offset_z_max_ - step_z_;
+          //TODO: only works if min/max offsets are symetrical
+          move_offset_y_max_ = -move_offset_y_min_;
+        }
+        sleep(1.0);
+      }
       else
-	{
-	  //TODO: ros::shutdown()??
-	  ROS_INFO("Done!");
-	}
-    }
-    //TODO:
-    //move from
-    //move_head("base_link", 2.0, -0.5, 1.2);
-    //to:
-    //move_head("base_link", 2.0, 0.5, 1.2);
+      {
+        //TODO: ros::shutdown()??
+        ROS_INFO("Done!");
+      }
   }
 
   void move_head (std::string frame_id, double x, double y, double z)
@@ -163,7 +188,7 @@ public:
     
     //we are pointing the wide_stereo camera frame 
     //(pointing_axis defaults to X-axis)
-    goal.pointing_frame = "wide_stereo_optical_frame";
+    goal.pointing_frame = "narrow_stereo_optical_frame";
     
     //take at least 5 seconds to get there
     goal.min_duration = ros::Duration(5);
@@ -183,18 +208,25 @@ public:
     //create a sequence storage for projected points 
     CvMemStorage* stor = cvCreateMemStorage (0);
     CvSeq* seq = cvCreateSeq (CV_SEQ_ELTYPE_POINT, sizeof (CvSeq), sizeof (CvPoint), stor);
+    // pcl::transformPointCloud(cam_model_.tfFrame(), cloud_in_, cloud_in_tranformed_, tf_listener_);
+    tf::StampedTransform transform;
+    tf_listener_.lookupTransform(cam_model_.tfFrame(), cloud_in_.header.frame_id, stamp_, transform);
+    pcl::transformPointCloud(cloud_in_, cloud_in_tranformed_, transform);
+
+    ROS_INFO("[PointCloudColorizer:] cloud transformed to %s", cam_model_.tfFrame().c_str());
+
+
     if (cloud_in_tranformed_.points.size() == 0)
     {
       ROS_WARN("[PointCloudColorizer:] Point cloud points with size 0!!! Returning.");
       return;
     }
 
-    std::cerr <<  cloud_in_tranformed_.points.size() <<  " " << cloud_in.points.size() << std::endl;
-    pcl::PointXYZRGB point_xyzrgb;
+    //pcl::PointXYZRGB point_xyzrgb;
     for (unsigned long i = 0; i < cloud_in_tranformed_.points.size(); i++)
     {
       cv::Point3d pt_cv(cloud_in_tranformed_.points[i].x, cloud_in_tranformed_.points[i].y, 
-                      cloud_in_tranformed_.points[i].z);
+                        cloud_in_tranformed_.points[i].z);
       cv::Point2d uv;
       cam_model_.project3dToPixel(pt_cv, uv);
       ROS_DEBUG_STREAM("points projected: " << round(uv.x) << " " << round(uv.y));
@@ -204,7 +236,7 @@ public:
       if (uv.x < 0 || uv.x > image.cols || uv.y < 0 || uv.y > image.rows)
       {
         //        ROS_WARN("[PointCloudColorizer:] width out of bounds");
-        point_xyzrgb.rgb = getRGB(0.9, 0.0, 0.0);
+        //point_xyzrgb.rgb = getRGB(0.9, 0.0, 0.0);
         //continue;
       }
       else
@@ -214,37 +246,42 @@ public:
         //uint8_t g = image.at<uint8_t>(round(uv.x), round(uv.y)*image.channels() + 3);
         //int32_t rgb = g | (g << 8) |  (g << 16);
 	
-	//VERSION for MONO
-	if (monochrome_)
-	  {
-	    uint8_t g = image.at<uint8_t>(round(uv.y), round(uv.x));
-	    //int32_t rgb = g | (g << 8) |  (g << 16);
-	    int32_t rgb = (g << 16) | (g << 8) | g;
-	    point_xyzrgb.rgb = *reinterpret_cast<float*>(&rgb);
-	  }
-	//VERSION for BGR8
-	else
-	  {
-	    const cv::Vec3b& bgr = image.at<cv::Vec3b>(round(uv.y), round(uv.x));
-	    int32_t rgb_packed = (bgr[0] << 16) | (bgr[1] << 8) | bgr[2];
-	    point_xyzrgb.rgb = *reinterpret_cast<float*>(&rgb_packed);
-	  }
+        //VERSION for MONO
+        if (monochrome_)
+        {
+          uint8_t g = image.at<uint8_t>(round(uv.y), round(uv.x));
+          //int32_t rgb = g | (g << 8) |  (g << 16);
+          int32_t rgb = (g << 16) | (g << 8) | g;
+          //          point_xyzrgb.rgb = *reinterpret_cast<float*>(&rgb);
+          if (cloud_xyzrgb_->points[i].rgb != getRGB(0.9, 0.0, 0.0))
+            cloud_xyzrgb_->points[i].rgb = *reinterpret_cast<float*>(&rgb);
+        }
+        //VERSION for BGR8
+        else
+        {
+          const cv::Vec3b& bgr = image.at<cv::Vec3b>(round(uv.y), round(uv.x));
+          int32_t rgb_packed = (bgr[0] << 16) | (bgr[1] << 8) | bgr[2];
+          //point_xyzrgb.rgb = *reinterpret_cast<float*>(&rgb_packed);
+          if (cloud_xyzrgb_->points[i].rgb != getRGB(0.9, 0.0, 0.0))
+            cloud_xyzrgb_->points[i].rgb = *reinterpret_cast<float*>(&rgb_packed);
+
+        }
       }
       //fill in points
-      point_xyzrgb.x = cloud_in_tranformed_.points[i].x;
-      point_xyzrgb.y = cloud_in_tranformed_.points[i].y;
-      point_xyzrgb.z = cloud_in_tranformed_.points[i].z;
+      //point_xyzrgb.x = cloud_in_tranformed_.points[i].x;
+      //point_xyzrgb.y = cloud_in_tranformed_.points[i].y;
+      //point_xyzrgb.z = cloud_in_tranformed_.points[i].z;
       //TODO:fix me
-      if (point_xyzrgb.rgb == getRGB(0.9, 0.0, 0.0))
-	cloud_xyzrgb_->points.push_back(point_xyzrgb);
+      //if (point_xyzrgb.rgb == getRGB(0.9, 0.0, 0.0))
+      //cloud_xyzrgb_->points.push_back(point_xyzrgb);
     }
     if (save_image_)
-      {
-	std::stringstream stamp;
-	stamp << cloud_in_tranformed_.header.stamp;
-	cv::imwrite(stamp.str() + ".png", image);
-      }
-    cloud_xyzrgb_->width =  cloud_xyzrgb_->points.size();
+    {
+      std::stringstream stamp;
+      stamp << cloud_in_tranformed_.header.stamp;
+      cv::imwrite(stamp.str() + ".png", image);
+    }
+    //cloud_xyzrgb_->width =  cloud_xyzrgb_->points.size();
     boost::shared_ptr< sensor_msgs::PointCloud2> output_cloud = boost::shared_ptr<sensor_msgs::PointCloud2>(new sensor_msgs::PointCloud2()); 
     pcl::toROSMsg (*cloud_xyzrgb_, *output_cloud);
     ROS_INFO("Publishing PointXZYRGB cloud with %ld points in frame %s", cloud_xyzrgb_->points.size(), 
