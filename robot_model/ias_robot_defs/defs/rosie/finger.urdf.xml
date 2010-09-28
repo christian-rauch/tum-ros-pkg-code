@@ -1,0 +1,133 @@
+<?xml version="1.0"?>
+
+<robot>
+
+  <macro name = "dlr_hit_hand_finger" params = "name parent *origin">
+
+    <joint name = "${name}_base_joint" type = "revolute">
+      <parent link  = "${parent}" />
+      <child link = "${name}_base_link" />
+      <insert_block name = "origin" />
+      <axis xyz = "0 0 1" />
+      <limit lower="-0.261799388" upper="0.261799388" effort="100" velocity="100"/> <!-- lowStop = -15 , highStop = +15 -->
+    </joint>
+    
+    <link name = "${name}_base_link">
+      <inertial>
+        <origin xyz = "0.004 0 0" rpy = "0 0 0" />
+        <mass value = "0.1" />
+        <cuboid_inertia_def width = "0.025" length = "0.033" height = "0.04" mass = "0.1" />
+      </inertial>
+      <visual>
+        <origin xyz = "0 0 0" rpy = "0 0 0" />
+        <geometry>
+          <mesh filename = "package://ias_robot_defs/meshes/hand/finger_base.dae"/>
+        </geometry>
+        <material name = "HandGray" />
+      </visual>
+      <collision>
+        <origin xyz = "0 0 0" rpy = "0 0 0" /> 
+        <geometry>
+          <mesh filename = "package://ias_robot_defs/meshes/hand/convex/finger_base_convex.stl"/>
+        </geometry>
+      </collision>
+    </link>
+    
+    <link name = "${name}_proximal_link">
+      <inertial>
+        <origin xyz = "0.035 -0.02 0" rpy = "0 0 0" /> 
+        <mass value = "0.1" />
+        <cuboid_inertia_def width = "0.041" length = "0.082" height = "0.036" mass = "0.1" />
+      </inertial>
+      <visual>
+        <origin xyz = "0 0 0" rpy = "0 0 0" /> 
+        <geometry>
+          <mesh filename = "package://ias_robot_defs/meshes/hand/finger_proximal.dae" />
+        </geometry>
+        <material name = "HandGray" />
+      </visual>
+      <collision>
+        <origin xyz = "0 0 0" rpy = "0 0 0" /> 
+        <geometry>
+          <mesh filename = "package://ias_robot_defs/meshes/hand/convex/finger_proximal_convex.stl" />
+        </geometry>
+      </collision>
+    </link>
+    
+    <link name = "${name}_middle_link">
+      <inertial>
+        <origin xyz = "0.015 -0.01 0" rpy = "0 0 0" />
+        <mass value = "0.1" />
+        <cuboid_inertia_def width = "0.028" length = "0.052" height = "0.03" mass = "0.1" />
+      </inertial>
+      <visual>
+        <origin xyz = "0 0 0" rpy = "0 0 0" />
+        <geometry>
+          <mesh filename = "package://ias_robot_defs/meshes/hand/finger_middle.dae" />  
+        </geometry>
+        <material name = "HandGray" />
+      </visual>
+      <collision>
+        <origin xyz = "0 0 0" rpy = "0 0 0" />
+        <geometry>
+          <mesh filename = "package://ias_robot_defs/meshes/hand/convex/finger_middle_convex.stl" />  
+        </geometry>
+      </collision>
+    </link>
+    
+    <link name = "${name}_distal_link">
+      <inertial>
+        <origin xyz = "0 0.014 0" rpy = "0 0 0" /> 
+        <mass value = "0.1" />
+        <cuboid_inertia_def width = "0.050" length = "0.029" height = "0.027" mass = "0.1" />
+      </inertial>
+      <visual>
+        <origin xyz = "0 0 0" rpy = "0 0 0" /> 
+        <geometry>
+          <mesh filename = "package://ias_robot_defs/meshes/hand/finger_distal.dae" />
+        </geometry>
+        <material name = "HandGray" />
+      </visual>
+      <collision>
+        <origin xyz = "0 0 0" rpy = "0 0 0" /> 
+        <geometry>
+          <mesh filename = "package://ias_robot_defs/meshes/hand/convex/finger_distal_convex.stl" />
+        </geometry>
+      </collision>
+    </link>
+
+    <!--link name = "${name}_tip" /-->
+
+    <joint name = "${name}_proximal_joint" type = "revolute">
+      <parent link = "${name}_base_link" />
+      <child link = "${name}_proximal_link" />
+      <origin xyz = "0 0 0" rpy = "1.570796 0 0" />
+      <axis xyz = "0 0 1" />
+      <limit lower="-0.087266463" upper="1.134464014" effort="100" velocity="100" />  <!-- lowStop = -5 highStop = 65 -->
+    </joint>
+    
+    <joint name = "${name}_middle_joint" type = "revolute">
+      <parent link = "${name}_proximal_link" />
+      <child link = "${name}_middle_link" />
+      <origin xyz = "0.0678 0 0" rpy = "0 0 0" />
+      <axis xyz = "0 0 1" />
+      <limit lower="0.087266463" upper="1.134464014" effort="100" velocity="100" />  <!-- lowStop = 5 highStop = 65 -->
+    </joint>
+
+    <joint name = "${name}_distal_joint" type = "revolute">
+      <parent link = "${name}_middle_link" />
+      <child link = "${name}_distal_link" />
+      <origin xyz = "0.030 0 0" rpy = "0 0 -1.57" />
+      <axis xyz = "0 0 1" />
+      <limit lower="0.087266463" upper="1.134464014" effort="100" velocity="100" />  <!-- lowStop = 5 highStop = 65 -->
+    </joint>
+    
+    <!--joint name = "${name}_joint_3" type = "fixed">
+      <parent link = "${name}_distal_link" />
+      <child link = "${name}_tip" />
+      <origin xyz = "0 0.0295 0" rpy = "0 1.57 1.57" />
+    </joint-->
+
+  </macro>
+
+</robot>

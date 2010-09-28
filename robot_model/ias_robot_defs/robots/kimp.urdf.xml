@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <robot name="kimp">
 
+  <include filename="$(find ias_robot_defs)/calibration/default_cal.xml"/>
   <include filename="$(find ias_robot_defs)/defs/kimp/base_defs.xml"/>
   <include filename="$(find ias_robot_defs)/defs/kimp/torso_defs.xml"/>
   <include filename="$(find ias_robot_defs)/defs/kimp/kuka_lwr_arm_defs.xml"/>
@@ -9,26 +10,31 @@
   <include filename="$(find ias_robot_defs)/defs/kimp/gazebo_defs.xml"/>
   <include filename="$(find ias_robot_defs)/defs/materials.xml"/>
   
-  <property name="torso_pos_x" value="0.055"/>
-  <property name="arm_offset_z" value="-0.1425"/>
+  <property name="arm_offset_z" value="-0.249"/>
+  <property name="base_upper_size_x" value="0.52"/>
+  <property name="base_upper_size_y" value="0.47"/>
+
+  <property name="chest_offset_x" value="0.135" />
+  <property name="chest_offset_z" value="-0.443" />
+
   
   <kimp_base name="base">
     <origin xyz="0 0 0" rpy="0 0 0"/>
   </kimp_base>
 
   <kimp_torso name="torso" parent="base"
-              pos_x="${torso_pos_x}"
+              pos_x="${base_upper_size_x / 2}"
               pos_y="0"
               pos_z="${base_size_z + base_offset_z}"/>
 
-  <kuka_lwr_arm parent="torso" name="left" right="-1">
-    <origin xyz="0 ${0.5 * torso_size_y} ${arm_offset_z}"
-            rpy="${-0.5 * M_PI} 0 0"/>
+  <kuka_lwr_arm parent="base" name="left" right="-1">
+    <origin xyz="${cal_base_to_left_arm_x} ${cal_base_to_left_arm_y} ${cal_base_to_left_arm_z}"
+            rpy="${cal_base_to_left_arm_roll} ${cal_base_to_left_arm_pitch} ${cal_base_to_left_arm_yaw}"/>
   </kuka_lwr_arm>
 
-  <kuka_lwr_arm parent="torso" name="right" right="1">
-    <origin xyz="0 ${-0.5 * torso_size_y} ${arm_offset_z}"
-            rpy="${0.5 * M_PI} ${-120 * M_PI / 180} 0"/>
+  <kuka_lwr_arm parent="base" name="right" right="1">
+    <origin xyz="${cal_base_to_right_arm_x} ${cal_base_to_right_arm_y} ${cal_base_to_right_arm_z}"
+            rpy="${cal_base_to_right_arm_roll} ${cal_base_to_right_arm_pitch} ${cal_base_to_right_arm_yaw}"/>
   </kuka_lwr_arm>
 
   <kimp_head parent="base_link"/>

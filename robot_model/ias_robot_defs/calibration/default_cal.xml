@@ -4,27 +4,63 @@
 
   <!-- ********** Head ********** -->
   <!-- PTU -> Camera projection center extra offsets-->
-  <property name="cal_ptu_cam_x_offset"   value=" 0.0455" />
-  <property name="cal_ptu_cam_y_offset"  value="-0.0661" />
-  <property name="cal_ptu_cam_z_offset" value="0.0409" />
+  <property name="cal_ptu_to_r_cam_x"     value="0.0450085" />
+  <property name="cal_ptu_to_r_cam_y"     value="-0.0690627" />
+  <property name="cal_ptu_to_r_cam_z"     value="0.110697" />
+  <property name="cal_ptu_to_r_cam_roll"  value="4.71005" />
+  <property name="cal_ptu_to_r_cam_pitch" value="0.00426654" />
+  <property name="cal_ptu_to_r_cam_yaw"   value="4.71095" />
+  
+  <!-- Robot Base -> tilting lms400 base -->
+  <property name="msr_base_to_lms400_x"     value="0.363" />
+  <property name="msr_base_to_lms400_y"     value="-0.238" />
+  <property name="msr_base_to_lms400_z"     value="1.576" />
+  <property name="msr_base_to_lms400_roll"  value="0.0" />
+  <property name="msr_base_to_lms400_pitch" value="0.0" />
+  <property name="msr_base_to_lms400_yaw"   value="0.0" />
+  
+  <!--second cube -> tilting lms400  -->
+  <property name="msr_cube_to_lms400_x"     value="-0.00683" />
+  <property name="msr_cube_to_lms400_y"     value="-0.01921" />
+  <property name="msr_cube_to_lms400_z"     value="0.14286" />
+  <property name="msr_cube_to_lms400_roll"  value="0.0" />
+  <property name="msr_cube_to_lms400_pitch" value="0.0" />
+  <property name="msr_cube_to_lms400_yaw"   value="0.0" />
 
   <!-- Robot Base -> Ptu base -->
-  <property name="cal_r_base_to_ptu_x"   value="0.159635" />
-  <property name="cal_r_base_to_ptu_y"   value="-0.005792" />
-  <property name="cal_r_base_to_ptu_z"   value="1.47387" />
-  <property name="cal_r_base_to_ptu_roll" value="0.0038971205676946756" />
-  <property name="cal_r_base_to_ptu_pitch" value="0.0075020741509742766" />
-  <property name="cal_r_base_to_ptu_yaw" value="0.026809979470048713" />
- 
-  <!-- Right Camera -> LeftCamera complete transformation (rpy in degrees) -->
-  <property name="cal_r_cam_to_l_cam_x"   value="-0.123910141126938" />
-  <property name="cal_r_cam_to_l_cam_y"  value="0.000355069835126858" />
-  <property name="cal_r_cam_to_l_cam_z" value="-0.00338830000504571" />
-  <property name="cal_r_cam_to_l_cam_roll"     value="0.00095916631048800001" />
-  <property name="cal_r_cam_to_l_cam_pitch"   value="6.2766014054209256" />
-  <property name="cal_r_cam_to_l_cam_yaw"     value="0.014360163058165143" />
+  <property name="msr_base_to_ptu_x"     value="0.405" />
+  <property name="msr_base_to_ptu_y"     value="0.0" />
+  <property name="msr_base_to_ptu_z"     value="1.53" />
+  <property name="msr_base_to_ptu_roll"  value="0.0" />
+  <property name="msr_base_to_ptu_pitch" value="0.0" />
+  <property name="msr_base_to_ptu_yaw"   value="0.0" />
 
-  <!-- Right Camera -> SwissRanger complete transformation (rpy in degrees) -->
+  <!-- Robot Base -> Left arm base -->
+  <property name="cal_base_to_left_arm_x"     value="0.395" />
+  <property name="cal_base_to_left_arm_y"     value="0.059" />
+  <property name="cal_base_to_left_arm_z"     value="1.149" />
+  <property name="cal_base_to_left_arm_roll"  value="-0.71372" />
+  <property name="cal_base_to_left_arm_pitch" value="0.84806" />
+  <property name="cal_base_to_left_arm_yaw"   value="0.71372" />
+
+  <!-- Robot Base -> Right arm base -->
+  [0.385121, -0.0570121, 1.15408, 5.57141, 5.42596, 2.4299]
+  <property name="cal_base_to_right_arm_x"     value="0.385121" />
+  <property name="cal_base_to_right_arm_y"     value="-0.0570121" />
+  <property name="cal_base_to_right_arm_z"     value="1.15408" />
+  <property name="cal_base_to_right_arm_roll"  value="5.57141" />
+  <property name="cal_base_to_right_arm_pitch" value="5.42596" />
+  <property name="cal_base_to_right_arm_yaw"   value="2.4299" />
+
+  <!-- Right Camera -> LeftCamera complete transformation-->
+  <property name="cal_r_cam_to_l_cam_x"   value="-0.125335" />
+  <property name="cal_r_cam_to_l_cam_y"  value="-0.000453696" />
+  <property name="cal_r_cam_to_l_cam_z" value="-0.000652368" />
+  <property name="cal_r_cam_to_l_cam_roll"     value="0.00104896" />
+  <property name="cal_r_cam_to_l_cam_pitch"   value="6.27783" />
+  <property name="cal_r_cam_to_l_cam_yaw"     value="0.00559089" />
+ 
+  <!-- Right Camera -> SwissRanger complete transformation (todo) -->
   <property name="cal_r_cam_to_sr4_x"   value="-0.0619785" />
   <property name="cal_r_cam_to_sr4_y"  value="0.001762617" />
   <property name="cal_r_cam_to_sr4_z" value="-0.0379636" />

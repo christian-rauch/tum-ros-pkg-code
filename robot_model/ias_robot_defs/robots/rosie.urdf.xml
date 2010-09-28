@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<robot name="rosie">
+
+  <include filename="$(find ias_robot_defs)/calibration/default_cal.xml"/>
+  <include filename="$(find ias_robot_defs)/defs/rosie/base_defs.xml"/>
+  <include filename="$(find ias_robot_defs)/defs/rosie/torso_defs.xml"/>
+  <include filename="$(find ias_robot_defs)/defs/rosie/kuka_lwr_arm_defs.xml"/>
+  <include filename="$(find ias_robot_defs)/defs/rosie/hand.urdf.xml"/>
+  <include filename="$(find ias_robot_defs)/defs/rosie/head_defs.xml"/>
+  <include filename="$(find ias_robot_defs)/defs/rosie/shoulder_laser_defs.xml"/>  
+  <include filename="$(find ias_robot_defs)/defs/rosie/gazebo_defs.xml"/>
+  <include filename="$(find ias_robot_defs)/defs/materials.xml"/>
+  
+  <property name="arm_offset_z" value="-0.249"/>
+  <property name="base_upper_size_x" value="0.52"/>
+  <property name="base_upper_size_y" value="0.47"/>
+
+  <property name="chest_offset_x" value="0.135" />
+  <property name="chest_offset_z" value="-0.443" />
+
+  
+  <rosie_base name="base">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </rosie_base>
+
+  <rosie_torso name="torso" parent="base"
+              pos_x="${base_upper_size_x / 2}"
+              pos_y="0"
+              pos_z="${base_size_z + base_offset_z}"/>
+
+  <kuka_lwr_arm parent="base" name="left" right="-1">
+    <origin xyz="${cal_base_to_left_arm_x} ${cal_base_to_left_arm_y} ${cal_base_to_left_arm_z}"
+            rpy="${cal_base_to_left_arm_roll} ${cal_base_to_left_arm_pitch} ${cal_base_to_left_arm_yaw}"/>
+  </kuka_lwr_arm>
+
+  <kuka_lwr_arm parent="base" name="right" right="1">
+    <origin xyz="${cal_base_to_right_arm_x} ${cal_base_to_right_arm_y} ${cal_base_to_right_arm_z}"
+            rpy="${cal_base_to_right_arm_roll} ${cal_base_to_right_arm_pitch} ${cal_base_to_right_arm_yaw}"/>
+  </kuka_lwr_arm>
+
+  <rosie_head parent="base_link"/>
+  <rosie_shoulder_laser parent="torso_link"/>
+
+  <dlr_hit_right_hand name = "right_hand" parent = "right_arm_7_link">
+    <origin xyz="0.075 0.075 -0.094" rpy="${0.5*M_PI} 0 ${(0.5 + 0.25)*M_PI}"/>
+  </dlr_hit_right_hand>
+  
+  <dlr_hit_left_hand name = "left_hand" parent = "left_arm_7_link">
+    <origin xyz="-0.075 0.075 -0.094"  rpy="${-0.5*M_PI} 0 ${(0.5 - 0.25)*M_PI}"/>
+  </dlr_hit_left_hand>
+
+</robot>

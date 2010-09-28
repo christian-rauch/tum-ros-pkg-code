@@ -19,10 +19,10 @@
     <joint name="${parent}_${name}_arm_base_joint" type="fixed">
       <insert_block name="origin"/>
       <parent link="${parent}_link"/>
-      <child link="${name}_arm_base_link"/>
+      <child link="calib_${name}_arm_base_link"/>
     </joint>
 
-    <link name="${name}_arm_base_link">
+    <link name="calib_${name}_arm_base_link">
       <inertial>
         <mass value="${arm_elem_base_mass}"/>
         <origin xyz="0 0 0.055"/>
@@ -33,7 +33,7 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://ias_robot_defs/meshes/kimp/arm_base.mesh"/>
+          <mesh filename="package://ias_robot_defs/meshes/kimp/arm_base.dae"/>
         </geometry>
         <material name="Orange"/>
       </visual>
@@ -45,7 +45,7 @@
       </collision>
     </link>
 
-    <gazebo reference="${name}_arm_base_link">
+    <gazebo reference="calib_${name}_arm_base_link">
       <material value="kuka-lwr.material"/>
     </gazebo>
 
@@ -60,7 +60,7 @@
                          k_position="30"
                          k_velocity="30"/>
       <dynamics damping="10.0"/>
-      <parent link="${name}_arm_base_link"/>
+      <parent link="calib_${name}_arm_base_link"/>
       <child link="${name}_arm_1_link"/>
     </joint>
 
@@ -75,7 +75,7 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://ias_robot_defs/meshes/kimp/arm_segment_a.mesh"/>
+          <mesh filename="package://ias_robot_defs/meshes/kimp/arm_segment_a.dae"/>
         </geometry>
         <material name="Orange"/>
       </visual>
@@ -124,7 +124,7 @@
       <visual>
         <origin xyz="0 0 0.2" rpy="${M_PI} 0 0"/>
         <geometry>
-          <mesh filename="package://ias_robot_defs/meshes/kimp/arm_segment_b.mesh"/>
+          <mesh filename="package://ias_robot_defs/meshes/kimp/arm_segment_b.dae"/>
         </geometry>
         <material name="Orange"/>
       </visual>
@@ -173,7 +173,7 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 ${M_PI}"/>
         <geometry>
-          <mesh filename="package://ias_robot_defs/meshes/kimp/arm_segment_a.mesh"/>
+          <mesh filename="package://ias_robot_defs/meshes/kimp/arm_segment_a.dae"/>
         </geometry>
         <material name="Orange"/>
       </visual>
@@ -222,7 +222,7 @@
       <visual>
         <origin xyz="0 0 0.2" rpy="0 ${M_PI} 0"/>
         <geometry>
-          <mesh filename="package://ias_robot_defs/meshes/kimp/arm_segment_b.mesh"/>
+          <mesh filename="package://ias_robot_defs/meshes/kimp/arm_segment_b.dae"/>
         </geometry>
         <material name="Orange"/>
       </visual>
@@ -271,7 +271,7 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry name="${name}_arm_5_geom">
-          <mesh filename="package://ias_robot_defs/meshes/kimp/arm_segment_last.mesh"/>
+          <mesh filename="package://ias_robot_defs/meshes/kimp/arm_segment_last.dae"/>
         </geometry>
         <material name="Orange"/>
       </visual>
@@ -319,7 +319,7 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <geometry>
-          <mesh filename="package://ias_robot_defs/meshes/kimp/arm_wrist.mesh"/>
+          <mesh filename="package://ias_robot_defs/meshes/kimp/arm_wrist.dae"/>
         </geometry>
         <material name="Grey"/>
       </visual>
@@ -366,7 +366,7 @@
       <visual>
         <origin xyz="0 0 0" rpy="0 0 ${right * -1/4 * M_PI}"/>
         <geometry>
-          <mesh filename="package://ias_robot_defs/meshes/kimp/arm_flanche.mesh"/>
+          <mesh filename="package://ias_robot_defs/meshes/kimp/arm_flanche.dae"/>
         </geometry>
         <material name="Grey"/>
       </visual>
@@ -390,7 +390,7 @@
 
     <joint name="${name}_arm_hand_fixed_joint" type="fixed">
       <origin xyz="${right * 0.075} 0.075 -0.094"
-              rpy="${0.5 * M_PI} 0 ${3/4 * M_PI + (right - 1) * 1/4 * M_PI}"/>
+              rpy="${0.5*right*M_PI} 0 ${(0.5 + 0.25*right)*M_PI}"/>
       <parent link="${name}_arm_7_link"/>
       <child link="${name}_arm_hand_link"/>
     </joint>

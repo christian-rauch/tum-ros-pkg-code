@@ -1,0 +1,141 @@
+<?xml version="1.0"?>
+<robot xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor"
+       xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller"
+       xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface">
+
+  <include filename="$(find ias_robot_defs)/defs/util_defs.xml"/>
+  <include filename="$(find ias_robot_defs)/defs/gazebo_sensors.xml"/>  
+  <include filename="$(find ias_robot_defs)/defs/b21/powercube_defs.xml"/>
+
+  <property name = "cube_separator_mass" value="0.33"/>
+  <property name = "sick_lms400_mass" value="2.3"/>
+  
+  <macro name = "tilting_lms400_laser" params = "name parent *origin">
+    
+    <joint name = "${name}_base_fixed_joint" type = "fixed">
+      <insert_block name = "origin" />
+      <parent link = "${parent}" />
+      <child link = "${name}_base" />
+    </joint>
+    
+    <link name = "${name}_base">
+      <inertial>
+        <mass value = "${0.5 * arm_elem_70_mass}"/>
+        <cuboid_inertia_def length = "0.07" width = "0.07" height = "0.07"
+                            mass = "${0.5 * arm_elem_70_mass}"/>
+      </inertial>
+      <visual>
+        <origin xyz = "0 0 0" rpy = "0 0 0"/>
+        <geometry>
+          <box size = "0.07 0.07 0.07"/>
+        </geometry>
+        <material name = "Grey"/>
+      </visual>
+      <collision>
+        <origin xyz = "0 0 0" rpy = "0 0 0"/>
+        <geometry>
+          <box size = "0.07 0.07 0.07"/>
+        </geometry>
+      </collision>
+    </link>
+    
+    <gazebo reference = "${name}_base">
+      <material value = "cube_light_gray"/>
+    </gazebo>
+    
+    <joint name = "${name}_joint" type = "revolute">
+      <origin xyz = "0 -0.070 0" rpy = "0 0 0"/>
+      <axis xyz = "0 -1 0"/>
+      <limit lower = "-0.78539" upper = "1.570796"
+             effort = "206" velocity = "${149 * M_PI/2}"/>
+      <parent link = "${name}_base"/>
+      <child link = "${name}_end"/>
+    </joint>
+
+    <link name = "${name}_end">
+      <inertial>
+        <mass value = "${0.5 * arm_elem_70_mass}"/>
+        <cuboid_inertia_def length = "0.07" width = "0.07" height = "0.07"
+                            mass = "${0.5 * arm_elem_70_mass}"/>
+      </inertial>
+      <visual>
+        <origin xyz = "0 0 0" rpy = "0 0 0"/>
+        <geometry>
+          <box size = "0.07 0.07 0.07"/>
+        </geometry>
+        <material name = "Grey"/>
+      </visual>
+      <collision>
+        <origin xyz = "0 0 0" rpy = "0 0 0"/>
+        <geometry>
+          <box size = "0.07 0.07 0.07"/>
+        </geometry>
+      </collision>
+    </link>
+    
+    <gazebo reference = "${name}_end">
+      <material value = "cube_light_gray"/>
+    </gazebo>
+    
+    <transmission name="${name}_trans" type="SimpleTransmission">
+      <actuator name="${name}_motor"/>
+      <joint name="${name}_joint"/>
+      <mechanicalReduction>1.0</mechanicalReduction>
+    </transmission>
+    
+    <joint name = "${name}_separator_fixed_joint" type = "fixed">
+      <parent link = "${name}_end" />
+      <child link = "${name}_cube_separator" />
+    </joint>
+
+    <link name = "${name}_cube_separator">
+      <inertial>
+        <origin xyz = "0 0 0.0525" rpy = "0 0 0" />
+        <mass value = "${cube_separator_mass}" />
+        <cylinder_inertia_def radius = "0.035" length = "0.035" mass = "${cube_separator_mass}" />
+      </inertial>
+      <visual>
+        <origin xyz = "0 0 0.0525" rpy = "0 0 0" />
+        <geometry>
+          <cylinder length="0.035" radius="0.035"/>
+        </geometry>
+        <material name="Black"/>
+      </visual>
+      <collision>
+        <origin xyz = "0 0 0.0525" rpy = "0 0 0" />
+        <geometry>
+          <cylinder length="0.035" radius="0.035"/>
+        </geometry>
+      </collision>
+    </link>
+    
+    <joint name = "${name}_lms400_mount_joint" type = "fixed">
+      <origin xyz = "${msr_cube_to_lms400_x} ${msr_cube_to_lms400_y} ${msr_cube_to_lms400_z}" rpy = "${msr_cube_to_lms400_roll} ${msr_cube_to_lms400_pitch + M_PI} ${msr_cube_to_lms400_yaw - M_PI/2}" />
+      <parent link = "${name}_end" />
+      <child link = "${name}_laser" />
+    </joint>
+
+    <link name = "${name}_laser">
+      <inertial>
+        <origin xyz = "0.025 0.004 0.0155" rpy = "0 0 ${M_PI/2}" />
+        <mass value = "${sick_lms400_mass}" />
+        <cuboid_inertia_def length = "0.128" width = "0.178" height = "0.105" mass = "${sick_lms400_mass}" />
+      </inertial>
+      <visual>
+        <origin xyz = "0.025 0.004 0.0155" rpy = "0 0 ${M_PI/2}" />
+        <geometry>
+          <box size = "0.128 0.178 0.105"/>
+        </geometry>
+        <material name="SickBlue"/>
+      </visual>
+      <collision>
+        <origin xyz = "0.025 0.004 0.0155" rpy = "0 0 ${M_PI/2}" />
+        <geometry>
+          <box size = "0.128 0.178 0.105"/>
+        </geometry>
+      </collision>
+    </link>
+      
+    </macro>
+
+</robot>

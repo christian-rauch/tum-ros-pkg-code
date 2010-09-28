@@ -148,7 +148,16 @@
       <origin xyz="${-wheel_offset_x} ${-wheel_offset_y} ${wheel_radius}"
               rpy="0 0 0"/>
     </kimp_wheel>
-
+    <!-- gscam -->
+    <link  name="gs_cam" >
+    </link>
+    <joint name="gs_cam_joint" type="fixed">
+      <parent link="base_link"/>
+      <child link="gs_cam"/>
+      <origin xyz="0.55 0.0 1.17"
+              rpy="-1.57 0 -1.57" />	      
+    </joint>
+    
     <!-- Two laser sensors -->
     <laser_sensor_urg04lx name="laser_front_left" link="${name}_link">
       <origin xyz="${laser_front_left_x} ${laser_front_left_y} ${laser_front_left_z}"

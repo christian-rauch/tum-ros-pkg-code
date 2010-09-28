@@ -10,9 +10,9 @@
   <!-- Calibration values -->
   <include filename="$(find ias_robot_defs)/calibration/default_cal.xml"/>
 
-  <property name="shoulder_tilting_laser_base_x" value="0.097" />
-  <property name="shoulder_tilting_laser_base_y" value="0.2235" />
-  <property name="shoulder_tilting_laser_base_z" value="0.035" />  
+  <property name="shoulder_tilting_laser_base_x" value="0.152" />
+  <property name="shoulder_tilting_laser_base_y" value="0.07" />
+  <property name="shoulder_tilting_laser_base_z" value="-0.0575" />
 
   <macro name="kimp_shoulder_laser" params="parent">
     <joint name="shoulder_tilt_fixed_joint" type="fixed">
@@ -49,8 +49,8 @@
     </gazebo>
 
     <joint name="shoulder_tilting_joint" type="revolute">
-      <origin xyz="0 0.070 0" rpy="0 0 0"/>
-      <axis xyz="0 1 0"/>
+      <origin xyz="0 -0.070 0" rpy="0 0 0"/>
+      <axis xyz="0 -1 0"/>
       <limit lower="-1.3" upper="1.3"
              effort="206" velocity="${149 * M_PI/2}"/>
       <parent link="shoulder_tilt_base"/>
@@ -100,7 +100,7 @@
                             mass="0.2"/>
       </inertial>
       <visual>
-        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <origin xyz="0 0 -0.035" rpy="0 0 0"/>
         <geometry>
           <cylinder length="0.06" radius="0.025"/>
         </geometry>
