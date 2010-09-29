@@ -1,0 +1,11 @@
+<launch>
+  <node name="arm_hand_server_right"
+	      pkg="motionControl" type="arm_hand_server.py"
+        args="-i right" respawn="false"
+        cwd="node" />
+
+  <node name="arm_hand_server_left"
+	      pkg="motionControl" type="arm_hand_server.py"
+        args="-i left" respawn="false"
+        cwd="node" />
+</launch>

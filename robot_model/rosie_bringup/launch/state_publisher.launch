@@ -1,0 +1,3 @@
+<launch>
+  <node pkg="robot_state_chain_publisher" type="state_chain_publisher" name="robot_state_chain_publisher" output="screen" />
+</launch>  

@@ -1,0 +1,23 @@
+<launch>
+  <machine name="leela" address="leela" default="true" >
+    <env name="HALCONROOT" value="/usr/local/halcon"/>
+    <env name="HALCONEXTENSIONS" value="$(find descr_class)"/> 
+    <env name="HALCONARCH" value="x64-linux2.4-gcc40"/>
+    
+    <env name="LD_LIBRARY_PATH" value="/usr/local/halcon/lib/x64-linux2.4-gcc40"/>
+    <env name="PATH" value="/usr/local/halcon/bin/x64-linux2.4-gcc40:$(env PATH)"/>
+  </machine>
+
+  <machine name="amy" address="amy"  >
+    <env name="HALCONROOT" value="/usr/local/halcon"/>
+    <env name="HALCONEXTENSIONS" value="$(find descr_class)"/> 
+    <env name="HALCONARCH" value="x64-linux2.4-gcc40"/>
+    
+    <env name="LD_LIBRARY_PATH" value="/usr/local/halcon/lib/x64-linux2.4-gcc40"/>
+    <env name="PATH" value="/usr/local/halcon/bin/x64-linux2.4-gcc40:$(env PATH)"/>
+  </machine>
+
+  <machine name="calculon" address="calculon" />
+  <machine name="yivo" address="yivo" />
+  <machine name="localhost" address="localhost" />	
+</launch>

@@ -1,0 +1,7 @@
+On Debian:
+- Add ntpdate shell script at /usr/bin/ntpdate
+----------
+#!/bin/sh
+
+/usr/sbin/ntpdate -t 0.1 -p 2 $@
+----------

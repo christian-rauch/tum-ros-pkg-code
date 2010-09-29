@@ -1,0 +1,15 @@
+<launch>
+  <param name="/use_sim_time" value="false" />
+  <param name="robot_description" command="$(find xacro)/xacro.py '$(find ias_robot_defs)/robots/rosie_no_arms.urdf.xml'"/>
+
+  <include file="$(find rosie_bringup)/machines/$(optenv ROBOT kimp.machine)"/>
+
+  <include file="$(find rosie_bringup)/launch/monitor.launch"/>
+  <include file="$(find rosie_bringup)/launch/runstop.launch"/>
+  <include file="$(find rosie_bringup)/launch/base.launch"/>
+  <include file="$(find rosie_bringup)/launch/localization.launch"/>
+  <include file="$(find amcl_to_jlo)/amcl_to_jlo.launch"/>
+  <include file="$(find rosie_bringup)/launch/state_publisher.launch"/>
+  <include file="$(find rosie_bringup)/launch/power_relay.launch"/>
+  <include file="$(find ias_kitchen_defs)/launch/ias_kitchen_model.launch"/>  
+</launch>

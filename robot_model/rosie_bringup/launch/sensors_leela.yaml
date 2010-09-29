@@ -1,0 +1,49 @@
+sensors:
+  -
+    description:
+      device: k10temp-pci-00c3
+      name: temp1
+    thresholds:
+      ok_range:
+        maximum: 60
+      warning_range:
+        minimum: 60
+        maximum: 70
+      error_range:
+        minimum: 70
+  -
+    description:
+      device: f71889fg-isa-0e80
+      name: fan1
+    thresholds:
+      ok_range:
+        minimum: 500
+        maximum: 7000
+      warning_range:
+        minimum: 7000
+      error_range:
+        maximum: 500
+  -
+    description:
+      device: f71889fg-isa-0e80
+      name: temp1
+    thresholds:
+      ok_range:
+        maximum: 60
+      warning_range:
+        minimum: 60
+        maximum: 70
+      error_range:
+        minimum: 70
+  -
+    description:
+      device: f71889fg-isa-0e80
+      name: temp3
+    thresholds:
+      ok_range:
+        maximum: 60
+      warning_range:
+        minimum: 60
+        maximum: 70
+      error_range:
+        minimum: 70

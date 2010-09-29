@@ -1,0 +1,10 @@
+<launch>
+  <include file="$(find rosie_bringup)/machines/$(optenv MACHINE_DEF kimp.machine)"/>
+
+  <node name="rosie_power_relay" pkg="power_relay" type="power_relay.py" output="log" machine="leela">
+    <param name="url" value="http://192.168.20.55" type="string"/>
+    <param name="username" value="admin" type="string"/>
+    <param name="password" value="rosiepower" type="string"/>
+    <rosparam param="outlets">['[1] right hand', '[2] left hand', '[3] SR4000', '[4] neck laser', '[5] navigation lasers', '[6] right camera', '[7] left camera', '[8] powercubes']</rosparam>
+  </node>
+</launch>

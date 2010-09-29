@@ -1,0 +1,44 @@
+<launch>
+  <!-- hokuyo shoulder scanner -->
+  <node pkg="hokuyo_node" type="hokuyo_node" output="screen" name="shoulder_scanner">
+    <param name="allow_unsafe_settings" type="bool" value="true"/>
+    <param name="intensity" type="bool" value="true"/>
+    <remap from="scan" to="shoulder_scan_dirty"/>
+    <param name="min_ang" type="double" value="-1.3" />
+    <param name="max_ang" type="double" value="1.3" />
+    <param name="skip" type="int" value="0"/>
+    <param name="frame_id" type="string" value="/shoulder_tilting_laser_sensor"/>
+  </node>
+
+  <!-- convert tilt laser scan to pointcloud -->
+  <node pkg="laser_filters" type="scan_to_cloud_filter_chain" output="screen" name="scan_to_cloud_filter_chain_tilt_laser">
+    <remap from="scan" to="shoulder_scan_dirty"/>
+    <remap from="cloud_filtered" to="tilt_scan_cloud"/>
+    <param name="target_frame" type="string" value="/base_link"/>
+    <rosparam command="load" file="$(find rosie_arm_navigation_perception)/config/shadow_filter.yaml" />
+  </node>
+
+  <!-- laser self filter -->
+  <include file="$(find rosie_arm_navigation_perception)/launch/tilt_laser_self_filter.launch"/> 
+
+  <!-- laser assembler -->
+  <node pkg="laser_assembler" type="point_cloud_assembler" output="screen" name="point_cloud_assembler">
+    <remap from="cloud" to="tilt_scan_cloud_filtered"/>
+    <param name="tf_tolerance_secs" type="double" value="0.25" />
+    <param name="tf_cache_time_secs" type="double" value="15.0" />
+    <param name="max_clouds" type="int" value="600" />
+    <param name="ignore_laser_skew" type="bool" value="true" />
+    <param name="fixed_frame" type="string" value="/map" />
+  </node>
+
+  <!-- laser snapshotter -->
+  <node pkg="pr2_laser_snapshotter" type="pr2_laser_snapshotter" output="screen" name="snapshotter">
+    <remap from="laser_scanner_signal" to="shoulder_scanner_signal"/>
+    <remap from="build_cloud" to="build_cloud" />
+    <remap from="full_cloud" to="/shoulder_cloud" />
+  </node>
+
+  <!-- collision map self occlusion -->
+  <include file="$(find rosie_arm_navigation_perception)/launch/collision_map_self_occ.launch"/>
+</launch>
+

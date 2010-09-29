@@ -1,0 +1,49 @@
+sensors:
+  -
+    description:
+      device: coretemp-isa-0000
+      name: Core 0
+    thresholds:
+      ok_range:
+        maximum: 60
+      warning_range:
+        minimum: 60
+        maximum: 70
+      error_range:
+        minimum: 70
+  -
+    description:
+      device: coretemp-isa-0001
+      name: Core 1
+    thresholds:
+      ok_range:
+        maximum: 60
+      warning_range:
+        minimum: 60
+        maximum: 70
+      error_range:
+        minimum: 70
+  -
+    description:
+      device: coretemp-isa-0002
+      name: Core 2
+    thresholds:
+      ok_range:
+        maximum: 60
+      warning_range:
+        minimum: 60
+        maximum: 70
+      error_range:
+        minimum: 70
+  -
+    description:
+      device: coretemp-isa-0003
+      name: Core 3
+    thresholds:
+      ok_range:
+        maximum: 60
+      warning_range:
+        minimum: 60
+        maximum: 70
+      error_range:
+        minimum: 70
