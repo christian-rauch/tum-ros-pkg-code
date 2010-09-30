@@ -1,0 +1,9 @@
+#goal
+uint32 lo_id
+uint32 mode  # 0 = look at it once , 1 = follow the object
+---
+#result
+string answer
+---
+#feedback
+string status

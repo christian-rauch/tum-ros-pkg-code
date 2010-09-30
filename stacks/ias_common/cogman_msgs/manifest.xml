@@ -1,0 +1,14 @@
+<package>
+  <description brief="Messages related to Manipulation">
+  </description>
+  <author>Alexis Maldonado</author>
+  <license>GPLv3</license>
+  <review status="unreviewed" notes=""/>
+  <depend package="geometry_msgs"/>
+  <depend package="actionlib_msgs"/>
+  <depend package="actionlib"/>
+</package>
+
+
+
+
