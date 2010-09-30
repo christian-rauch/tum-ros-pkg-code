@@ -1,0 +1,89 @@
+<launch>
+  <group ns="stereo_table_cluster_detector">
+    
+    <node pkg="pcl_cloud_tools" type="transform_pointcloud_node" name="transform_pointcloud_node" output="screen">
+      <remap from="/cloud_pcd" to="/narrow_stereo_textured/points2" />
+    </node>
+
+    <node pkg="pcl_cloud_tools" type="pad_hull_node" name="pad_hull_node" output="screen">
+      <remap from="/cloud_pcd" to="table_convex_hull/output" />
+    </node>
+
+    
+    <!-- PCL Manager -->
+    <node pkg="nodelet" type="nodelet" name="pcl_manager" args="manager" output="screen" />
+    
+    <!-- Run a voxel_grid filter to clean NaNs -->
+    <node pkg="nodelet" type="nodelet" name="voxel_grid" args="load pcl/VoxelGrid pcl_manager" output="screen">
+      <remap from="voxel_grid/input" to="/cloud_pcd_transformed" />
+      <rosparam>
+        leaf_size: 0.01
+        filter_field_name: x
+        filter_limit_min: 0.0
+        filter_limit_max: 1.2
+      </rosparam>
+    </node>
+
+    <!-- Segment the table plane -->
+    <node pkg="nodelet" type="nodelet" name="planar_segmentation_stereo" args="load pcl/SACSegmentation pcl_manager" output="screen">
+      <remap from="planar_segmentation_stereo/input" to="voxel_grid/output" />
+      <rosparam>
+        model_type: 9
+        max_iterations: 1000
+        method_type: 0
+        model_threshold: 0.01
+        distance_threshold: 0.01
+        optimize_coefficients : true
+        axis: [0.0, 0.0, 1.0]
+        eps_angle: 0.08
+      </rosparam>
+    </node>
+
+    <!-- Project the planar inliers -->
+    <node pkg="nodelet" type="nodelet" name="project_planar_inliers" args="load pcl/ProjectInliers pcl_manager" output="screen">
+      <remap from="~input" to="voxel_grid/output" />
+      <remap from="~inliers" to="planar_segmentation_stereo/inliers" />
+      <remap from="~model" to="planar_segmentation_stereo/model" />
+      <rosparam>
+        model_type: 9
+        copy_all_data: false
+        copy_all_fields: false
+      </rosparam>
+    </node>
+
+    <!-- Compute the convex hull -->
+    <node pkg="nodelet" type="nodelet" name="table_convex_hull" args="load pcl/ConvexHull2D pcl_manager" output="screen">
+      <remap from="~input" to="project_planar_inliers/output" />
+    </node>
+
+    <!-- Extract the remaining of all-plane (XYZ) -->
+    <node pkg="nodelet" type="nodelet" name="extract_remaining_indices" args="load pcl/ExtractIndices pcl_manager" output="screen">
+      <remap from="extract_remaining_indices/input"   to="voxel_grid/output" />
+      <remap from="extract_remaining_indices/indices" to="planar_segmentation_stereo/inliers" />
+      <rosparam>
+        negative: true
+      </rosparam>
+    </node>
+
+
+    <!-- Extract the object clusters using a polygonal prism -->
+    <node pkg="nodelet" type="nodelet" name="table_object_candidates" args="load pcl/ExtractPolygonalPrismData pcl_manager" output="screen">
+      <remap from="~input" to="extract_remaining_indices/output" />
+      <remap from="~planar_hull"   to="/cloud_pcd_padded" />
+      <rosparam>
+        height_min: 0.02
+        height_max: 0.2
+        vpz: 1.3
+      </rosparam>
+    </node>
+
+    <node pkg="nodelet" type="nodelet" name="extract_table_object_candidates" args="load pcl/ExtractIndices pcl_manager" output="screen">
+      <!-- Extract_plane_indices needs to be negated for this work -->
+      <remap from="~input"   to="extract_remaining_indices/output" />
+      <remap from="~indices" to="table_object_candidates/output" />
+      <rosparam>
+        negative: false
+      </rosparam>
+    </node>
+  </group>
+</launch>
