@@ -1,0 +1,19 @@
+<package>
+  <description brief="nav_pcontroller">
+
+     simple P-Controller for a holonomic robot base.
+
+  </description>
+  <author>Ingo Kresse</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <depend package="tf"/>
+  <depend package="roscpp"/>
+  <depend package="vision_srvs" />
+  <depend package="visualization_msgs" />
+  <depend package="actionlib_msgs" />
+  <depend package="navp_action" />
+  <depend package="move_base_msgs"/>
+</package>
+
+

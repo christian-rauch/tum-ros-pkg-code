@@ -1,0 +1,4 @@
+src/nav_pcontroller/
+msg/
+msg_gen/
+.genaction
