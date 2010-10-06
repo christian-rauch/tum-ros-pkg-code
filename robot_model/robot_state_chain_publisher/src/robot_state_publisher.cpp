@@ -60,8 +60,15 @@ RobotStatePublisher::RobotStatePublisher(const Tree& tree)
   SegmentMap::const_iterator root = tree.getRootSegment();
   if (root->second.children.empty())
     throw empty_tree_ex;
-
-  root_ = (*root->second.children.begin())->first;
+  
+  root_ = root->first;
+  ignore_root = false;
+  
+  if (root_ == "world")
+  {
+    ignore_root = true;
+    root_ = (*root->second.children.begin())->first;
+  }
 }
 
 
@@ -69,7 +76,10 @@ RobotStatePublisher::RobotStatePublisher(const Tree& tree)
 bool RobotStatePublisher::publishTransforms(map<string, RobotStatePublisher::JointState >& joint_positions, const Time& time, const ros::Time& republish_time)
 {
   int i=0;
-  tf_msg_.transforms.resize(tree_.getNrOfSegments()-1);
+  if (ignore_root)
+    tf_msg_.transforms.resize(tree_.getNrOfSegments()-1);
+  else
+    tf_msg_.transforms.resize(tree_.getNrOfSegments());
   addChildTransforms( joint_positions, tree_.getSegment( root_ ), i, time, republish_time );
   tf_msg_.transforms.resize(i);
 

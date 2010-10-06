@@ -64,6 +64,7 @@ namespace robot_state_chain_publisher{
         ros::Publisher tf_publisher_;
         KDL::Tree tree_;
         std::string root_;
+        bool ignore_root;
         std::string tf_prefix_;
         tf::tfMessage tf_msg_;
 
