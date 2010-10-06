@@ -63,7 +63,7 @@
         <origin xyz="0 ${reflect * -0.5 * wheel_width} 0"
                 rpy="${0.5 * reflect * M_PI} 0 0"/>
         <geometry>
-          <cylinder radius="${wheel_radius}" length="${wheel_width}"/>
+          <cylinder radius="${0.99 * wheel_radius}" length="${wheel_width}"/>
         </geometry>
         <material name="Black"/>
       </visual>
@@ -87,13 +87,13 @@
 
   <macro name="rosie_base" params="name *origin">
     
-    <link name="world"/>
+    <!--link name="world"/>
     
-    <joint name="${name}_joint" type="continuous">
+    <joint name="${name}_joint" type="floating">
       <insert_block name="origin" />
       <parent link="world"/>
       <child link="${name}_link"/>
-    </joint>
+    </joint-->
 
     <link name="${name}_link">
       <inertial>
@@ -129,7 +129,7 @@
     <gazebo reference="${name}_link">
       <material value="kimp.material"/>
     </gazebo>
-
+    
     <rosie_wheel parent="${name}" suffix="left_front" reflect="-1">
       <origin xyz="${wheel_offset_x} ${wheel_offset_y} ${wheel_radius}"
               rpy="0 0 0"/>
@@ -151,25 +151,26 @@
     </rosie_wheel>
     
     <!-- Add the fake omnidrive -->
-    <rosie_omniwheel_caster suffix="left_front_omnidrive" parent="${name}_link">
+    <rosie_caster_v0 suffix="fl_omnidrive" parent="${name}_link">
       <origin xyz="${omni_caster_offset_x} ${omni_caster_offset_y} ${omni_wheel_radius}"
               rpy="0 0 0"/>
-    </rosie_omniwheel_caster>
+    </rosie_caster_v0>
 
-    <rosie_omniwheel_caster suffix="right_front_omnidrive" parent="${name}_link">
+
+    <rosie_caster_v0 suffix="fr_omnidrive" parent="${name}_link">
       <origin xyz="${omni_caster_offset_x} ${-omni_caster_offset_y} ${omni_wheel_radius}"
               rpy="0 0 0"/>
-    </rosie_omniwheel_caster>
+    </rosie_caster_v0>
 
-    <rosie_omniwheel_caster suffix="left_back_omnidrive" parent="${name}_link">
+    <rosie_caster_v0 suffix="bl_omnidrive" parent="${name}_link">
       <origin xyz="${-omni_caster_offset_x} ${omni_caster_offset_y} ${omni_wheel_radius}"
               rpy="0 0 0"/>
-    </rosie_omniwheel_caster>
+    </rosie_caster_v0>
 
-    <rosie_omniwheel_caster suffix="right_back_omnidrive" parent="${name}_link">
+    <rosie_caster_v0 suffix="br_omnidrive" parent="${name}_link">
       <origin xyz="${-omni_caster_offset_x} ${-omni_caster_offset_y} ${omni_wheel_radius}"
               rpy="0 0 0"/>
-    </rosie_omniwheel_caster>
+    </rosie_caster_v0>
     
     <!-- gscam -->
     <link  name="gs_cam" >

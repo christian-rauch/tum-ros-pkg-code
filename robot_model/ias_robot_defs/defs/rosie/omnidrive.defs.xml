@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 
-<robot xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor"
-       xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller"
-       xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface">
+<robot> 
 
   <include filename="$(find ias_robot_defs)/defs/util_defs.xml"/>
+  <include filename="$(find ias_robot_defs)/defs/rosie/base_transmission.defs.xml"/>
+  <include filename="$(find ias_robot_defs)/defs/rosie/base_gazebo.defs.xml"/>
 
   <!--
      The next two macros are for faking the omnidrive. The code is taken from pr2
@@ -18,78 +18,69 @@
   <property name="omni_caster_offset_x" value="0.2225" />
   <property name="omni_caster_offset_y" value="0.2225" />
 
-  <macro name="rosie_omniwheel" params="suffix parent reflect">
+  <!--                                                      -->
+  <!--           wheel                                      -->
+  <!--                                                      -->
+  <macro name="rosie_omniwheel_v0" params="suffix parent reflect">
+
     <joint name="${parent}_${suffix}_wheel_joint" type="continuous">
       <origin xyz="0 ${reflect*omni_caster_wheel_offset_y} 0" rpy="0 0 0" />
       <axis xyz="0 1 0" />
-      <limit effort="100" velocity="100" />
+      <limit effort="100" velocity="100"/>
       <dynamics damping="0.0" friction="0.0" />
       <parent link="${parent}_rotation_link"/>
       <child link="${parent}_${suffix}_wheel_link"/>
     </joint>
-
+    
     <link name="${parent}_${suffix}_wheel_link">
       <inertial>
-        <mass value="0.44036" /> <!-- check jmh 20081205 -->
-        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="0.44036" />
+        <origin xyz="0 0 0" />
         <inertia  ixx="0.012411765597" ixy="-0.000711733678" ixz="0.00050272983"
                   iyy="0.015218160428" iyz="-0.000004273467" izz="0.011763977943" />
       </inertial>
       <visual>
         <origin xyz="0 0 0" rpy="${M_PI / 2} 0 0" />
         <geometry>
+          <!--cylinder radius="${omni_wheel_radius}" length="${omni_wheel_length}" /-->    <!--- for visualising the real wheels used for moving-->
           <cylinder radius="0.001" length="0.001" />
         </geometry>
       </visual>
       <collision>
-        <origin xyz="0 0 0" rpy="${M_PI/2} 0 0" />
+        <origin xyz="0 0 0" rpy="${M_PI/2} 0 0" /> <!-- rotation because cyl. geom primitive has symmetry axis in +x direction -->
         <geometry>
           <cylinder radius="${omni_wheel_radius}" length="${omni_wheel_length}" />
         </geometry>
       </collision>
     </link>
 
-    <transmission type="SimpleTransmission" name="${parent}_${suffix}_wheel_trans">
-      <actuator name="${parent}_${suffix}_wheel_motor" />
-      <joint name="${parent}_${suffix}_wheel_joint" />
-      <mechanicalReduction>${reflect}</mechanicalReduction>
-    </transmission>
+    <!-- extensions -->
+    <rosie_omniwheel_gazebo_v0 parent="${parent}" suffix="${suffix}" />
+    <rosie_omniwheel_transmission_v0 parent="${parent}" suffix="${suffix}" reflect="${reflect}" />
 
-    <gazebo reference="${parent}_${suffix}_wheel_link">
-      <sensor:contact name="${parent}_${suffix}_wheel_contact_sensor">
-        <geom>${parent}_${suffix}_wheel_link_geom</geom>
-        <updateRate>100.0</updateRate>
-        <controller:gazebo_ros_bumper name="${parent}_${suffix}_wheel_ros_bumper_controller" plugin="libgazebo_ros_bumper.so">
-          <alwaysOn>true</alwaysOn>
-          <updateRate>100.0</updateRate>
-          <bumperTopicName>${parent}_${suffix}_wheel_bumper</bumperTopicName>
-          <interface:bumper name="${parent}_${suffix}_wheel_ros_bumper_iface" />
-        </controller:gazebo_ros_bumper>
-      </sensor:contact>
-      <mu1 value="100.0" />
-      <mu2 value="100.0" />
-      <kp value="1000000.0" />
-      <kd value="1.0" />
-    </gazebo>
   </macro>
 
-  <macro name="rosie_omniwheel_caster" params="suffix parent *origin">
-    <joint name="${suffix}_caster_rotation_joint" type="continuous">
-      <insert_block name="origin" />
+  <!-- Macro for PR2 Caster hub only -->
+  <macro name="rosie_caster_hub_v0" params="suffix parent *origin" >
+      
+    <joint name="${suffix}_rotation_joint" type="continuous">
       <axis xyz="0 0 1" />
-      <limit effort="100" velocity="100" />
+      <limit effort="100" velocity="100"/> <!-- alpha tested velocity and effort limits -->
+      <!--safety_controller  k_velocity="10" /-->
       <dynamics damping="0.0" friction="0.0" />
-      <parent link="${parent}" />
-      <child link="${suffix}_caster_rotation_link" />
+      <insert_block name="origin" />
+      <parent link="${parent}"/>
+      <child link="${suffix}_rotation_link" />
     </joint>
-
-    <link name="${suffix}_caster_rotation_link">
+    
+    <link name="${suffix}_rotation_link">
       <inertial>
-        <mass value="3.473082" />
-        <origin xyz="0 0 0.07" rpy="0 0 0"/>
+        <mass value="3.473082"/>
+        <origin xyz="0 0 0.07" />
         <inertia  ixx="0.012411765597" ixy="-0.000711733678" ixz="0.00050272983"
                   iyy="0.015218160428" iyz="-0.000004273467" izz="0.011763977943" />
       </inertial>
+
       <visual>
         <origin xyz="0 0 0.07" rpy="0 0 0" />
         <geometry>
@@ -104,14 +95,20 @@
       </collision>
     </link>
 
-    <transmission type="SimpleTransmission" name="${suffix}_caster_rotation_trans">
-      <actuator name="${suffix}_caster_rotation_motor" />
-      <joint name="${suffix}_caster_rotation_joint" />
-      <mechanicalReduction>-1</mechanicalReduction>
-    </transmission>
+    <!-- extensions -->
+    <rosie_caster_transmission_v0 suffix="${suffix}" />
+  </macro>
 
-    <rosie_omniwheel parent="${suffix}_caster" suffix="l" reflect="1" />
-    <rosie_omniwheel parent="${suffix}_caster" suffix="r" reflect="-1" />
+  <macro name="rosie_caster_v0" params="suffix parent *origin">
+
+    <rosie_caster_hub_v0 parent="${parent}" suffix="${suffix}_caster" >
+      <insert_block name="origin" />
+    </rosie_caster_hub_v0>
+
+    <!-- wheel macros -->
+    <rosie_omniwheel_v0 parent="${suffix}_caster" suffix="l" reflect="1" />
+    <rosie_omniwheel_v0 parent="${suffix}_caster" suffix="r" reflect="-1" />
+
   </macro>
 
 </robot>

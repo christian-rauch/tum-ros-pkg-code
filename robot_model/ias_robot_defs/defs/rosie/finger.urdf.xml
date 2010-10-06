@@ -10,7 +10,14 @@
       <insert_block name = "origin" />
       <axis xyz = "0 0 1" />
       <limit lower="-0.261799388" upper="0.261799388" effort="100" velocity="100"/> <!-- lowStop = -15 , highStop = +15 -->
+      <dynamics damping="${testing_damping_value}"/>
     </joint>
+    
+    <transmission name="${name}_base_trans" type="SimpleTransmission">
+      <actuator name="${name}_base_motor"/>
+      <joint name="${name}_base_joint"/>
+      <mechanicalReduction>1.0</mechanicalReduction>
+    </transmission>
     
     <link name = "${name}_base_link">
       <inertial>
@@ -104,7 +111,14 @@
       <origin xyz = "0 0 0" rpy = "1.570796 0 0" />
       <axis xyz = "0 0 1" />
       <limit lower="-0.087266463" upper="1.134464014" effort="100" velocity="100" />  <!-- lowStop = -5 highStop = 65 -->
+      <dynamics damping="${testing_damping_value}"/>
     </joint>
+    
+    <transmission name="${name}_proximal_trans" type="SimpleTransmission">
+      <actuator name="${name}_proximal_motor"/>
+      <joint name="${name}_proximal_joint"/>
+      <mechanicalReduction>1.0</mechanicalReduction>
+    </transmission>
     
     <joint name = "${name}_middle_joint" type = "revolute">
       <parent link = "${name}_proximal_link" />
@@ -112,7 +126,14 @@
       <origin xyz = "0.0678 0 0" rpy = "0 0 0" />
       <axis xyz = "0 0 1" />
       <limit lower="0.087266463" upper="1.134464014" effort="100" velocity="100" />  <!-- lowStop = 5 highStop = 65 -->
+      <dynamics damping="${testing_damping_value}"/>
     </joint>
+    
+    <transmission name="${name}_middle_trans" type="SimpleTransmission">
+      <actuator name="${name}_middle_motor"/>
+      <joint name="${name}_middle_joint"/>
+      <mechanicalReduction>1.0</mechanicalReduction>
+    </transmission>
 
     <joint name = "${name}_distal_joint" type = "revolute">
       <parent link = "${name}_middle_link" />
@@ -120,7 +141,14 @@
       <origin xyz = "0.030 0 0" rpy = "0 0 -1.57" />
       <axis xyz = "0 0 1" />
       <limit lower="0.087266463" upper="1.134464014" effort="100" velocity="100" />  <!-- lowStop = 5 highStop = 65 -->
+      <dynamics damping="${testing_damping_value}"/>
     </joint>
+    
+    <transmission name="${name}_distal_trans" type="SimpleTransmission">
+      <actuator name="${name}_distal_motor"/>
+      <joint name="${name}_distal_joint"/>
+      <mechanicalReduction>1.0</mechanicalReduction>
+    </transmission>
     
     <!--joint name = "${name}_joint_3" type = "fixed">
       <parent link = "${name}_distal_link" />

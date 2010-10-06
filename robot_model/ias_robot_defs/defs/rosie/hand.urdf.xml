@@ -9,6 +9,8 @@
   inertial matrix definition based on the bounding boxes of the 
   links.-->
     
+  <property name="testing_damping_value" value="0.005"/>
+  
   <macro name = "dlr_hit_right_hand" params = "name parent *origin">
     
     <joint name = "${name}_mount_joint" type = "fixed">
@@ -65,7 +67,14 @@
       <origin xyz = "-0.003 0.0271 0" rpy = "0 0 0" />
       <axis xyz = "0 0 -1" />
       <limit lower="0" upper="1.570796" effort="100" velocity="100" />  <!-- lowStop = 0 highStop = 90 -->
+      <dynamics damping="${testing_damping_value}"/>
     </joint>
+    
+    <transmission name="${name}_thumb_trans" type="SimpleTransmission">
+      <actuator name="${name}_thumb_motor"/>
+      <joint name="${name}_thumb_joint"/>
+      <mechanicalReduction>1.0</mechanicalReduction>
+    </transmission>
 
     <dlr_hit_hand_finger name = "${name}_ring_finger" parent = "${name}_palm">
       <origin xyz = "-0.0043 -0.040165 0.14543" rpy = "1.570796 -1.536488 1.570796" />
@@ -141,7 +150,14 @@
       <origin xyz = "-0.003 -0.0271 0" rpy = "0 0 0" />
       <axis xyz = "0 0 1" />
       <limit lower="0" upper="1.570796" effort="100" velocity="100" />  <!-- lowStop = 0 highStop = 90 -->
+      <dynamics damping="${testing_damping_value}"/>
     </joint>
+    
+    <transmission name="${name}_thumb_trans" type="SimpleTransmission">
+      <actuator name="${name}_thumb_motor"/>
+      <joint name="${name}_thumb_joint"/>
+      <mechanicalReduction>1.0</mechanicalReduction>
+    </transmission>
     
     <dlr_hit_hand_finger name = "${name}_ring_finger" parent = "${name}_palm">
       <origin xyz = "-0.0043 0.040165 0.14543" rpy = "1.570796 -1.536488 1.570796" />
