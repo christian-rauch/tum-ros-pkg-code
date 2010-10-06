@@ -1,0 +1,86 @@
+base_controller:
+  caster_names: fr_omnidrive_caster_rotation_link fl_omnidrive_caster_rotation_link bl_omnidrive_caster_rotation_link br_omnidrive_caster_rotation_link
+
+  type: pr2_mechanism_controllers/Pr2BaseController
+  publish_tf: false
+
+  caster_velocity_pid_gains: &caster_velocity_pid_gains
+    p: 8.0
+    d: 0.0
+    i: 0.1
+    i_clamp: 4.0
+
+  caster_position_pid_gains: &caster_position_pid_gains
+    p: 80.0
+    d: 0.0
+    i: 0.0
+    i_clamp: 3.45
+
+  wheel_pid_gains: &wheel_pid_gains
+    p: 3.0
+    d: 0.0
+    i: 0.0
+    i_clamp: 2.0
+
+  fl_omnidrive_caster_l_wheel_joint:
+    *wheel_pid_gains
+  fl_omnidrive_caster_r_wheel_joint:
+    *wheel_pid_gains
+  fr_omnidrive_caster_l_wheel_joint:
+    *wheel_pid_gains
+  fr_omnidrive_caster_r_wheel_joint:
+    *wheel_pid_gains
+  bl_omnidrive_caster_l_wheel_joint:
+    *wheel_pid_gains
+  bl_omnidrive_caster_r_wheel_joint:
+    *wheel_pid_gains
+  br_omnidrive_caster_l_wheel_joint:
+    *wheel_pid_gains
+  br_omnidrive_caster_r_wheel_joint:
+    *wheel_pid_gains
+
+  fr_omnidrive_caster_rotation_joint:
+    velocity_controller:
+      *caster_velocity_pid_gains
+    position_controller:
+      *caster_position_pid_gains
+  fl_omnidrive_caster_rotation_joint:
+    velocity_controller:
+      *caster_velocity_pid_gains
+    position_controller:
+      *caster_position_pid_gains
+  bl_omnidrive_caster_rotation_joint:
+    velocity_controller:
+      *caster_velocity_pid_gains
+    position_controller:
+      *caster_position_pid_gains
+  br_omnidrive_caster_rotation_joint:
+    velocity_controller:
+      *caster_velocity_pid_gains
+    position_controller:
+      *caster_position_pid_gains
+
+  timeout: 0.2
+  max_translational_acceleration: 
+    x: 2.0
+    y: 2.0 
+  max_rotational_acceleration: 2.0
+  state_publish_rate: 0.25
+
+  max_translational_velocity: 1.0 
+  max_rotational_velocity: 2.0
+
+  caster_velocity_filter:
+    name: caster_velocity_filter
+    type: filters/MultiChannelTransferFunctionFilterDouble
+    params:
+      a: [1.0, -0.98]
+      b: [0.02]
+
+  wheel_velocity_filter:
+    name: wheel_velocity_filter
+    type: filters/MultiChannelTransferFunctionFilterDouble
+    params:
+      a: [1.0, -0.5]
+      b: [0.5]
+

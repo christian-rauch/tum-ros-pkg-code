@@ -1,0 +1,6 @@
+<launch>
+  <include file="$(find ias_gazebo)/environments/empty_world.launch"/>
+  <include file="$(find ias_gazebo)/environments/kitchen.launch"/>
+  <include file="$(find ias_gazebo)/robots/rosie.launch"/>
+  <include file="$(find jlo)/jlo.launch"/>
+</launch>

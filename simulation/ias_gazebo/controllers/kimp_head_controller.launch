@@ -1,0 +1,11 @@
+<launch>
+
+  <rosparam file="$(find ias_gazebo)/controllers/kimp/head_controller.yaml" command="load" />
+  <rosparam file="$(find ias_gazebo)/controllers/kimp/tilting_laser_controller.yaml" command="load" />>
+  
+  <node name="head_spawner" pkg="pr2_controller_manager" type="spawner"
+        args="head_controller tilting_laser_controller"
+        output="screen"/>
+
+  <node name="tilt_laser" pkg="ias_gazebo" type="tilt_laser.py"/>
+</launch>

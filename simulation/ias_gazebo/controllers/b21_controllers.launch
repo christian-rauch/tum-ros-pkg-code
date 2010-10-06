@@ -1,0 +1,3 @@
+<launch>
+  <include file="$(find ias_gazebo)/controllers/b21_arms_cartesian_pose_controllers.launch"/>
+</launch>

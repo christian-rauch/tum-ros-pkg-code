@@ -1,0 +1,8 @@
+<launch>
+
+  <rosparam file="$(find ias_gazebo)/controllers/kimp/cartesian_pose_controllers.yaml" command="load" />
+  <node name="arms_spawner" pkg="pr2_controller_manager" type="spawner"
+        args="l_arm_cartesian_pose_controller r_arm_cartesian_pose_controller"
+        output="screen"/>  
+
+</launch>

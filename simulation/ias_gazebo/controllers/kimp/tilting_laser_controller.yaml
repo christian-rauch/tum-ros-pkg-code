@@ -1,0 +1,8 @@
+tilting_laser_controller:
+  type: JointVelocityController
+  joint: shoulder_tilting_joint
+  pid:
+    p: 2
+    i: 0
+    d: 0
+    i_clamp: 0.1

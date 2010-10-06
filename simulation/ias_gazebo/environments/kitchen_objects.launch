@@ -1,0 +1,4 @@
+<launch>
+  <node name="kitchen_loader" pkg="gazebo_tools" type="gazebo_model"
+        args="-f $(find ias_gazebo)/worlds/kitchen_objects.model spawn kitchen" respawn="false" />
+</launch>

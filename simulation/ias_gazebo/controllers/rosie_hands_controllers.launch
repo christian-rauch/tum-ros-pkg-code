@@ -1,0 +1,8 @@
+<launch>
+
+  <rosparam file="$(find ias_gazebo)/controllers/rosie/rosie_hand_controller.yaml" command="load" />
+  <node name="hands_spawner" pkg="pr2_controller_manager" type="spawner"
+        args="l_hand_controller"
+        output="screen"/>  
+
+</launch>

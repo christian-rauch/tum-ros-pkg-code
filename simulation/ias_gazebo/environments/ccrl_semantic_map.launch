@@ -1,0 +1,8 @@
+<launch>
+
+  <include file="$(find kbquery)/kbquery_ccrl_semantic_map.launch"/>
+
+  <node name="kitchen_loader" pkg="ias_gazebo" type="load_semantic_map.sh"
+        args="kitchen_description" respawn="false" />
+ 
+</launch>

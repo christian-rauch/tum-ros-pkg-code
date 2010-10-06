@@ -1,0 +1,8 @@
+<launch>
+
+  <include file = "$(find ias_gazebo)/controllers/rosie_base_controller_odom.launch" />
+  <include file = "$(find ias_gazebo)/controllers/rosie_arms_trajectory_controllers.launch" /> 
+  <include file = "$(find ias_gazebo)/controllers/rosie_head_controller.launch" />
+  <!--include file = "$(find ias_gazebo)/controllers/rosie_hands_controllers.launch" /--> 
+
+</launch>

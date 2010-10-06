@@ -1,0 +1,32 @@
+material Ias/Wall
+{
+  receive_shadows on
+
+	technique
+	{
+		pass
+		{
+			ambient 0.6 0.6 0.6 1.0
+            diffuse 0.625 0.625 0.625 1.0
+            specular 0.65 0.65 0.65 1
+            shading phong
+		}
+	}
+}
+
+material Ias/KitchenBoard
+{
+  receive_shadows on
+
+	technique
+	{
+		pass
+		{
+			ambient 0.65 0.65 0.65 1.0
+            diffuse 0.675 0.675 0.675 1.0
+            specular 0.7 0.7 0.7 1
+            shading phong
+		}
+	}
+}
+

@@ -1,0 +1,8 @@
+<launch>
+  <node pkg="map_server" type="map_server" name="map_server" args="$(find ias_gazebo)/localization/maps/gazebo_kitchen_5cm.yaml" respawn="false" output="screen"/>
+  
+  <node name="fake_localization" pkg="fake_localization" type="fake_localization">
+    <param name="delta_x" value="1.4"/>
+    <param name="delta_y" value="2.4"/>
+  </node>
+</launch>

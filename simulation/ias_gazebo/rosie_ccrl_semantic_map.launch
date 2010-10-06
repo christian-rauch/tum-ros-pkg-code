@@ -1,0 +1,5 @@
+<launch>
+  <include file="$(find ias_gazebo)/environments/empty_world.launch"/>
+  <include file="$(find ias_gazebo)/environments/ccrl_semantic_map.launch"/>
+  <include file="$(find ias_gazebo)/robots/rosie.launch"/>
+</launch>

@@ -1,0 +1,12 @@
+<launch>
+
+  <!-- send urdf to param server -->
+  <param name="coffee_cup"      textfile="$(find gazebo_worlds)/objects/coffee_cup.model" />
+
+  <!-- push urdf to factory and spawn robot in gazebo -->
+  <node name="cup_spawner" pkg="gazebo_tools" type="xml2factory"
+        args="coffee_cup 0.33 2.80 1.099  0 0 0 coffee_cup"
+        respawn="false" output="screen" />
+
+</launch>
+

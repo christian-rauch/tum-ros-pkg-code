@@ -1,0 +1,12 @@
+<launch>
+
+  <rosparam file="$(find ias_gazebo)/controllers/rosie/base_controller.yaml" command="load"/>
+  <rosparam file="$(find ias_gazebo)/controllers/rosie/odometry.yaml" command="load" ns="rosie_odometry" />
+  <node name="spawner_base_odometry" pkg="pr2_controller_manager"
+        type="spawner" args="base_controller rosie_odometry" output="screen"/>
+
+  <!-- This is needed since fake_localization needs a base_footprint -->
+  <node name="base_footprint_publisher" pkg="tf" type="static_transform_publisher"
+        args="0 0 0 0 0 0 /base_footprint /base_link 1000"/>
+
+</launch>

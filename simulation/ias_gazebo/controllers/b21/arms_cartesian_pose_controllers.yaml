@@ -1,0 +1,87 @@
+cartesian_twist_gains: &cartesian_twist_gains
+  ff_trans: 0.0
+  fb_trans:
+    p: 25.0
+    i: 0.5
+    d: 0.0
+    i_clamp: 1.0
+  ff_rot: 0.0
+  fb_rot:
+    p: 0.5
+    i: 0.1
+    d: 0.0
+    i_clamp: 0.2
+
+cartesian_pose_gains: &cartesian_pose_gains
+  p: 65
+  d: 0
+    
+r_arm_cartesian_wrench_controller:
+  type: CartesianWrenchController
+  root_name: b21_link
+  tip_name: right_arm_6_link
+r_arm_cartesian_twist_controller:
+  type: CartesianTwistController
+  root_name: b21_link
+  tip_name: right_arm_6_link
+  output: r_arm_cartesian_wrench_controller
+  <<: *cartesian_twist_gains
+r_arm_cartesian_pose_controller:
+  type: CartesianPoseController
+  root_name: b21_link
+  tip_name: right_arm_6_link
+  output: r_arm_cartesian_twist_controller
+  <<: *cartesian_pose_gains
+
+r_gripper_1_controller:
+  type: JointPositionController
+  joint: right_gripper_1_joint
+  pid:
+    p: 1.0
+    i: 0.0
+    d: 0.0
+    i_clamp: 0.0
+
+r_gripper_2_controller:
+  type: JointPositionController
+  joint: right_gripper_2_joint
+  pid:
+    p: 1.0
+    i: 0.0
+    d: 0.0
+    i_clamp: 0.0
+
+l_arm_cartesian_wrench_controller:
+  type: CartesianWrenchController
+  root_name: b21_link
+  tip_name: left_arm_6_link
+l_arm_cartesian_twist_controller:
+  type: CartesianTwistController
+  root_name: b21_link
+  tip_name: left_arm_6_link
+  output: l_arm_cartesian_wrench_controller
+  <<: *cartesian_twist_gains
+l_arm_cartesian_pose_controller:
+  type: CartesianPoseController
+  root_name: b21_link
+  tip_name: left_arm_6_link
+  output: l_arm_cartesian_twist_controller
+  <<: *cartesian_pose_gains
+
+l_gripper_1_controller:
+  type: JointPositionController
+  joint: left_gripper_1_joint
+  pid:
+    p: 1.0
+    i: 0.0
+    d: 0.0
+    i_clamp: 0.0
+
+l_gripper_2_controller:
+  type: JointPositionController
+  joint: left_gripper_2_joint
+  pid:
+    p: 1.0
+    i: 0.0
+    d: 0.0
+    i_clamp: 0.0
