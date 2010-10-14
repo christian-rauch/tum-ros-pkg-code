@@ -1,0 +1,26 @@
+<launch>
+  <node pkg="nav_pcontroller" type="nav_pcontroller" name="nav_pcontroller" respawn="false">
+    <param name="slowdown_far" value="0.20"/>
+    <param name="slowdown_near" value="0.08"/>
+    <param name="safety_dist" value="0.06"/>
+    <param name="repelling_dist" value="0.10"/>
+    <param name="repelling_gain" value="0.5"/>
+    <param name="repelling_gain_max" value="0.015"/>
+
+    <param name="vel_ang_max" value="0.6"/>
+    <param name="vel_lin_max" value="0.1"/>
+    <param name="acc_ang_max" value="0.4"/>
+    <param name="acc_lin_max" value="0.4"/>
+    <param name="loop_rate" value="30"/>
+    <param name="p" value="1.2"/>
+
+    <remap from="~laser_1" to="/base_scan_front"/>
+    <remap from="~laser_2" to="/base_scan_rear"/>
+  </node>
+
+  <include file="$(find rosie_move_base)/move_base.launch" />
+  <node pkg="fake_localization" type="fake_localization" name="fake_localization" respawn="false" output="screen" >
+    <param name="odom_frame_id" value="odom"/>
+  </node>
+
+</launch>

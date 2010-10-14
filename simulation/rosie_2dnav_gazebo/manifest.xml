@@ -1,0 +1,17 @@
+<package>
+  <description brief="rosie_2dnav_gazebo">
+
+     rosie_2dnav_gazebo
+
+  </description>
+  <author>Lorenz Moesenlechner</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/rosie_2dnav_gazebo</url>
+  <depend package="fake_localization"/>
+  <depend package="rosie_movie_base"/>
+  <depend package="nav_pcontroller"/>
+
+</package>
+
+
