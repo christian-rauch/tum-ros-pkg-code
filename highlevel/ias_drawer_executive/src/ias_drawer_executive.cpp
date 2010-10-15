@@ -1,933 +1,927 @@
+/* 
+ * Copyright (c) 2010, Thomas Ruehr <ruehr@cs.tum.edu>
+ * All rights reserved.
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ *     * Redistributions of source code must retain the above copyright
+ *       notice, this list of conditions and the following disclaimer.
+ *     * Redistributions in binary form must reproduce the above copyright
+ *       notice, this list of conditions and the following disclaimer in the
+ *       documentation and/or other materials provided with the distribution.
+ *     * Neither the name of Willow Garage, Inc. nor the names of its
+ *       contributors may be used to endorse or promote products derived from
+ *       this software without specific prior written permission.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
 // roslaunch arm_ik.launch
 #include <ros/ros.h>
-#include <pr2_controllers_msgs/JointTrajectoryAction.h>
-#include <actionlib/client/simple_action_client.h>
-#include <actionlib/client/terminal_state.h>
-#include <pr2_common_action_msgs/ArmMoveIKAction.h>
-#include <tf/transform_listener.h>
-#include <pr2_controllers_msgs/Pr2GripperCommandAction.h>
-#include <move_base_msgs/MoveBaseAction.h>
-#include <geometry_msgs/Twist.h>
 
+#include <ias_drawer_executive/RobotDriver.h>
+#include <ias_drawer_executive/Gripper.h>
+#include <ias_drawer_executive/Pressure.h>
+#include <ias_drawer_executive/Poses.h>
+#include <ias_drawer_executive/RobotArm.h>
+#include <ias_drawer_executive/AverageTF.h>
+#include <ias_drawer_executive/Torso.h>
+#include <ias_drawer_executive/Head.h>
+#include <ias_drawer_executive/OperateHandleController.h>
 
-void QuaternionToEuler(const btQuaternion &TQuat, btVector3 &TEuler)
+#include <boost/thread.hpp>
+
+#include <actionlib/client/simple_client_goal_state.h>
+#include <visualization_msgs/Marker.h>
+
+#include <ias_drawer_executive/DemoScripts.h>
+
+tf::Stamped<tf::Pose> toPose(float x, float y, float z, float ox, float oy, float oz, float ow, const char fixed_frame[])
 {
-   btScalar W = TQuat.getW();
-   btScalar X = TQuat.getX();
-   btScalar Y = TQuat.getY();
-   btScalar Z = TQuat.getZ();
-   float WSquared = W * W;
-   float XSquared = X * X;
-   float YSquared = Y * Y;
-   float ZSquared = Z * Z;
-   TEuler.setX(atan2f(2.0f * (Y * Z + X * W), -XSquared - YSquared + ZSquared + WSquared));
-   TEuler.setY(asinf(-2.0f * (X * Z - Y * W)));
-   TEuler.setZ(atan2f(2.0f * (X * Y + Z * W), XSquared - YSquared - ZSquared + WSquared));
- //   TEuler *= RADTODEG;
-};
-
-
-class RobotDriver
-{
-private:
-  //! The node handle we'll be using
-  ros::NodeHandle nh_;
-  //! We will be publishing to the "cmd_vel" topic to issue commands
-  ros::Publisher cmd_vel_pub_;
-  //! We will be listening to TF transforms as well
-  tf::TransformListener listener_;
-
-public:
-  //! ROS node initialization
-  RobotDriver(ros::NodeHandle &nh)
-  {
-    nh_ = nh;
-    //set up the publisher for the cmd_vel topic
-    cmd_vel_pub_ = nh_.advertise<geometry_msgs::Twist>("/navigation/cmd_vel", 1);
-  }
-
-
-  //! Drive forward a specified distance based on odometry information
-  void driveInMap(const float targetPose[])
-  { 
-
-   double distance = 0;
-   tf::Stamped<tf::Pose> targetPoseMap;
-   tf::Stamped<tf::Pose> targetPoseBase;
-
-   bool done = false;
-
-   while (ros::ok() && !done) {
-  
-      listener_.waitForTransform("base_footprint", "map", 
-                               ros::Time(0), ros::Duration(10.0));
-
-      targetPoseMap.frame_id_ = "map";
-      targetPoseMap.stamp_ = ros::Time();
-      targetPoseMap.setOrigin(btVector3( targetPose[0], targetPose[1], 0));
-      targetPoseMap.setRotation(btQuaternion(0,0, targetPose[2],  targetPose[3]));
-
-      targetPoseBase.stamp_ = ros::Time();
-
-      listener_.transformPose("base_link", targetPoseMap, targetPoseBase);
-
-      btVector3 euler;
-      QuaternionToEuler(targetPoseBase.getRotation(),euler);
-  
-      ROS_INFO("target pose in base coords: %f %f %f %f ANGLE %f ", targetPoseBase.getOrigin().x(), targetPoseBase.getOrigin().y(), targetPoseBase.getRotation().z(), targetPoseBase.getRotation().w(),euler.z());
-
-      //get the difference between the two poses
-    //geometry_msgs::Twist diff = diff2D(target_pose, robot_pose);
-    //tf_.transformPose(fixed_frame_, pose, fixed_pose);   
-
-    //wait for the listener to get the first message
-    listener_.waitForTransform("base_footprint", "odom_combined", 
-                               ros::Time(0), ros::Duration(10.0));
-    
-    //we will record transforms here
-    tf::StampedTransform start_transform;
-    tf::StampedTransform current_transform;
-
-    //record the starting transform from the odometry to the base frame
-    listener_.lookupTransform("base_footprint", "odom_combined", 
-                              ros::Time(0), start_transform);
-    
-    //we will be sending commands of type "twist"
-    geometry_msgs::Twist base_cmd;
-   
-    /*float delta = 0.01;
-    float big_delta = 0.01;
-
-    if (targetPoseBase.getOrigin().x() > delta)
-      base_cmd.linear.x = 0.05;
-    if (targetPoseBase.getOrigin().x() < -delta)
-      base_cmd.linear.x = -0.05;
-
-    if (targetPoseBase.getOrigin().y() > delta)
-      base_cmd.linear.y = 0.05;
-    if (targetPoseBase.getOrigin().y() < -delta)
-      base_cmd.linear.y = -0.05;
-
-    if (targetPoseBase.getOrigin().x() > big_delta)
-      base_cmd.linear.x = 0.05;
-    if (targetPoseBase.getOrigin().x() < -big_delta)
-      base_cmd.linear.x = -0.05;
-
-    if (targetPoseBase.getOrigin().y() > big_delta)
-      base_cmd.linear.y = 0.05;
-    if (targetPoseBase.getOrigin().y() < -big_delta)
-      base_cmd.linear.y = -0.05;   
-
-    float angle_delta = 0.01;
-    if (euler.z() > angle_delta)
-      base_cmd.angular.z = 0.05;
-    if (euler.z() < -angle_delta)
-      base_cmd.angular.z = -0.05;
-
-    float big_angle_delta = 0.2;
-    if (euler.z() > big_angle_delta)
-      base_cmd.angular.z = 0.25;
-    if (euler.z() < -big_angle_delta)
-      base_cmd.angular.z = -0.25;  */ 
-
-    //calulate speeds for reaching goal in 1 second and then scale them down to reasonable speeds
-    float theoretic_x = targetPoseBase.getOrigin().x();
-    float theoretic_y = targetPoseBase.getOrigin().y();
-    float theoretic_w = euler.z();
-
-    float scale_x = 1;    
-    float scale_y = 1;    
-    float scale_w = 1;    
-    if (fabs(theoretic_x) > 0.05)
-       scale_x = 0.05 / fabs(theoretic_x);
-    if (fabs(theoretic_y) > 0.05)
-       scale_y = 0.05 / fabs(theoretic_y);
-    if (fabs(theoretic_w) > 0.25)
-       scale_w = 0.25 / fabs(theoretic_w);
-
-    if (fabs(theoretic_w) < 0.05)
-       scale_w = 0.05 / fabs(theoretic_w);
-
-    float scale = scale_x;
-    if (scale_y < scale)
-      scale = scale_y;
-    if (scale_w < scale)
-      scale = scale_w;
-
-    ROS_INFO("scales %f %f %f", scale_x, scale_y, scale_w);
-
-    scale = fabs(scale);
-    if (scale > 1)
-      scale = 1;
-
-    base_cmd.linear.x = theoretic_x * scale;
-    base_cmd.linear.y = theoretic_y * scale;
-    base_cmd.angular.z = theoretic_w * scale;
-
-    ROS_INFO("COMMAND %f %f %f", base_cmd.linear.x, base_cmd.linear.y, base_cmd.angular.z);
-    
-    ros::Rate rate(10.0);
-
-    // if ((base_cmd.angular.z == 0) && (base_cmd.linear.y == 0) && (base_cmd.linear.x == 0))
-
-    if ((fabs(targetPoseBase.getOrigin().x()) < 0.02) && (fabs(targetPoseBase.getOrigin().y()) < 0.02) &&  (fabs(euler.z()) < 0.01))
-      done = true;
-  //  while (!done && nh_.ok())
-          
-      //send the drive command after safety check
-      if ((fabs(base_cmd.linear.x) <= 0.051) && (fabs(base_cmd.linear.y) <= 0.051) && (fabs(base_cmd.angular.z) <= 0.26))
-          cmd_vel_pub_.publish(base_cmd);
-      else 
-          ROS_ERROR("COMMAND EXCEEDS MAXIMUM LIMITS (COMMAND %f %f %f)", base_cmd.linear.x, base_cmd.linear.y, base_cmd.angular.z);
-      rate.sleep();
-      //get the current transform
-      try
-      {
-        listener_.lookupTransform("base_footprint", "odom_combined", 
-                                  ros::Time(0), current_transform);
-      }
-      catch (tf::TransformException ex)
-      {
-        ROS_ERROR("%s",ex.what());
-        break;
-      }
-      //see how far we've traveled
-      tf::Transform relative_transform = 
-        start_transform.inverse() * current_transform;
-      double dist_moved = relative_transform.getOrigin().length();
-
-//      if(dist_moved > distance) done = true;
-    
-
-   }
-    //if (done) return true;
-    //return false;
-  }
-
-  void driveInOdom(const float targetPose[]){
-  
-      listener_.waitForTransform("base_link", "map", 
-                               ros::Time(0), ros::Duration(10.0));
-
-      tf::Stamped<tf::Pose> targetPoseMap;
-      targetPoseMap.frame_id_ = "base_link";
-      targetPoseMap.stamp_ = ros::Time();
-      targetPoseMap.setOrigin(btVector3( targetPose[0], targetPose[1], 0));
-      targetPoseMap.setRotation(btQuaternion(0,0, targetPose[2],  targetPose[3]));
-
-      tf::Stamped<tf::Pose> targetPoseBase;
-
-      targetPoseBase.stamp_ = ros::Time();
-
-      listener_.transformPose("map", targetPoseMap, targetPoseBase);
-      
-      float pose[4];
-      pose[0] = targetPoseBase.getOrigin().x();
-      pose[1] = targetPoseBase.getOrigin().y();
-      pose[2] = targetPoseBase.getRotation().z();
-      pose[3] = targetPoseBase.getRotation().w();
-     
-      driveInMap(pose);
-   }
-
-
-};
-
-
-
-
-// Our Action interface type, provided as a typedef for convenience
-typedef actionlib::SimpleActionClient<pr2_controllers_msgs::Pr2GripperCommandAction> GripperClient;
-
-class Gripper{
-private:
-  GripperClient* gripper_client_;  
-
-public:
-  //Action client initialization
-  Gripper(){
-
-    //Initialize the client for the Action interface to the gripper controller
-    //and tell the action client that we want to spin a thread by default
-    gripper_client_ = new GripperClient("r_gripper_controller/gripper_action", true);
-    
-    //wait for the gripper action server to come up 
-    while(!gripper_client_->waitForServer(ros::Duration(5.0))){
-      ROS_INFO("Waiting for the r_gripper_controller/gripper_action action server to come up");
-    }
-  }
-
-  ~Gripper(){
-    delete gripper_client_;
-  }
-
-  //Open the gripper
-  void open(){
-    pr2_controllers_msgs::Pr2GripperCommandGoal open;
-    open.command.position = 0.08;
-    open.command.max_effort = -1.0;  // Do not limit effort (negative)
-    
-    ROS_INFO("Sending open goal");
-    gripper_client_->sendGoal(open);
-    gripper_client_->waitForResult();
-    if(gripper_client_->getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
-      ROS_INFO("The gripper opened!");
-    else
-      ROS_INFO("The gripper failed to open.");
-  }
-
-  //Close the gripper
-  void close(){
-    pr2_controllers_msgs::Pr2GripperCommandGoal squeeze;
-    squeeze.command.position = 0.0;
-    squeeze.command.max_effort = 50.0;  // Close gently
-    
-    ROS_INFO("Sending squeeze goal");
-    gripper_client_->sendGoal(squeeze);
-    gripper_client_->waitForResult();
-    if(gripper_client_->getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
-      ROS_INFO("The gripper closed!");
-    else
-      ROS_INFO("The gripper failed to close.");
-  }
-};
-
-// arm joint angles for seeing the marker with the hand camera
-//high drawer
-float highPoseA[7] = {-1.2658078481383668, 0.65194895948513354, -0.6651333173724735, -2.1146686310085161, -52.566807785671713, -1.1327560220881783, -29.66004589615245};
-float highPoseB[7] = {-0.83999946139288795, 0.64805759302232857, -0.20651851395459886, -1.979887098710452, -52.732655383958971, -1.1379335835800284, -29.902173036506696};
-
-//low drawer
-float lowPoseA[7] = {-0.58879241080122102,1.2959701090793467,0.61289464879551958,-1.3123493485210054, -1.819574788110754,-1.1066071611083139,-0.425};
-float lowPoseB[7] = {-0.56640762411483492,1.1399770708747323,0.49102498075440626,-0.9884972671560539,-1.8417302224128111,-0.88001270522963293,-0.425};
-
-//middle drawer
-float midPoseA[7] = {-1.136473525061469,0.87282630371086467,-0.20427354638542061,-2.1237891858256783,-2.2135217141215739,-1.2897797147276118,1.4621021956879214};
-float midPoseB[7] = {-1.1291777427340541, 0.83112100662036859,-0.55432813235088196,-1.9421019430393511,-2.3539661773600271845,-0.76206336967963972,1.46};    
-
-//tucking pose, expects left arm to be tucked already
-float tuckPose[7] = {0.00059073198959080919, 1.1486903479544912, -1.4332329356842286, -1.4462622565507686, -51.274908792804851, -0.2154139507083308, -31.660673060172002};
-//untucking poses, hand follows the base in a circular motion
-float untuckPoseA[7] = {-1.3239253869056138, 1.2547723815274774, -2.1150616574089849, -1.6996110014719421, -51.308807185757871, -0.15602427477238412, -31.606852526008804};
-float untuckPoseB[7] = {-2.2269442631579031, 0.96740342774164501, -2.3171087386350413, -1.7653369044400637, -51.229440982461696, -0.10677217721964216, -31.598672849030081};
-
-
-float dishA[7] = {-2.1348350112742915, 0.64738083363749299, -1.595672374796923, -1.7539000182407651, -50.992267925964406, -0.56283267770359235, -37.575928292312355};
-float dishB[7] = {-2.0394094946964008, -0.050442687051153672, -1.3657235537825063, -1.7921194860460163, -48.520404053480007, -0.07701207587152159, -37.641191672461751};
-float dishC[7] =  {-0.80451542916409791, 0.098275187766477728, -1.4459009669674494, -0.39189716554453613, -48.893864846832827, -0.076881549111220027, -37.661771391668857};
-float dishD[7] = {-1.4447203283947423, 1.1970786439702392, -0.76343082593721368, -0.96967707467619535, -50.016792498717102, -0.07775172751321624, -37.754706445001595};
-
-bool tucked = false;
-
-//l_arm_tucked = [0.06024, 1.248526, 1.789070, -1.683386, -1.7343417, -0.0962141, -0.0864407]
-//r_arm_tucked = [-0.023593, 1.1072800, -1.5566882, -2.124408, -1.4175, -1.8417, 0.21436]
-
-typedef actionlib::SimpleActionClient< pr2_controllers_msgs::JointTrajectoryAction > TrajClient;
-
-class RobotArm
-{
-private:
-  // Action client for the joint trajectory action 
-  // used to trigger the arm movement action
-  TrajClient* traj_client_;
-
-
-public:
-  //! Initialize the action client and wait for action server to come up
-  RobotArm() 
-  {
-    // tell the action client that we want to spin a thread by default
-    traj_client_ = new TrajClient("r_arm_controller/joint_trajectory_action", true);
-
-    // wait for action server to come up
-    while(!traj_client_->waitForServer(ros::Duration(5.0))){
-      ROS_INFO("Waiting for the joint_trajectory_action server");
-    }
-  }
-
-  //! Clean up the action client
-  ~RobotArm()
-  {
-    delete traj_client_;
-  }
-
-  //! Sends the command to start a given trajectory
-  void startTrajectory(pr2_controllers_msgs::JointTrajectoryGoal goal)
-  {
-
-    // When to start the trajectory: 1s from now
-    goal.trajectory.header.stamp = ros::Time::now() + ros::Duration(1.0);
-    traj_client_->sendGoal(goal);
-    traj_client_->waitForResult();
-
-    if(traj_client_->getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
-       ROS_INFO("traj action succ");
-    else
-       ROS_INFO("traj action failed");
-  }
-
-  //! Generates a simple trajectory with two waypoints, used as an example
-  /*! Note that this trajectory contains two waypoints, joined together
-      as a single trajectory. Alternatively, each of these waypoints could
-      be in its own trajectory - a trajectory can have one or more waypoints
-      depending on the desired application.
-  */
- pr2_controllers_msgs::JointTrajectoryGoal lookAtMarker(float *poseA, float *poseB)
-  {
-
-    tucked = (poseB == tuckPose);
-    //our goal variable
-    pr2_controllers_msgs::JointTrajectoryGoal goal;
-
-    // First, the joint names, which apply to all waypoints
-    goal.trajectory.joint_names.push_back("r_shoulder_pan_joint");
-    goal.trajectory.joint_names.push_back("r_shoulder_lift_joint");
-    goal.trajectory.joint_names.push_back("r_upper_arm_roll_joint");
-    goal.trajectory.joint_names.push_back("r_elbow_flex_joint");
-    goal.trajectory.joint_names.push_back("r_forearm_roll_joint");
-    goal.trajectory.joint_names.push_back("r_wrist_flex_joint");
-    goal.trajectory.joint_names.push_back("r_wrist_roll_joint");
-
-    // We will have two waypoints in this goal trajectory
-    goal.trajectory.points.resize(2);
-
-    // First trajectory point
-
-    int ind = 0;
-    goal.trajectory.points[ind].positions.resize(7);
-    goal.trajectory.points[ind].velocities.resize(7);
-    for (size_t j = 0; j < 7; ++j)
-    {
-      goal.trajectory.points[ind].positions[j] = poseA[j];
-      goal.trajectory.points[ind].velocities[j] = 0.0;
-    }
-    // To be reached 1 second after starting along the trajectory
-    goal.trajectory.points[ind].time_from_start = ros::Duration(2.0);
-
-    // Second trajectory point
-   
-    ind += 1;
-    goal.trajectory.points[ind].positions.resize(7);
-    goal.trajectory.points[ind].velocities.resize(7);
-    for (size_t j = 0; j < 7; ++j)
-    {
-      goal.trajectory.points[ind].positions[j] = poseB[j];
-      goal.trajectory.points[ind].velocities[j] = 0.0;
-    }
-    // To be reached 2 seconds after starting along the trajectory
-    goal.trajectory.points[ind].time_from_start = ros::Duration(4.0);
-
-    //we are done; return the goal
-    return goal;
-  }
-
-  //! Returns the current state of the action
-  actionlib::SimpleClientGoalState getState()
-  {
-    return traj_client_->getState();
-  }
-
-  // rosrun tf_echo /base_link /r_wrist_roll_joint -> position
-bool move_ik(float x, float y, float z, float ox, float oy, float oz, float ow) 
-  {
-  actionlib::SimpleActionClient<pr2_common_action_msgs::ArmMoveIKAction> ac("r_arm_ik", true);
-
-  ac.waitForServer(); //will wait for infinite time  
-
-  //ROS_INFO("server found.");
-
-  pr2_common_action_msgs::ArmMoveIKGoal goal;
-  goal.pose.header.frame_id = "base_link";
-  goal.pose.header.stamp = ros::Time::now();
-
-  goal.pose.pose.orientation.x = ox;
-  goal.pose.pose.orientation.y = oy;
-  goal.pose.pose.orientation.z = oz;
-  goal.pose.pose.orientation.w = ow;
-  goal.pose.pose.position.x = x;
-  goal.pose.pose.position.y = y;
-  goal.pose.pose.position.z = z;
-
-  goal.ik_timeout = ros::Duration(5.0);
-  goal.ik_seed.name.push_back("r_shoulder_pan_joint");
-  goal.ik_seed.name.push_back("r_shoulder_lift_joint");
-  goal.ik_seed.name.push_back("r_upper_arm_roll_joint");
-  goal.ik_seed.name.push_back("r_elbow_flex_joint");
-  goal.ik_seed.name.push_back("r_forearm_roll_joint");
-  goal.ik_seed.name.push_back("r_wrist_flex_joint");
-  goal.ik_seed.name.push_back("r_wrist_roll_joint");
-
-  // somewhat close to what we use for looking at the drawer
-  goal.ik_seed.position.push_back(-1.1291777427340541);
-  goal.ik_seed.position.push_back(0.83112100662036859);
-  goal.ik_seed.position.push_back(-0.55432813235088196);
-  goal.ik_seed.position.push_back(-1.9421019430393511);
-  goal.ik_seed.position.push_back(-2.3539661773600271845);
-  goal.ik_seed.position.push_back(-0.76206336967963972);
-  goal.ik_seed.position.push_back( 1.46 );
-				   
-  goal.move_duration= ros::Duration(1.0);
-  ac.sendGoal(goal);
-
-  bool finished_before_timeout = ac.waitForResult(ros::Duration(30.0));
-
-  if (finished_before_timeout)
-  {
-    actionlib::SimpleClientGoalState state = ac.getState();
-    ROS_INFO("Action finished: %s", state.toString().c_str());
-    if (state == actionlib::SimpleClientGoalState::SUCCEEDED)
-      return true;
-    else 
-      return false;
-  }
-  else
-    ROS_INFO("Action did not finish before the time out.");
-  return false;
-  }
-};
-
-void getMarkerTransform(tf::StampedTransform &marker)
-{
-  tf::TransformListener listener;
-  ros::NodeHandle node;
-  ros::Rate rate(100.0);
-  int count = 0;
-
-  double lastTime = 0;
-  tf::StampedTransform transSum; 
-  int i = 0;
-  double numSamples = 20;
-  geometry_msgs::Quaternion rot[500];
-  geometry_msgs::Vector3 trans[500];
-
-  while (count < numSamples  && ros::ok()){
-    tf::StampedTransform transform;
-    try{
-      listener.lookupTransform("/base_link", "/4x4_1",  
-                               ros::Time(0), transform);
-    }
-    catch (tf::TransformException ex){
-      //ROS_ERROR("%s",ex.what());
-    }
-
-    double actTime = transform.stamp_.toSec();
-                                  
-    //ROS_INFO("I see a ARToolkit Marker. %f", transform.stamp_.toSec());
- 
-    if (actTime!=lastTime) {
-      lastTime=actTime;
-     // ROS_INFO("NEW MARKER POSITION %i" , count);
-      marker = transform;
-      trans[count].x = transform.getOrigin().x();
-      trans[count].y = transform.getOrigin().y();
-      trans[count].z = transform.getOrigin().z();
-      rot[count].x = transform.getRotation().x();
-      rot[count].y = transform.getRotation().y();
-      rot[count].z = transform.getRotation().z();
-      rot[count].w = transform.getRotation().w();
-      count++;
-      
-      double meanZ = 0;
-      for (i = 0; i < count; i++) 
-      meanZ += trans[i].z;
-      meanZ /= (double)count;
-  
-      double deviation=0;
-      for (i = 0; i < count; i++)
-         deviation+= (trans[i].z - meanZ) * (trans[i].z - meanZ);
-      deviation/= (double)count;
-		
-      ROS_INFO("new marker %i STD DEVIATION IN Z %f", count, sqrtf(deviation));
-
-      ROS_INFO("CURRENT MARKER x %f y %f z %f ",transform.getOrigin().x(), transform.getOrigin().y(), transform.getOrigin().z());
-      ROS_INFO("CURRENT MARKER OR x %f y %f z %f w %f", transform.getRotation().x(), transform.getRotation().y(), transform.getRotation().z(), transform.getRotation().w());
-
-
-     btVector3 euler;
-     //QuaternionToEuler(btQuaternion(rot[count].x,rot[count].y,rot[count].z,rot[count].w).normalize(), euler);
-     QuaternionToEuler(transform.getRotation().normalize(), euler);
-    
-     ROS_INFO("EULER %f %f %f", euler.x(),euler.y(),euler.z());
-    }
-
-    rate.sleep();
-  }
-
-  //remove outliers
-  double meanZ = 0;
-  for (i = 0; i < numSamples; i++) 
-	  meanZ += trans[i].z;
-  meanZ /= numSamples;
-  
-  double deviation=0;
-  for (i = 0; i < numSamples; i++)
-	  deviation+= (trans[i].z - meanZ) * (trans[i].z - meanZ);
-  deviation /= numSamples;
-  
-  ROS_INFO("STD DEVIATION IN Z %f", sqrtf(deviation));
-  
-  geometry_msgs::Quaternion rotMean;
-  geometry_msgs::Vector3 transMean;
-
-  transMean.x = 0;
-  transMean.y = 0;
-  transMean.z = 0;
-  rotMean.x = 0;
-  rotMean.y = 0;
-  rotMean.z = 0;
-  rotMean.w = 0; // would otherwise be 1
-  
-  double numGoodSamples = 0;
-  for (i = 0; i < numSamples; i++) 
-     if ((trans[i].z - meanZ) * (trans[i].z - meanZ) < deviation) {
-		 transMean.x += trans[i].x;
-		 transMean.y += trans[i].y;
-		 transMean.z += trans[i].z;
-		 rotMean.x += rot[i].x;
-		 rotMean.y += rot[i].y;
-		 rotMean.z += rot[i].z;
-		 rotMean.w += rot[i].w;
-		 numGoodSamples+=1;
-	  }
-
-  ROS_INFO("Number of accepted samples %f", numGoodSamples);
-  
-  transMean.x /= numGoodSamples; 
-  transMean.y /= numGoodSamples;
-  transMean.z /= numGoodSamples;
-  rotMean.x /= numGoodSamples;
-  rotMean.y /= numGoodSamples;   
-  rotMean.z /= numGoodSamples;
-  rotMean.w /= numGoodSamples;
-
-  marker.setOrigin(btVector3(transMean.x,transMean.y,transMean.z));
-  marker.setRotation(btQuaternion(rotMean.x,rotMean.y,rotMean.z,rotMean.w).normalize());
-
+    tf::Stamped<tf::Pose> p0;
+    p0.frame_id_=fixed_frame;
+    p0.stamp_=ros::Time();
+    p0.setOrigin(btVector3(x,y,z));
+    p0.setRotation(btQuaternion(ox,oy,oz,ow));
+    return p0;
 }
 
-
-
-void getWristPose(tf::StampedTransform &marker)
+tf::Stamped<tf::Pose> toPose(const char text[], const char fixed_frame[])
 {
-  tf::TransformListener listener;
-  ros::NodeHandle node;
-  ros::Rate rate(10.0);
-
-  tf::StampedTransform transform;
-  bool transformOk = false;
-  while (ros::ok() && (!transformOk)) {
-  transformOk = true;
-  try{
-     listener.lookupTransform("/base_link", "/r_wrist_roll_link",ros::Time(0), transform);
-    }
-    catch (tf::TransformException ex){
-     //ROS_ERROR("%s",ex.what());
-     transformOk = false;
-    }   
-   rate.sleep();
-  }    
-  marker = transform;
+    float x,y,z, ox,oy,oz,ow;
+    sscanf(text,"%f %f %f %f %f %f %f", &x, &y, &z, &ox, &oy, &oz, &ow);
+    return toPose(x,y,z, ox,oy,oz,ow,fixed_frame);
 }
 
-
-void openDrawer(int pos)
+void printPose(const char title[], tf::Stamped<tf::Pose> pose)
 {
-
-  Gripper gripper;  
-  RobotArm arm;
-  arm.startTrajectory(arm.lookAtMarker(untuckPoseA, untuckPoseB));
-  gripper.open();
-  // Start the trajectory    
-  if (pos == 0) arm.startTrajectory(arm.lookAtMarker(lowPoseA,lowPoseB));
-  if (pos == 1) arm.startTrajectory(arm.lookAtMarker(midPoseA,midPoseB));
-  if (pos == 2) arm.startTrajectory(arm.lookAtMarker(highPoseA,highPoseB));
-  // Wait for trajectory completion
-  while(!arm.getState().isDone() && ros::ok())
-  {
-    usleep(500);
-  }
-  tf::StampedTransform aM; // averaged marker position 
-  getMarkerTransform(aM);
-
-  ROS_INFO("AVERAGED MARKER POS %f %f %f ROT %f %f %f %f", aM.getOrigin().x(),aM.getOrigin().y(),aM.getOrigin().z(),aM.getRotation().x(),aM.getRotation().y(),aM.getRotation().z(),aM.getRotation().w());
-
-  double gripHorizontal = true;
-  //double distToVert = (aM.getRotation().x() - 0.992) * (aM.getRotation().x() - 0.992) 
-  //                  + (aM.getRotation().y() + 0.063) * (aM.getRotation().y() + 0.063)
-  //                  + (aM.getRotation().z() - 0.073) * (aM.getRotation().z() - 0.073)
-  //                  + (aM.getRotation().w() - 0.073) * (aM.getRotation().w() - 0.073);
-
-  //double distToHoriz = (aM.getRotation().x() + 0.492809) * (aM.getRotation().x() + 0.492809) 
-  //                  + (aM.getRotation().y() - 0.673529) * (aM.getRotation().y() - 0.673529)
-  //                  + (aM.getRotation().z() - 0.456726) * (aM.getRotation().z() - 0.456726)
-  //                  + (aM.getRotation().w() + 0.308057) * (aM.getRotation().w() + 0.308057);
-
-  //   horiz 0.022361 -0.694367 0.018255 0.719042
-
-  btVector3 euler;
-  QuaternionToEuler(aM.getRotation().normalize(), euler);
-   
-  ROS_INFO("EULER %f %f %f", euler.x(),euler.y(),euler.z());
-
-  //ROS_INFO("DISTANCE TO HORIZ %f DISTANCE TO VERT %f", distToHoriz, distToVert);
-
-  //if (distToVert < distToHoriz)
-  //  gripHorizontal = false;
-
-  double gripOrientation[4];
-
-  gripHorizontal = false;
-
-  if (gripHorizontal) {
-     gripOrientation[0] = 0;
-     gripOrientation[1] = 0;
-     gripOrientation[2] = 0;
-     gripOrientation[3] = 1;
-  } else {
-     gripOrientation[0] = -.711;
-     gripOrientation[1] = -.008;
-     gripOrientation[2] = .005;
-     gripOrientation[3] = .703;
-  } 
-  
-  btQuaternion grip(aM.getRotation());
-  grip *= btQuaternion(btVector3(0,-1,0), - M_PI / 2.0f);
-
- /*  gripOrientation[0] = grip.x();
-  gripOrientation[1] = grip.y();
-  gripOrientation[2] = grip.z();
-  gripOrientation[3] = grip.w(); */
-
-  arm.move_ik(aM.getOrigin().x() - .35,aM.getOrigin().y(),aM.getOrigin().z(), gripOrientation[0],gripOrientation[1],gripOrientation[2],gripOrientation[3]);
-  arm.move_ik(aM.getOrigin().x() - .30,aM.getOrigin().y(),aM.getOrigin().z(), gripOrientation[0],gripOrientation[1],gripOrientation[2],gripOrientation[3]);
-  arm.move_ik(aM.getOrigin().x() - .23,aM.getOrigin().y(),aM.getOrigin().z(), gripOrientation[0],gripOrientation[1],gripOrientation[2],gripOrientation[3]);
-  arm.move_ik(aM.getOrigin().x() - .18,aM.getOrigin().y(),aM.getOrigin().z(), gripOrientation[0],gripOrientation[1],gripOrientation[2],gripOrientation[3]);
-
-  gripper.close(); 
-
-  tf::StampedTransform desiredPose = aM;  
-  desiredPose.setOrigin(btVector3(aM.getOrigin().x() - .18 - .05,aM.getOrigin().y(),aM.getOrigin().z()));
-  tf::StampedTransform startPose = aM;  
-  startPose.setOrigin(btVector3(aM.getOrigin().x() - .18,aM.getOrigin().y(),aM.getOrigin().z()));
-
- //  arm.move_ik(aM.getOrigin().x() - .35,aM.getOrigin().y(),aM.getOrigin().z(), -0.711, -0.008, 0.005, 0.703);
-  arm.move_ik(desiredPose.getOrigin().x(),desiredPose.getOrigin().y(),desiredPose.getOrigin().z(), gripOrientation[0],gripOrientation[1],gripOrientation[2],gripOrientation[3]);
-  double dx, dy, dz;
-  double lastK = 2;
-  double maxK = 8;
-  bool success = true;
-
-  for (double k = 2; k <= maxK; k++) {    
-    tf::StampedTransform actPose;
-    getWristPose(actPose);
-    ROS_INFO_STREAM("ACTUAL  POSE " << actPose.getOrigin().x() << " " << actPose.getOrigin().y() << " " << actPose.getOrigin().z()) ;
-    ROS_INFO_STREAM("DESIRED POSE " << desiredPose.getOrigin().x() << " " << desiredPose.getOrigin().y() << " " << desiredPose.getOrigin().z()) ;
-    ROS_INFO_STREAM("START   POSE " << startPose.getOrigin().x() << " " << startPose.getOrigin().y() << " " << startPose.getOrigin().z()) ;
-    dx = actPose.getOrigin().x() - startPose.getOrigin().x();
-    dy = actPose.getOrigin().y() - startPose.getOrigin().y();
-    dz = actPose.getOrigin().z() - startPose.getOrigin().z();
-    double length = sqrtf(dx * dx + dy * dy + dz * dz);
-    dx *= 0.05 / length;
-    dy *= 0.05 / length;
-    dz *= 0.05 / length;
-    ROS_INFO("D x %f y %f z %f", dx , dy ,dz);
-    double x = startPose.getOrigin().x() + dx * k;
-    double y = startPose.getOrigin().y() + dy * k;
-    double z = startPose.getOrigin().z() + dz * k;
-    ROS_INFO("D %f %f %f NEXT POSE %f %f %f" ,dx,dy,dz, x,y,z);
-    if (success)
-     success = arm.move_ik(x,y,z, gripOrientation[0],gripOrientation[1],gripOrientation[2],gripOrientation[3]);
-    if (success)
-     lastK = k; 
-  }
-
-  tf::StampedTransform lastPose = startPose;
-  if (0)
-  for (double k = 2; k <= maxK; k++) {    
-    tf::StampedTransform actPose;
-    getWristPose(actPose);
-    ROS_INFO_STREAM("ACTUAL  POSE " << actPose.getOrigin().x() << " " << actPose.getOrigin().y() << " " << actPose.getOrigin().z()) ;
-    ROS_INFO_STREAM("DESIRED POSE " << desiredPose.getOrigin().x() << " " << desiredPose.getOrigin().y() << " " << desiredPose.getOrigin().z()) ;
-    ROS_INFO_STREAM("START   POSE " << startPose.getOrigin().x() << " " << startPose.getOrigin().y() << " " << startPose.getOrigin().z()) ;
-    dx = actPose.getOrigin().x() - lastPose.getOrigin().x();
-    dy = actPose.getOrigin().y() - lastPose.getOrigin().y();
-    dz = actPose.getOrigin().z() - lastPose.getOrigin().z();
-    lastPose = actPose;
-    double length = sqrtf(dx * dx + dy * dy + dz * dz);
-    dx *= 0.05 / length;
-    dy *= 0.05 / length;
-    dz *= 0.05 / length;
-    ROS_INFO("D x %f y %f z %f", dx , dy ,dz);
-    double x = actPose.getOrigin().x() + dx;
-    double y = actPose.getOrigin().y() + dy;
-    double z = actPose.getOrigin().z() + dz;
-    ROS_INFO("D %f %f %f NEXT POSE %f %f %f" ,dx,dy,dz, x,y,z);
-    if (success)
-     success = arm.move_ik(x,y,z, gripOrientation[0],gripOrientation[1],gripOrientation[2],gripOrientation[3]);
-    if (success)
-     lastK = k; 
-  }
-
-  if (lastK < maxK) {
-    double missing = maxK - lastK;
-    double drx = dx * missing;
-    double dry = dy * missing;
-    float ps[4];
-    ps[0] = drx;
-    ps[1] = dry;
-    ps[2] = 0;
-    ps[3] = 1;
-
-    ros::NodeHandle nh;
-    RobotDriver driver(nh);
-    driver.driveInOdom(ps);
-  }
-
-  //for (double retract = .05; retract < .45; retract += .05) {
-  //   ROS_INFO("TRYING TO OPEN FOR %f cm", retract * 100);
-  //   arm.move_ik(aM.getOrigin().x()  - retract - 0.18,aM.getOrigin().y(),aM.getOrigin().z(), -0.711, -0.008, 0.005, 0.703);
-  // }
-  gripper.open();
-   // close it again   
-  gripper.close();
-
-  if (lastK < maxK) {
-    double missing = maxK - lastK;
-    double drx = dx * missing;
-    double dry = dy * missing;
-    float ps[4];
-    ps[0] = -drx;
-    ps[1] = -dry;
-    ps[2] = 0;
-    ps[3] = 1;
-
-    ros::NodeHandle nh;
-    RobotDriver driver(nh);
-    driver.driveInOdom(ps);
-  }
-
-  for (double k = lastK; k > -1; --k) {    
-    double x = startPose.getOrigin().x() + dx * k;
-    double y = startPose.getOrigin().y() + dy * k;
-    double z = startPose.getOrigin().z() + dz * k;
-    ROS_INFO("D %f %f %f NEXT POSE %f %f %f" ,dx,dy,dz, x,y,z);
-    arm.move_ik(x,y,z, gripOrientation[0],gripOrientation[1],gripOrientation[2],gripOrientation[3]);
-  }
-
-  gripper.open();
-
-  arm.move_ik(aM.getOrigin().x()  - 0.2  - 0.18,aM.getOrigin().y(),aM.getOrigin().z(), gripOrientation[0],gripOrientation[1],gripOrientation[2],gripOrientation[3]);    
+    ROS_INFO("%s %f %f %f %f %f %f %f %s", title, pose.getOrigin().x(), pose.getOrigin().y(), pose.getOrigin().z()
+             , pose.getRotation().x(), pose.getRotation().y(), pose.getRotation().z(), pose.getRotation().w(), pose.frame_id_.c_str());
 }
 
-typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
-
-void moveBase(const float pose[])
+void printPose(const char title[], btTransform pose)
 {
-  float x = pose[0];
-  float y = pose[1];
-  float oz = pose[2];
-  float ow = pose[3];
-
-  RobotArm arm;
-  // Start the trajectory    
-
-  if (!tucked)
-    arm.startTrajectory(arm.lookAtMarker(untuckPoseA, tuckPose));
-
-  //tell the action client that we want to spin a thread by default
-  MoveBaseClient ac("move_base", true);
-
-  //wait for the action server to come up
-  while(!ac.waitForServer(ros::Duration(5.0))){
-    ROS_INFO("Waiting for the move_base action server to come up");
-  }
-
-  move_base_msgs::MoveBaseGoal goal;
-
-  //we'll send a goal to the robot to move 1 meter forward
-  goal.target_pose.header.frame_id = "/map";
-  goal.target_pose.header.stamp = ros::Time::now();
-
-  goal.target_pose.pose.position.x = x;
-  goal.target_pose.pose.position.y = y;
-  goal.target_pose.pose.orientation.z = oz;
-  goal.target_pose.pose.orientation.w = ow;
-
-  ROS_INFO("Sending goal");
-  ac.sendGoal(goal);
-
-  bool finished_before_timeout = ac.waitForResult(ros::Duration(20.0));  
-
-  if(ac.getState() == actionlib::SimpleClientGoalState::SUCCEEDED)
-    ROS_INFO("Hooray, the base moved");
-  else
-    ROS_INFO("The base failed to movefor some reason");
-
-  ros::NodeHandle nh;
-
-  RobotDriver driver(nh);
-
-  driver.driveInMap(pose);
+    ROS_INFO("%s %f %f %f %f %f %f %f", title, pose.getOrigin().x(), pose.getOrigin().y(), pose.getOrigin().z()
+             , pose.getRotation().x(), pose.getRotation().y(), pose.getRotation().z(), pose.getRotation().w());
 }
-
-// robot poses in map frame 
-float poseA[4] = {-.942, .485, 1, 0}; // island left
-float poseB[4] = {-1.013, 1.111, 1, 0}; //island middle
-float poseC[4] = {-1.089, 2.039, 1, 0}; //island right
-float poseD[4] = { .212, 2.89, 0, 1}; // below oven 
-float poseE[4] = { .117, 1.957, 0, 1}; //sink left 
-float poseF[4] = { .115, 1.17, 0, 1}; // sink dishwasher
-float poseG[4] = { .232, .501, 0.05, 0.999}; // sink righ / trash
-float poseH[4] = { .242, 2.263, 0, 1}; // right of heater
-
-float poseD1[4] = { -0.996, 2.152, 0.921, -.390}; // %8
-float poseD2[4] = { -.754, 0.239, 0.952, .306}; // %9
-//float poseD3[4] = { .242, 2.263, 0, 1}; // right of heater
-//float poseD4[4] = { .242, 2.263, 0, 1}; // right of heater
-
-float pose0[4] = { -0.377, 1.382, 0, 1}; // somewhere in between island and sink
-
-float *poses[20] = {poseA, poseB, poseC, poseD, poseE, poseF, poseG, poseH, poseD1, poseD2, pose0};
-
-int drw_top = 2;
-int drw_mid = 1;
-int drw_low = 0;
 
 int main(int argc, char** argv)
 {
-  // Init the ROS node
-  ros::init(argc, argv, "robot_driver");
+    // Init the ROS node
+    ros::init(argc, argv, "ias_drawer_executive");
 
-  printf("ias_drawer_executive \n");
-  printf("usage: ias_drawer_executive <drawer_position> <drawer_height> [<drawer_position> <drawer_height> .. <drawer_position> <drawer_height>] \n");
-  printf("drawer_position:-1 .. dont move base \n");
-  printf("                 0 .. island left \n");
-  printf("                 1 .. island middle \n");
-  printf("                 2 .. island right \n");
-  printf("                 3 .. under oven \n");
-  printf("                 4 .. left of dishwasher \n");
-  printf("                 5 .. dishwasher \n");
-  printf("                 6 .. right of dishwasher \n");
-  printf("drawer_height:-1 .. dont grasp/open drawer\n");
-  printf("               0 .. low (~34cm) \n");
-  printf("               1 .. middle (~64cm) \n");
-  printf("               2 .. high (~78cm) \n\n");
+    printf("ias_drawer_executive %i\n", argc);
+    printf("usage: ias_drawer_executive <drawer_position> <drawer_height> [<drawer_position> <drawer_height> .. <drawer_position> <drawer_height>] \n");
+    printf("drawer_position:-1 .. dont move base \n");
+    printf("                 0 .. island left \n");
+    printf("                 1 .. island middle \n");
+    printf("                 2 .. island right \n");
+    printf("                 3 .. under oven \n");
+    printf("                 4 .. left of dishwasher \n");
+    printf("                 5 .. dishwasher \n");
+    printf("                 6 .. right of dishwasher \n");
+    printf("                 7 .. right of oven \n");
+    printf("                 8 .. fridge \n");
+    printf("drawer_height:-1 .. dont grasp/open drawer\n");
+    printf("               0 .. low (~34cm) \n");
+    printf("               1 .. middle (~64cm) \n");
+    printf("               2 .. high (~78cm) \n");
+    printf("               3 .. higher (~97cm) \n\n");
 
-  //RobotArm arm;
-  // Start the trajectory    
+    ros::NodeHandle node_handle;
 
-  //arm.startTrajectory(arm.lookAtMarker(dishA, dishB));
-  //arm.startTrajectory(arm.lookAtMarker(dishC, dishD));
-   
-  for (int i = 0; i < (argc - 1) / 2 ; ++i) {
-    if (argc >= (i * 2 + 3)) {
-       if (atoi(argv[i* 2 + 1])!= -1)
-          moveBase(poses[atoi(argv[i* 2 + 1])]);
-       if (atoi(argv[i* 2 + 2])!= -1)
-          openDrawer(atoi(argv[i* 2 + 2]));
-       }
-   }
 
-  
+    /*if ((argc > 1) && (atoi(argv[1]) > -2) )
+        for (int i = 0; i < (argc - 1) / 2 ; ++i)
+        {
+            if (argc >= (i * 2 + 3))
+            {
+                if (atoi(argv[i* 2 + 1]) >= 0)
+                {
+                    ROS_INFO("TARGET POSE IN MAP %f %f %f %f",Poses::poses[atoi(argv[i* 2 + 1])][0],Poses::poses[atoi(argv[i* 2 + 1])][1],Poses::poses[atoi(argv[i* 2 + 1])][2],Poses::poses[atoi(argv[i* 2 + 1])][3]);
+                    RobotDriver::getInstance()->moveBase(Poses::poses[atoi(argv[i* 2 + 1])]);
+                }
+                if (atoi(argv[i* 2 + 2]) >= 0)
+                    OperateHandleController::operateHandle(atoi(argv[i* 2 + 2]));
+            }
+        }*/
+
+
+
+    if ((argc > 1) && (atoi(argv[1]) > -2) )
+        for (int i = 0; i < (argc - 1) / 2 ; ++i)
+        {
+            if (argc >= (i * 2 + 3))
+            {
+                if (atoi(argv[i* 2 + 1]) >= 0)
+                {
+                    Torso *torso = Torso::getInstance();
+                    boost::thread *t;
+                    if (atoi(argv[i* 2 + 1])==8)
+                        t = &boost::thread(&Torso::up, torso);
+                    else
+                        t = &boost::thread(&Torso::down, torso);
+                    ROS_INFO("TARGET POSE IN MAP %f %f %f %f",Poses::poses[atoi(argv[i* 2 + 1])][0],Poses::poses[atoi(argv[i* 2 + 1])][1],Poses::poses[atoi(argv[i* 2 + 1])][2],Poses::poses[atoi(argv[i* 2 + 1])][3]);
+                    RobotDriver::getInstance()->moveBase(Poses::poses[atoi(argv[i* 2 + 1])]);
+                    t->join();
+                }
+                if (atoi(argv[i* 2 + 2]) >= 0)
+                {
+                    tf::Stamped<tf::Pose> aM  = OperateHandleController::getHandlePoseFromMarker(0,atoi(argv[i* 2 + 2]));
+                    OperateHandleController::operateHandle(0,aM);
+                }
+            }
+        }
+
+    //! drive in map x y oz ow
+    if (atoi(argv[1]) == -4)
+    {
+
+        RobotArm::getInstance(0)->tucked = true;
+        for (int i = 0; i < (argc - 1 ) / 4; ++i)
+        {
+            float p[4];
+            p[0] = atof(argv[2 + i * 4]);
+            p[1] = atof(argv[3 + i * 4]);
+            p[2] = atof(argv[4 + i * 4]);
+            p[3] = atof(argv[5 + i * 4]);
+            ROS_INFO("going to %f %f %f %f", p[0], p[1], p[2], p[3]);
+            RobotDriver::getInstance()->moveBase(p);
+        }
+    }
+
+    if (atoi(argv[1]) == -45) {
+
+    //while (ros::ok()) {
+    //   rate.sleep();
+    //   ros::spinOnce();
+    //   float r[2],l[2];
+    //   p->getCenter(r,l);
+    //   //ROS_INFO("CENTERS %f %f , %f %f", r[0], r[1], l[0], l[1]);
+    //   float d[2];
+    //   d[0] = r[0] - l[0];
+    //   d[1] = r[1] - l[1];
+    //   float k = fabs(d[1]);
+    //   if (k > 1)
+    //     k = 1;
+    //   ROS_INFO("DIFF %f %f            argv %f", d[0], d[1], atof(argv[1]));
+    //   if (d[1] > limit) {
+    //      ROS_INFO("pos");
+    //      arm->rotate_toolframe_ik(increment * k,0,0);
+    //   }
+    //   if (d[1] < -limit) {
+    //      ROS_INFO("neg");
+    //      arm->rotate_toolframe_ik(-increment * k,0,0);
+    //   }
+    //
+         RobotArm::getInstance(atoi(argv[2]))->rotate_toolframe_ik(atof(argv[3]),atof(argv[4]),atof(argv[5]));
+    }
+
+    if (atoi(argv[1]) == -5)
+    {
+        //RobotArm arm;
+        Gripper *gripper = Gripper::getInstance(0);
+        gripper->open();
+        Pressure::getInstance()->reset();
+        gripper->close();
+        RobotArm *arm = RobotArm::getInstance();
+        arm->stabilize_grip();
+    }
+
+    //! put gripper to some pose in map
+    if (atoi(argv[1]) == -3)
+    {
+        //bool move_ik
+        double x,y,z,ox,oy,oz,ow;
+        x = atof(argv[3]);
+        y = atof(argv[4]);
+        z = atof(argv[5]);
+        ox = atof(argv[6]);
+        oy = atof(argv[7]);
+        oz = atof(argv[8]);
+        ow = atof(argv[9]);
+        printf("moving tool to ik goal pos in map %f %f %f or %f %f %f %f \n", x,y,z,ox,oy,oz,ow);
+        RobotArm::getInstance(atoi(argv[2]))->universal_move_toolframe_ik(x,y,z,ox,oy,oz,ow,"map");
+    }
+
+    //! put gripper to some pose in base
+    if (atoi(argv[1]) == -2)
+    {
+        //bool move_ik
+        double x,y,z,ox,oy,oz,ow;
+        x = atof(argv[3]);
+        y = atof(argv[4]);
+        z = atof(argv[5]);
+        ox = atof(argv[6]);
+        oy = atof(argv[7]);
+        oz = atof(argv[8]);
+        ow = atof(argv[9]);
+        printf("moving tool %s to ik goal pos %f %f %f or %f %f %f %f \n", (atoi(argv[2])==0) ? "right" : "left" , x,y,z,ox,oy,oz,ow);
+        RobotArm::getInstance(atoi(argv[2]))->universal_move_toolframe_ik(x,y,z,ox,oy,oz,ow);
+        // arm->move_toolframe_ik(x,y,z,ox,oy,oz,ow);
+
+        //btQuaternion myq(ox,oy,oz,ow);
+
+        //btQuaternion qx = myq *     btQuaternion(M_PI / 2,0,0);;
+        //btQuaternion qy = myq *     btQuaternion(0,M_PI / 2,0);;
+        //btQuaternion qz = myq *     btQuaternion(0,0,M_PI / 2);;
+
+        //ROS_INFO("ROT X %f %f %f %f", qx.x(),qx.y(),qx.z(),qx.w());
+        //ROS_INFO("ROT Y %f %f %f %f", qy.x(),qy.y(),qy.z(),qy.w());
+        //ROS_INFO("ROT Z %f %f %f %f", qz.x(),qz.y(),qz.z(),qz.w());
+
+        //arm->move_ik(x,y,z,ox,oy,oz,ow);
+    }
+
+    if (atoi(argv[1]) == -6)
+    {
+        while (ros::ok())
+        {
+            tf::StampedTransform aM = AverageTF::getMarkerTransform("/4x4_1",20);
+        }
+    }
+
+    if (atoi(argv[1]) == -7)
+    {
+        RobotArm::getInstance(1)->startTrajectory(RobotArm::getInstance(1)->lookAtMarker(Poses::lf0,Poses::lf1));
+        RobotArm::getInstance(1)->startTrajectory(RobotArm::getInstance(1)->lookAtMarker(Poses::lf2,Poses::lf3));
+    }
+
+
+    if (atoi(argv[1]) == -8)
+    {
+        printf("ias_drawer_executive -8 arm(0=r,1=l) r_x r_y r_z frame_id");
+        printf("rotate around frame downstream from wrist");
+        RobotArm::getInstance(atoi(argv[2]))->rotate_toolframe_ik(atof(argv[3]),atof(argv[4]),atof(argv[5]), argv[6]);
+    }
+
+    //! get plate from open drawer
+    if (atoi(argv[1]) == -9)
+        DemoScripts::takePlate();
+
+    //! drive relative to base
+    if (atoi(argv[1]) == -10)
+    {
+        float target[4];
+        target[0] = atof(argv[2]);
+        target[1] = atof(argv[3]);
+        target[2] = 0;
+        target[3] = 1;
+        ROS_INFO("POSE IN BASE %f %f %f", target[0],target[1], target[2]);
+        RobotDriver::getInstance()->driveInOdom(target, 1);
+    }
+
+    //! print plate pose
+    if (atoi(argv[1]) == -11)
+    {
+        btVector3 vec = OperateHandleController::getPlatePose();
+        ROS_INFO("POSE IN MAP %f %f %f", vec.x(), vec.y(), vec.z());
+    }
+
+    //! get bottle out of open fridge
+    if (atoi(argv[1]) == -12)
+        DemoScripts::takeBottle();
+    //! move both grippers uniformly in direction x y z in base
+    if (atoi(argv[1]) == -13)
+    {
+        OperateHandleController::spinnerL(atof(argv[2]), atof(argv[3]),atof(argv[4]));
+    }
+
+    if (atoi(argv[1]) == -14)
+    {
+
+        RobotArm::getInstance(1)->universal_move_toolframe_ik(1.25, -0.7000, 1, 0.005001, -0.053009, -0.029005, 0.998160,"map");
+        RobotArm::getInstance(1)->universal_move_toolframe_ik(1.165, -0.655, 1.151, 0.005, -0.053, -0.029, 0.998, "map");
+        RobotArm::getInstance(1)->universal_move_toolframe_ik(0.9, -0.655, 1.251, 0.005, -0.053, -0.029, 0.998, "map");
+        RobotArm::getInstance(1)->universal_move_toolframe_ik(0.9, -0.255, 1.251, 0.005, -0.053, -0.029, 0.998, "map");
+    }
+
+    if (atoi(argv[1]) == -15)   //check for maximum base movement
+    {
+        RobotDriver *driver = RobotDriver::getInstance();
+        float relativePose[2] = {0,0};
+        for (relativePose[0] = 0; relativePose[0] < 1; relativePose[0] = relativePose[0] + 0.025)
+        {
+            ROS_INFO("CAN DRIVE %f %i", relativePose[0], driver->checkCollision(relativePose));
+        }
+    }
+
+    if (atoi(argv[1]) == -16)
+    {
+        std::vector<int> arm;
+        std::vector<tf::Stamped<tf::Pose> > goal;
+        btVector3 result;
+
+        tf::Stamped<tf::Pose> p0;
+        p0.frame_id_="map";
+        p0.stamp_=ros::Time();
+        p0.setOrigin(btVector3(0.9, -0.255, 1.251));
+        p0.setRotation(btQuaternion(0.005, -0.053, -0.029, 0.998));
+        goal.push_back(p0);
+        arm.push_back(1);
+
+        RobotArm::findBaseMovement(result, arm, goal,true, false);
+
+        RobotArm::getInstance(1)->universal_move_toolframe_ik(0.9, -0.255, 1.251, 0.005, -0.053, -0.029, 0.998, "map");
+    }
+
+    if (atoi(argv[1]) == -17)
+    {
+        //    tf::Stamped<tf::Pose> toPose(float x, float y, float z, float ox, float oy, float oz, float ow, const char fixed_frame[])
+        char posestrings[][100] = {{"0.542329 -0.981344 1.23612 0.0330708  0.00176235 0.595033  0.803019"},
+            {"0.556517 -0.920874 1.23603 0.0298695 -0.00432607 0.545786  0.837381"},
+            {"0.572956 -0.861407 1.23635 0.0268959 -0.00695657 0.494586  0.868685"},
+            {"0.581633 -0.828156 1.23589 0.0252092 -0.00877769 0.475406  0.879362"},
+            {"0.604209 -0.781168 1.23568 0.0179254  0.00291321 0.436192  0.89967"},
+            {"0.622422 -0.748086 1.23539 0.0152842  0.00913191 0.340254  0.940165"},
+            {"0.639726 -0.721124 1.23581 0.0164386  0.0162648  0.278332  0.960206"},
+            {"0.661803 -0.694327 1.23576 0.0219128  0.0176437  0.246738  0.968674"},
+            {"0.698809 -0.657863 1.23729 0.0284113  0.0207615  0.238006  0.970626"},
+            {"0.740968 -0.625336 1.23853 0.0375375  0.0235445  0.227272  0.972823"},
+            {"0.784319 -0.598149 1.23992 0.0450486  0.0276238  0.212765  0.975673"},
+            {"0.82972  -0.572236 1.24111 0.0451087  0.0322855  0.169386  0.983987"},
+            {"0.875225 -0.553171 1.24195 0.0358857  0.032936   0.122281  0.9913"},
+            {"0.956881 -0.532016 1.24365 0.0254018  0.0329301  0.0418438 0.998258"},
+            {"0.972319 -0.530781 1.2467  0.0022027  0.0133422  0.0679044 0.9976"},
+            {"1.02179  -0.52356  1.24665 0.0022027  0.0133422  0.0679044 0.9976"}
+        };
+        tf::Stamped<tf::Pose> oldposes[20];
+        for (int k = 0; k < 16; ++k)
+        {
+            oldposes[k] = toPose(posestrings[k],"map");
+            printPose("traj : ", oldposes[k]);
+        }
+        for (int k = 1; k < 14; ++k)
+        {
+            btTransform diffPose = oldposes[k].inverse() * oldposes[k-1];
+            //diffPose.setRotation(diffPose.getRotation().normalize());
+            //printPose("difference", diffPose);
+            float distance = diffPose.getOrigin().length();
+            btQuaternion adjusted = diffPose.getRotation()  * (1 / distance);
+            adjusted.normalize();
+            ROS_INFO("DIST : %f QUAT ADJ : %f %f %f %f", distance, adjusted.x(), adjusted.y(), adjusted.z(), adjusted.w());
+        }
+    }
+
+
+    if (atoi(argv[1]) == -18)
+    {
+        Gripper::getInstance(atoi(argv[2]))->open();
+    }
+    if (atoi(argv[1]) == -19)
+    {
+        Gripper::getInstance(atoi(argv[2]))->close();
+    }
+    if (atoi(argv[1]) == -20)
+    {
+        Torso::getInstance()->pos(atof(argv[2]));
+    }
+
+    if (atoi(argv[1]) == -21)
+    {
+        RobotHead::getInstance()->lookAt("/map",Poses::inDrawer0[0],Poses::inDrawer0[1],Poses::inDrawer0[2]);
+    }
+
+    //! look at a pos in map
+    if (atoi(argv[1]) == -22)
+    {
+        RobotHead::getInstance()->lookAt("/map",atof(argv[2]),atof(argv[3]),atof(argv[4]));
+    }
+
+    // move tool without driving
+    if (atoi(argv[1]) == -24)
+    {
+        //bool move_ik
+        double x,y,z,ox,oy,oz,ow;
+        x = atof(argv[3]);
+        y = atof(argv[4]);
+        z = atof(argv[5]);
+        ox = atof(argv[6]);
+        oy = atof(argv[7]);
+        oz = atof(argv[8]);
+        ow = atof(argv[9]);
+        printf("moving tool to ik goal pos in map %f %f %f or %f %f %f %f \n", x,y,z,ox,oy,oz,ow);
+        //RobotArm::getInstance(atoi(argv[2]))->universal_move_toolframe_ik(x,y,z,ox,oy,oz,ow,"map");
+
+        tf::Stamped<tf::Pose> p0;
+        p0.frame_id_="map";
+        p0.stamp_=ros::Time();
+        p0.setOrigin(btVector3(x,y,z));
+        p0.setRotation(btQuaternion(ox,oy,oz,ow));
+        RobotArm::getInstance(atoi(argv[2]))->move_toolframe_ik_pose(p0);
+    }
+
+    // test marker stuff
+    if (atoi(argv[1]) == -25)
+    {
+        ros::NodeHandle node_handle;
+        ros::Publisher vis_pub = node_handle.advertise<visualization_msgs::Marker>( "/robot_arm_marker", 0 );
+
+        visualization_msgs::Marker marker;
+        marker.header.frame_id = "/base_link";
+        marker.header.stamp = ros::Time::now();
+        marker.ns = "goalpoints";
+        marker.id =  10000;
+        marker.type = visualization_msgs::Marker::ARROW;
+        marker.action = visualization_msgs::Marker::ADD;
+
+        double x,y,z,ox,oy,oz,ow;
+        x = atof(argv[3]);
+        y = atof(argv[4]);
+        z = atof(argv[5]);
+        ox = atof(argv[6]);
+        oy = atof(argv[7]);
+        oz = atof(argv[8]);
+        ow = atof(argv[9]);
+        marker.pose.orientation.x = ox;
+        marker.pose.orientation.y = oy;
+        marker.pose.orientation.z = oz;
+        marker.pose.orientation.w = ow;
+        marker.pose.position.x = x;
+        marker.pose.position.y = y;
+        marker.pose.position.z = z;
+        marker.scale.x = 0.1;
+        marker.scale.y = 0.1;
+        marker.scale.z = 0.1;
+        marker.color.r = 1.0;
+        marker.color.g = 0.0;
+        marker.color.b = 0.0;
+        marker.color.a = 1.0;
+
+        ROS_INFO("PUBLISH MARKER %i", marker.id);
+
+        ros::Rate rate(10.0);
+        while (ros::ok())
+        {
+            marker.id = ++marker.id;
+            marker.pose.position.x = marker.pose.position.x + .01;
+            vis_pub.publish( marker );
+            ros::spinOnce();
+            rate.sleep();
+        }
+    }
+
+    //! open both grippers at the same time
+    if (atoi(argv[1]) == -26)
+    {
+        OperateHandleController::openGrippers();
+    }
+
+    if (atoi(argv[1]) == -27)
+    {
+        OperateHandleController::getHandlePoseFromLaser(0);
+    }
+
+
+    //! print bottle pose
+    if (atoi(argv[1]) == -28)
+    {
+        RobotHead::getInstance()->lookAt("/map", 1.243111, -0.728864, 0.9);
+        std::vector<tf::Stamped<tf::Pose> *> handlePoses;
+        handlePoses.clear();
+        tf::Stamped<tf::Pose> bottle = OperateHandleController::getBottlePose();
+        ROS_INFO("BOTTLE in %s : %f %f %f", bottle.frame_id_.c_str(), bottle.getOrigin().x(),bottle.getOrigin().y(),bottle.getOrigin().z());
+    }
+
+    //! doesnt work
+    if (atoi(argv[1]) == -29)
+    {
+        std::vector<tf::Stamped<tf::Pose> > targetPose;
+        std::vector<std::string> frame_ids;
+        RobotDriver::getInstance()->driveToMatch(targetPose, frame_ids);
+    }
+
+    if (atoi(argv[1]) == -30)
+    {
+        Gripper::getInstance(1)->updatePressureZero();
+        Gripper::getInstance(1)->closeCompliant();
+    }
+
+    //! put down the bottle at the island
+    if (atoi(argv[1]) == -31)
+        DemoScripts::serveBottle();
+
+    //! bring plate to the island next to the pancake heater and present it so that the pancake can be pushed on top
+    if (atoi(argv[1]) == -32)
+        DemoScripts::servePlateToIsland();
+
+    //! deprecated: get the lego piece, now implemented in another package
+    if (atoi(argv[1]) == -33)
+    {
+        float p[] = {.1, 0.896, 0.003, 1.000};
+        //RobotDriver::getInstance()->moveBase(p, false);
+
+        pr2_controllers_msgs::JointTrajectoryGoal goalA = RobotArm::getInstance(0)->lookAtMarker(Poses::prepDishR1,Poses::prepDishR1);
+        boost::thread t2(&RobotArm::startTrajectory, RobotArm::getInstance(0), goalA);
+
+        Torso *torso = Torso::getInstance();
+        boost::thread t2u(&Torso::up, torso);
+
+        RobotArm::getInstance(0)->tucked = true;
+
+        RobotDriver::getInstance()->moveBase(p, false);
+
+        t2u.join();
+        t2.join();
+
+        RobotHead::getInstance()->lookAt("/map",0.449616, 0.9, 1.078124);
+
+        tf::Stamped<tf::Pose> toyPose = OperateHandleController::getBottlePose(); // in map!
+
+        RobotArm *arm = RobotArm::getInstance(0);
+
+        ROS_INFO("LEGO POSE");
+        arm->printPose(toyPose);
+
+        tf::Stamped<tf::Pose> toyPoseBase = RobotArm::getInstance(0)->getPoseIn("base_link",toyPose);
+        toyPoseBase.setRotation(btQuaternion(0,0,0,1));
+
+        tf::Stamped<tf::Pose> ap_30 = toyPoseBase;
+        ap_30.setOrigin(toyPoseBase.getOrigin() + btVector3(-.3,0,0));
+        ap_30 = arm->getPoseIn("map", ap_30);
+
+        tf::Stamped<tf::Pose> ap_20 = toyPoseBase;
+        ap_20.setOrigin(toyPoseBase.getOrigin() + btVector3(-.2,0,0));
+        ap_20 = arm->getPoseIn("map", ap_20);
+
+        tf::Stamped<tf::Pose> ap_10 = toyPoseBase;
+        ap_10.setOrigin(toyPoseBase.getOrigin() + btVector3(-.1,0,0));
+        ap_10 = arm->getPoseIn("map", ap_10);
+
+        tf::Stamped<tf::Pose> ap_05 = toyPoseBase;
+        ap_05.setOrigin(toyPoseBase.getOrigin() + btVector3(-.05,0,0));
+        ap_05 = arm->getPoseIn("map", ap_05 );
+
+        tf::Stamped<tf::Pose> ap_00 = toyPoseBase;
+        ap_00.setOrigin(toyPoseBase.getOrigin() + btVector3(0,0,0));
+        ap_00 = arm->getPoseIn("map", ap_00);
+
+
+        tf::Stamped<tf::Pose> ap_0010 = toyPoseBase;
+        ap_0010.setOrigin(toyPoseBase.getOrigin() + btVector3(0,0,0.15));
+        ap_0010 = arm->getPoseIn("map", ap_0010);
+
+        tf::Stamped<tf::Pose> ap_1010 = toyPoseBase;
+        ap_1010.setOrigin(toyPoseBase.getOrigin() + btVector3(-.1,0,0.15));
+        ap_1010 = arm->getPoseIn("map", ap_1010);
+
+        tf::Stamped<tf::Pose> ap_3010 = toyPoseBase;
+        ap_3010.setRotation(btQuaternion(0,0,.707,.707));
+        ap_3010.setOrigin(toyPoseBase.getOrigin() + btVector3(-.3,0,0.15));
+        ap_3010 = arm->getPoseIn("map", ap_3010);
+
+        arm->printPose(ap_30);
+        arm->printPose(ap_20);
+        arm->printPose(ap_10);
+        arm->printPose(ap_05);
+        arm->printPose(ap_00);
+        ROS_INFO("-");
+        arm->printPose(ap_0010);
+        arm->printPose(ap_1010);
+        arm->printPose(ap_3010);
+
+        Gripper::getInstance(0)->open();
+
+        arm->universal_move_toolframe_ik_pose(ap_30);
+        arm->universal_move_toolframe_ik_pose(ap_20);
+        arm->universal_move_toolframe_ik_pose(ap_10);
+        arm->universal_move_toolframe_ik_pose(ap_05);
+        arm->universal_move_toolframe_ik_pose(ap_00);
+
+        Gripper::getInstance(0)->closeCompliant();
+        Gripper::getInstance(0)->close();
+
+        arm->universal_move_toolframe_ik_pose(ap_0010);
+        arm->universal_move_toolframe_ik_pose(ap_1010);
+        arm->universal_move_toolframe_ik_pose(ap_3010);
+    }
+
+    //! put plate or silverware into carrying pose
+    if (atoi(argv[1]) == -34)
+    {
+        tf::Stamped<tf::Pose> rightTip = RobotArm::getInstance(0)->getToolPose();
+        tf::Stamped<tf::Pose> leftTip = RobotArm::getInstance(1)->getToolPose();
+
+        leftTip.setOrigin(btVector3(leftTip.getOrigin().x(), leftTip.getOrigin().y(), rightTip.getOrigin().z()));
+
+        RobotArm::getInstance(1)->universal_move_toolframe_ik_pose(leftTip);
+
+        rightTip = RobotArm::getInstance(0)->getToolPose();
+        leftTip = RobotArm::getInstance(1)->getToolPose();
+
+        float averageX = (rightTip.getOrigin().x() + leftTip.getOrigin().x()) * 0.5;
+        float averageY = (rightTip.getOrigin().y() + leftTip.getOrigin().y()) * 0.5;
+        float averageZ = (rightTip.getOrigin().z() + leftTip.getOrigin().z()) * 0.5;
+
+        ROS_INFO("AVERAGE Y pre: %f", averageY);
+
+        OperateHandleController::spinnerL(.45 - averageX,0 - averageY,.935 - averageZ);
+
+    }
+
+
+    //! serve pancake / bring silverware over to the pillar table
+    if (atoi(argv[1]) == -35)
+        DemoScripts::serveToTable();
+
+    //! open drawer no. 4 in one pull, for video comparison with haptic approach
+    if (atoi(argv[1]) == -36)
+    {
+
+        /*Translation: [0.621, 1.421, 0.757]
+        - Rotation: in Quaternion [-0.714, -0.010, 0.051, 0.698]
+                 in RPY [-1.591, 0.059, 0.085]
+        ruehr@satie:~/sandbox/tumros-internal/highlevel/ias_drawer_executive$ rosrun tf tf_echo map r_gripper_tool_frame
+        At time 1286637310.022
+        - Translation: [0.168, 1.391, 0.734]
+        - Rotation: in Quaternion [-0.722, 0.028, 0.105, 0.684]
+                 in RPY [-1.615, 0.190, 0.105]
+
+                  Translation: [-0.031, 1.818, 0.051]
+        - Rotation: in Quaternion [-0.003, -0.006, 0.031, 0.999]
+                 in RPY [-0.006, -0.013, 0.062]
+
+
+                 */
+
+        {
+
+
+            std::vector<int> arm;
+            std::vector<tf::Stamped<tf::Pose> > goal;
+            btVector3 result;
+
+            tf::Stamped<tf::Pose> p0;
+            p0.frame_id_="map";
+            p0.stamp_=ros::Time();
+            p0.setOrigin(btVector3(0.64, 1.421, 0.757));
+            p0.setRotation(btQuaternion(-0.714, -0.010, 0.051, 0.698));
+            goal.push_back(p0);
+            arm.push_back(0);
+
+            tf::Stamped<tf::Pose> p3;
+            p3.frame_id_="map";
+            p3.stamp_=ros::Time();
+            p3.setOrigin(btVector3(0.55, 1.391, 0.734));
+            p3.setRotation(btQuaternion(-0.714, -0.010, 0.051, 0.698));
+            goal.push_back(p3);
+            arm.push_back(0);
+
+            tf::Stamped<tf::Pose> p1;
+            p1.frame_id_="map";
+            p1.stamp_=ros::Time();
+            p1.setOrigin(btVector3(0.168, 1.391, 0.734));
+            p1.setRotation(btQuaternion(-0.714, -0.010, 0.051, 0.698));
+            goal.push_back(p1);
+            arm.push_back(0);
+
+            Gripper::getInstance(0)->open();
+
+            RobotArm::findBaseMovement(result, arm, goal,true, false);
+
+            RobotArm *a = RobotArm::getInstance(0);
+            a->time_to_target = 2;
+            a->universal_move_toolframe_ik_pose(p3);
+            a->universal_move_toolframe_ik_pose(p0);
+            Gripper::getInstance(0)->closeCompliant();
+            Gripper::getInstance(0)->close();
+            //a->universal_move_toolframe_ik_pose(p3);
+            a->universal_move_toolframe_ik_pose(p1);
+            Gripper::getInstance(0)->open();
+
+            //RobotArm::findBaseMovement(result, arm, goal,false);
+        }
+
+
+    }
+
+    //! open handle assuming the right gripper surrounds it already, it takes the grippers pose and makes a haptic approach + opens
+    if (atoi(argv[1]) == -37)
+    {
+        {
+            std::vector<int> arm;
+            std::vector<tf::Stamped<tf::Pose> > goal;
+            btVector3 result;
+
+            tf::Stamped<tf::Pose> p0;
+            p0.frame_id_="map";
+            p0.stamp_=ros::Time();
+            p0.setOrigin(btVector3(0.64, 1.421, 0.757));
+            p0.setRotation(btQuaternion(-0.714, -0.010, 0.051, 0.698));
+            goal.push_back(p0);
+            arm.push_back(0);
+
+            tf::Stamped<tf::Pose> p3;
+            p3.frame_id_="map";
+            p3.stamp_=ros::Time();
+            p3.setOrigin(btVector3(0.55, 1.391, 0.734));
+            p3.setRotation(btQuaternion(-0.714, -0.010, 0.051, 0.698));
+            goal.push_back(p3);
+            arm.push_back(0);
+
+            tf::Stamped<tf::Pose> p1;
+            p1.frame_id_="map";
+            p1.stamp_=ros::Time();
+            p1.setOrigin(btVector3(0.168, 1.391, 0.734));
+            p1.setRotation(btQuaternion(-0.714, -0.010, 0.051, 0.698));
+            goal.push_back(p1);
+            arm.push_back(0);
+
+            Gripper::getInstance(0)->open();
+
+            RobotArm::findBaseMovement(result, arm, goal,true, false);
+
+            RobotArm *a = RobotArm::getInstance(0);
+            a->time_to_target = 2;
+            a->universal_move_toolframe_ik_pose(p3);
+            a->universal_move_toolframe_ik_pose(p0);
+        }
+        //tf::Stamped<tf::Pose> p0;
+        //p0.frame_id_="map";
+        //p0.stamp_=ros::Time();
+        //p0.setOrigin(btVector3(0.64, 1.421, 0.757));
+        //p0.setRotation(btQuaternion(-0.714, -0.010, 0.051, 0.698));
+        //p0 = RobotArm::getInstance(0)->getPoseIn("base_link",p0);
+
+
+        tf::Stamped<tf::Pose> p0 = RobotArm::getInstance(0)->getToolPose("base_link");
+
+        int handle = OperateHandleController::operateHandle(0,p0);
+        //     OperateHandleController::close(handle);
+        //Translation: [0.828, 1.973, 1.313]
+//- Rotation: in Quaternion [-0.701, -0.031, 0.039, 0.711]
+        //          in RPY [-1.556, 0.012, 0.099]
+
+
+    }
+
+
+
+    if (atoi(argv[1]) == -38)
+    {
+        ros::Rate rate(5);
+        while (ros::ok())
+        {
+            ROS_INFO("GRIPPER OPENING R%f L%f", Gripper::getInstance(0)->getAmountOpen(), Gripper::getInstance(1)->getAmountOpen());
+            rate.sleep();
+        }
+    }
+
+
+    //! get silverware, bring to pillar like plate with -35
+    if (atoi(argv[1]) == -39)
+        DemoScripts::takeSilverware();
+
+    //! open drawer for plate picking with fixed map pose -> a little quicker
+    if (atoi(argv[1]) == -40)
+        DemoScripts::openDrawer();
+
+    //! get plate back from island
+    if (atoi(argv[1]) == -41)
+        DemoScripts::takePlateFromIsland();
+
+    if (atoi(argv[1]) == -42)
+        OperateHandleController::plateTuckPose();
+
+
+    if (atoi(argv[1]) == -43)
+        OperateHandleController::plateAttackPose();
+
+    // open fridge with laser handle
+    if (atoi(argv[1]) == -44)
+        DemoScripts::openFridge();
+
+
+    // runs the whole demo once
+    if (atoi(argv[1]) == -100)
+    {
+
+        int idx = 0;
+        if (argc > 1)
+            idx = atoi(argv[2]);
+
+        ROS_INFO("INDEX TO DEMO :%i", idx);
+
+        int handle = 0;
+
+        switch (idx)
+        {
+
+        case 0:
+
+            handle = DemoScripts::openFridge();
+
+        case 1:
+
+            DemoScripts::takeBottle();
+
+        case 2:
+
+            DemoScripts::closeFridge(handle);
+
+        case 3:
+
+            DemoScripts::serveBottle();
+
+        case 4:
+
+            DemoScripts::openDrawer();
+
+        case 5:
+
+            DemoScripts::takePlate();
+
+        case 6:
+
+            DemoScripts::servePlateToIsland();
+
+        case 7:
+
+            DemoScripts::takeSilverware();
+
+        case 8:
+
+            DemoScripts::serveToTable();
+
+        case 9:
+
+            DemoScripts::takePlateFromIsland();
+
+        case 10:
+            //2nd time :)
+            DemoScripts::serveToTable();
+        }
+    }
+
+    /*
+
+       Translation: [0.208, 2.109, 0.051]
+       - Rotation: in Quaternion [0.000, 0.001, 0.034, 0.999]
+                  in RPY [0.000, 0.001, 0.069]
+
+
+       */
+    // tool frame target poses
+    /*- Translation: [-1.728, 2.191, 0.976]
+    - Rotation: in Quaternion [-0.308, 0.646, -0.287, 0.637]
+            in RPY [-1.602, 0.702, -1.569]
+    ruehr@satie:~/sandbox/tumros-internal/highlevel/ias_drawer_executive$ rosrun tf tf_echo map l_gripper_tool_frame
+    At time 1286303719.777
+    - Translation: [-1.709, 1.923, 0.977]
+    - Rotation: in Quaternion [-0.616, -0.318, 0.670, 0.267]
+            in RPY [-1.519, 0.713, 1.703]*/
+
+    /*
+
+    first step base
+
+     Translation: [-0.122, 1.015, 0.051]
+    - Rotation: in Quaternion [0.001, -0.000, -0.013, 1.000]
+    second step base
+    Translation: [-0.113, 1.022, 0.051]
+    - Rotation: in Quaternion [0.003, -0.001, 0.975, 0.223]
+    thir dstep
+
+    -0.901, 1.778, 0.050]
+    - Rotation: in Quaternion [-0.000, -0.002, 0.999, -0.051]
+
+    last step via tf target pose
+
+    */
+
 }
 
+
+/*
+- Translation: [0.330, -0.381, 0.051]
+- Rotation: in Quaternion [0.001, -0.001, 0.079, 0.997]
+            in RPY [0.002, -0.001, 0.159]
+
+0.542329 -0.981344 1.23612 0.0330708  0.00176235 0.595033  0.803019
+0.556517 -0.920874 1.23603 0.0298695 -0.00432607 0.545786  0.837381
+0.572956 -0.861407 1.23635 0.0268959 -0.00695657 0.494586  0.868685
+0.581633 -0.828156 1.23589 0.0252092 -0.00877769 0.475406  0.879362
+0.604209 -0.781168 1.23568 0.0179254  0.00291321 0.436192  0.89967
+0.622422 -0.748086 1.23539 0.0152842  0.00913191 0.340254  0.940165
+0.639726 -0.721124 1.23581 0.0164386  0.0162648  0.278332  0.960206
+0.661803 -0.694327 1.23576 0.0219128  0.0176437  0.246738  0.968674
+0.698809 -0.657863 1.23729 0.0284113  0.0207615  0.238006  0.970626
+0.740968 -0.625336 1.23853 0.0375375  0.0235445  0.227272  0.972823
+0.784319 -0.598149 1.23992 0.0450486  0.0276238  0.212765  0.975673
+0.82972  -0.572236 1.24111 0.0451087  0.0322855  0.169386  0.983987
+0.875225 -0.553171 1.24195 0.0358857  0.032936   0.122281  0.9913
+0.956881 -0.532016 1.24365 0.0254018  0.0329301  0.0418438 0.998258
+0.972319 -0.530781 1.2467  0.0022027  0.0133422  0.0679044 0.9976
+1.02179  -0.52356  1.24665 0.0022027  0.0133422  0.0679044 0.9976
+*/

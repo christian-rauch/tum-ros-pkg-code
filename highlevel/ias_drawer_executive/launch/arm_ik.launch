@@ -14,5 +14,5 @@
     <param name="max_acc" value="2.0" />
     <param name="max_vel" value="2.5" />
   </node>
-  <include file="$(find pr2_arm_kinematics)/launch/pr2_ik_rarm_node.launch"/>
+  <!--include file="$(find pr2_arm_kinematics)/launch/pr2_ik_rarm_node.launch"/-->
 </launch>

@@ -1,0 +1,16 @@
+# Define the goal e.g. 0 8 3 = open fridge with right arm, 1 4 2 = open drawer with left arm, 0 -1 -1 close fridge that returned handle -1 when opening, starting from current base position
+# 0 = right 1 = left
+int32 arm
+# 4 = left of sink, 8 = fridge, -1 = dont drive anywhere
+int32 positionIdx
+# 0 = low drawer 1 = middle drawer 2 = top drawer 3 = fridge high,  or give trajectory handle here like (negative numbers)
+int32 heightIdx
+---
+# Define the result
+#int32 slipped # 0 = gripper still has contact, 1 slipped off, gripper lost contact
+#float32 distance #the distance the gripper travelled, e.g. detected depth of drawer
+#used to close the thing again, robot has to be in a pose similar to the one after opening for this to work
+int32 trajectoryHandle
+---
+# Define a feedback message
+float32 current_distance

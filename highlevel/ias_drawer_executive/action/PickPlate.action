@@ -1,0 +1,8 @@
+# 0 = right 1 = left
+int32 arm
+---
+# Define the result
+int32 ok
+---
+# Define a feedback message
+float32 current_distance

@@ -1,5 +1,19 @@
 <launch>
-  <include file="$(find ias_drawer_executive)/launch/arm_ik.launch"/>
-  <include file="$(find ias_drawer_executive)/launch/ar_pose_pr2_forearm.launch"/>
+
+  <!-- <include file="$(find ias_drawer_executive)/launch/ar_pose_pr2_forearm.launch"/> -->
+  <!-- <include file="$(find ias_drawer_executive)/launch/ar_pose_pr2_forearm_l.launch"/> -->
   <include file="$(find ias_pr2_2dnav)/pr2_2dnav.launch"/>
+
+  <include file="$(find ias_drawer_executive)/launch/grip.launch"/>
+
+  <include file="$(find handle_detection)/launch/drawer_handles_detector.launch" />
+  <include file="$(find cloud_tools)/launch/point_cloud_assembler_with_filter.launch"/>
+
+  <include file="$(find pcl_cloud_tools)/launch/table_plate_detector_narrow_stereo.launch"/>
+
+  <param name="/reactive_grasp_node_left/min_contact_row" value="3" />
+  <param name="/reactive_grasp_node_right/min_contact_row" value="3" />
+  <param name="/l_arm_ik/free_angle" value="2" />
+  <param name="/r_arm_ik/free_angle" value="2" />
+
 </launch>

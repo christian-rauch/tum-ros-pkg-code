@@ -1,5 +1,5 @@
 <launch>
-  <node name="ar_pose" pkg="ar_pose" type="ar_multi" respawn="false" output="screen">
+  <node name="ar_pose" pkg="ar_pose" type="ar_multi" respawn="false" output="screen" machine="c2">
   <param name="marker_pattern_list" type="string" value="$(find ias_drawer_executive)/data/12_5mm"/>
 		<param name="threshold" type="int" value="128"/>
         <remap from="/usb_cam/camera_info" to="/r_forearm_cam/camera_info"/>

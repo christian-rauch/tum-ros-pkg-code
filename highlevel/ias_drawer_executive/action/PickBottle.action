@@ -1,0 +1,9 @@
+# Define the goal e.g. 0 8 3 = open fridge with right arm, 1 4 2 = open drawer with left arm, 0 -1 -1 close fridge that returned handle -1 when opening, starting from current base position
+# 0 = right 1 = left
+int32 arm
+---
+# Define the result
+int32 ok
+---
+# Define a feedback message
+float32 current_distance

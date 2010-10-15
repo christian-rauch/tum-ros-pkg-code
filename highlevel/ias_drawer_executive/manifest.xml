@@ -4,7 +4,7 @@
      ias_drawer_executive
      opens drawers in the ias kitchen.
      the robot is driven to a hardcoded location that is know for each drawer.
-     the right goes to a hardcoded joint state so that we see the ar toolkit marker on the drawer handle in the forearm camera.
+     the right hand goes to a hardcoded joint state so that we see the ar toolkit marker on the drawer handle in the forearm camera.
      ik is then used to grasp at the marker, and the drawer is opened with some trajectory exploration, following the line of least resistance so to say.
 
   </description>
@@ -14,14 +14,35 @@
   <url>http://ros.org/wiki/ias_drawer_executive</url>
   <depend package="move_arm_msgs"/>
   <depend package="actionlib"/>
-  <depend package="ar_pose"/>
+  <depend package="actionlib_msgs"/>
+  <!--depend package="ar_pose"/-->
   <depend package="kinematics_msgs"/>
   <depend package="pr2_arm_move_ik"/>
   <depend package="pr2_controllers_msgs"/>
   <depend package="tf"/>
+  <depend package="pr2_msgs"/>
   <depend package="move_base_msgs"/>
+  <depend package="joint_trajectory_action"/>
+  <depend package="geometry_msgs"/>
+  <depend package="kinematics_msgs"/>
+  <depend package="std_srvs"/>
+<depend package="visualization_msgs"/>
+
+  <!-- for map2pc2 -->
+  <depend package="pcl"/>
+  <depend package="nav_msgs"/>
+  <depend package="laser_geometry"/>
+
+  <!-- for cop plate detection -->
+  <depend package="cop_client_cpp"/>
+
+  <!-- Stuff other people forgot to add ;) -->
+  <depend package="pcl_cloud_tools"/>
+  <depend package="point_cloud_converter"/>
+
+  <depend package="ias_table_msgs"/>
+  <export>
+    <cpp cflags="-I${prefix}/include/" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lias_drawer_executive_library"/>
+  </export>
 
 </package>
-
-
-

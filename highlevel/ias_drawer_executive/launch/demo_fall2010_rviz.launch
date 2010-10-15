@@ -1,0 +1,3 @@
+<launch>
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find ias_drawer_executive)/launch/demo_fall2010.vcg"/>
+</launch>

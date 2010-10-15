@@ -1,0 +1,8 @@
+# goal
+int32 arm
+---
+# result
+int32 handle
+---
+# feedback
+float32 alive
