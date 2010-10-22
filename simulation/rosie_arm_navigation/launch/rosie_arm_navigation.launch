@@ -1,6 +1,7 @@
 <launch>
 
  <!-- load perception -->
+ <include file="$(find rosie_arm_navigation)/launch/perception.launch"/>
 
  <!-- load planning -->	
  <include file="$(find rosie_arm_navigation)/launch/ompl_planning.launch"/>

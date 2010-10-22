@@ -13,6 +13,7 @@ groups:
       torso_link
       head_pan_link
       ptu_tilt_center
+      shoulder_tilt_base
 
   - name: left_arm
     joints:

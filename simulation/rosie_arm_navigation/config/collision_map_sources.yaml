@@ -1,0 +1,9 @@
+cloud_sources:
+  - name: tilt_scan_cloud_filtered
+    frame_subsample: 1
+    point_subsample: 1
+    sensor_frame: shoulder_tilting_laser
+    dynamic_publish: true
+    static_publish: true
+    dynamic_until_static_publish: true
+    dynamic_buffer_size: 25

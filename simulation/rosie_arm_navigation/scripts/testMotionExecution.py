@@ -44,10 +44,11 @@ class TestMotionExecutionBuffer(unittest.TestCase):
         obj1.id = "obj1";
         obj1.operation.operation = mapping_msgs.msg.CollisionObjectOperation.ADD
         obj1.shapes = [Shape() for _ in range(1)]
-        obj1.shapes[0].type = Shape.CYLINDER
-        obj1.shapes[0].dimensions = [float() for _ in range(2)]
+        obj1.shapes[0].type = Shape.BOX
+        obj1.shapes[0].dimensions = [float() for _ in range(3)]
         obj1.shapes[0].dimensions[0] = .1
-        obj1.shapes[0].dimensions[1] = 2.0
+        obj1.shapes[0].dimensions[1] = .1
+        obj1.shapes[0].dimensions[2] = 2.0
         obj1.poses = [Pose() for _ in range(1)]
         obj1.poses[0].position.x = 1.1
         obj1.poses[0].position.y = -.6
@@ -105,7 +106,7 @@ class TestMotionExecutionBuffer(unittest.TestCase):
             motion_plan_request.goal_constraints.joint_constraints[i].tolerance_below = 0.08
 
         motion_plan_request.goal_constraints.joint_constraints[0].position = 1.5
-        motion_plan_request.goal_constraints.joint_constraints[1].position = -1.5
+        motion_plan_request.goal_constraints.joint_constraints[1].position = 0.0#-1.5
         motion_plan_request.goal_constraints.joint_constraints[5].position = 0.0
 
         goal = MoveArmGoal()
