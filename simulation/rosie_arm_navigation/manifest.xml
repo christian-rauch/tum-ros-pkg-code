@@ -1,0 +1,14 @@
+<package>
+  <description brief="rosie_arm_navigation">
+
+     rosie_arm_navigation
+
+  </description>
+  <author>E. Gil Jones</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/rosie_arm_navigation</url>
+
+</package>
+
+

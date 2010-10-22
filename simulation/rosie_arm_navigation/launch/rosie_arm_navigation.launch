@@ -1,0 +1,21 @@
+<launch>
+
+ <!-- load perception -->
+
+ <!-- load planning -->	
+ <include file="$(find rosie_arm_navigation)/launch/ompl_planning.launch"/>
+
+ <!-- load move_arm -->
+ <include file="$(find rosie_arm_navigation)/launch/move_right_arm.launch"/>
+ <!--include file="$(find rosie_arm_navigation)/launch/move_left_arm.launch"/-->
+
+ <!-- load planning_environment -->
+ <include file="$(find rosie_arm_navigation)/launch/environment_server.launch"/>
+ <include file="$(find planning_environment)/launch/display_planner_collision_model.launch" />
+
+ <!-- load controllers -->
+ <include file="$(find rosie_arm_navigation)/launch/trajectory_filter.launch"/>
+
+ <!-- load ik -->
+
+</launch>
