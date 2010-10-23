@@ -146,7 +146,7 @@
 
   <!-- The cylinder obstacle -->
   <model:physical name="cylinder1_model">
-    <xyz>   1.1   -.6    1.0</xyz> 
+    <xyz>   .9   -.5    1.0</xyz> 
     <rpy>   0.0    0.0    0.0</rpy>
     <body:box name="cylinder1_body">
       <geom:box name="cylinder1_geom">

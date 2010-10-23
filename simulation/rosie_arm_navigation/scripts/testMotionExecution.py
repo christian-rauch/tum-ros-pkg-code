@@ -50,8 +50,8 @@ class TestMotionExecutionBuffer(unittest.TestCase):
         obj1.shapes[0].dimensions[1] = .1
         obj1.shapes[0].dimensions[2] = 2.0
         obj1.poses = [Pose() for _ in range(1)]
-        obj1.poses[0].position.x = 1.1
-        obj1.poses[0].position.y = -.6
+        obj1.poses[0].position.x = .9
+        obj1.poses[0].position.y = -.5
         obj1.poses[0].position.z = 1.0
         obj1.poses[0].orientation.x = 0
         obj1.poses[0].orientation.y = 0
@@ -106,8 +106,24 @@ class TestMotionExecutionBuffer(unittest.TestCase):
             motion_plan_request.goal_constraints.joint_constraints[i].tolerance_below = 0.08
 
         motion_plan_request.goal_constraints.joint_constraints[0].position = 1.5
-        motion_plan_request.goal_constraints.joint_constraints[1].position = -2.0
-        motion_plan_request.goal_constraints.joint_constraints[3].position = 1.0
+        motion_plan_request.goal_constraints.joint_constraints[1].position = -1.8
+        motion_plan_request.goal_constraints.joint_constraints[3].position = .5
+
+        goal = MoveArmGoal()
+        goal.planner_service_name = "ompl_planning/plan_kinematic_path"
+        goal.motion_plan_request = motion_plan_request
+
+        self.move_arm_action_client.send_goal(goal)
+
+        while True:
+             cur_state = self.move_arm_action_client.get_state()
+             if(cur_state != actionlib_msgs.msg.GoalStatus.ACTIVE and
+                cur_state != actionlib_msgs.msg.GoalStatus.PENDING):
+                 break 
+
+        motion_plan_request.goal_constraints.joint_constraints[0].position = 0.0
+        motion_plan_request.goal_constraints.joint_constraints[1].position = 0.0
+        motion_plan_request.goal_constraints.joint_constraints[3].position = 0.0
 
         goal = MoveArmGoal()
         goal.planner_service_name = "ompl_planning/plan_kinematic_path"
