@@ -8,12 +8,12 @@
     <remap from="filter_trajectory" to="trajectory_filter/filter_trajectory_with_constraints" />
     <!--remap from="filter_trajectory" to="chomp_planner_longrange/filter_trajectory_with_constraints" /-->
     
-    <remap from="get_trajectory_validity" to="environment_server/get_trajectory_validity" />	
-    <remap from="get_environment_safety" to="environment_server/get_environment_safety" />	
-    <remap from="get_execution_safety" to="environment_server/get_execution_safety" />	
-    <remap from="get_group_info" to="environment_server/get_group_info" />	
-    <remap from="get_robot_state" to="environment_server/get_robot_state" />	
-    <remap from="get_state_validity" to="environment_server/get_state_validity" />	
+    <remap from="get_trajectory_validity" to="environment_server_right_arm/get_trajectory_validity" />	
+    <remap from="get_environment_safety" to="environment_server_right_arm/get_environment_safety" />	
+    <remap from="get_execution_safety" to="environment_server_right_arm/get_execution_safety" />	
+    <remap from="get_joints_in_group" to="environment_server_right_arm/get_joints_in_group" />	
+    <remap from="get_robot_state" to="environment_server_right_arm/get_robot_state" />	
+    <remap from="get_state_validity" to="environment_server_right_arm/get_state_validity" />	
 
     <param name="group" type="string" value="right_arm" />
     <param name="trajectory_filter_allowed_time" type="double" value="2.0" />

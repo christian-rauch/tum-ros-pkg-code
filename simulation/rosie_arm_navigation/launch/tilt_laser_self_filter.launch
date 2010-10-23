@@ -5,10 +5,10 @@
      <remap from="robot_description" to="robot_description" />
      
      <!-- The topic for the input cloud -->
-     <remap from="cloud_in" to="tilt_scan_cloud_known2" />
+     <remap from="cloud_in" to="tilt_scan_cloud" />
      
      <!-- The topic for the output cloud -->
-     <remap from="cloud_out" to="tilt_scan_cloud_filtered2" />
+     <remap from="cloud_out" to="tilt_scan_cloud_filtered" />
 
      <!-- The frame of the sensor used to obtain the data to be
        filtered; This parameter is optional. If it is not specified,

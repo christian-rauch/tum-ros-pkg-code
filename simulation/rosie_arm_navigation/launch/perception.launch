@@ -4,35 +4,21 @@
   <include file="$(find rosie_arm_navigation)/launch/rosie_planning_environment.launch" />
 
   <!-- convert tilt laser scan to pointcloud -->
-  <node machine="c2" pkg="laser_filters" type="scan_to_cloud_filter_chain" output="screen" name="scan_to_cloud_filter_chain_tilt_laser">
+  <node pkg="laser_filters" type="scan_to_cloud_filter_chain" output="screen" name="scan_to_cloud_filter_chain_tilt_laser">
     <remap from="scan" to="/laser/shoulder_tilting_laser_sensor"/>
     <remap from="cloud_filtered" to="/tilt_scan_cloud"/>
     <param name="target_frame" type="string" value="base_link"/>
     <rosparam command="load" file="$(find rosie_arm_navigation)/config/shadow_filter.yaml" />
   </node>
 
-  <!-- need to clear known objects from scans -->
-  <node machine="c2" pkg="planning_environment" type="clear_known_objects" name="laser_clear_objects" output="screen">
-    <remap from="cloud_in" to="tilt_scan_cloud" />
-    <remap from="cloud_out" to="tilt_scan_cloud_known" />
-    <param name="sensor_frame" type="string" value="shoulder_tilting_laser" />			
-    <param name="fixed_frame" type="string" value="base_link" />
-    <param name="object_padd" type="double" value=".04" />
-    <param name="object_scale" type="double" value="1.0" />
-  </node>
-
- <node pkg="point_cloud_converter" name="point_cloud_converter_preself" type="point_cloud_converter">
-	<remap from="/points_in" to="/tilt_scan_cloud_known" />
-        <remap from="/points2_out" to="/tilt_scan_cloud_known2" />
+  <node pkg="laser_filters" type="scan_to_cloud_filter_chain" output="screen" name="scan_to_cloud_filter_chain_tilt_laser_base">
+    <remap from="scan" to="/laser/laser_front_left"/>
+    <remap from="cloud_filtered" to="/base_laser_cloud"/>
+    <param name="target_frame" type="string" value="base_link"/>
   </node>
 
   <!-- need to individually self filter scans -->
   <include file="$(find rosie_arm_navigation)/launch/tilt_laser_self_filter.launch" />    
-
- <node pkg="point_cloud_converter" name="point_cloud_converter_postself" type="point_cloud_converter">
-	<remap from="/points2_in" to="/tilt_scan_cloud_filtered2" />
-        <remap from="/points_out" to="/tilt_scan_cloud_filtered" />
-  </node>
 
   <!-- assemble pointcloud into a full world view -->
   <node pkg="laser_assembler" type="point_cloud_assembler" output="screen"  name="point_cloud_assembler">

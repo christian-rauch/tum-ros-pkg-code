@@ -60,7 +60,7 @@ class TestMotionExecutionBuffer(unittest.TestCase):
         
         self.obj_pub.publish(obj1)
 
-        rospy.sleep(2.0)
+        rospy.sleep(1.0)
         
     def tearDown(self):
         obj1 = CollisionObject()
@@ -106,8 +106,8 @@ class TestMotionExecutionBuffer(unittest.TestCase):
             motion_plan_request.goal_constraints.joint_constraints[i].tolerance_below = 0.08
 
         motion_plan_request.goal_constraints.joint_constraints[0].position = 1.5
-        motion_plan_request.goal_constraints.joint_constraints[1].position = 0.0#-1.5
-        motion_plan_request.goal_constraints.joint_constraints[5].position = 0.0
+        motion_plan_request.goal_constraints.joint_constraints[1].position = -2.0
+        motion_plan_request.goal_constraints.joint_constraints[3].position = 1.0
 
         goal = MoveArmGoal()
         goal.planner_service_name = "ompl_planning/plan_kinematic_path"

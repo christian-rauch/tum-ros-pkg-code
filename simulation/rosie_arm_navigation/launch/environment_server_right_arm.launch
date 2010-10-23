@@ -2,10 +2,12 @@
   <!-- send additional description parameters -->
   <include file="$(find rosie_arm_navigation)/launch/rosie_planning_environment.launch" />
 
-  <node pkg="planning_environment" type="environment_server" output="screen" name="environment_server">      
+  <node pkg="planning_environment" type="environment_server" output="screen" name="environment_server_right_arm">      
     <remap from="collision_map" to="collision_map_occ" />
     <remap from="collision_map_update" to="collision_map_occ_update" />
     
+    <param name="group" type="string" value="right_arm" />	
+
     <param name="allow_valid_collisions" type="bool" value="false" />
 
     <param name="collision_map_safety_timeout" type="double" value="100000.0" />
