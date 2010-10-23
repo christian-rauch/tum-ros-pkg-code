@@ -9,6 +9,9 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/rosie_arm_navigation</url>
 
+  <depend package="arm_navigation_tests"/>
+  <depend package="ias_gazebo"/>
+
 </package>
 
 
