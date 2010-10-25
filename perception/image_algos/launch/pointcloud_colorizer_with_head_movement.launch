@@ -1,14 +1,28 @@
 <launch>
+  
+  <group ns="prosilica">
+    <node name="image_proc" pkg="image_proc" type="image_proc" />
+  </group>
+  
 <node pkg="point_cloud_converter" type="point_cloud_converter" name="point_cloud_converter" output="screen" respawn="true" >
   <remap from="/points_in" to="/shoulder_cloud"/>
 </node>
 
   <node pkg="image_algos" type="pointcloud_colorizer_with_head_movement_node" name="pointcloud_colorizer_with_head_movement_node" 
-	output="screen" respawn="true">
-    <param name="input_image_topic" value="/narrow_stereo/left/image_rect" />
+	output="screen" respawn="false">
+    <param name="input_image_topic" value="/prosilica/image_rect" />
     <param name="input_cloud_topic" value="/points2_out" />
     <param name="monochrome" value="true" />
     <param name="save_image" value="false" />	
   </node>
 <!--   launch-prefix="xterm -e gdb -args" -->
+
+<node pkg="dynamic_reconfigure" type="dynparam" args="set_from_parameters prosilica_driver" name="prosilica_reconfigure">
+  <param name="auto_exposure" type="bool" value="false"/>
+  <param name="trigger_mode" type="string" value="streaming"/>	
+  <param name="auto_gain" type="bool" value="false"/>	
+  <param name="gain" type="int" value="24"/>	
+  <param name="auto_whitebalance" type="bool" value="false"/>	
+</node>
+
 </launch>
