@@ -1,0 +1,11 @@
+# This action moves the arm in the current orientation to the point relative to the current position
+# using non-collision aware interpolated ik
+
+# which arm to use
+string arm_name
+
+# the point relative to the current position to move to
+geometry_msgs/Point rel_point
+---
+bool success
+---

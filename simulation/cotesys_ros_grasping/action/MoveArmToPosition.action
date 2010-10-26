@@ -1,0 +1,12 @@
+# an action which moves the end_effector to the specified x,y,z position relative to the base_link of the robot
+
+# string name associated with the arm to which the end effector is attached
+string arm_name
+
+# x, y, z point
+geometry_msgs/Point point
+
+---
+# TODO - more about what went wrong
+bool success
+---

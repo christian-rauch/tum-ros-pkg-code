@@ -1,0 +1,16 @@
+<launch>
+  
+  <node pkg="cotesys_ros_grasping" type="move_arm_to_position_server" name="move_arm_to_position_server" output="screen">
+    <remap from="left_move_arm_action" to="move_left_arm"/>  
+    <remap from="right_move_arm_action" to="move_right_arm"/>  
+    <param name="end_effector_rot_z" type="double" value=".7071" />
+    <param name="end_effector_rot_x" type="double" value=".7071" />    
+    <param name="end_effector_rot_w" type="double" value="0.0" />    
+  </node>  
+  
+  <node pkg="cotesys_ros_grasping" type="move_arm_relative_cartesian_point_server" name="move_arm_relative_cartesian_point_server" output="screen">
+    <remap from="left_move_arm_action" to="move_left_arm"/>  
+    <remap from="right_move_arm_action" to="move_right_arm"/>  
+    <param name="disable_collisions" type="bool" value="true" />    
+  </node>  
+</launch>

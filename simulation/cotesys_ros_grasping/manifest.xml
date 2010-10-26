@@ -1,0 +1,25 @@
+<package>
+  <description brief="cotesys_ros_grasping">
+
+     cotesys_ros_grasping
+
+  </description>
+  <author>Gil Jones</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/cotesys_ros_grasping</url>
+
+  <depend package="move_arm"/>
+  <depend package="actionlib"/>
+  <depend package="actionlib_msgs"/>
+  <depend package="geometry_msgs"/>
+  <depend package="pr2_controllers_msgs"/>
+
+  <export>
+    <cpp cflags="-I${prefix}/msg/cpp"/>
+  </export>
+
+
+</package>
+
+
