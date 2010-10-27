@@ -1,0 +1,5 @@
+# action to reset the laser tilt and take a static collision map
+
+---
+bool success	
+---

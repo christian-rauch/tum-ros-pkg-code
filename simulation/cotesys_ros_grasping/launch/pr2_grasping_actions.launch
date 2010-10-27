@@ -13,4 +13,6 @@
     <remap from="right_move_arm_action" to="move_right_arm"/>  
     <param name="disable_collisions" type="bool" value="true" />    
   </node>  
+  
+  <node pkg="cotesys_ros_grasping" type="take_static_collision_map_server" name="take_static_collision_map_server_server" output="screen"/>
 </launch>

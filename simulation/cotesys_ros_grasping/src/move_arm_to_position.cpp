@@ -174,7 +174,7 @@ bool MoveArmToPositionServer::execute(const cotesys_ros_grasping::MoveArmToPosit
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "move_arm");
+  ros::init(argc, argv, "move_arm_to_position");
   
   ros::AsyncSpinner spinner(1); // Use 1 thread
   spinner.start();

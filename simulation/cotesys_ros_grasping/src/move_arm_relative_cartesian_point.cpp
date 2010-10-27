@@ -229,7 +229,7 @@ bool MoveArmRelativeCartesianPointServer::execute(const cotesys_ros_grasping::Mo
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "move_arm");
+  ros::init(argc, argv, "move_arm_relative_cartesian_point");
   
   ros::AsyncSpinner spinner(1); // Use 1 thread
   spinner.start();
