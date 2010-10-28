@@ -7,6 +7,5 @@ string arm_name
 geometry_msgs/Point point
 
 ---
-# TODO - more about what went wrong
-bool success
+motion_planning_msgs/ArmNavigationErrorCodes error_code
 ---

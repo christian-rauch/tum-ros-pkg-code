@@ -191,15 +191,15 @@ bool MoveArmRelativeCartesianPointServer::execute(const cotesys_ros_grasping::Mo
   motion_planning_msgs::GetMotionPlan::Response plan_res;
   
   if(!interp_ik_client->call(plan_req,plan_res)) {
-    ROS_WARN("Interpolated ik call failed");
-    cart_res.success = false;
+    ROS_WARN_STREAM("Interpolated ik call failed with error code " << plan_res.error_code.val);
+    cart_res.error_code = plan_res.error_code;
     action_server_->setAborted(cart_res);
     return true;
   }
   for(unsigned int i = 0; i < plan_res.trajectory_error_codes.size(); i++) {
     if(plan_res.trajectory_error_codes[i].val != plan_res.trajectory_error_codes[i].SUCCESS) {
       ROS_WARN_STREAM("Interpolated ik call did not succeed " << plan_res.error_code.val << " for point " << i);
-      cart_res.success = false;
+      cart_res.error_code = plan_res.trajectory_error_codes[i];
       action_server_->setAborted(cart_res);
       return true;
     }
@@ -216,11 +216,12 @@ bool MoveArmRelativeCartesianPointServer::execute(const cotesys_ros_grasping::Mo
   }
   
   actionlib::SimpleClientGoalState state = joint_traj_client->getState();
-  cart_res.success = (state == actionlib::SimpleClientGoalState::SUCCEEDED);
-  if(cart_res.success) {
-    action_server_->setSucceeded(cart_res);
-  } else {
+  if(state != actionlib::SimpleClientGoalState::SUCCEEDED) {
+    cart_res.error_code.val = cart_res.error_code.TRAJECTORY_CONTROLLER_FAILED;
     action_server_->setAborted(cart_res);
+  } else {
+    cart_res.error_code.val = cart_res.error_code.SUCCESS;
+    action_server_->setSucceeded(cart_res);
   }
   return true;
 }
@@ -233,7 +234,6 @@ int main(int argc, char** argv)
   
   ros::AsyncSpinner spinner(1); // Use 1 thread
   spinner.start();
-  ros::NodeHandle nh("~");
 
   cotesys_ros_grasping::MoveArmRelativeCartesianPointServer move_arm_pos;
 

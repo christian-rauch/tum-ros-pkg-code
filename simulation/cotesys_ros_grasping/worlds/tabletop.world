@@ -1,0 +1,395 @@
+<?xml version="1.0"?>
+<gazebo:world
+    xmlns:xi="http://www.w3.org/2001/XInclude"
+    xmlns:gazebo="http://playerstage.sourceforge.net/gazebo/xmlschema/#gz"
+    xmlns:model="http://playerstage.sourceforge.net/gazebo/xmlschema/#model"
+    xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor"
+    xmlns:window="http://playerstage.sourceforge.net/gazebo/xmlschema/#window"
+    xmlns:param="http://playerstage.sourceforge.net/gazebo/xmlschema/#param"
+    xmlns:body="http://playerstage.sourceforge.net/gazebo/xmlschema/#body"
+    xmlns:geom="http://playerstage.sourceforge.net/gazebo/xmlschema/#geom"
+    xmlns:joint="http://playerstage.sourceforge.net/gazebo/xmlschema/#joint"
+    xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface"
+    xmlns:ui="http://playerstage.sourceforge.net/gazebo/xmlschema/#ui"
+    xmlns:rendering="http://playerstage.sourceforge.net/gazebo/xmlschema/#rendering"
+    xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller"
+    xmlns:physics="http://playerstage.sourceforge.net/gazebo/xmlschema/#physics">
+
+  <verbosity>5</verbosity>
+  <logData>0</logData>
+
+  <physics:ode>
+    <stepTime>0.001</stepTime>
+    <gravity>0 0 -9.8</gravity>
+    <updateRate>0</updateRate>
+    <cfm>1e-10</cfm>
+    <erp>0.2</erp>
+    <quickStep>1</quickStep>
+    <stepIters>100</stepIters>
+    <quickStepW>1.3</quickStepW>
+    <contactMaxCorrectingVel>100</contactMaxCorrectingVel>
+    <contactSurfaceLayer>0.001</contactSurfaceLayer>
+  </physics:ode>
+
+  <rendering:ogre>
+    <ambient>0.8 0.8 0.8 0.8</ambient>
+    <grid>0</grid>
+    <sky>
+      <material>Gazebo/CloudySky</material>
+    </sky>
+    <fog>
+      <type>none</type>
+      <color>1 1 1 1</color>
+      <linearStart>0</linearStart>
+      <linearEnd>0</linearEnd>
+      <density>0</density>
+    </fog>
+  </rendering:ogre>
+
+  <rendering:gui>
+    <size>480 320</size>
+    <pos>0 0</pos>
+    <frames>
+      <row height="100%">
+        <camera width="100%">
+          <xyz>0.3 0 3</xyz>
+          <rpy>0 90 90</rpy>
+        </camera>
+      </row>
+    </frames>
+  </rendering:gui>
+
+  <!-- clock -->
+  <model:physical name="clock">
+    <xyz>0 0 0</xyz>
+    <rpy>0 0 0</rpy>
+    <static>true</static>
+    <body:box name="clock_body">
+      <geom:box name="clock_geom">
+        <mesh>default</mesh>
+        <size>0 0 0</size>
+        <visual>
+          <size>0 0 0</size>
+          <material>PR2/White</material>
+          <mesh>unit_box</mesh>
+        </visual>
+      </geom:box>
+    </body:box>
+    <!-- broadcast ros /time with simTime -->
+    <controller:gazebo_ros_time name="gazebo_ros_time" plugin="libgazebo_ros_time.so">
+      <alwaysOn>true</alwaysOn>
+      <updateRate>1000.0</updateRate>
+      <interface:audio name="dummy_gazebo_ros_time_iface_should_not_be_here"/>
+    </controller:gazebo_ros_time>
+    <!-- offer ROS services to spawn and delete models -->
+    <controller:gazebo_ros_factory name="gazebo_ros_factory" plugin="libgazebo_ros_factory.so">
+      <alwaysOn>true</alwaysOn>
+      <updateRate>1.0</updateRate>
+      <interface:audio name="dummy_gazebo_ros_factory_iface_should_not_be_here"/>
+    </controller:gazebo_ros_factory>
+  </model:physical>
+ 
+
+  <model:physical name="gplane">
+    <xyz>0 0 0</xyz>
+    <rpy>0 -0 0</rpy>
+    <enableGravity>1</enableGravity>
+    <enableFriction>1</enableFriction>
+    <collide>all</collide>
+    <static>1</static>
+
+    <body name="plane">
+      <xyz>0 0 0</xyz>
+      <rpy>0 -0 0</rpy>
+
+      <geom:plane name="plane">
+        <xyz>0 0 0</xyz>
+        <rpy>0 -0 0</rpy>
+        <normal>0 0 1</normal>
+        <size>51.3 51.3</size>
+        <segments>10 10</segments>
+        <uvTile>100 100</uvTile>
+        <material>Gazebo/GrayGrid</material>
+        <castShadows>0</castShadows>
+        <mass>0.001</mass>
+        <laserFiducialId>-1</laserFiducialId>
+        <laserRetro>2000</laserRetro>
+      </geom:plane>
+    </body>
+  </model:physical>
+
+  <model:renderable name="point_white">
+    <xyz>0 0 3</xyz>
+    <rpy>0 -0 0</rpy>
+    <enableGravity>0</enableGravity>
+    <enableFriction>1</enableFriction>
+    <collide>all</collide>
+    <light>
+      <type>point</type>
+      <direction>0 0 -1</direction>
+      <diffuseColor>0.8 0.8 0.8 1</diffuseColor>
+      <specularColor>0.8 0.8 0.8 1</specularColor>
+      <range>10</range>
+      <attenuation> 0.2 0.1 0</attenuation>
+    </light>
+  </model:renderable>
+
+ 
+  <model:physical name="table_model">
+    <xyz>0.05 0 .01 </xyz> <!---0.011023</xyz>-->
+    <rpy>0 0 0</rpy>
+    <enableGravity>1</enableGravity>
+    <enableFriction>1</enableFriction>
+    <collide>all</collide>
+    <static>0</static>
+
+    <body name="leg1_link">
+      <xyz>1.47997 0.499876 0.548975</xyz>
+      <rpy>-0.000235507 4.03385e-05 -0.00513087</rpy>
+
+      <geom:cylinder name="leg1_link_geom">
+        <xyz>0 0 -0.275</xyz>
+        <rpy>0 -0 0</rpy>
+        <size>0.02 0.55</size>
+        <mass>0.001</mass>
+        <laserFiducialId>-1</laserFiducialId>
+        <laserRetro>-1</laserRetro>
+        <visual>
+          <xyz>0 0 0</xyz>
+          <rpy>0 -0 0</rpy>
+          <mesh>unit_cylinder</mesh>
+          <material>Gazebo/Red</material>
+          <castShadows>1</castShadows>
+          <scale>0.04 0.04 0.55</scale>
+        </visual>
+      </geom:cylinder>
+    </body>
+
+    <body name="leg2_link">
+      <xyz>0.479969 0.499965 0.548975</xyz>
+      <rpy>0.00018023 -4.86741e-05 -0.0050351</rpy>
+
+      <geom:cylinder name="leg2_link_geom">
+        <xyz>0 0 -0.275</xyz>
+        <rpy>0 -0 0</rpy>
+        <size>0.02 0.55</size>
+        <mass>0.001</mass>
+        <laserFiducialId>-1</laserFiducialId>
+        <laserRetro>-1</laserRetro>
+        <visual>
+          <xyz>0 0 0</xyz>
+          <rpy>0 -0 0</rpy>
+          <mesh>unit_cylinder</mesh>
+          <material>Gazebo/Red</material>
+          <castShadows>1</castShadows>
+          <scale>0.04 0.04 0.55</scale>
+        </visual>
+      </geom:cylinder>
+    </body>
+
+    <body name="leg3_link">
+      <xyz>1.47988 -0.500124 0.548974</xyz>
+      <rpy>0.000365466 -6.19859e-06 -0.00540089</rpy>
+
+      <geom:cylinder name="leg3_link_geom">
+        <xyz>0 0 -0.275</xyz>
+        <rpy>0 -0 0</rpy>
+        <size>0.02 0.55</size>
+        <mass>0.001</mass>
+        <laserFiducialId>-1</laserFiducialId>
+        <laserRetro>-1</laserRetro>
+        <visual>
+          <xyz>0 0 0</xyz>
+          <rpy>0 -0 0</rpy>
+          <mesh>unit_cylinder</mesh>
+          <material>Gazebo/Red</material>
+          <castShadows>1</castShadows>
+          <scale>0.04 0.04 0.55</scale>
+        </visual>
+      </geom:cylinder>
+    </body>
+
+    <body name="leg4_link">
+      <xyz>0.479876 -0.500033 0.548975</xyz>
+      <rpy>-0.000257486 -8.80051e-05 -0.00533305</rpy>
+
+      <geom:cylinder name="leg4_link_geom">
+        <xyz>0 0 -0.275</xyz>
+        <rpy>0 -0 0</rpy>
+        <size>0.02 0.55</size>
+        <mass>0.001</mass>
+        <laserFiducialId>-1</laserFiducialId>
+        <laserRetro>-1</laserRetro>
+        <visual>
+          <xyz>0 0 0</xyz>
+          <rpy>0 -0 0</rpy>
+          <mesh>unit_cylinder</mesh>
+          <material>Gazebo/Red</material>
+          <castShadows>1</castShadows>
+          <scale>0.04 0.04 0.55</scale>
+        </visual>
+      </geom:cylinder>
+    </body>
+
+    <body name="table_top_link">
+      <xyz>0.979922 -7.81635e-05 0.548974</xyz>
+      <rpy>-7.34566e-06 -1.17668e-05 -0.00524477</rpy>
+
+      <geom:box name="table_top_link_geom">
+        <xyz>0 0 0.0</xyz>
+        <rpy>0 -0 0</rpy>
+        <size>1 1 0.05</size>
+        <mass>0.001</mass>
+        <laserFiducialId>-1</laserFiducialId>
+        <laserRetro>-1</laserRetro>
+        <visual>
+          <xyz>0 0 0</xyz>
+          <rpy>0 -0 0</rpy>
+          <mesh>unit_box</mesh>
+          <material>Gazebo/LightWood</material>
+          <castShadows>1</castShadows>
+          <scale>1 1 0.05</scale>
+        </visual>
+      </geom:box>
+    </body>
+    <joint:hinge name="leg1_joint">
+      <body1>leg1_link</body1>
+      <body2>table_top_link</body2>
+      <anchor>leg1_link</anchor>
+      <anchorOffset>0 0 0</anchorOffset>
+      <erp>0.4</erp>
+      <cfm>0.01</cfm>
+      <fudgeFactor>1</fudgeFactor>
+      <axis>0 0 1</axis>
+      <lowStop>0</lowStop>
+      <highStop>0</highStop>
+    </joint:hinge>
+    <joint:hinge name="leg2_joint">
+      <body1>leg2_link</body1>
+      <body2>table_top_link</body2>
+      <anchor>leg2_link</anchor>
+      <anchorOffset>0 0 0</anchorOffset>
+      <erp>0.4</erp>
+      <cfm>0.01</cfm>
+      <fudgeFactor>1</fudgeFactor>
+      <axis>0 0 1</axis>
+      <lowStop>0</lowStop>
+      <highStop>0</highStop>
+    </joint:hinge>
+    <joint:hinge name="leg3_joint">
+      <body1>leg3_link</body1>
+      <body2>table_top_link</body2>
+      <anchor>leg3_link</anchor>
+      <anchorOffset>0 0 0</anchorOffset>
+      <erp>0.4</erp>
+      <cfm>0.01</cfm>
+      <fudgeFactor>1</fudgeFactor>
+      <axis>0 0 1</axis>
+      <lowStop>0</lowStop>
+      <highStop>0</highStop>
+    </joint:hinge>
+    <joint:hinge name="leg4_joint">
+      <body1>leg4_link</body1>
+      <body2>table_top_link</body2>
+      <anchor>leg4_link</anchor>
+      <anchorOffset>0 0 0</anchorOffset>
+      <erp>0.4</erp>
+      <cfm>0.01</cfm>
+      <fudgeFactor>1</fudgeFactor>
+      <axis>0 0 1</axis>
+      <lowStop>0</lowStop>
+      <highStop>0</highStop>
+    </joint:hinge>
+  </model:physical>
+ 
+   <model:physical name="cylinder1_model">
+    <xyz>   .74   0    .7</xyz> 
+    <rpy>   0.0    0.0    0.0</rpy>
+     <body:box name="cylinder1_body">
+      <geom:box name="cylinder1_geom">
+        <size>0.03 0.03 .2</size>
+        <mass> 0.1</mass>
+        <kp>1000000.0</kp>
+        <kd>1.0</kd>
+        <visual>
+          <size> 0.03 0.03 .2</size>
+          <material>Gazebo/BumpyMetal</material>
+          <mesh>unit_box</mesh>
+        </visual>
+      </geom:box>
+    </body:box>
+  </model:physical>
+
+   <!--
+
+<model:physical name="coffee_cup_model">
+  <xyz>   0.6    0.0    0.6</xyz>
+  <rpy>   0.0    0.0    0.0</rpy>
+  <body:trimesh name="cup1_body">
+    <xyz>   0.0    0.0    0.009</xyz>
+    <rpy>  90.0    0.0   90.0</rpy>
+    <massMatrix>true</massMatrix> 
+    <mass>1.0</mass>
+    <ixx>0.01</ixx>
+    <ixy>0.00</ixy>
+    <ixz>0.00</ixz>
+    <iyy>0.01</iyy>
+    <iyz>0.00</iyz>
+    <izz>0.01</izz>
+    <cx>0.0</cx>
+    <cy>0.0</cy>
+    <cz>0.0</cz>
+    <dampingFactor>0.05</dampingFactor>
+    <geom:trimesh name="cup1_geom">
+      <laserRetro>2000.0</laserRetro>
+      <kp>100000000.0</kp>
+      <kd>1.0</kd>
+      <scale>0.1 0.1 0.1</scale>
+      <mesh>cup.mesh</mesh>
+
+      <visual>
+        <scale>0.1 0.1 0.1</scale>
+        <material>Gazebo/BumpyMetal</material>
+        <mesh>cup.mesh</mesh>
+      </visual>
+    </geom:trimesh>
+  </body:trimesh>
+</model:physical>
+
+-->
+  <!--
+ 
+  <model:physical name="coffee_cup">
+    <xyz>1.00003 -0.0011 0.564652</xyz>
+    <rpy>-0.00217438 -0.0151384 0.496121</rpy>
+    <enableGravity>1</enableGravity>
+    <enableFriction>1</enableFriction>
+    <collide>all</collide>
+    <static>0</static>
+
+    <body name="cup1_body">
+      <xyz>1.00003 -0.220089 0.573652</xyz>
+      <rpy>89.998 -0.496212 89.9849</rpy>
+
+      <geom:trimesh name="cup1_geom">
+        <xyz>0 0 0</xyz>
+        <rpy>0 -0 0</rpy>
+        <mesh>cup.mesh</mesh>
+        <scale>0.1 0.1 0.1</scale>
+        <mass>0.001</mass>
+        <laserFiducialId>-1</laserFiducialId>
+        <laserRetro>2000</laserRetro>
+        <visual>
+          <xyz>0 0 0</xyz>
+          <rpy>0 -0 0</rpy>
+          <mesh>cup.mesh</mesh>
+          <material>Gazebo/PioneerBody</material>
+          <castShadows>1</castShadows>
+          <scale>0.1 0.1 0.1</scale>
+        </visual>
+      </geom:trimesh>
+    </body>
+  </model:physical>
+-->
+
+</gazebo:world>

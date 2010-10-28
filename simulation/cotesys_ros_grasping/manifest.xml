@@ -16,6 +16,7 @@
   <depend package="pr2_controllers_msgs"/>
   <depend package="collision_environment_msgs"/>
   <depend package="pr2_msgs"/>
+  <depend package="motion_planning_msgs"/>
 
   <export>
     <cpp cflags="-I${prefix}/msg/cpp"/>

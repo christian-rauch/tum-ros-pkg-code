@@ -73,7 +73,7 @@ private:
 TakeStaticCollisionMapServer::TakeStaticCollisionMapServer()
   : priv_nh_("~")
 {
-  priv_nh_.param<double>("laser_period", laser_period_, 10);
+  priv_nh_.param<double>("laser_period", laser_period_, 4);
   priv_nh_.param<double>("laser_amplitude", laser_amplitude_, .25);
   priv_nh_.param<double>("laser_offset", laser_offset_, .7);
   priv_nh_.param<std::string>("cloud_source", cloud_source_, "full_cloud_filtered");
@@ -126,7 +126,6 @@ int main(int argc, char** argv)
   
   ros::AsyncSpinner spinner(1); // Use 1 thread
   spinner.start();
-  ros::NodeHandle nh("~");
 
   cotesys_ros_grasping::TakeStaticCollisionMapServer take_static_map;
 

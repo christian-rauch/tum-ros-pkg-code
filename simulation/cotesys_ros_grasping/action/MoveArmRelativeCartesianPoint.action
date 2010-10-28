@@ -7,5 +7,5 @@ string arm_name
 # the point relative to the current position to move to
 geometry_msgs/Point rel_point
 ---
-bool success
+motion_planning_msgs/ArmNavigationErrorCodes error_code
 ---

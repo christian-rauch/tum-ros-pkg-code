@@ -34,6 +34,9 @@ rosbuild_link_boost(move_arm_relative_cartesian_point_server thread)
 rosbuild_add_executable(take_static_collision_map_server src/take_static_collision_map.cpp)
 rosbuild_link_boost(take_static_collision_map_server thread)
 
+rosbuild_add_executable(attach_bounding_box_server src/attach_bounding_box_server.cpp)
+rosbuild_link_boost(attach_bounding_box_server thread)
+
 #common commands for building c++ executables and libraries
 #rosbuild_add_library(${PROJECT_NAME} src/example.cpp)
 #target_link_libraries(${PROJECT_NAME} another_library)

@@ -62,6 +62,8 @@ private:
   std::string left_arm_name_, right_arm_name_;
   std::string right_ik_link_, left_ik_link_;
 
+  double ik_to_gripper_x_diff_, ik_to_gripper_y_diff_, ik_to_gripper_z_diff_;
+
   double end_effector_rot_x_;
   double end_effector_rot_y_;
   double end_effector_rot_z_;
@@ -80,6 +82,9 @@ MoveArmToPositionServer::MoveArmToPositionServer()
   priv_nh_.param<std::string>("right_arm_name", right_arm_name_, "right_arm");
   priv_nh_.param<std::string>("right_ik_link", right_ik_link_, "r_wrist_roll_link");
   priv_nh_.param<std::string>("left_ik_link", left_ik_link_, "l_wrist_roll_link");
+  priv_nh_.param<double>("ik_to_gripper_x_diff", ik_to_gripper_x_diff_, .12);
+  priv_nh_.param<double>("ik_to_gripper_y_diff", ik_to_gripper_y_diff_, 0.0);
+  priv_nh_.param<double>("ik_to_gripper_z_diff", ik_to_gripper_z_diff_, 0.0);
   priv_nh_.param<double>("end_effector_rot_x", end_effector_rot_x_, 0.0);
   priv_nh_.param<double>("end_effector_rot_y", end_effector_rot_y_, 0.0);
   priv_nh_.param<double>("end_effector_rot_z", end_effector_rot_z_, 0.0);
@@ -125,9 +130,9 @@ bool MoveArmToPositionServer::execute(const cotesys_ros_grasping::MoveArmToPosit
   goal.motion_plan_request.goal_constraints.position_constraints[0].header.frame_id = "base_link";
     
   goal.motion_plan_request.goal_constraints.position_constraints[0].link_name = ik_link_name;
-  goal.motion_plan_request.goal_constraints.position_constraints[0].position.x = req->point.x;
-  goal.motion_plan_request.goal_constraints.position_constraints[0].position.y = req->point.y;
-  goal.motion_plan_request.goal_constraints.position_constraints[0].position.z = req->point.z;
+  goal.motion_plan_request.goal_constraints.position_constraints[0].position.x = req->point.x-ik_to_gripper_x_diff_;
+  goal.motion_plan_request.goal_constraints.position_constraints[0].position.y = req->point.y-ik_to_gripper_y_diff_;
+  goal.motion_plan_request.goal_constraints.position_constraints[0].position.z = req->point.z-ik_to_gripper_z_diff_;
     
   goal.motion_plan_request.goal_constraints.position_constraints[0].constraint_region_shape.type = geometric_shapes_msgs::Shape::BOX;
   goal.motion_plan_request.goal_constraints.position_constraints[0].constraint_region_shape.dimensions.push_back(0.02);
@@ -157,15 +162,17 @@ bool MoveArmToPositionServer::execute(const cotesys_ros_grasping::MoveArmToPosit
   move_arm_client->sendGoal(goal);
   bool call_ok = move_arm_client->waitForResult(ros::Duration(30.0));
   if(!call_ok) {
-    res.success = false;
+    res.error_code = move_arm_client->getResult()->error_code;
     action_server_->setAborted(res);
-  }
-  actionlib::SimpleClientGoalState state = move_arm_client->getState();
-  res.success = (state == actionlib::SimpleClientGoalState::SUCCEEDED);
-  if(res.success) {
-    action_server_->setSucceeded(res);
   } else {
-    action_server_->setAborted(res);
+    actionlib::SimpleClientGoalState state = move_arm_client->getState();
+    if(state != actionlib::SimpleClientGoalState::SUCCEEDED) {
+      res.error_code = move_arm_client->getResult()->error_code;
+      action_server_->setAborted(res);
+    } else {
+      res.error_code = move_arm_client->getResult()->error_code;
+      action_server_->setSucceeded(res);
+    } 
   }
   return true;
 }
@@ -178,7 +185,6 @@ int main(int argc, char** argv)
   
   ros::AsyncSpinner spinner(1); // Use 1 thread
   spinner.start();
-  ros::NodeHandle nh("~");
 
   cotesys_ros_grasping::MoveArmToPositionServer move_arm_pos;
 
