@@ -42,7 +42,7 @@ public class PrologVisualizationCanvas extends PApplet implements MouseListener,
 		// not required when calling from Prolog
 		//initProlog();
 		this.init();
-
+		this.setSize(560, 620);
 
 		AVObject = new ActionVisApplet();
 		AVObject.init();
@@ -61,10 +61,10 @@ public class PrologVisualizationCanvas extends PApplet implements MouseListener,
 	
 	    initControlP5();
 		
-		this.setSize(1270, 620);
+		
 		this.draw();
 		this.setVisible(true);
-		
+		this.setSize(1270, 620);
 		
 		if(debugMode) {
 			(new Thread(new testDataLoader(this))).start();
@@ -72,6 +72,9 @@ public class PrologVisualizationCanvas extends PApplet implements MouseListener,
 		
 	}
 	
+	public void draw() {
+		background(20, 20, 20);
+	}
 	
 	
 	/**

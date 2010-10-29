@@ -411,7 +411,6 @@ public class Canvas extends PApplet implements MouseListener, MouseMotionListene
 		try {
 			boolean external = false;
 			int location[] = null;
-			int editorLocation[] = null;
 
 			String name = null;
 			boolean present = false;
@@ -555,33 +554,33 @@ public class Canvas extends PApplet implements MouseListener, MouseMotionListene
 
 				}
 				else if(external) {
-					int locationX = editorLocation[0] - 20;
-					int locationY = editorLocation[1];
-
-					if(locationX - windowW > 10) {
-						// if it fits to the left of the window
-						frame.setLocation(locationX - windowW, locationY);
-
-					}
-					else { // doesn't fit
-						// if it fits inside the editor window,
-						// offset slightly from upper lefthand corner
-						// so that it's plunked inside the text area
-						locationX = editorLocation[0] + 66;
-						locationY = editorLocation[1] + 66;
-
-						if((locationX + windowW > applet.screen.width - 33)
-								|| (locationY + windowH > applet.screen.height - 33)) {
-							// otherwise center on screen
-							locationX = (applet.screen.width - windowW) / 2;
-							locationY = (applet.screen.height - windowH) / 2;
-						}
-						frame.setLocation(locationX, locationY);
-					}
+//					int locationX = editorLocation[0] - 20;
+//					int locationY = editorLocation[1];
+//
+//					if(locationX - windowW > 10) {
+//						// if it fits to the left of the window
+//						frame.setLocation(locationX - windowW, locationY);
+//
+//					}
+//					else { // doesn't fit
+//						// if it fits inside the editor window,
+//						// offset slightly from upper lefthand corner
+//						// so that it's plunked inside the text area
+//						locationX = editorLocation[0] + 66;
+//						locationY = editorLocation[1] + 66;
+//
+//						if((locationX + windowW > applet.screenWidth - 33)
+//								|| (locationY + windowH > applet.screenHeight - 33)) {
+//							// otherwise center on screen
+//							locationX = (applet.screenWidth - windowW) / 2;
+//							locationY = (applet.screenHeight - windowH) / 2;
+//						}
+//						frame.setLocation(locationX, locationY);
+//					}
 				}
 				else { // just center on screen
-					frame.setLocation((applet.screen.width - applet.width) / 2,
-							(applet.screen.height - applet.height) / 2);
+					frame.setLocation((applet.screenWidth - applet.width) / 2,
+							(applet.screenHeight - applet.height) / 2);
 				}
 
 				//	        frame.setLayout(null);

@@ -6,37 +6,22 @@ import edu.tum.cs.vis.items.Cylinder;
 
 public class CookingPot extends Item {
 
-	/**
-	 * initializes a STATIC Instance
-	 */
-	public CookingPot(float x, float y, float z) { super(x,y,z); }
+	public CookingPot(float m00, float m01, float m02, float m03, float m10,
+			float m11, float m12, float m13, float m20, float m21, float m22,
+			float m23, float m30, float m31, float m32, float m33, float xdim,
+			float ydim, float zdim) {
+		
+		super(m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31,
+				m32, m33, xdim, ydim, zdim);
+	}
 
-	/**
-	 * initializes a STATIC Instance
-	 */
-	public CookingPot(float x, float y, float z, float rotX, float rotY, float rotZ, float scale, int color){ super(x, y, z, rotX, rotY, rotZ, scale, color); }
-	
 	@Override
 	public void drawIt(Canvas c) {
-		c.pushMatrix();
-		if(trafoMatrix != null)
-			c.applyMatrix(trafoMatrix[0], trafoMatrix[1], trafoMatrix[2], trafoMatrix[3], 
-					trafoMatrix[4], trafoMatrix[5], trafoMatrix[6], trafoMatrix[7], 
-					trafoMatrix[8], trafoMatrix[9], trafoMatrix[10], trafoMatrix[11], 
-					trafoMatrix[12], trafoMatrix[13], trafoMatrix[14], trafoMatrix[15]);
-
-		c.translate(currentData[0], currentData[1], currentData[2]);
-		
-		c.fill(colorOverride!=0 ? colorOverride : currentColor);
-		if(currentData[6] != 1.0f) c.scale(currentData[6]);
-		if(currentData[3] != 0) c.rotateX(currentData[3]);
-		if(currentData[4] != 0) c.rotateY(currentData[4]); 
-		if(currentData[5] != 0) c.rotateZ(currentData[5]);
 		
 		(new Cylinder(new Vector3f(0f, 0f, 0f), new Vector3f(0f, 0f, -11f), 11f)).draw(c);
 		(new Cylinder(new Vector3f(-1f, -11f, -7f), new Vector3f(1f, -11f, -7f), 2.5f)).draw(c);
 		(new Cylinder(new Vector3f(-1f, 11f, -7f), new Vector3f(1f, 11f, -7f), 2.5f)).draw(c);
-		c.popMatrix();
+
 	}
 
 }

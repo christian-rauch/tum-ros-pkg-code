@@ -5,41 +5,17 @@ import edu.tum.cs.vis.Canvas;
 public class Chair extends Item {
 
 	
-	/**
-	 * initializes a STATIC Instance
-	 * normal position is 320.0, 200.33, 0.0
-	 */
-	public Chair(float x, float y, float z) { super(x,y,z); }
+	public Chair(float m00, float m01, float m02, float m03, float m10,
+			float m11, float m12, float m13, float m20, float m21, float m22,
+			float m23, float m30, float m31, float m32, float m33, float xdim,
+			float ydim, float zdim) {
+		
+		super(m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31,
+				m32, m33, xdim, ydim, zdim);
+	}
 
-	/**
-	 * initializes a STATIC Instance
-	 * normal position is 320.0, 200.33, 0.0
-	 */
-	public Chair(float x, float y, float z, float rotX, float rotY, float rotZ, float scale, int color){ super(x, y, z, rotX, rotY, rotZ, scale, color); }
-	
-	
 	@Override
 	public void drawIt(Canvas c) {
-		c.pushMatrix();
-		c.translate(currentData[0], currentData[1], currentData[2]);
-		c.fill(colorOverride!=0 ? colorOverride : currentColor);
-		if(currentData[6] != 1.0f) c.scale(currentData[6]);
-		if(currentData[3] != 0) c.rotateX(currentData[3]);
-		if(currentData[4] != 0) c.rotateY(currentData[4]); 
-		if(currentData[5] != 0) c.rotateZ(currentData[5]);
-		
-
-		// draw legs
-		/*
-		 
-		c.translate(0, 0, -73.177f);	  
-		c.rect(-40.24f, -59.89f, 80.46f, 119.76f);
-		  
-		c.translate (299.875f, 155.41f, 36.5885f);		c.box(5f, 5f, 73.177f);
-		c.translate (0f, 89.82f, 0f);	  				c.box(5f, 5f, 73.177f);
-		c.translate (40.23f, 0f, 0f);	  				c.box(5f, 5f, 73.177f);
-		c.translate (0f, -89.82f, 0f);  				c.box(5f, 5f, 73.177f);
-		*/
 		
 		c.translate(0, 0, 45f);	  
 		c.box(40f, 40f, -2f);
@@ -51,9 +27,6 @@ public class Chair extends Item {
 		c.translate(0,-20.0f,-30);			c.box(-5f, 5f, 90f);
 		c.translate(40f,0,-22.5f);			c.box(-5f, 5f, 45f);
 
-		
-		
-		c.popMatrix();
 	}
 
 }

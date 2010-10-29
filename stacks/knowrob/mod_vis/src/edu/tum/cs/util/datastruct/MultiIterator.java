@@ -14,7 +14,7 @@ public class MultiIterator<T> implements Iterable<T> {
 	Vector<Iterable<T>> collections = new Vector<Iterable<T>>();	
 	
 	public Iterator<T> iterator() {
-		return new LocalIterator<T>(collections);
+		return new LocalIterator(collections);
 	}
 	
 	public void add(Iterable<T> i) {
@@ -33,7 +33,7 @@ public class MultiIterator<T> implements Iterable<T> {
 		return iterator().hasNext();
 	}
 	
-	public class LocalIterator<T> implements Iterator<T> {
+	public class LocalIterator implements Iterator<T> {
 
 		Vector<Iterable<T>> collections;
 		Iterator<Iterable<T>> ii;

@@ -24,27 +24,13 @@ public abstract class ItemBase implements Drawable, DrawableAnimated {
 	 */
 	protected float[] trafoMatrix = null;
 	
-	/**
-	 * sets the color (for the whole time); 
-	 * if color is 0, the item is not drawn at all!; 
-	 * @param color
-	 */
-	public abstract void setColor(int color);
+	protected float xdim;
+	protected float ydim;
+	protected float zdim;
+	
+	protected int color;
+	
 
-	/**
-	 * changes the color for a range of frames; 
-	 * makes the object animated; 
-	 * in frames where the color is 0, the item is not drawn at all; 
-	 * @param color color
-	 * @param start first frame to change
-	 * @param end last frame to change
-	 */
-	public abstract void setColor(int color, int start, int end);
-	
-	public void setTrafoMatrix(float[] m) {
-		trafoMatrix = m;
-	}
-	
 	public void draw(Canvas c) {
 		draw(c,0);
 	}
@@ -56,5 +42,39 @@ public abstract class ItemBase implements Drawable, DrawableAnimated {
 		return (((((alpha << 8) + red) << 8) + green) << 8) + blue;
 	}
 	
+	public void setColor(int color){
+		this.color = color;
+	}
+
+	public void setColor(int color,int start, int end){
+		this.color=color;
+	}
+	
+	public void setPose(float[] pose) {
+		this.trafoMatrix = pose;
+	}
+	
+	public void setPose(float m00,float m01,float m02,float m03,
+						float m10,float m11,float m12,float m13, 
+						float m20,float m21,float m22,float m23, 
+						float m30,float m31,float m32,float m33) {
+		this.trafoMatrix = new float[] {
+				m00, m01, m02, m03,
+				m10, m11, m12, m13, 
+				m20, m21, m22, m23, 
+				m30, m31, m32, m33	};
+	}
+	
+	public void setPosition(float x, float y, float z) {
+		this.trafoMatrix[3]=x;
+		this.trafoMatrix[7]=x;
+		this.trafoMatrix[11]=x;
+	}
+	
+	public void setDimensions(float xdim, float ydim, float zdim) {
+		this.xdim=xdim;
+		this.ydim=ydim;
+		this.zdim=zdim;
+	}
 
 }

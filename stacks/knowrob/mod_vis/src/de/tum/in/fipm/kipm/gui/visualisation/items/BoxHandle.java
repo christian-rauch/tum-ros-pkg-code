@@ -4,21 +4,19 @@ import edu.tum.cs.vis.Canvas;
 
 public class BoxHandle extends Handle {
 
-	private float[] sizes;
 	
-	public BoxHandle(float x, float y, float z, float xdepth, float ywidth, float zheight) {
-		super(x,y,z);
-		sizes = new float[] {xdepth, ywidth, zheight};
+	public BoxHandle(float m00, float m01, float m02, float m03, float m10,
+			float m11, float m12, float m13, float m20, float m21, float m22,
+			float m23, float m30, float m31, float m32, float m33, float xdim,
+			float ydim, float zdim) {
+		
+		super(m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31,
+				m32, m33, xdim, ydim, zdim);
 	}
-	
+
 	@Override
-	public void draw(Canvas c) {
-		c.pushMatrix();
-		c.noStroke();
-		c.translate(coordinates[0], coordinates[1], coordinates[2]);
-		c.fill(colorOverride!=0 ? colorOverride : currentColor);
-		c.box(sizes[0], sizes[1], sizes[2]);
-		c.popMatrix();
+	public void drawIt(Canvas c) {
+		c.box(xdim, ydim, zdim);
 	}
 }
 

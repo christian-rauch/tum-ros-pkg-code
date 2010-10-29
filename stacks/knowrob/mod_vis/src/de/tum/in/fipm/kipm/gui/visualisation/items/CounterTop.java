@@ -1,13 +1,10 @@
 package de.tum.in.fipm.kipm.gui.visualisation.items;
 
-
 import edu.tum.cs.vis.Canvas;
 
+public class CounterTop extends Item {
 
-public class Ellipse extends Item {
-
-	
-	public Ellipse(float m00, float m01, float m02, float m03, float m10,
+	public CounterTop(float m00, float m01, float m02, float m03, float m10,
 			float m11, float m12, float m13, float m20, float m21, float m22,
 			float m23, float m30, float m31, float m32, float m33, float xdim,
 			float ydim, float zdim) {
@@ -19,8 +16,7 @@ public class Ellipse extends Item {
 	@Override
 	public void drawIt(Canvas c) {
 
-		c.ellipse(xdim,xdim,ydim,ydim);
+		c.box(this.xdim, this.ydim, this.zdim);
 
 	}
-
 }

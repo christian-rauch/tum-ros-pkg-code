@@ -4,8 +4,21 @@ include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 rosbuild_init()
 rosbuild_gensrv()
 
+
+set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 set(JAVA_OUTPUT_DIR ${PROJECT_SOURCE_DIR}/bin)
+
+
+# replace image path in communication vis applet
+rosbuild_find_ros_package(mod_vis)
+set( LOCAL_PACKAGE_PATH ${mod_vis_PACKAGE_PATH} )
+
+file(GLOB inputs src/de/tum/in/fipm/kipm/gui/visualisation/applets/*.in)
+foreach( _in ${inputs} )
+  string(REPLACE ".in" "" _out ${_in})
+  configure_file( ${_in} ${_out} )
+endforeach( _in )
 
 
 

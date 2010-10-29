@@ -4,26 +4,24 @@ import edu.tum.cs.vis.Canvas;
 
 public class SphereHandle extends Handle {
 
+
 	private float radius;
-	
-	public SphereHandle(float x, float y, float z, float radius) {
-		super(x,y,z);
-		this.radius = radius;
+
+	public SphereHandle(float m00, float m01, float m02, float m03, float m10,
+			float m11, float m12, float m13, float m20, float m21, float m22,
+			float m23, float m30, float m31, float m32, float m33, float xdim,
+			float ydim, float zdim) {
+		
+		super(m00, m01, m02, m03, m10, m11, m12, m13, m20, m21, m22, m23, m30, m31,
+				m32, m33, xdim, ydim, zdim);
+		this.radius=(float) (0.5 * Math.sqrt(xdim*xdim + ydim*ydim + zdim*zdim));
 	}
-	
+
+
 	@Override
-	public void draw(Canvas c) {
-		c.pushMatrix();
-		if(trafoMatrix != null)
-			c.applyMatrix(trafoMatrix[0], trafoMatrix[1], trafoMatrix[2], trafoMatrix[3], 
-					trafoMatrix[4], trafoMatrix[5], trafoMatrix[6], trafoMatrix[7], 
-					trafoMatrix[8], trafoMatrix[9], trafoMatrix[10], trafoMatrix[11], 
-					trafoMatrix[12], trafoMatrix[13], trafoMatrix[14], trafoMatrix[15]);
-		c.noStroke();
-		c.translate(coordinates[0], coordinates[1], coordinates[2]);
-		c.fill(colorOverride!=0 ? colorOverride : currentColor);
+	public void drawIt(Canvas c) {
+		
 		c.sphere(radius);
-		c.popMatrix();
 	}
 }
 

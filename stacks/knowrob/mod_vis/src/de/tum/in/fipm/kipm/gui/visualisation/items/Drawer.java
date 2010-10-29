@@ -18,51 +18,10 @@ public class Drawer extends StorageFacility {
 	}
 	
 	
-	@Override 
-	public void addHandle(Handle h) {
-		// change coordinates of handle relative to box center.
-		float newX = h.coordinates[0]-fixedData[0];
-		float newY = h.coordinates[1]-fixedData[1];
-		float newZ = h.coordinates[2]-fixedData[2];
-		
-		h.coordinates = new float[] {newX, newY, newZ};
-		super.addHandle(h);
-	}
-	
-	
 	@Override
-	public void drawIt(Canvas c, int step) {
+	public void drawIt(Canvas c) {
 		
-		c.pushMatrix();
-		
-			c.applyMatrix(fixedData[0],  fixedData[1],  fixedData[2],  fixedData[3],
-						  fixedData[4],  fixedData[5],  fixedData[6],  fixedData[7], 
-						  fixedData[8],  fixedData[9],  fixedData[10], fixedData[11], 
-						  fixedData[12], fixedData[13], fixedData[14], fixedData[15]);
-	
-			c.fill(colorOverride!=0 ? colorOverride : (currentData[1] | 0xFF000000));
-			
-			// hack: display problems, therefore negative sign
-			c.box(fixedData[16], fixedData[17], -fixedData[18]); 	// draw it!
+		c.box(xdim, ydim, -zdim);
 
-	
-			if(currentData[0] == 0) {		// object is closed - only draw handles
-				c.popMatrix();
-				for(int i=0;i<handles.size();i++)
-					handles.get(i).draw(c,step);
-
-			} else {						// object is opened - draw handles and inner
-
-				
-				for(int i=0;i<handles.size();i++)
-					handles.get(i).draw(c,step);
-				
-				c.translate((float)(currentData[0] * 0.6*fixedData[16] / 1000.0f),0f,0f);
-				c.translate(0.05f*fixedData[16],0,0);
-				c.fill(colorOverride!=0 ? colorOverride : currentData[1]);
-				c.box(fixedData[16]*0.9f,-fixedData[17]*0.9f,fixedData[18]*0.9f);
-				c.popMatrix();
-			}
-		
 	}
 }
