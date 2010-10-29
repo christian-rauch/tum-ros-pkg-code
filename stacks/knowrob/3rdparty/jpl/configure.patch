@@ -83,9 +83,18 @@ index f801b21..5cb0621 100644
  
  
 diff --git a/jpl.pl b/jpl.pl
-index 8873e37..63a4681 100644
+index 8873e37..accc9ed 100644
 --- a/jpl.pl
 +++ b/jpl.pl
+@@ -34,7 +34,7 @@
+ 	    jpl_set_default_jvm_opts/1,
+ 	    jpl_get_actual_jvm_opts/1,
+ 	    jpl_pl_lib_version/1,
+-	    jpl_c_lib_version/1,
++	    % jpl_c_lib_version/1,
+ 	    jpl_new/3,
+ 	    jpl_call/4,
+ 	    jpl_get/3,
 @@ -4392,6 +4392,12 @@ prolog:error_message(java_exception(Ex)) -->
  
  user:file_search_path(jar, swi(lib)).

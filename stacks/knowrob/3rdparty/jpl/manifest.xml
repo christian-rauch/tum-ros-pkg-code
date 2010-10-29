@@ -6,7 +6,8 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <export>
-    <java classpath="${prefix}/jpl/jpl.jar"/>
+    <java classpath="${prefix}/jpl/jpl.jar"
+          ld_lib_path="${prefix}/jpl"/>
   </export>
 </package>
 
