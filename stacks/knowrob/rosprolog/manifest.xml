@@ -13,6 +13,7 @@
   <rosdep name="swi_prolog_odbc"/>
   <rosdep name="swi_prolog_semweb"/>
   <rosdep name="swi_prolog_sgml"/>
+  <rosdep name="swi_prolog_xpce"/>
 </package>
 
 
