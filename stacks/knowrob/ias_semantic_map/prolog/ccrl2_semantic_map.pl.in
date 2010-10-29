@@ -41,20 +41,20 @@
 :- use_module(library('semweb/actionmodel')).
 
 
-:- owl_parser:owl_parse('@LOCAL_PACKAGE_PATH@/owl/ias_semantic_map.owl', false, false, true).
+:- owl_parser:owl_parse('@LOCAL_PACKAGE_PATH@/owl/ccrl2_semantic_map.owl', false, false, true).
 
 :- rdf_db:rdf_register_ns(knowrob, 'http://ias.cs.tum.edu/kb/knowrob.owl#', [keep(true)]).
-:- rdf_db:rdf_register_ns(ias_map, 'http://ias.cs.tum.edu/kb/ias_semantic_map.owl#', [keep(true)]).
+:- rdf_db:rdf_register_ns(ias_map, 'http://ias.cs.tum.edu/kb/ccrl2_semantic_map.owl#', [keep(true)]).
 
 
 readMap([R0|EntityList]) :-
-    readEntity('http://ias.cs.tum.edu/kb/ias_semantic_map.owl#F360-Containers-revised-walls', 'null', R0),
+    readEntity('http://ias.cs.tum.edu/kb/knowrob.owl#SemanticEnvironmentMap0', 'null', R0),
     setof(TopLevelObj,
           ( owl_individual_of(TopLevelObj, knowrob:'StorageConstruct');
             owl_individual_of(TopLevelObj, knowrob:'FurniturePiece');
             owl_individual_of(TopLevelObj, knowrob:'CounterTop') ),
           TopLevelObjs),
-    readEntities(TopLevelObjs, 'http://ias.cs.tum.edu/kb/ias_semantic_map.owl#F360-Containers-revised-walls', EntityList).
+    readEntities(TopLevelObjs, 'http://ias.cs.tum.edu/kb/knowrob.owl#SemanticEnvironmentMap0', EntityList).
     
 
 readEntities([], _, []).
