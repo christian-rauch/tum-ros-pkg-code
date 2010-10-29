@@ -40,10 +40,17 @@
 
 :- rdf_meta cop_to_knowrob(r,r).
 
-
 %% cop_listener(-Listener)
 cop_listener(Listener) :-
-    jpl_new('edu.tum.cs.ias.knowrob.CopROSClient', [], Listener).
+    jpl_new('edu.tum.cs.ias.knowrob.CopROSClient', ['json_prolog'], Listener),
+    jpl_call(Listener, 'startCopModelDBListener', ['/knowrob/cop_db', '/cop/in'], _),
+    jpl_call(Listener, 'startCopObjDetectionsListener', ['/kipla/cop_reply'], _).
+
+%% odufinder_listener(-Listener)
+odufinder_listener(Listener) :-
+    jpl_new('edu.tum.cs.ias.knowrob.CopROSClient', ['json_prolog'], Listener),
+    jpl_call(Listener, 'startCopObjDetectionsListener', ['/odu_finder/TemplateName'], _).
+
 
 
 %% cop_create_model_instance(+ModelType, +ObjectType) is det.
@@ -67,7 +74,7 @@ cop_create_model_instance(ModelType, ObjectType) :-
 %
 cop_create_perception_instance(ModelTypes, Perception) :-
 
-  rdf_instance_from_class('http://ias.cs.tum.edu/kb/knowrob.owl#CopPerception', Perception),
+  rdf_instance_from_class('http://ias.cs.tum.edu/kb/comp_cop.owl#CopPerception', Perception),
 
   findall(MC, (member(MT, ModelTypes),
                atom_concat('http://ias.cs.tum.edu/kb/knowrob.owl#', MT, MC),
@@ -214,4 +221,9 @@ cop_to_knowrob('blue',                'http://ias.cs.tum.edu/kb/knowrob.owl#Blue
 
 cop_to_knowrob('transobject',         'http://ias.cs.tum.edu/kb/knowrob.owl#ColorlessThing').
 
-
+% specially for germandeli: check if there is a class with the respective productID
+cop_to_knowrob(GermanDeliID, GermanDeliOWLClass) :-
+    owl_has(Restr, owl:hasValue, literal(type(xsd:string, GermanDeliID))),
+    owl_has(Restr, owl:onProperty, 'http://ias.cs.tum.edu/kb/germandeli.owl#productID'),
+    owl_direct_subclass_of(GermanDeliOWLClass, Restr),
+    owl_subclass_of(GermanDeliOWLClass, 'http://ias.cs.tum.edu/kb/germandeli.owl#GermanDeliObject'),!.

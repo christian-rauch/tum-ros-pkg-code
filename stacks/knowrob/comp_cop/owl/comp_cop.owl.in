@@ -338,7 +338,13 @@
     <owl:Class rdf:about="#ShapeModel">
         <rdfs:subClassOf rdf:resource="#CopObjRecModel"/>
     </owl:Class>
-    
+
+
+    <!-- http://www.roboearth.org/kb/vision_descriptors.owl#ShapeModel -->
+
+    <owl:Class rdf:about="#ODUFinder">
+        <rdfs:subClassOf rdf:resource="#CopObjRecModel"/>
+    </owl:Class>
 
 
     <!-- http://www.roboearth.org/kb/vision_descriptors.owl#ShapeModelDownloader -->

@@ -29,7 +29,6 @@ import ros.pkg.vision_srvs.srv.srvjlo.Request;
 import ros.pkg.vision_msgs.msg.partial_lo;
 
 import java.util.concurrent.ExecutionException;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Queue;
@@ -52,6 +51,11 @@ public class CopROSClient {
 	static CopCallback<cop_answer> copObjectDetectionsCallback;
 	static CopCallback<cop_answer> copModelDBCallback;
 
+	Thread listenToCopDB;
+	Thread updateKnowRobModelDB;
+	Thread listenToCopObjDetections;
+	Thread updateKnowRobObjDetections;
+	
     /**
      * Client library for listening to CoP messages and asserting the object
      * detections in KnowRob
@@ -59,44 +63,50 @@ public class CopROSClient {
      * @author tenorth@cs.tum.edu
      *
      */
-	public CopROSClient() throws InterruptedException, RosException, ExecutionException {
+	public CopROSClient(String node_name) throws InterruptedException, RosException, ExecutionException {
 
-		initRos();
+		initRos(node_name);
 		
 		copObjectDetectionsCallback = new CopCallback<cop_answer>();
 		copModelDBCallback = new CopCallback<cop_answer>();
 		
-// TODO: change so that the threads are only spawned if desired (e.g. if called from Prolog)
-		
-		
-		// create threads listening to /knowrob/cop_db to update the CoP database content
-		Thread listenToCopDB = new Thread( new CopModelDBListenerThread() ); 
-		listenToCopDB.start();
-		Thread updateKnowRobModelDB = new Thread( new UpdateKnowRobModelDBThread() ); 
-		updateKnowRobModelDB.start(); 		
-		
-		// create threads listening to /kipla/cop_reply to receive object detections
-		Thread listenToCopObjDetections = new Thread( new CopObjListenerThread() ); 
-		listenToCopObjDetections.start();
-		Thread updateKnowRobObjDetections = new Thread( new UpdateKnowRobObjectsThread() ); 
-		updateKnowRobObjDetections.start(); 
 	}
 
+	
+	public void startCopModelDBListener(String cop_topic, String cop_service) {
+		
+		// create threads listening to /knowrob/cop_db to update the CoP database content
+		listenToCopDB = new Thread( new CopModelDBListenerThread(cop_topic, cop_service) ); 
+		listenToCopDB.start();
+		updateKnowRobModelDB = new Thread( new UpdateKnowRobModelDBThread() ); 
+		updateKnowRobModelDB.start(); 		
+		
+	}
+	
+	public void startCopObjDetectionsListener(String cop_topic) {
+
+		// create threads listening to /kipla/cop_reply to receive object detections
+		listenToCopObjDetections = new Thread( new CopObjListenerThread(cop_topic) ); 
+		listenToCopObjDetections.start();
+		updateKnowRobObjDetections = new Thread( new UpdateKnowRobObjectsThread() ); 
+		updateKnowRobObjDetections.start(); 
+	}
+	
+	
 	
 
 	/**
 	 * Thread-safe ROS initialization
 	 */
-	protected static void initRos() {
-		
-		synchronized(rosInitialized) {
-			if(!rosInitialized) {
-		    	ros = Ros.getInstance();
-		    	ros.init("knowrob_copOneResult");
-		    	n = ros.createNodeHandle();
-			}
-	    	rosInitialized=true;
+	protected static void initRos(String node_name) {
+
+    	ros = Ros.getInstance();
+
+		if(!Ros.getInstance().isInitialized()) {
+	    	ros.init(node_name);
 		}
+		n = ros.createNodeHandle();
+
 	}
 
     /**
@@ -110,11 +120,21 @@ public class CopROSClient {
      */
     public static class CopObjListenerThread implements Runnable {
     	    	
+    	String topic;
+    	
+    	public CopObjListenerThread() {
+			this("/kipla/cop_reply");
+		}
+    	
+    	public CopObjListenerThread(String t) {
+			topic=t;
+		}
+    	
     	@Override public void run() {
     		
     		try {
 
-	    		Subscriber<cop_answer> sub = n.subscribe("/kipla/cop_reply", new cop_answer(), copObjectDetectionsCallback, 10);
+	    		Subscriber<cop_answer> sub = n.subscribe(topic, new cop_answer(), copObjectDetectionsCallback, 10);
 	    		
 	    		n.spin();
 	    		sub.shutdown();
@@ -144,6 +164,8 @@ public class CopROSClient {
     				
     				res = copObjectDetectionsCallback.pop();
 
+System.err.println("GOT RESULT IN KNOWROB UPDATE");
+    				
         			// iterate over detected poses
         			for(aposteriori_position pose : res.found_poses) {
         				
@@ -163,14 +185,14 @@ public class CopROSClient {
         				}
 
         				// create VisualPerception instance
-        				System.out.println("comp_cop:cop_create_perception_instance("+objectArrayToPlList(m_types_classes.keySet().toArray())+", Perception)");
+        				System.err.println("comp_cop:cop_create_perception_instance("+objectArrayToPlList(m_types_classes.keySet().toArray())+", Perception)");
         				solutions = executeQuery("comp_cop:cop_create_perception_instance("+objectArrayToPlList(m_types_classes.keySet().toArray())+", Perception)");
         				if(solutions.get("Perception").size()>1) {throw new Exception("ERROR: More than one Perception instance created.");}
         	    		String perception = solutions.get("Perception").get(0).toString();
         	    		
         	    		
         				// create object information
-        	    		System.out.println("comp_cop:cop_create_object_instance("+objectArrayToPlList(m_types_classes.values().toArray())+", "+p_id+", Obj)");
+        	    		System.err.println("comp_cop:cop_create_object_instance("+objectArrayToPlList(m_types_classes.values().toArray())+", "+p_id+", Obj)");
         				solutions = executeQuery("comp_cop:cop_create_object_instance("+objectArrayToPlList(m_types_classes.values().toArray())+", "+p_id+", Obj)");
         				if(solutions.get("Obj").size()>1) {throw new Exception("ERROR: More than one Object instance created:"+objectArrayToPlList(solutions.get("Obj").toArray()));}
         				String obj = solutions.get("Obj").get(0).toString();
@@ -178,15 +200,19 @@ public class CopROSClient {
 
         				// read pose from loID, assert it (remember lo-ID)
 //        	    		System.out.println();
-						new Query("comp_cop:cop_set_loid("+perception+", "+p_lo_id+")").allSolutions();
-						partial_lo lo_pose = loQuery("framequery", "", (int)p_lo_id, 1);
-						new Query("comp_cop:cop_set_perception_pose("+perception+","+doubleArrayToPlList(lo_pose.pose)+")").allSolutions();
-						new Query("comp_cop:cop_set_perception_cov("+ perception+","+doubleArrayToPlList(lo_pose.cov) +")").allSolutions();
-        				
+        				if(p_lo_id!=0) {
+        					synchronized(jpl.Query.class) {
+								new Query("comp_cop:cop_set_loid("+perception+", "+p_lo_id+")").allSolutions();
+								partial_lo lo_pose = loQuery("framequery", "", (int)p_lo_id, 1);
+								new Query("comp_cop:cop_set_perception_pose("+perception+","+doubleArrayToPlList(lo_pose.pose)+")").allSolutions();
+								new Query("comp_cop:cop_set_perception_cov("+ perception+","+doubleArrayToPlList(lo_pose.cov) +")").allSolutions();
+        					}
+        				}
 						
-						// link VisualPerception instance to the object instance
-						new Query("comp_cop:cop_set_object_perception("+obj+", "+perception+")").allSolutions();
-						
+        				synchronized(jpl.Query.class) {
+							// link VisualPerception instance to the object instance
+							new Query("comp_cop:cop_set_object_perception("+obj+", "+perception+")").allSolutions();
+        				}
         			}
     				n.spinOnce();
  
@@ -210,21 +236,30 @@ public class CopROSClient {
      *
      */
     public static class CopModelDBListenerThread implements Runnable {
-    	    	
+    	
+    	String topic;
+    	String service;
+    	
+    	public CopModelDBListenerThread() {
+			this("/knowrob/cop_db", "/cop/in");
+		}
+    	
+    	public CopModelDBListenerThread(String t, String s) {
+			topic=t;
+			service=s;
+		}	
     	@Override public void run() {
     		
     		try {
     			
-	    		Subscriber<cop_answer> sub = n.subscribe("/knowrob/cop_db", new cop_answer(), copModelDBCallback, 10);
-	    		
-	    		// TODO: call ROS service to register for the topic
-	    		
+	    		Subscriber<cop_answer> sub = n.subscribe(topic, new cop_answer(), copModelDBCallback, 10);
+
 	    		// call cop to get the cop_descriptor model
 	    		cop_call copcall = new cop_call();
 	    		cop_call.Request cop_req = copcall.createRequest();
 	    		
 	    		cop_req.outputtopic="/knowrob/cop_db";
-	    		cop_req.action_type=25600;
+	    		cop_req.action_type=25601;
 	    		cop_req.number_of_objects=1;
 	    		
 	    		cop_req.list_of_poses=new apriori_position[1];
@@ -235,7 +270,7 @@ public class CopROSClient {
 	    		cop_req.object_ids = new long[1];
 	    		cop_req.object_ids[0] = 1;
 	    		
-	    		ServiceClient<cop_call.Request, cop_call.Response, cop_call> cl = n.serviceClient("/cop/in", new cop_call());
+	    		ServiceClient<cop_call.Request, cop_call.Response, cop_call> cl = n.serviceClient(service, new cop_call());
 	    		cl.call(cop_req);	
 	    		
 	    		n.spin();
@@ -263,6 +298,8 @@ public class CopROSClient {
         			while(true) {
         				
         				res = copModelDBCallback.pop();
+
+        				System.err.println("GOT RESULT IN KNOWROB UPDATE");
 
             			// iterate over objects
             			for(aposteriori_position pose : res.found_poses) {
@@ -390,42 +427,48 @@ public class CopROSClient {
     		HashMap<String, Vector<Object>> result = new HashMap< String, Vector<Object> >();
     		Hashtable[] solutions;
 
-    		Query q = new Query( "expand_goal(("+query+"),_9), call(_9)" );
+    		synchronized(jpl.Query.class) {
     		
-    			// Due to bugs we have to check for one answer beforehand.
-    			if (!q.hasMoreSolutions())
-    				return new HashMap<String, Vector<Object>>();
-    			Hashtable oneSolution = q.nextSolution();
-    			if (oneSolution.isEmpty())	// Due to a bug consulting a file without anything else results in shutdown
-    				return new HashMap<String, Vector<Object>>();	// I will try to prevent it with this construction
-    			
-    		// Restart the query and fetch everything.
-    		q.rewind();
-    		solutions = q.allSolutions();
-
-
-
-    		for (Object key: solutions[0].keySet()) {
-    			result.put(key.toString(), new Vector<Object>());
-    		}
-    		
-    		// Build the result
-    		for (int i=0; i<solutions.length; i++) {
-    			Hashtable solution = solutions[i];
-    			for (Object key: solution.keySet()) {
-    				String keyStr = key.toString();
-    				if (!result.containsKey( keyStr )) {
-
-    					// previously unknown column, add result vector
-    					Vector<Object> resultVector = new Vector<Object>(); 
-    					resultVector.add( i, solution.get( key ).toString() );
-    					result.put(keyStr, resultVector);
-
-    				}
-    				// Put the solution into the correct vector
-    				Vector<Object> resultVector = result.get( keyStr );
-    				resultVector.add( i, solution.get( key ).toString() );
-    			}
+	    		Query q = new Query( "expand_goal(("+query+"),_9), call(_9)" );
+	
+	    		if(!q.hasSolution())
+	    			return new HashMap<String, Vector<Object>>();
+	    		
+	//    			// Due to bugs we have to check for one answer beforehand.
+	//    			if (!q.hasMoreSolutions())
+	//    				return new HashMap<String, Vector<Object>>();
+	//    			Hashtable oneSolution = q.nextSolution();
+	//    			if (oneSolution.isEmpty())	// Due to a bug consulting a file without anything else results in shutdown
+	//    				return new HashMap<String, Vector<Object>>();	// I will try to prevent it with this construction
+	    			
+	    		// Restart the query and fetch everything.
+	//    		q.rewind();
+	    		solutions = q.allSolutions();
+	
+	
+	
+	    		for (Object key: solutions[0].keySet()) {
+	    			result.put(key.toString(), new Vector<Object>());
+	    		}
+	    		
+	    		// Build the result
+	    		for (int i=0; i<solutions.length; i++) {
+	    			Hashtable solution = solutions[i];
+	    			for (Object key: solution.keySet()) {
+	    				String keyStr = key.toString();
+	    				if (!result.containsKey( keyStr )) {
+	
+	    					// previously unknown column, add result vector
+	    					Vector<Object> resultVector = new Vector<Object>(); 
+	    					resultVector.add( i, solution.get( key ).toString() );
+	    					result.put(keyStr, resultVector);
+	
+	    				}
+	    				// Put the solution into the correct vector
+	    				Vector<Object> resultVector = result.get( keyStr );
+	    				resultVector.add( i, solution.get( key ).toString() );
+	    			}
+	    		}
     		}
     		// Generate the final QueryResult and return
     		return result;
@@ -460,21 +503,21 @@ public class CopROSClient {
 		
 		cop_answer r = copOneResult(cop_req, "/knowrob/cop_client");
 		
-		String modelType=""; String objClass="";
-		for(aposteriori_position pose : r.found_poses) {
-			
-			// iterate over models used for detecting these poses
-			for(cop_descriptor model : pose.models) {
+		String[] res = null;
+		if(r!=null) {
+			String modelType=""; String objClass="";
+			for(aposteriori_position pose : r.found_poses) {
 				
-				modelType=model.type;
-				objClass=model.sem_class;
+				// use first entry as model class
+				if(pose.models.length > 0) {
+					modelType=pose.models[0].type;
+					objClass=pose.models[0].sem_class;
+				}
 			}
+			res = new String[2];
+			res[0]=modelType;
+			res[1]=objClass;
 		}
-		
-		String[] res = new String[2];
-		res[0]=modelType;
-		res[1]=objClass;
-		
 		return res;
     }
     
@@ -488,7 +531,7 @@ public class CopROSClient {
      */
     public static cop_answer copOneResult(cop_call.Request cop_req, String output_topic) {  	
 
-    	initRos();
+    	initRos("knowrob_cop_one_result");
     	
 		// call the cop service and subscribe to the answer topic
 		ServiceClient<cop_call.Request, cop_call.Response, cop_call> cl = n.serviceClient("/cop/in", new cop_call());
@@ -510,13 +553,13 @@ public class CopROSClient {
 			while (cop_callback.isEmpty()) {
 				ros.spinOnce();
 			}
-	
+
 			// just read the first result returned on the output_topic
 			r = cop_callback.pop();
 			sub.shutdown();
 			
 		} catch (RosException e) {
-			e.printStackTrace();
+			ros.logError("CopROSClient: Call to service /cop/in failed");
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
