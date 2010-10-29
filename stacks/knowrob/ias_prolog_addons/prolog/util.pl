@@ -305,7 +305,7 @@ lists_equal([A|Arest],[B|Brest]) :-
 % not exported to avoid conflicts (use util:min_list to refer to this implementation)
 %
 min_list([], _).
-min_list([A], A).
+min_list([A], A) :- !.
 min_list([A|Arest],Min) :-
   min_list1(Arest, A, Min),!.
 
@@ -320,7 +320,7 @@ min_list1([A|Arest], OldMin ,Min) :-
 % not exported to avoid conflicts (use util:max_list to refer to this implementation)
 %
 max_list([], _).
-max_list([A], A).
+max_list([A], A) :- !.
 max_list([A|Arest], Max) :-
   max_list1(Arest, A, Max),!.
 
