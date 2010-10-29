@@ -101,15 +101,14 @@ rdfs_instance_of(Resource, Class) :-
        -> ((rdfs_individual_of(Resource, Class) ; 
             rdfs_computable_instance_of_subclass(Resource, Class)),!)
 
-       % compute all instances of this class
-       ;  (findall(MyClass, (rdfs_individual_of(Resource, MyClass);
-                            rdfs_computable_instance_of_subclass(Resource, MyClass)), Classes),
+       % compute the class of the given instance
+       ;  (findall(MyClass, (rdfs_individual_of(Resource, MyClass)), Classes),
            member(Class, Classes)) )
 
-  ; nonvar(Class)    % compute the class of the given instance
+  ; (nonvar(Class)    % compute all instances of this class
     -> ( findall(MyResource, (rdfs_individual_of(MyResource, Class);
                               rdfs_computable_instance_of_subclass(MyResource, Class)), Resources),
-         member(Resource, Resources)).
+         member(Resource, Resources))).
 
 
 
