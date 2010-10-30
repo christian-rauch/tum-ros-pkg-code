@@ -14,6 +14,7 @@
   <depend package="pr2_navigation_perception"/>
   <depend package="pr2_navigation_teleop"/>
   <depend package="pr2_machine"/>
+  <depend package="pr2_nav_pcontroller"/>
 
 </package>
 

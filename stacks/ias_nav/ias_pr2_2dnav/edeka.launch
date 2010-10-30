@@ -5,12 +5,7 @@
   <include file="$(find pr2_navigation_perception)/lasers_and_filters.xml" />
   <include file="$(find pr2_navigation_perception)/ground_plane.xml" />
   <include file="$(find pr2_navigation_global)/move_base.xml" />
-
-  <include file="$(find pr2_nav_pcontroller)/nav_pcontroller.launch" />
-  
-  <!--node name="map_server" pkg="map_server" type="map_server" args="$(find ias_maps)/ias_karlstrasse_20101008.yaml" machine="c2" /-->
- <node name="map_server" pkg="map_server" type="map_server" args="$(find ias_maps)/ccrl_20101029.yaml" machine="c2" />
-
+  <node name="map_server" pkg="map_server" type="map_server" args="$(find ias_maps)/edeka_20100928.yaml" machine="c2" />
 
   <param name="/move_base_node/footprint_padding" value="0.03"/>
   <param name="/move_base_node/TrajectoryPlannerROS/min_in_place_rotational_vel" value="0.1"/>
