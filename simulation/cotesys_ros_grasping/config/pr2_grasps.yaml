@@ -1,0 +1,22 @@
+grasps:
+  - name: front_level
+    end_effector_x_rot: 0.0
+    end_effector_y_rot: 0.0
+    end_effector_z_rot: 0.0
+    end_effector_w_rot: 1.0
+    ik_to_gripper_x_diff: .12
+    ik_to_gripper_y_diff: 0.0
+    ik_to_gripper_z_diff: 0.0
+  - name: top
+    end_effector_x_rot: 0.0
+    end_effector_y_rot: .7071
+    end_effector_z_rot: 0.0
+    end_effector_w_rot: .7071
+    ik_to_gripper_x_diff: 0.0
+    ik_to_gripper_y_diff: 0.0
+    ik_to_gripper_z_diff: .12
+  - name: default
+    end_effector_x_rot: 0.0
+    end_effector_y_rot: 0.0
+    end_effector_z_rot: 0.0
+    end_effector_w_rot: 1.0

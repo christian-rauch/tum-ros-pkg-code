@@ -50,6 +50,18 @@
 namespace cotesys_ros_grasping
 {
 
+struct GraspDef {
+  std::string name;
+  double ik_to_gripper_x_diff_;
+  double ik_to_gripper_y_diff_;
+  double ik_to_gripper_z_diff_;
+
+  double end_effector_rot_x_;
+  double end_effector_rot_y_;
+  double end_effector_rot_z_;
+  double end_effector_rot_w_;
+};
+
 class MoveArmToPositionServer
 {
 public:
@@ -61,14 +73,9 @@ private:
 
   std::string left_arm_name_, right_arm_name_;
   std::string right_ik_link_, left_ik_link_;
-
-  double ik_to_gripper_x_diff_, ik_to_gripper_y_diff_, ik_to_gripper_z_diff_;
-
-  double end_effector_rot_x_;
-  double end_effector_rot_y_;
-  double end_effector_rot_z_;
-  double end_effector_rot_w_;
-
+  
+  std::map<std::string, GraspDef> grasp_def_map_;
+  
   ros::NodeHandle priv_nh_, root_nh_;
   boost::shared_ptr<actionlib::SimpleActionClient<move_arm_msgs::MoveArmAction> > left_move_arm_client_, right_move_arm_client_;
   boost::shared_ptr<actionlib::SimpleActionServer<cotesys_ros_grasping::MoveArmToPositionAction> > action_server_;
@@ -82,13 +89,70 @@ MoveArmToPositionServer::MoveArmToPositionServer()
   priv_nh_.param<std::string>("right_arm_name", right_arm_name_, "right_arm");
   priv_nh_.param<std::string>("right_ik_link", right_ik_link_, "r_wrist_roll_link");
   priv_nh_.param<std::string>("left_ik_link", left_ik_link_, "l_wrist_roll_link");
-  priv_nh_.param<double>("ik_to_gripper_x_diff", ik_to_gripper_x_diff_, .12);
-  priv_nh_.param<double>("ik_to_gripper_y_diff", ik_to_gripper_y_diff_, 0.0);
-  priv_nh_.param<double>("ik_to_gripper_z_diff", ik_to_gripper_z_diff_, 0.0);
-  priv_nh_.param<double>("end_effector_rot_x", end_effector_rot_x_, 0.0);
-  priv_nh_.param<double>("end_effector_rot_y", end_effector_rot_y_, 0.0);
-  priv_nh_.param<double>("end_effector_rot_z", end_effector_rot_z_, 0.0);
-  priv_nh_.param<double>("end_effector_rot_w", end_effector_rot_w_, 1.0);
+
+  if(!priv_nh_.hasParam("grasps")) {
+    ROS_WARN_STREAM("No grasps loaded");
+  } else {
+    XmlRpc::XmlRpcValue grasps_xml;
+    priv_nh_.getParam("grasps", grasps_xml);
+    if(grasps_xml.getType() != XmlRpc::XmlRpcValue::TypeArray) {
+      ROS_WARN("grasps is not an array");
+    } else if(grasps_xml.size() == 0) {
+      ROS_WARN("No grasps specified in grasps yaml");
+    } else {
+      bool hasDefault = false;
+      for(int i = 0; i < grasps_xml.size(); i++) {
+        if(!grasps_xml[i].hasMember("name")) {
+          ROS_WARN("Each grasp must have a name");
+          continue;
+        }
+        GraspDef grasp;
+        grasp.name = std::string(grasps_xml[i]["name"]);
+        if(grasp.name == "default") {
+          hasDefault = true;
+        }
+        ROS_INFO_STREAM("Adding grasp named " << grasp.name);
+        if(grasps_xml[i].hasMember("ik_to_gripper_x_diff")) {
+          grasp.ik_to_gripper_x_diff_ = grasps_xml[i]["ik_to_gripper_x_diff"];
+        }
+        if(grasps_xml[i].hasMember("ik_to_gripper_y_diff")) {
+          grasp.ik_to_gripper_y_diff_ = grasps_xml[i]["ik_to_gripper_y_diff"];
+        }
+        if(grasps_xml[i].hasMember("ik_to_gripper_z_diff")) {
+          grasp.ik_to_gripper_z_diff_ = grasps_xml[i]["ik_to_gripper_z_diff"];
+        }
+        if(grasps_xml[i].hasMember("end_effector_x_rot")) {
+          grasp.end_effector_rot_x_ = grasps_xml[i]["end_effector_x_rot"];
+        } else {
+          ROS_WARN("no x rot");
+        }
+        if(grasps_xml[i].hasMember("end_effector_y_rot")) {
+          grasp.end_effector_rot_y_ = grasps_xml[i]["end_effector_y_rot"];
+        } else {
+          ROS_WARN("no y rot");
+        }
+        if(grasps_xml[i].hasMember("end_effector_z_rot")) {
+          grasp.end_effector_rot_z_ = grasps_xml[i]["end_effector_z_rot"];
+        } else {
+          ROS_WARN("no z rot");
+        }
+        if(grasps_xml[i].hasMember("end_effector_w_rot")) {
+          grasp.end_effector_rot_w_ = grasps_xml[i]["end_effector_w_rot"];
+        } else {
+          ROS_WARN("no w rot");
+        }
+        ROS_INFO_STREAM("Quaternion is " << grasp.end_effector_rot_x_ << " " 
+                        << grasp.end_effector_rot_y_ << " " 
+                        << grasp.end_effector_rot_z_ << " " 
+                        << grasp.end_effector_rot_w_);
+
+        grasp_def_map_[grasp.name] = grasp;
+      }
+      if(!hasDefault) {
+        ROS_WARN("No default grasp pose");
+      }
+    }
+  }
 
   //TODO - test if the end effector parameters specify a valid quaternion
 
@@ -105,8 +169,23 @@ bool MoveArmToPositionServer::execute(const cotesys_ros_grasping::MoveArmToPosit
 {
   if(req->arm_name != left_arm_name_ && req->arm_name != right_arm_name_) {
     ROS_ERROR_STREAM("Can't do anything for arm named " << req->arm_name);
+    return false;
   }
-  
+
+  std::string grasp_name = req->grasp_name;
+  if(grasp_def_map_.find(req->grasp_name) == grasp_def_map_.end()) {
+    if(grasp_def_map_.find("default") != grasp_def_map_.end()) {
+      ROS_DEBUG("Using default");
+      grasp_name = "default";
+    } else {
+      ROS_INFO_STREAM("Don't have grasp named " << req->grasp_name << " and no default defined");
+      return false;
+    }
+  }
+
+  ROS_INFO_STREAM("Going to execute grasp named " << grasp_name);
+  GraspDef& grasp = grasp_def_map_[grasp_name];
+
   std::string ik_link_name;
   boost::shared_ptr<actionlib::SimpleActionClient<move_arm_msgs::MoveArmAction> >  move_arm_client;
   if(req->arm_name == left_arm_name_) {
@@ -126,13 +205,13 @@ bool MoveArmToPositionServer::execute(const cotesys_ros_grasping::MoveArmToPosit
   goal.motion_plan_request.allowed_planning_time = ros::Duration(2.0);
   
   goal.motion_plan_request.goal_constraints.position_constraints.resize(1);
-  goal.motion_plan_request.goal_constraints.position_constraints[0].header.stamp = ros::Time::now();
+  goal.motion_plan_request.goal_constraints.position_constraints[0].header.stamp = ros::Time();
   goal.motion_plan_request.goal_constraints.position_constraints[0].header.frame_id = "base_link";
     
   goal.motion_plan_request.goal_constraints.position_constraints[0].link_name = ik_link_name;
-  goal.motion_plan_request.goal_constraints.position_constraints[0].position.x = req->point.x-ik_to_gripper_x_diff_;
-  goal.motion_plan_request.goal_constraints.position_constraints[0].position.y = req->point.y-ik_to_gripper_y_diff_;
-  goal.motion_plan_request.goal_constraints.position_constraints[0].position.z = req->point.z-ik_to_gripper_z_diff_;
+  goal.motion_plan_request.goal_constraints.position_constraints[0].position.x = req->point.x-grasp.ik_to_gripper_x_diff_;
+  goal.motion_plan_request.goal_constraints.position_constraints[0].position.y = req->point.y-grasp.ik_to_gripper_y_diff_;
+  goal.motion_plan_request.goal_constraints.position_constraints[0].position.z = req->point.z-grasp.ik_to_gripper_z_diff_;
     
   goal.motion_plan_request.goal_constraints.position_constraints[0].constraint_region_shape.type = geometric_shapes_msgs::Shape::BOX;
   goal.motion_plan_request.goal_constraints.position_constraints[0].constraint_region_shape.dimensions.push_back(0.02);
@@ -143,13 +222,13 @@ bool MoveArmToPositionServer::execute(const cotesys_ros_grasping::MoveArmToPosit
   goal.motion_plan_request.goal_constraints.position_constraints[0].weight = 1.0;
 
   goal.motion_plan_request.goal_constraints.orientation_constraints.resize(1);
-  goal.motion_plan_request.goal_constraints.orientation_constraints[0].header.stamp = ros::Time::now();
+  goal.motion_plan_request.goal_constraints.orientation_constraints[0].header.stamp = ros::Time();
   goal.motion_plan_request.goal_constraints.orientation_constraints[0].header.frame_id = "base_link";
   goal.motion_plan_request.goal_constraints.orientation_constraints[0].link_name = ik_link_name;
-  goal.motion_plan_request.goal_constraints.orientation_constraints[0].orientation.x = end_effector_rot_x_;
-  goal.motion_plan_request.goal_constraints.orientation_constraints[0].orientation.y = end_effector_rot_y_;
-  goal.motion_plan_request.goal_constraints.orientation_constraints[0].orientation.z = end_effector_rot_z_;
-  goal.motion_plan_request.goal_constraints.orientation_constraints[0].orientation.w = end_effector_rot_w_;
+  goal.motion_plan_request.goal_constraints.orientation_constraints[0].orientation.x = grasp.end_effector_rot_x_;
+  goal.motion_plan_request.goal_constraints.orientation_constraints[0].orientation.y = grasp.end_effector_rot_y_;
+  goal.motion_plan_request.goal_constraints.orientation_constraints[0].orientation.z = grasp.end_effector_rot_z_;
+  goal.motion_plan_request.goal_constraints.orientation_constraints[0].orientation.w = grasp.end_effector_rot_w_;
     
   goal.motion_plan_request.goal_constraints.orientation_constraints[0].absolute_roll_tolerance = 0.04;
   goal.motion_plan_request.goal_constraints.orientation_constraints[0].absolute_pitch_tolerance = 0.04;

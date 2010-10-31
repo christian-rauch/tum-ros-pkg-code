@@ -46,22 +46,28 @@ if __name__ == '__main__':
       attach_object_client = actionlib.SimpleActionClient('attach_bounding_box', AttachBoundingBoxAction)
       attach_object_client.wait_for_server()
 
+      print 'Connected to all clients'
+
       move_rarm_to_side_goal = MoveArmToPositionGoal()
       move_rarm_to_side_goal.arm_name = "right_arm"
+      move_rarm_to_side_goal.grasp_name = "top_level"
       move_rarm_to_side_goal.point.x = .52
       move_rarm_to_side_goal.point.y = -.7
       move_rarm_to_side_goal.point.z = .9
 
       move_to_arm_pos_client.send_goal(move_rarm_to_side_goal)
+      print 'sent right arm goal'
       move_to_arm_pos_client.wait_for_result()
 
       move_larm_to_side_goal = MoveArmToPositionGoal()
       move_larm_to_side_goal.arm_name = "left_arm"
+      move_rarm_to_side_goal.grasp_name = "top_level"
       move_larm_to_side_goal.point.x = .52
       move_larm_to_side_goal.point.y = .7
       move_larm_to_side_goal.point.z = .9
 
       move_to_arm_pos_client.send_goal(move_larm_to_side_goal)
+      print 'sent left arm goal'
       move_to_arm_pos_client.wait_for_result()
 
       open_gripper(right_gripper_client_)
@@ -73,6 +79,7 @@ if __name__ == '__main__':
 
       right_arm_pos_goal = MoveArmToPositionGoal()
       right_arm_pos_goal.arm_name = "right_arm"
+      right_arm_pos_goal.grasp_name = "top"
       right_arm_pos_goal.point.x = .70
       right_arm_pos_goal.point.y = 0.0
       right_arm_pos_goal.point.z = .75

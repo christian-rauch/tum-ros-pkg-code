@@ -3,7 +3,10 @@
 # string name associated with the arm to which the end effector is attached
 string arm_name
 
-# x, y, z point
+# which named grasp to use
+string grasp_name
+
+# x, y, z point of the grasp
 geometry_msgs/Point point
 
 ---
