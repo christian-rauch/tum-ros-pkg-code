@@ -1,0 +1,5 @@
+<launch>
+  <node pkg="missing_objects_tutorial" type="synthetic_percepts" name="synthetic_percepts" output="screen" respawn="false">
+    <param name="missing_object" value="BreakfastCereal"/>
+  </node>
+</launch>
