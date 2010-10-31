@@ -1,5 +1,5 @@
 ;;;
-;;; Copyright (c) 2009, Lorenz Moesenlechner <moesenle@cs.tum.edu>
+;;; Copyright (c) 2010, Lorenz Moesenlechner <moesenle@in.tum.de>
 ;;; All rights reserved.
 ;;; 
 ;;; Redistribution and use in source and binary forms, with or without
@@ -27,58 +27,15 @@
 ;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
+(in-package :desig)
 
-(in-package :cl-user)
+(defclass designator-id-mixin ()
+  ((object-id :initarg :object-id :initform (gensym "OBJ-ID-")
+              :reader object-id)))
 
-(defpackage :cram-reasoning
-  (:use #:common-lisp #:cram-utilities)
-  (:nicknames :crs)
-  (:import-from #:alexandria
-                #:curry #:rcurry #:compose #:with-gensyms)
-  (:export #:lisp-fun
-           #:lisp-pred
-           #:bound
-           #:ground
-           #:member
-           #:string-concat
-           #:==
-           #:format
-           #:warn
-           #:error
-           #:?_
-           #:fail
-           #:and
-           #:or
-           #:not
-           #:<
-           #:>
-           #:<=
-           #:>=
-           #:unify
-           #:unify-p
-           #:prolog
-           #:def-fact-group
-           #:<-
-           #:def-prolog-handler
-           #:slot-value
-           #:get-slot-value
-           #:instance-of
-           #:lisp-type
-           #:once
-           #:findall
-           #:forall
-           #:bagof
-           #:filter-bindings
-           #:query-var
-           #:symbol-value
-           ;; Rete
-           #:clear-alpha-network #:rete-assert #:rete-retract
-           #:with-facts-asserted #:object-id
-           #:rete-holds #:alpha-network-size
-           #:def-production #:register-production
-           #:clear-productions #:remove-production
-           #:with-productions #:remove-production-handler
-           #:register-production-handler
-           #:with-production-handlers
-           #:rete-proof))
-
+(defmethod equate :after ((parent designator-id-mixin) (succ designator-id-mixin))
+  (labels ((doit (curr-d &optional (id (slot-value curr-d 'object-id)))
+             (when curr-d
+               (setf (slot-value curr-d 'object-id) id)
+               (doit (successor curr-d) id))))
+    (doit (first-desig parent))))

@@ -1,5 +1,5 @@
 ;;;
-;;; Copyright (c) 2009, Lorenz Moesenlechner <moesenle@cs.tum.edu>
+;;; Copyright (c) 2010, Lorenz Moesenlechner <moesenle@in.tum.de>
 ;;; All rights reserved.
 ;;; 
 ;;; Redistribution and use in source and binary forms, with or without
@@ -27,58 +27,22 @@
 ;;; POSSIBILITY OF SUCH DAMAGE.
 ;;;
 
+(in-package :desig)
 
-(in-package :cl-user)
+(defgeneric make-location-proxy (type value)
+  (:documentation "Creates a location proxy of `type' and initializes
+  it with `value'."))
 
-(defpackage :cram-reasoning
-  (:use #:common-lisp #:cram-utilities)
-  (:nicknames :crs)
-  (:import-from #:alexandria
-                #:curry #:rcurry #:compose #:with-gensyms)
-  (:export #:lisp-fun
-           #:lisp-pred
-           #:bound
-           #:ground
-           #:member
-           #:string-concat
-           #:==
-           #:format
-           #:warn
-           #:error
-           #:?_
-           #:fail
-           #:and
-           #:or
-           #:not
-           #:<
-           #:>
-           #:<=
-           #:>=
-           #:unify
-           #:unify-p
-           #:prolog
-           #:def-fact-group
-           #:<-
-           #:def-prolog-handler
-           #:slot-value
-           #:get-slot-value
-           #:instance-of
-           #:lisp-type
-           #:once
-           #:findall
-           #:forall
-           #:bagof
-           #:filter-bindings
-           #:query-var
-           #:symbol-value
-           ;; Rete
-           #:clear-alpha-network #:rete-assert #:rete-retract
-           #:with-facts-asserted #:object-id
-           #:rete-holds #:alpha-network-size
-           #:def-production #:register-production
-           #:clear-productions #:remove-production
-           #:with-productions #:remove-production-handler
-           #:register-production-handler
-           #:with-production-handlers
-           #:rete-proof))
+(defgeneric location-proxy-current-solution (proxy)
+  (:documentation "Returns the current solution of the proxy"))
 
+(defgeneric location-proxy-next-solution (proxy)
+  (:documentation "Returns the next solution of the proxy object or
+  NIL if no more solutions exist."))
+
+(defgeneric location-proxy-precedence-value (proxy)
+  (:documentation "Returns a number that indicates the proxie's
+  precedence. Lower numbers correspond to lower precedence."))
+
+(defgeneric location-proxy-solution->pose (desig solution)
+  (:documentation "Returns a pose-stamped for a location proxy."))
