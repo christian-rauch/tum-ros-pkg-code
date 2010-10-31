@@ -1,0 +1,6 @@
+int32 corners_x
+int32 corners_y
+float32 spacing_x
+float32 spacing_y
+---
+geometry_msgs/PoseStamped board_pose

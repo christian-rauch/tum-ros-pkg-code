@@ -1,0 +1,3 @@
+geometry_msgs/PoseStamped board_pose
+---
+geometry_msgs/PoseStamped nav_pose

@@ -1,0 +1,15 @@
+<launch>
+  <!-- Wide Checkerboard Detector -->
+  <node pkg="checkerboard_pose" type="cb_detector.py" name="wide_cb_detector" output="screen">
+    <remap from="image_stream" to="/wide_stereo/left/image_rect" /> 
+    <remap from="camera_info" to="/wide_stereo/left/camera_info" /> 
+    <remap from="get_checkerboard_pose" to="wide_get_checkerboard_pose" /> 
+    <remap from="board_pose" to="wide_board_pose" /> 
+    <param name="corners_x" value="5"/>
+    <param name="corners_y" value="4"/>
+    <param name="spacing_x" value="0.08"/>
+    <param name="spacing_y" value="0.08"/>
+    <param name="publish_period" value="0.3"/>
+  </node>
+  <node pkg="approach_table_tools" type="approach_pose_finder.py" name="approach_pose_finder" output="screen"/>
+</launch>

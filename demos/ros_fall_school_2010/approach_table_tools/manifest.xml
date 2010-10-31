@@ -1,0 +1,18 @@
+<package>
+  <description brief="approach_table_support">
+
+     approach_table_support
+
+  </description>
+  <author></author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/approach_table_support</url>
+  <depend package="checkerboard_pose"/>
+  <depend package="rospy"/>
+  <depend package="tf"/>
+  <depend package="geometry_msgs"/>
+
+</package>
+
+
