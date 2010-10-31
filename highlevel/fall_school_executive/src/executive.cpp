@@ -53,7 +53,9 @@ main(int argc, char** argv)
 
   // Lower the torso
   actionlib::SimpleActionClient<pr2_controllers_msgs::SingleJointPositionAction> torso_client("/torso_controller/position_joint_action", true);
+  ROS_INFO("waiting for torso action server");
   torso_client.waitForServer();
+  ROS_INFO("found action server");
   pr2_controllers_msgs::SingleJointPositionGoal torso_goal;
   torso_goal.position = 0.03;
   torso_goal.min_duration = ros::Duration(2.0);
@@ -139,8 +141,8 @@ main(int argc, char** argv)
   actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> drive_base_client("drive_base_action", true);
   drive_base_client.waitForServer();
   move_base_msgs::MoveBaseGoal drive_base_goal;
-  drive_base_goal.target_pose.header.frame_id = "odom_combined";
-  drive_base_goal.target_pose.pose.position.x = 0.5;
+  drive_base_goal.target_pose.header.frame_id = "base_link";
+  drive_base_goal.target_pose.pose.position.x = 0.3;
   drive_base_goal.target_pose.pose.position.y = 0.0;
   drive_base_goal.target_pose.pose.position.z = 0.0;
   drive_base_goal.target_pose.pose.orientation.x = 0.0;
@@ -154,7 +156,7 @@ main(int argc, char** argv)
     ROS_BREAK();
 
   // Move to the right-hand table, using local navigation (NO OBSTACLE AVOIDANCE!)
-  drive_base_goal.target_pose.header.frame_id = "odom_combined";
+  drive_base_goal.target_pose.header.frame_id = "base_link";
   drive_base_goal.target_pose.pose.position.x = 0.0;
   drive_base_goal.target_pose.pose.position.y = -1.1;
   drive_base_goal.target_pose.pose.position.z = 0.0;
