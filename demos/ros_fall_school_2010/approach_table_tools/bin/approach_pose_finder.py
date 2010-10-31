@@ -34,7 +34,7 @@
 #* 
 #* Author: Eitan Marder-Eppstein
 #***********************************************************
-PKG = 'icra_ros_tutorial' # this package name
+PKG = 'approach_table_tools' # this package name
 NAME = 'find_approach_pose'
 
 import roslib; roslib.load_manifest(PKG) 
