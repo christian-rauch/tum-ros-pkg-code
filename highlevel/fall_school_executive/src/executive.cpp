@@ -129,7 +129,7 @@ main(int argc, char** argv)
   torso_goal.position = 0.195;
   torso_goal.min_duration = ros::Duration(2.0);
   torso_goal.max_velocity = 1.0;
-  ROS_INFO("raising the torso");
+  ROS_INFO("Raising the torso");
   torso_client.sendGoal(torso_goal);
   torso_client.waitForResult();
   if(torso_client.getState() != actionlib::SimpleClientGoalState::SUCCEEDED)
@@ -147,6 +147,7 @@ main(int argc, char** argv)
   drive_base_goal.target_pose.pose.orientation.y = 0.0;
   drive_base_goal.target_pose.pose.orientation.z = 0.0;
   drive_base_goal.target_pose.pose.orientation.w = 1.0;
+  ROS_INFO("Moving close to the table");
   drive_base_client.sendGoal(drive_base_goal);
   drive_base_client.waitForResult();
   if(drive_base_client.getState() != actionlib::SimpleClientGoalState::SUCCEEDED)
@@ -161,11 +162,12 @@ main(int argc, char** argv)
   drive_base_goal.target_pose.pose.orientation.y = 0.0;
   drive_base_goal.target_pose.pose.orientation.z = 0.0;
   drive_base_goal.target_pose.pose.orientation.w = 1.0;
+  ROS_INFO("Moving to the right table");
   drive_base_client.sendGoal(drive_base_goal);
   drive_base_client.waitForResult();
   if(drive_base_client.getState() != actionlib::SimpleClientGoalState::SUCCEEDED)
     ROS_BREAK();
-  
+  ROS_INFO("Finished");
   ros::spin();
   return 0;
 }
