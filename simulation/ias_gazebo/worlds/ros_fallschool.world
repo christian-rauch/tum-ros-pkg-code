@@ -31,7 +31,6 @@
     <quickStep>true</quickStep>
     <quickStepIters>10</quickStepIters>
     <quickStepW>1.3</quickStepW>
-    <islandThreads>3</islandThreads>
     <contactMaxCorrectingVel>100.0</contactMaxCorrectingVel>
     <contactSurfaceLayer>0.001</contactSurfaceLayer>
   </physics:ode>
@@ -42,7 +41,7 @@
 
   <rendering:gui>
     <type>fltk</type>
-    <size>640 480</size>
+    <size>1024 768</size>
     <pos>0 0</pos>
     <frames>
       <row height="100%">
@@ -52,7 +51,6 @@
         </camera>
       </row>
     </frames>
-    <udpateRate>1.0</udpateRate>
   </rendering:gui>
 
 
@@ -64,8 +62,7 @@
     <gazeboPath>media</gazeboPath>
     <grid>false</grid>
     <maxUpdateRate>10</maxUpdateRate>
-    <shadowTechnique>none</shadowTechnique>
-    <shadows>false</shadows>
+    <shadowTechnique>stencilAdditive</shadowTechnique>
   </rendering:ogre>
 
   <!-- clock -->
@@ -84,6 +81,18 @@
         </visual>
       </geom:box>
     </body:box>
+    <!-- broadcast ros /time with simTime -->
+    <controller:gazebo_ros_time name="gazebo_ros_time" plugin="libgazebo_ros_time.so">
+      <alwaysOn>true</alwaysOn>
+      <updateRate>1000.0</updateRate>
+      <interface:audio name="dummy_gazebo_ros_time_iface_should_not_be_here"/>
+    </controller:gazebo_ros_time>
+    <!-- offer ROS services to spawn and delete models -->
+    <controller:gazebo_ros_factory name="gazebo_ros_factory" plugin="libgazebo_ros_factory.so">
+      <alwaysOn>true</alwaysOn>
+      <updateRate>1.0</updateRate>
+      <interface:audio name="dummy_gazebo_ros_factory_iface_should_not_be_here"/>
+    </controller:gazebo_ros_factory>
   </model:physical>
 
   <!-- ground plane -->
