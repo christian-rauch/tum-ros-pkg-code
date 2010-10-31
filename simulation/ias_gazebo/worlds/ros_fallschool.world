@@ -42,7 +42,7 @@
 
   <rendering:gui>
     <type>fltk</type>
-    <size>1024 768</size>
+    <size>640 480</size>
     <pos>0 0</pos>
     <frames>
       <row height="100%">
@@ -52,6 +52,7 @@
         </camera>
       </row>
     </frames>
+    <udpateRate>1.0</udpateRate>
   </rendering:gui>
 
 
@@ -63,7 +64,8 @@
     <gazeboPath>media</gazeboPath>
     <grid>false</grid>
     <maxUpdateRate>10</maxUpdateRate>
-    <shadowTechnique>stencilAdditive</shadowTechnique>
+    <shadowTechnique>none</shadowTechnique>
+    <shadows>false</shadows>
   </rendering:ogre>
 
   <!-- clock -->
