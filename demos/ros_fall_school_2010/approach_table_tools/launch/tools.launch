@@ -19,4 +19,7 @@
 
   <!-- Arm Tucker -->
   <node pkg="pr2_tuck_arms_action" type="tuck_arms.py" name="tuck_arms" output="screen"/>
+
+  <!-- Local p controller for base -->
+  <include file="$(find drive_base_action)/launch/pr2_drive_base_action.launch"/>
 </launch>
