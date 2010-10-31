@@ -1,0 +1,17 @@
+<package>
+  <description brief="table_objects">
+  </description>
+  <author>Zoltan-Csaba Marton</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/table_objects</url>
+  <depend package="roscpp"/>
+  <depend package="sensor_msgs"/>
+  <depend package="geometry_msgs" />
+  <depend package="mapping_msgs"/>
+  <depend package="visualization_msgs"/>
+  <depend package="pcl"/>
+
+</package>
+
+

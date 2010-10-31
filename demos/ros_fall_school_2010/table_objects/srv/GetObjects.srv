@@ -1,0 +1,4 @@
+sensor_msgs/PointCloud2 data
+---
+mapping_msgs/CollisionObject[] table_objects
+
