@@ -1,0 +1,4 @@
+sensor_msgs/PointCloud2 data
+---
+geometry_msgs/PoseStamped table_pose
+

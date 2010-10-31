@@ -1,0 +1,12 @@
+<package>
+  <description brief="table_pose">
+  </description>
+
+  <author>Radu Bogdan Rusu</author>
+  <license>BSD</license>
+  <url></url>
+  <review status="experimental" notes="beta"/>
+
+  <depend package="pcl" />
+  <depend package="roscpp" />
+</package>
