@@ -19,23 +19,23 @@ r_hand_controller:
     - right_hand_thumb_middle_joint
     - right_hand_thumb_distal_joint
   gains:
-    right_hand_thumb_joint: {p: 100.0, d: 10.0}
-    right_hand_ring_finger_base_joint: {p: 100.0, d: 10.0}
-    right_hand_ring_finger_proximal_joint: {p: 100.0, d: 10.0}
-    right_hand_ring_finger_middle_joint: {p: 100.0, d: 10.0}
-    right_hand_ring_finger_distal_joint: {p: 100.0, d: 10.0}
-    right_hand_middle_finger_base_joint: {p: 100.0, d: 10.0}
-    right_hand_middle_finger_proximal_joint: {p: 100.0, d: 10.0}
-    right_hand_middle_finger_middle_joint: {p: 100.0, d: 10.0}
-    right_hand_middle_finger_distal_joint: {p: 100.0, d: 10.0}
-    right_hand_fore_finger_base_joint: {p: 100.0, d: 10.0}
-    right_hand_fore_finger_proximal_joint: {p: 100.0, d: 10.0}
-    right_hand_fore_finger_middle_joint: {p: 100.0, d: 10.0}
-    right_hand_fore_finger_distal_joint: {p: 100.0, d: 10.0}
-    right_hand_thumb_base_joint: {p: 100.0, d: 10.0}
-    right_hand_thumb_proximal_joint: {p: 100.0, d: 10.0}
-    right_hand_thumb_middle_joint: {p: 100.0, d: 10.0}
-    right_hand_thumb_distal_joint: {p: 100.0, d: 10.0}
+    right_hand_thumb_joint: {p: 1.0, d: 10.0}
+    right_hand_ring_finger_base_joint: {p: 1.0, d: 10.0}
+    right_hand_ring_finger_proximal_joint: {p: 1.0, d: 10.0}
+    right_hand_ring_finger_middle_joint: {p: 1.0, d: 10.0}
+    right_hand_ring_finger_distal_joint: {p: 1.0, d: 10.0}
+    right_hand_middle_finger_base_joint: {p: 1.0, d: 10.0}
+    right_hand_middle_finger_proximal_joint: {p: 1.0, d: 10.0}
+    right_hand_middle_finger_middle_joint: {p: 1.0, d: 10.0}
+    right_hand_middle_finger_distal_joint: {p: 1.0, d: 10.0}
+    right_hand_fore_finger_base_joint: {p: 1.0, d: 10.0}
+    right_hand_fore_finger_proximal_joint: {p: 1.0, d: 10.0}
+    right_hand_fore_finger_middle_joint: {p: 1.0, d: 10.0}
+    right_hand_fore_finger_distal_joint: {p: 1.0, d: 10.0}
+    right_hand_thumb_base_joint: {p: 1.0, d: 10.0}
+    right_hand_thumb_proximal_joint: {p: 1.0, d: 10.0}
+    right_hand_thumb_middle_joint: {p: 1.0, d: 10.0}
+    right_hand_thumb_distal_joint: {p: 1.0, d: 10.0}
   joint_trajectory_action_node:
     joints:
       - right_hand_thumb_joint
@@ -113,23 +113,23 @@ l_hand_controller:
     - left_hand_thumb_middle_joint
     - left_hand_thumb_distal_joint
   gains:
-    left_hand_thumb_joint: {p: 100.0, d: 10.0}
-    left_hand_ring_finger_base_joint: {p: 100.0, d: 10.0}
-    left_hand_ring_finger_proximal_joint: {p: 100.0, d: 10.0}
-    left_hand_ring_finger_middle_joint: {p: 100.0, d: 10.0}
-    left_hand_ring_finger_distal_joint: {p: 100.0, d: 10.0}
-    left_hand_middle_finger_base_joint: {p: 100.0, d: 10.0}
-    left_hand_middle_finger_proximal_joint: {p: 100.0, d: 10.0}
-    left_hand_middle_finger_middle_joint: {p: 100.0, d: 10.0}
-    left_hand_middle_finger_distal_joint: {p: 100.0, d: 10.0}
-    left_hand_fore_finger_base_joint: {p: 100.0, d: 10.0}
-    left_hand_fore_finger_proximal_joint: {p: 100.0, d: 10.0}
-    left_hand_fore_finger_middle_joint: {p: 100.0, d: 10.0}
-    left_hand_fore_finger_distal_joint: {p: 100.0, d: 10.0}
-    left_hand_thumb_base_joint: {p: 100.0, d: 10.0}
-    left_hand_thumb_proximal_joint: {p: 100.0, d: 10.0}
-    left_hand_thumb_middle_joint: {p: 100.0, d: 10.0}
-    left_hand_thumb_distal_joint: {p: 100.0, d: 10.0}
+    left_hand_thumb_joint: {p: 1.0, d: 10.0}
+    left_hand_ring_finger_base_joint: {p: 1.0, d: 10.0}
+    left_hand_ring_finger_proximal_joint: {p: 1.0, d: 10.0}
+    left_hand_ring_finger_middle_joint: {p: 1.0, d: 10.0}
+    left_hand_ring_finger_distal_joint: {p: 1.0, d: 10.0}
+    left_hand_middle_finger_base_joint: {p: 1.0, d: 10.0}
+    left_hand_middle_finger_proximal_joint: {p: 1.0, d: 10.0}
+    left_hand_middle_finger_middle_joint: {p: 1.0, d: 10.0}
+    left_hand_middle_finger_distal_joint: {p: 1.0, d: 10.0}
+    left_hand_fore_finger_base_joint: {p: 1.0, d: 10.0}
+    left_hand_fore_finger_proximal_joint: {p: 1.0, d: 10.0}
+    left_hand_fore_finger_middle_joint: {p: 1.0, d: 10.0}
+    left_hand_fore_finger_distal_joint: {p: 1.0, d: 10.0}
+    left_hand_thumb_base_joint: {p: 1.0, d: 10.0}
+    left_hand_thumb_proximal_joint: {p: 1.0, d: 10.0}
+    left_hand_thumb_middle_joint: {p: 1.0, d: 10.0}
+    left_hand_thumb_distal_joint: {p: 1.0, d: 10.0}
   joint_trajectory_action_node:
     joints:
       - left_hand_thumb_joint

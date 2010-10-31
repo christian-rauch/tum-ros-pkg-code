@@ -1,0 +1,8 @@
+<launch>
+  
+  <include file="$(find ias_gazebo)/environments/empty_world.launch"/>
+  <include file="$(find ias_kitchen_defs)/launch/ias_kitchen_model.sim.launch"/>
+  
+  <node name="kitchen_loader" pkg="gazebo_tools" type="gazebo_model" args="-p /ias_kitchen/kitchen_description spawn kitchen_model" respawn="false" output="screen" />
+  
+</launch>

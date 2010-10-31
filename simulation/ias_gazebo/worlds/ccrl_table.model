@@ -1,0 +1,94 @@
+<?xml version="1.0"?>
+  
+  <model:physical name="table1"
+    xmlns:model="http://playerstage.sourceforge.net/gazebo/xmlschema/#model" 
+    xmlns:body="http://playerstage.sourceforge.net/gazebo/xmlschema/#body" 
+    xmlns:geom="http://playerstage.sourceforge.net/gazebo/xmlschema/#geom"> 
+  
+    <xyz>0 0 0</xyz>	
+    <rpy>0 0 0</rpy>
+    <static>true</static>
+
+    <body:box name="table_body">
+      <geom:box name="foot1">
+        <xyz>0.385 0.585 0.327</xyz>
+        <size>0.03 0.03 0.654</size>
+        <mass>2</mass>
+        <visual>
+          <size>0.03 0.03 0.654</size>
+          <mesh>unit_box</mesh>
+          <material>Ias/DarkGray</material>
+        </visual>
+      </geom:box>
+      <geom:box name="foot2">
+        <xyz>0.385 -0.585 0.327</xyz>
+        <size>0.03 0.03 0.654</size>
+        <mass>2</mass>
+        <visual>
+          <size>0.03 0.03 0.654</size>
+          <mesh>unit_box</mesh>
+          <material>Ias/DarkGray</material>
+        </visual>
+      </geom:box>
+      <geom:box name="foot3">
+        <xyz>-0.385 -0.585 0.327</xyz>
+        <size>0.03 0.03 0.654</size>
+        <mass>2</mass>
+        <visual>
+          <size>0.03 0.03 0.654</size>
+          <mesh>unit_box</mesh>
+          <material>Ias/DarkGray</material>
+        </visual>
+      </geom:box>
+      <geom:box name="foot4">
+        <xyz>-0.385 0.585 0.327</xyz>
+        <size>0.03 0.03 0.654</size>
+        <mass>2</mass>
+        <visual>
+          <size>0.03 0.03 0.654</size>
+          <mesh>unit_box</mesh>
+          <material>Ias/DarkGray</material>
+        </visual>
+      </geom:box>
+      <geom:box name="undertop">
+        <xyz>0 0 0.669</xyz>
+        <size>0.8 1.2 0.03</size>
+        <mass>5</mass>
+        <visual>
+          <size>0.8 1.2 0.03</size>
+          <mesh>unit_box</mesh>
+          <material>Ias/DarkGray</material>
+        </visual>
+      </geom:box>
+      <geom:box name="tabletop">
+        <xyz>0 0 0.699</xyz>
+        <size>0.8 1.2 0.03</size>
+        <mass>5</mass>
+        <visual>
+          <size>0.8 1.2 0.03</size>
+          <mesh>unit_box</mesh>
+          <material>Ias/White</material>
+        </visual>
+      </geom:box>
+      <geom:box name="calibration_plate">
+        <xyz>0.405 -0.0925 0.369</xyz>
+        <size>0.01 1.015 0.61</size>
+        <mass>5</mass>
+        <visual>
+          <size>0.01 1.015 0.61</size>
+          <mesh>unit_box</mesh>
+          <material>Ias/CCRLCalibPlate</material>
+        </visual>
+      </geom:box>
+      <geom:box name="back_plate">
+        <xyz>0.395 -0.0925 0.369</xyz>
+        <size>0.01 1.015 0.61</size>
+        <mass>5</mass>
+        <visual>
+          <size>0.01 1.015 0.61</size>
+          <mesh>unit_box</mesh>
+          <material>Ias/LightBrown</material>
+        </visual>
+      </geom:box>
+    </body:box>
+  </model:physical>

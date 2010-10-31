@@ -1,5 +1,0 @@
-<launch>
-  <include file="$(find ias_gazebo)/controllers/kimp_head_controller.launch"/>
-  <include file="$(find ias_gazebo)/controllers/kimp_arms_cartesian_pose_controllers.launch"/>
-  <include file="$(find ias_gazebo)/controllers/kimp_base_controller_odom.launch"/>
-</launch>

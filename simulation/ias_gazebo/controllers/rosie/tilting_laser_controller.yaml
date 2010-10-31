@@ -1,8 +1,16 @@
 tilting_laser_controller:
-  type: JointVelocityController
+  type:  pr2_mechanism_controllers/LaserScannerTrajController
   joint: shoulder_tilting_joint
-  pid:
-    p: 2
-    i: 0
-    d: 0
-    i_clamp: 0.1
+  gains:
+    p: 8.0
+    i: 0.1
+    d: 0.2
+    i_clamp: 0.5
+  velocity_filter:
+    - name: low_pass
+      type: filters/TransferFunctionFilterDouble
+      params:
+        a: [1.0, -0.1]
+        b: [0.9]
+  max_velocity:    100
+  max_acceleration: 30
