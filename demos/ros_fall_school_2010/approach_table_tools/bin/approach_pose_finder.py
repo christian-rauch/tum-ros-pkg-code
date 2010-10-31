@@ -44,7 +44,7 @@ import numpy
 import math
 
 from geometry_msgs.msg import Quaternion, Pose
-from icra_ros_tutorial.srv import GetApproachPose, GetApproachPoseResponse
+from approach_table_tools.srv import GetApproachPose, GetApproachPoseResponse
 
 def msg_to_quaternion(msg):
   return [msg.x, msg.y, msg.z, msg.w]
