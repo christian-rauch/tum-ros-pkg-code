@@ -1,0 +1,5 @@
+string execution_trace_filename
+---
+rosie_execution_trace_visualization/PlanInfo[] perceives
+rosie_execution_trace_visualization/PlanInfo[] pick_ups
+rosie_execution_trace_visualization/PlanInfo[] put_downs

@@ -1,0 +1,6 @@
+<launch>
+  <include file="$(find pr2_execution_trace_visualization)/launch/execution_trace_server.launch">
+    <arg name="bag" value="$(find pr2_execution_trace_visualization)/downloads/execution_traces/_2010-10-12-00-24-12.bag"/>
+  </include>
+  <node name="init_demo" pkg="pr2_execution_trace_visualization" type="init_demo.sh"/>
+</launch>

@@ -1,0 +1,27 @@
+<package>
+  <description brief="rosie_execution_trace_visualization">
+
+     rosie_execution_trace_visualization
+
+  </description>
+  <author>Lorenz Moesenlechner</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/rosie_execution_trace_visualization</url>
+  <depend package="rosie_executive"/>
+  <depend package="cram_reasoning"/>
+  <depend package="cram_plan_knowledge"/>
+  <depend package="cram_execution_trace"/>
+  <depend package="cram_plan_library"/>
+  <depend package="cram_roslisp_common"/>
+  <depend package="cram_utilities"/>
+  <depend package="designators"/>
+  <depend package="designators_ros"/>  
+  <depend package="cl_json_pl_server"/>
+  <depend package="visualization_msgs"/>
+  <depend package="tf_trajectory_visualization"/>
+  <depend package="geometry_msgs"/>
+  <depend package="ias_kitchen_defs"/>
+  <depend package="table_costmap"/>
+
+</package>

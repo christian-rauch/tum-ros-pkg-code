@@ -1,0 +1,5 @@
+string execution_trace_filename
+---
+pr2_execution_trace_visualization/PlanInfo[] perceives
+pr2_execution_trace_visualization/PlanInfo[] pick_ups
+pr2_execution_trace_visualization/PlanInfo[] put_downs

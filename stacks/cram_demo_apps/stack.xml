@@ -1,0 +1,15 @@
+<stack>
+  <description brief="cram_demo_apps">cram_demo_apps</description>
+  <author>Maintained by Lorenz Moesenlechner</author>
+  <license>BSD</license>  
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/cram_demo_apps</url>
+  <depend stack="common_msgs" /> <!-- geometry_msgs -->
+  <depend stack="cram_highlevel" /> <!-- cram_roslisp_common, designators_ros, cram_plan_knowledge, cram_plan_library, cl_json_pl_server -->
+  <depend stack="cram_pl" /> <!-- cram_reasoning, cram_execution_trace, cram_utilities, designators -->
+  <depend stack="cram_rosie" /> <!-- rosie_executive -->
+  <depend stack="ias_visualization" /> <!-- tf_trajectory_visualization -->
+  <depend stack="ros" />
+  <depend stack="visualization_common" /> <!-- visualization_msgs -->
+
+</stack>

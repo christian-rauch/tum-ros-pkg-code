@@ -1,0 +1,11 @@
+
+<launch>
+  <arg name="bag"/>
+  
+  <include file="$(find ias_kitchen_defs)/launch/ias_kitchen_model.launch"/>
+  <include file="$(find ias_map_annotations)/launch/table_annotations.launch"/>
+  <node name="tf_bag_trajectory_visualization" pkg="tf_trajectory_visualization"
+        type="tf_bag_trajectory_visualization" args="$(arg bag)"/>
+  <node name="execution_trace_server" pkg="pr2_execution_trace_visualization"
+        type="execution_trace_server" output="screen"/>
+</launch>
