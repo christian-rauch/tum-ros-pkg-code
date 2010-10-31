@@ -38,7 +38,7 @@
 # Need to explicitly enable 'with' in python 2.5
 from __future__ import with_statement
 
-PKG = 'checkerboard_pose'
+PKG = 'approach_table_tools'
 NAME = 'image_cb_detector_node'
 import roslib; roslib.load_manifest(PKG)
 
@@ -53,7 +53,7 @@ from sensor_msgs.msg import Image, CameraInfo
 from geometry_msgs.msg import PoseStamped
 
 from cv_bridge import CvBridge, CvBridgeError
-from checkerboard_pose.srv import GetCheckerboardPose, GetCheckerboardPoseResponse
+from approach_table_tools.srv import GetCheckerboardPose, GetCheckerboardPoseResponse
 from image_geometry import PinholeCameraModel
 
 class ImageCbDetector:
