@@ -9,7 +9,10 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/fall_school_executive</url>
   <depend package="approach_table_tools"/>
+  <depend package="checkerboard_pose"/>
+  <depend package="actionlib"/>
+  <depend package="move_base_msgs"/>
+  <depend package="pr2_common_action_msgs"/>
+  <depend package="pr2_controllers_msgs"/>
 
 </package>
-
-
