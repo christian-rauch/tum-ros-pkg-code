@@ -1,0 +1,22 @@
+<package>
+  <description brief="powercube_ptu_process_module">
+
+     powercube_ptu_process_module
+
+  </description>
+  <author>Lorenz Moesenlechner</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/powercube_ptu_process_module</url>
+  <depend package="process_modules"/>
+  <depend package="designators"/>
+  <depend package="cram_reasoning"/>
+  <depend package="cram_roslisp_common"/>
+  <depend package="cogman_msgs"/>
+  <depend package="cljlo"/>
+  <depend package="cljlo_utils"/>
+  <depend package="actionlib_lisp"/>
+
+</package>
+
+
