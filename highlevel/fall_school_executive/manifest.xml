@@ -1,0 +1,15 @@
+<package>
+  <description brief="fall_school_executive">
+
+     fall_school_executive
+
+  </description>
+  <author>Brian Gerkey</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/fall_school_executive</url>
+  <depend package="approach_table_tools"/>
+
+</package>
+
+
