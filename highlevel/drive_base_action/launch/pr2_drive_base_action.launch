@@ -1,0 +1,5 @@
+<launch>
+  <node name="drive_base_action" pkg="drive_base_action" type="drive_base_action" respawn="false" output="screen" >
+  <remap from="cmd_vel" to="/base_controller/command"/>
+  </node>
+</launch>

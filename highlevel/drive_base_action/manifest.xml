@@ -1,0 +1,20 @@
+<package>
+  <description brief="drive_base_action">
+
+     drive_base_action
+
+  </description>
+  <author>Thomas Ruehr</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/drive_base_action</url>
+  <depend package="roscpp"/>
+  <depend package="geometry_msgs"/>
+  <depend package="tf"/>
+  <depend package="actionlib"/>
+  <depend package="actionlib_msgs"/>
+  <depend package="move_base_msgs"/>
+
+</package>
+
+
