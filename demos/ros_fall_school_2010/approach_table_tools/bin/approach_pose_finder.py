@@ -86,7 +86,7 @@ class ApproachPoseFinder:
     board_pose = req.board_pose
     #We need to create a goal that's actually reachable for the navigation stack... let's say 0.5 meters away from and centered on the board
     trans = msg_to_pose(board_pose.pose)
-    origin = tf.transformations.translation_matrix([(1 * .108) / 2, 0, -0.45])
+    origin = tf.transformations.translation_matrix([2 * 0.08, 0, -1.0])
     pose_mat =  numpy.dot(trans, origin)
     board_pose.pose = pose_to_msg(pose_mat)
   
