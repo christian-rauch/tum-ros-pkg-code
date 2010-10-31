@@ -43,9 +43,9 @@
       </visual>
 
       <collision>
-        <origin xyz="0 0 ${-0.5 * torso_size_z}" rpy="0 0 0"/>
+        <origin xyz="0 0 ${-torso_size_z}" rpy="0 0 0"/>
         <geometry>
-          <box size="${torso_size_x} ${torso_size_y} ${torso_size_z}"/>
+          <mesh filename="package://ias_robot_defs/meshes/kimp/convex/torso_convex.stl"/>
         </geometry>
       </collision>
     </link>

@@ -77,7 +77,12 @@
   <property name="cal_r_cam_to_stoc_pitch"   value="${-0.5 * M_PI}" />
   <property name="cal_r_cam_to_stoc_yaw"     value="${-0.5 * M_PI}" />
 
-  
-
+  <!-- base -> neck scanner (calibrated against RightCam using a CalTab --> 
+  <property name="cal_base_to_neck_scanner_x"      value="0.405376" />
+  <property name="cal_base_to_neck_scanner_y"      value="0.063816" />
+  <property name="cal_base_to_neck_scanner_z"      value="1.410532" />
+  <property name="cal_base_to_neck_scanner_roll"   value="0.000707" />
+  <property name="cal_base_to_neck_scanner_pitch"  value="-0.007788" />
+  <property name="cal_base_to_neck_scanner_yaw"    value="-0.023937" />
   
 </root>

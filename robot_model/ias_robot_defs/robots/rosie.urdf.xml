@@ -39,7 +39,7 @@
   </kuka_lwr_arm>
 
   <rosie_head parent="base_link"/>
-  <rosie_shoulder_laser parent="torso_link"/>
+  <rosie_shoulder_laser parent="base_link"/>
 
   <dlr_hit_right_hand name = "right_hand" parent = "right_arm_7_link">
     <origin xyz="0.075 0.075 -0.094" rpy="${0.5*M_PI} 0 ${(0.5 + 0.25)*M_PI}"/>

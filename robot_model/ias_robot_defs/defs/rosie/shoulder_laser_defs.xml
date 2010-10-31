@@ -7,16 +7,14 @@
   <include filename="$(find ias_robot_defs)/defs/gazebo_sensors.xml"/>  
   <include filename="$(find ias_robot_defs)/defs/b21/powercube_defs.xml"/>
 
-  <property name="shoulder_tilting_laser_base_x" value="0.152" />
-  <property name="shoulder_tilting_laser_base_y" value="0.07" />
-  <property name="shoulder_tilting_laser_base_z" value="-0.0575" />
-
   <macro name="rosie_shoulder_laser" params="parent">
     <joint name="shoulder_tilt_fixed_joint" type="fixed">
-      <origin xyz="${shoulder_tilting_laser_base_x}
-                   ${shoulder_tilting_laser_base_y}
-                   ${shoulder_tilting_laser_base_z}"
-              rpy="0 0 0"/>
+      <origin xyz="${cal_base_to_neck_scanner_x}
+                   ${cal_base_to_neck_scanner_y}
+                   ${cal_base_to_neck_scanner_z}"
+              rpy="${cal_base_to_neck_scanner_roll}
+                   ${cal_base_to_neck_scanner_pitch}
+                   ${cal_base_to_neck_scanner_yaw}"/>
       <parent link="${parent}"/>
       <child link="shoulder_tilt_base"/>
     </joint>
@@ -85,7 +83,7 @@
     </transmission>
 
     <joint name="laser_tilt_fixed_joint" type="fixed">
-      <origin xyz="0.078 0 0.030"/>
+      <origin xyz="0.0803 0 0.024"/>
       <parent link="shoulder_tilt_end"/>
       <child link="shoulder_tilting_laser"/>
     </joint>
