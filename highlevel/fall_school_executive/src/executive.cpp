@@ -38,7 +38,7 @@
 #include <actionlib/client/simple_action_client.h>
 
 // Messages
-#include <checkerboard_pose/GetCheckerboardPose.h>
+#include <approach_table_tools/GetCheckerboardPose.h>
 #include <approach_table_tools/GetApproachPose.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <move_base_msgs/MoveBaseAction.h>
@@ -78,8 +78,8 @@ main(int argc, char** argv)
   
   // Get the checkerboard pose
   ros::service::waitForService("get_checkerboard_pose");
-  checkerboard_pose::GetCheckerboardPoseRequest cb_req;
-  checkerboard_pose::GetCheckerboardPoseResponse cb_resp;
+  approach_table_tools::GetCheckerboardPoseRequest cb_req;
+  approach_table_tools::GetCheckerboardPoseResponse cb_resp;
   cb_req.corners_x = 5;
   cb_req.corners_y = 4;
   cb_req.spacing_x = 0.08;
