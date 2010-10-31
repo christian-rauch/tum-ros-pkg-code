@@ -177,3 +177,39 @@ material Ias/CCRLCalibPlate
     }
   }
 }
+
+material Ias/CerealBox
+{
+  receive_shadows on
+  
+  technique
+  {
+    pass
+    {
+      ambient 0.5 0.5 0.5 1.000000
+      
+      texture_unit
+      {
+        texture cereal_box_fr.jpg
+      }
+    }
+  }
+}
+
+material Ias/MilkBox
+{
+  receive_shadows on
+  
+  technique
+  {
+    pass
+    {
+      ambient 0.5 0.5 0.5 1.000000
+      
+      texture_unit
+      {
+        texture milk_box_fr.jpg
+      }
+    }
+  }
+}

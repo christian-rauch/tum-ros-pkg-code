@@ -130,24 +130,6 @@
     </light>
   </model:renderable>
  
-  <model:physical name = "table1">
-    <xyz>0 -0.6 0</xyz>
-    <static>true</static>
-  
-    <include embedded="true">
-      <xi:include href="ccrl_table.model" />
-    </include> 
-  </model:physical>
-  
-  <model:physical name = "table2">
-    <xyz>0 0.6 0</xyz>
-    <rpy>0 0 180</rpy>
-    <static>true</static>
-  
-    <include embedded="true">
-      <xi:include href="ccrl_table.model" />
-    </include> 
-  </model:physical>
 
   <model:physical name = "walls">
     <xyz>0 0 0</xyz>
@@ -196,6 +178,43 @@
         </visual>
       </geom:box>
     </body:box>
+  </model:physical>
+  
+  <model:physical name = "table1">
+    <xyz>0 -0.6 0</xyz>
+    <static>true</static>
+  
+    <include embedded="true">
+      <xi:include href="ccrl_table.model" />
+    </include> 
+  </model:physical>
+  
+  <model:physical name = "table2">
+    <xyz>0 0.6 0</xyz>
+    <rpy>0 0 180</rpy>
+    <static>true</static>
+  
+    <include embedded="true">
+      <xi:include href="ccrl_table.model" />
+    </include> 
+  </model:physical>
+  
+  <model:physical name = "cereal_box">
+    <xyz>0.2 -0.6 0.715</xyz>
+    <rpy>0 0 0</rpy>
+  
+    <include embedded="true">
+      <xi:include href="cereal_box.model" />
+    </include> 
+  </model:physical>
+  
+  <model:physical name = "milk_box">
+    <xyz>0.2 0.6 0.715</xyz>
+    <rpy>0 0 0</rpy>
+  
+    <include embedded="true">
+      <xi:include href="milk_box.model" />
+    </include> 
   </model:physical>
 
 </gazebo:world>
