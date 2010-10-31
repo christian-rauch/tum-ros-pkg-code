@@ -10,9 +10,13 @@
   <url>http://ros.org/wiki/approach_table_support</url>
   <depend package="rospy"/>
   <depend package="tf"/>
-  <depend package="geometry_msgs"/>
   <depend package="pr2_tuck_arms_action"/>
-
+  <depend package="opencv2"/>
+  <depend package="cv_bridge"/>
+  <depend package="tf"/>
+  <depend package="sensor_msgs"/>
+  <depend package="geometry_msgs"/>
+  <depend package="image_geometry"/>
 </package>
 
 
