@@ -52,18 +52,17 @@ main(int argc, char** argv)
   ros::NodeHandle n;
 
   // Lower the torso
-/*
-  actionlib::SimpleActionClient<pr2_controllers_msgs::SingleJointPositionAction> torso_client("torso_controller/position_joint_action", true);
+  actionlib::SimpleActionClient<pr2_controllers_msgs::SingleJointPositionAction> torso_client("/torso_controller/position_joint_action", true);
   torso_client.waitForServer();
   pr2_controllers_msgs::SingleJointPositionGoal torso_goal;
-  torso_goal.position = 0.0;
+  torso_goal.position = 0.03;
   torso_goal.min_duration = ros::Duration(2.0);
   torso_goal.max_velocity = 1.0;
+  ROS_INFO("lowering the torso");
   torso_client.sendGoal(torso_goal);
   torso_client.waitForResult();
   if(torso_client.getState() != actionlib::SimpleClientGoalState::SUCCEEDED)
     ROS_BREAK();
-*/
 
   // Tuck the arms
   actionlib::SimpleActionClient<pr2_common_action_msgs::TuckArmsAction> tuck_arms_client("tuck_arms", true);
@@ -127,15 +126,45 @@ main(int argc, char** argv)
     ROS_BREAK();
 
   // Raise the torso
-/*
   torso_goal.position = 0.195;
   torso_goal.min_duration = ros::Duration(2.0);
   torso_goal.max_velocity = 1.0;
+  ROS_INFO("raising the torso");
   torso_client.sendGoal(torso_goal);
   torso_client.waitForResult();
   if(torso_client.getState() != actionlib::SimpleClientGoalState::SUCCEEDED)
     ROS_BREAK();
-*/
+
+  // Move close to the table, using local navigation (NO OBSTACLE AVOIDANCE!)
+  actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> drive_base_client("drive_base_action", true);
+  drive_base_client.waitForServer();
+  move_base_msgs::MoveBaseGoal drive_base_goal;
+  drive_base_goal.target_pose.header.frame_id = "odom_combined";
+  drive_base_goal.target_pose.pose.position.x = 0.5;
+  drive_base_goal.target_pose.pose.position.y = 0.0;
+  drive_base_goal.target_pose.pose.position.z = 0.0;
+  drive_base_goal.target_pose.pose.orientation.x = 0.0;
+  drive_base_goal.target_pose.pose.orientation.y = 0.0;
+  drive_base_goal.target_pose.pose.orientation.z = 0.0;
+  drive_base_goal.target_pose.pose.orientation.w = 1.0;
+  drive_base_client.sendGoal(drive_base_goal);
+  drive_base_client.waitForResult();
+  if(drive_base_client.getState() != actionlib::SimpleClientGoalState::SUCCEEDED)
+    ROS_BREAK();
+
+  // Move to the right-hand table, using local navigation (NO OBSTACLE AVOIDANCE!)
+  drive_base_goal.target_pose.header.frame_id = "odom_combined";
+  drive_base_goal.target_pose.pose.position.x = 0.0;
+  drive_base_goal.target_pose.pose.position.y = -1.1;
+  drive_base_goal.target_pose.pose.position.z = 0.0;
+  drive_base_goal.target_pose.pose.orientation.x = 0.0;
+  drive_base_goal.target_pose.pose.orientation.y = 0.0;
+  drive_base_goal.target_pose.pose.orientation.z = 0.0;
+  drive_base_goal.target_pose.pose.orientation.w = 1.0;
+  drive_base_client.sendGoal(drive_base_goal);
+  drive_base_client.waitForResult();
+  if(drive_base_client.getState() != actionlib::SimpleClientGoalState::SUCCEEDED)
+    ROS_BREAK();
   
   ros::spin();
   return 0;
