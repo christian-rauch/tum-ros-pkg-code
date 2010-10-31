@@ -81,6 +81,7 @@ class ApproachPoseFinder:
   def __init__(self):
     self.listener = tf.TransformListener()
     self.server = rospy.Service('get_approach_pose', GetApproachPose, self.get_approach_pose)
+    self.fixed_frame = rospy.get_param('~fixed_frame', 'odom_combined')
 
   def get_approach_pose(self, req):
     board_pose = req.board_pose
@@ -92,10 +93,10 @@ class ApproachPoseFinder:
   
     #Now that we have our pose, we want to transform it into a frame the navigation stack can move in
     #wait for the transform between the camera and odometric frame to be available
-    self.listener.waitForTransform('odom_combined', board_pose.header.frame_id, board_pose.header.stamp, rospy.Duration(2.0))
+    self.listener.waitForTransform(self.fixed_frame, board_pose.header.frame_id, board_pose.header.stamp, rospy.Duration(2.0))
   
     #transform the pose from the camera to odometric frame
-    odom_pose = self.listener.transformPose('odom_combined', board_pose)
+    odom_pose = self.listener.transformPose(self.fixed_frame, board_pose)
   
     #project the goal down to the ground
     odom_pose.pose.position.z = 0.0
