@@ -1,0 +1,20 @@
+<package>
+  <description brief="rosie_torso_action">
+
+     rosie_torso_action
+
+  </description>
+  <author>Alexis Maldonado</author>
+  <license>GPLv3+</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/rosie_torso_action</url>
+
+  <depend package="rospy"/>
+  <depend package="actionlib"/>
+  <depend package="actionlib_msgs"/>
+  <depend package="pr2_common_action_msgs"/>
+  <depend package="pr2_controllers_msgs"/>
+  <depend package="cogman_msgs"/>
+</package>
+
+
