@@ -10,11 +10,10 @@
   <url>http://ros.org/wiki/rosie_tuck_arms_action</url>
 
   <depend package="rospy"/>
-  <depend package="actionlib">
+  <depend package="actionlib"/>
   <depend package="actionlib_msgs"/>
-  <depend package="trajectory_msgs"/>
   <depend package="pr2_common_action_msgs"/>
-  <depend package="pr2_controllers_msgs"/>
+  <depend package="cogman_msgs"/>
 </package>
 
 
