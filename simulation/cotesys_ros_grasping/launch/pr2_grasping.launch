@@ -9,7 +9,8 @@
   <!-- load controllers -->	
   <include file="$(find pr2_arm_navigation_filtering)/launch/trajectory_filter.launch"/>
 
-
+  <!-- load table objects -->
+  <include file="$(find table_objects)/launch/get_table_objects.launch"/>
 
   <!-- right arm -->
 

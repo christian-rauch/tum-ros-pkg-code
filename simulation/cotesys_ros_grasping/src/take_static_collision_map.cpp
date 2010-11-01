@@ -73,7 +73,7 @@ private:
 TakeStaticCollisionMapServer::TakeStaticCollisionMapServer()
   : priv_nh_("~")
 {
-  priv_nh_.param<double>("laser_period", laser_period_, 4);
+  priv_nh_.param<double>("laser_period", laser_period_, 2);
   priv_nh_.param<double>("laser_amplitude", laser_amplitude_, .25);
   priv_nh_.param<double>("laser_offset", laser_offset_, .7);
   priv_nh_.param<std::string>("cloud_source", cloud_source_, "full_cloud_filtered");
