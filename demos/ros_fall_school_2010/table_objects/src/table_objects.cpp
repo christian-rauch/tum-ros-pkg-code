@@ -49,12 +49,27 @@
 #include <pcl/segmentation/extract_clusters.h>
 
 #include <table_objects/GetObjects.h>
+#include <table_objects/GetLastObjects.h>
 
 // Eigen
 #include <Eigen3/Core>
 #include <Eigen3/Geometry>
 
+#define MAX_QUEUE 20
+
 using namespace pcl;
+
+std::vector<mapping_msgs::CollisionObject> last_table_objects;
+
+bool
+  getLastObjects (table_objects::GetLastObjects::Request &req, table_objects::GetLastObjects::Response &res)
+{
+  std::vector<mapping_msgs::CollisionObject>::iterator oldest = last_table_objects.end ();
+  if (req.number < last_table_objects.size ())
+    oldest = last_table_objects.begin () + req.number;
+  res.table_objects.insert (res.table_objects.end (), last_table_objects.begin (), oldest);
+  return (true);
+}
 
 bool
   getTableObjects (table_objects::GetObjects::Request &req, table_objects::GetObjects::Response &res)
@@ -73,6 +88,7 @@ bool
   ROS_INFO ("[getTableObjects] Number of clusters found matching the given constraints: %d.", (int)clusters.size ());
 
   // ---[ Convert clusters to collision objects
+  res.table_objects.reserve (clusters.size ());
   for (size_t i = 0; i < clusters.size (); ++i)
   {
     pcl::PointCloud<PointXYZ> cloud_object_cluster;
@@ -104,6 +120,7 @@ bool
     cerr << rotation << endl;
     cerr << "norms: " << rotation.row (0).norm () << " " << rotation.row (1).norm () << " " << rotation.row (2).norm () << endl;
     Eigen3::Quaternion<float> qt (rotation);
+    qt.normalize ();
     cerr << "Quaternions: " << qt.x () << " " << qt.y () << " " << qt.z () << " " << qt.w () << endl;
     
     //pcl::copyPointCloud (cloud, clusters[i], cloud_object_cluster);
@@ -142,6 +159,11 @@ bool
     collision_object.poses[0].orientation.z = qt.z ();
     collision_object.poses[0].orientation.w = qt.w ();
     res.table_objects.push_back (collision_object);
+    
+    // save the last MAX_QUEUE objects
+    last_table_objects.insert (last_table_objects.begin (), collision_object);
+    if (last_table_objects.size () > MAX_QUEUE)
+      last_table_objects.resize (MAX_QUEUE);
   }
 
   return (true);
@@ -151,11 +173,14 @@ bool
 int
   main (int argc, char** argv)
 {
+  last_table_objects.reserve (MAX_QUEUE);
+  
   ros::init (argc, argv, "table_objects");
 
   ros::NodeHandle nh;
 
   ros::ServiceServer service = nh.advertiseService ("get_table_objects", getTableObjects);
+  ros::ServiceServer service2 = nh.advertiseService ("get_last_objects", getLastObjects);
   ros::spin ();
 
   return (0);

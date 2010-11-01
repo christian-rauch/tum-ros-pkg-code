@@ -1,0 +1,4 @@
+uint32 number
+---
+mapping_msgs/CollisionObject[] table_objects
+
