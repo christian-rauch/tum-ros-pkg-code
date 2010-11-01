@@ -17,6 +17,7 @@
   <depend package="sensor_msgs"/>
   <depend package="geometry_msgs"/>
   <depend package="image_geometry"/>
+  <depend package="drive_base_action"/>
 </package>
 
 
