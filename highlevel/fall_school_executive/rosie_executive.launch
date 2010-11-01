@@ -1,0 +1,7 @@
+<launch>
+  <node name="fall_school_executive" pkg="fall_school_executive" type="executive" output="screen">
+    <remap from="move_base_local" to="nav_pcontroller/move_base"/>
+    <remap from="drive_base_action" to="nav_pcontroller/move_base"/>
+  </node>
+</launch>
+
