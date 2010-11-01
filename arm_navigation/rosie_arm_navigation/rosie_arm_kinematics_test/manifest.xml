@@ -1,0 +1,15 @@
+<package>
+  <description brief="rosie_arm_kinematics_test">
+
+     rosie_arm_kinematics_test
+
+  </description>
+  <author>Alexis Maldonado</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/kinematics_tutorials</url>
+  <depend package="kinematics_msgs"/>
+
+</package>
+
+
