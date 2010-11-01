@@ -28,7 +28,7 @@
     <rosparam>
       # -[ Mandatory parameters
       k_search: 0
-      radius_search: 0.015
+      radius_search: 0.03
       # Set the spatial locator. Possible values are: 0 (ANN), 1 (FLANN), 2 (organized)
       spatial_locator: 0
     </rosparam>
@@ -81,8 +81,8 @@
    <remap from="~input"         to="/extract_plane_indices/output" />
    <remap from="~planar_hull"   to="/convex_hull/output" />
    <rosparam>
-     height_min: 0
-     height_max: 0.5
+     height_min: -0.5
+     height_max: 0
    </rosparam>
   </node>
 
