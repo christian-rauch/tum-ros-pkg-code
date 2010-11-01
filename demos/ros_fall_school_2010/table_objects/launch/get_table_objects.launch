@@ -47,7 +47,7 @@
       optimize_coefficients: true
       normal_distance_weight: 0.1
       eps_angle: 0.09
-      axis: [0.0 0.0 1.0]
+      axis: [0.0, 0.0, 1.0]
     </rosparam>
   </node>
 
