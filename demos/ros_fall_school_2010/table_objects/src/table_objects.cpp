@@ -93,16 +93,18 @@ bool
     Eigen3::Matrix3f evecs;
     Eigen3::Vector3f evals;
     pcl::eigen33 (covariance_matrix, evecs, evals);
-    Eigen3::Vector3f up = evecs.col (0);
-    evecs.col (0) = evecs.col (1);
-    evecs.col (1) = evecs.col (2);
-    evecs.col (2) = up;
-    cerr << "Eigenvalues followed by re-ordered eigenvectors: " << evals.transpose () << endl;
+    cerr << "Eigenvalues followed by eigenvectors: " << evals.transpose () << endl;
     cerr << evecs << endl;
-    //cerr << "norms: " << evecs.col (0).norm () << " " << evecs.col (1).norm () << " " << evecs.col (2).norm () << endl;
-    Eigen3::Matrix3f rotation = evecs.transpose ();
-    Eigen3::Quaternion<float> qt (evecs);
-    //cerr << "Quaternions: " << qt.x () << " " << qt.y () << " " << qt.z () << " " << qt.w () << endl;
+    Eigen3::Matrix3f rotation;
+    rotation.row (2) = evecs.col (0);
+    rotation.row (1) = evecs.col (1);
+    rotation.row (0) = rotation.row (1).cross (rotation.row (2));
+    //rotation.transposeInPlace ();
+    cerr << "Rotation matrix: " << endl;
+    cerr << rotation << endl;
+    cerr << "norms: " << rotation.row (0).norm () << " " << rotation.row (1).norm () << " " << rotation.row (2).norm () << endl;
+    Eigen3::Quaternion<float> qt (rotation);
+    cerr << "Quaternions: " << qt.x () << " " << qt.y () << " " << qt.z () << " " << qt.w () << endl;
     
     //pcl::copyPointCloud (cloud, clusters[i], cloud_object_cluster);
     Eigen3::Array3f min_point (+FLT_MAX, +FLT_MAX, +FLT_MAX);
