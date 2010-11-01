@@ -1,0 +1,5 @@
+<launch>
+  <include file="$(find rosie_arm_kinematics)/rosie_right_arm_kinematics.launch" />
+  <include file="$(find rosie_arm_kinematics)/rosie_left_arm_kinematics.launch" />
+</launch>
+

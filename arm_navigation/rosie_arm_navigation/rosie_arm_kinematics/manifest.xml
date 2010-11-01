@@ -1,0 +1,14 @@
+<package>
+  <description brief="rosie_arm_kinematics">
+
+     rosie_arm_kinematics
+
+  </description>
+  <author>Alexis Maldonado</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/rosie_arm_kinematics</url>
+  <depend package="ias_arm_kinematics"/>
+</package>
+
+

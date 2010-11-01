@@ -1,0 +1,13 @@
+<launch>
+
+
+  <node name="rosie_left_arm_kinematics" pkg="ias_arm_kinematics" type="arm_kinematics" output="screen">
+    <param name="urdf_xml" value="robot_description" type="string"/>
+    <param name="root_name" value="calib_left_arm_base_link" type="string"/>
+    <param name="tip_name" value="left_arm_hand_link" type="string"/>
+    <param name="maxIterations" value="1000" type="int"/>
+    <param name="epsilon" value="0.01" type="double"/>
+  </node>
+
+</launch>
+
