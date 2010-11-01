@@ -1,0 +1,7 @@
+
+Fork of arm_kinematics from Washington University for the ROS Fall school. Includes a small fix for the inverse kinematics.
+
+Once this fix is implemented in the upstream package, we should delete this package.
+
+Alexis Maldonado
+
