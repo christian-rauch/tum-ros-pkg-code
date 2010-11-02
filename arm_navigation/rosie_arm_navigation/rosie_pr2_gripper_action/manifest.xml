@@ -1,0 +1,17 @@
+<package>
+  <description brief="rosie_pr2_gripper_action">
+
+     rosie_pr2_gripper_action
+
+  </description>
+  <author>Alexis Maldonado</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/rosie_pr2_gripper_action</url>
+
+  <depend package="pr2_controllers_msgs"/>
+  <depend package="cogman_msgs"/>
+  <depend package="actionlib"/>
+</package>
+
+
