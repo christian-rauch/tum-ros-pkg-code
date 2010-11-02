@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+
+import roslib; roslib.load_manifest('table_objects')
+
+from sensor_msgs.msg import PointCloud2
+from table_objects.srv import GetCurrentObjects, GetObjects, GetObjectsRequest, GetCurrentObjectsResponse
+import rospy
+
+latest_point_cloud = PointCloud2()
+got_cloud = False
+
+def point_cloud_cb(data):
+    global latest_point_cloud, got_cloud
+    
+    latest_point_cloud = data
+    got_cloud = True
+
+def get_current_objs(req):
+    if not got_cloud:
+        rospy.logerr('No point cloud received so far.')
+        return None
+    get_table_objects_service_ = rospy.ServiceProxy("/get_table_objects", GetObjects)
+    get_table_objects = GetObjectsRequest()
+    get_table_objects.data = latest_point_cloud
+    return GetCurrentObjectsResponse(
+        get_table_objects_service_.call(get_table_objects).table_objects)
+        
+def main():
+    rospy.init_node('detect_objects_srv')
+    object_indices_sub = rospy.Subscriber("~input", PointCloud2, point_cloud_cb)
+    get_table_objs_srv = rospy.Service('~get_table_objects', GetCurrentObjects, get_current_objs)
+    rospy.spin()
+    
+if __name__ == '__main__':
+    main()
