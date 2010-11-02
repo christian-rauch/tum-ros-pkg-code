@@ -1,8 +1,6 @@
 <launch>
 
-  <include file="$(find pr2_machine)/$(env ROBOT).machine" />
-  
-  <node machine="c2" pkg="collision_map" type="collision_map_self_occ_node" name="collision_map_self_occ_node" respawn="true" output="screen">
+  <node pkg="collision_map" type="collision_map_self_occ_node" name="collision_map_self_occ_node" respawn="true" output="screen">
     
     <remap from="robot_description" to="robot_description" />
     
@@ -36,7 +34,7 @@
     <param name="resolution" type="double" value="0.01" />
     
     <!-- cloud sources -->
-    <rosparam command="load" file="$(find rosie_arm_navigation)/config/collision_map_sources.yaml" />	
+    <rosparam command="load" file="$(find rosie_arm_navigation_launch)/config/collision_map_sources.yaml" />	
   </node>
   
 </launch>

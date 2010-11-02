@@ -7,7 +7,7 @@ cloud_sources:
     static_publish: true
     dynamic_until_static_publish: true
     dynamic_buffer_size: 25
-  - name: base_laser_cloud
+  - name: base_laser_cloud_filtered
     sensor_frame: laser_front_left
     frame_subsample: 1
     point_subsample: 1

@@ -11,6 +11,7 @@
 
   <depend package="arm_navigation_tests"/>
   <depend package="ias_gazebo"/>
+  <depend package="rosie_arm_kinematics"/>
 
 </package>
 

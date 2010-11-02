@@ -6,7 +6,7 @@
     <remap from="collision_map" to="collision_map_occ" />
     <remap from="collision_map_update" to="collision_map_occ_update" />
     
-    <param name="group" type="string" value="right_arm" />	
+    <param name="group" type="string" value="left_arm" />	
 
     <param name="allow_valid_collisions" type="bool" value="false" />
 

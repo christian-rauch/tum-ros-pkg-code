@@ -1,14 +1,14 @@
 <launch>
 
   <!-- send additional description parameters -->
-  <include file="$(find rosie_arm_navigation)/launch/rosie_planning_environment.launch" />
+  <include file="$(find rosie_arm_navigation_launch)/launch/rosie_planning_environment.launch" />
 
   <!-- convert tilt laser scan to pointcloud -->
   <node pkg="laser_filters" type="scan_to_cloud_filter_chain" output="screen" name="scan_to_cloud_filter_chain_tilt_laser">
     <remap from="scan" to="/laser/shoulder_tilting_laser_sensor"/>
     <remap from="cloud_filtered" to="/tilt_scan_cloud"/>
     <param name="target_frame" type="string" value="base_link"/>
-    <rosparam command="load" file="$(find rosie_arm_navigation)/config/shadow_filter.yaml" />
+    <rosparam command="load" file="$(find rosie_arm_navigation_launch)/config/shadow_filter.yaml" />
   </node>
 
   <node pkg="laser_filters" type="scan_to_cloud_filter_chain" output="screen" name="scan_to_cloud_filter_chain_tilt_laser_base">
@@ -18,7 +18,7 @@
   </node>
 
   <!-- need to individually self filter scans -->
-  <include file="$(find rosie_arm_navigation)/launch/tilt_laser_self_filter.launch" />    
+  <include file="$(find rosie_arm_navigation_launch)/launch/tilt_laser_self_filter.launch" />    
 
   <!-- assemble pointcloud into a full world view -->
   <node pkg="laser_assembler" type="point_cloud_assembler" output="screen"  name="point_cloud_assembler">
@@ -37,6 +37,6 @@
   </node>
 
   <!-- start collision map -->
-  <include file="$(find rosie_arm_navigation)/launch/collision_map_self_occ.launch" />
+  <include file="$(find rosie_arm_navigation_launch)/launch/collision_map_self_occ.launch" />
     
 </launch>
