@@ -10,5 +10,6 @@
   </node>
 
   <include file="$(find pr2_gazebo)/pr2.launch"/>
+  <include file="$(find ias_gazebo)/pr2_filtered_pcd2.launch"/>
 
 </launch>
