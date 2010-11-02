@@ -51,14 +51,19 @@
 #include <table_objects/GetObjects.h>
 #include <table_objects/GetLastObjects.h>
 
+#include <table_objects/table_objects.h>
+
 // Eigen
 #include <Eigen3/Core>
 #include <Eigen3/Geometry>
 
-#define MAX_QUEUE 20
-
 using namespace pcl;
 
+bool classify;
+flann::Index<float> *flann_index;
+
+/*
+#define MAX_QUEUE 20
 std::vector<mapping_msgs::CollisionObject> last_table_objects;
 
 bool
@@ -69,7 +74,7 @@ bool
     oldest = last_table_objects.begin () + req.number;
   res.table_objects.insert (res.table_objects.end (), last_table_objects.begin (), oldest);
   return (true);
-}
+}*/
 
 bool
   getTableObjects (table_objects::GetObjects::Request &req, table_objects::GetObjects::Response &res)
@@ -93,6 +98,52 @@ bool
   {
     pcl::PointCloud<PointXYZ> cloud_object_cluster;
     pcl::copyPointCloud (cloud, clusters[i], cloud_object_cluster);
+    std::stringstream ss;
+    ss << "cluster_" << i;
+    std::string label = ss.str ();
+    
+    // run VFH classification
+    if (classify)
+    {
+      // compute normals
+      pcl::PointCloud<pcl::Normal>::Ptr normals = boost::make_shared<pcl::PointCloud<pcl::Normal> >();
+      pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> n3d;
+      n3d.setKSearch (30); // have to use the same parameters as during training
+      pcl::KdTree<pcl::PointXYZ>::Ptr tree = boost::make_shared<pcl::KdTreeANN<pcl::PointXYZ> > ();
+      n3d.setSearchMethod (tree);
+      n3d.setInputCloud(cloud_object_cluster.makeShared ());
+      n3d.compute(*normals);
+      
+      // compute vfh
+      pcl::PointCloud<pcl::VFHSignature308> vfh_signature;
+      pcl::VFHEstimation<pcl::PointXYZ, pcl::Normal, pcl::VFHSignature308> vfh;
+      vfh.setSearchMethod (tree);
+      vfh.setInputCloud(cloud_object_cluster.makeShared ());
+      vfh.setInputNormals(normals);
+      vfh.compute(vfh_signature);
+      
+      // search for nearest neighor
+      int k = 1;
+      flann::Matrix<float> p = flann::Matrix<float>(vfh_signature.points.at (0).histogram, 1, 308);
+      flann::Matrix<int> k_indices = flann::Matrix<int>(new int[k], 1, k);
+      flann::Matrix<float> k_distances = flann::Matrix<float>(new float[k], 1, k);
+      flann_index->knnSearch (p, k_indices, k_distances, k, flann::SearchParams (512));
+
+      // extracting the label name
+      std::string vfh_model = models.at (k_indices[0][0]).first.c_str ();
+      size_t pos1 = vfh_model.find ('/');
+      std::string vfh_label = vfh_model;
+      if (pos1 != std::string::npos)
+      {
+        size_t pos2 = vfh_model.find ('/', pos1+1);
+        vfh_label = vfh_model.substr (pos1+1, pos2-pos1-1);
+      }
+      while (vfh_label.find (".bag") != std::string::npos || vfh_label.find (".pcd") != std::string::npos)
+        vfh_label = vfh_label.substr (0, vfh_label.size () - 4);
+      ROS_INFO ("VFH label for cluster %zu: %s\n", i, vfh_label.c_str ());
+    }
+    
+    // compute 3D centroid
     Eigen3::Vector4f centroid;
     pcl::compute3DCentroid (cloud_object_cluster, centroid);
     
@@ -109,8 +160,8 @@ bool
     Eigen3::Matrix3f evecs;
     Eigen3::Vector3f evals;
     pcl::eigen33 (covariance_matrix, evecs, evals);
-    cerr << "Eigenvalues followed by eigenvectors: " << evals.transpose () << endl;
-    cerr << evecs << endl;
+    //cerr << "Eigenvalues followed by eigenvectors: " << evals.transpose () << endl;
+    //cerr << evecs << endl;
     Eigen3::Matrix3f rotation;
     rotation.row (2) = evecs.col (0);
     rotation.row (1) = evecs.col (1);
@@ -118,10 +169,10 @@ bool
     //rotation.transposeInPlace ();
     cerr << "Rotation matrix: " << endl;
     cerr << rotation << endl;
-    cerr << "norms: " << rotation.row (0).norm () << " " << rotation.row (1).norm () << " " << rotation.row (2).norm () << endl;
+    //cerr << "norms: " << rotation.row (0).norm () << " " << rotation.row (1).norm () << " " << rotation.row (2).norm () << endl;
     Eigen3::Quaternion<float> qt (rotation);
     qt.normalize ();
-    cerr << "Quaternions: " << qt.x () << " " << qt.y () << " " << qt.z () << " " << qt.w () << endl;
+    //cerr << "Quaternions: " << qt.x () << " " << qt.y () << " " << qt.z () << " " << qt.w () << endl;
     
     //pcl::copyPointCloud (cloud, clusters[i], cloud_object_cluster);
     Eigen3::Array3f min_point (+FLT_MAX, +FLT_MAX, +FLT_MAX);
@@ -134,15 +185,13 @@ bool
       min_point = min_point.min (transformed);
       max_point = max_point.max (transformed);
     }
-    cerr << "Minimum corner: " << min_point.transpose () << endl;
-    cerr << "Maximum corner: " << max_point.transpose () << endl;
+    //cerr << "Minimum corner: " << min_point.transpose () << endl;
+    //cerr << "Maximum corner: " << max_point.transpose () << endl;
     
     // create the collison object
-    std::stringstream ss;
-    ss << "cluster_" << i;
     mapping_msgs::CollisionObject collision_object;
     collision_object.header = cloud.header;
-    collision_object.id = ss.str ();
+    collision_object.id = label;
     collision_object.operation.operation = mapping_msgs::CollisionObjectOperation::ADD;
     collision_object.shapes.resize (1);
     collision_object.shapes[0].type = geometric_shapes_msgs::Shape::BOX;
@@ -160,10 +209,10 @@ bool
     collision_object.poses[0].orientation.w = qt.w ();
     res.table_objects.push_back (collision_object);
     
-    // save the last MAX_QUEUE objects
+    /*// save the last MAX_QUEUE objects
     last_table_objects.insert (last_table_objects.begin (), collision_object);
     if (last_table_objects.size () > MAX_QUEUE)
-      last_table_objects.resize (MAX_QUEUE);
+      last_table_objects.resize (MAX_QUEUE);*/
   }
 
   return (true);
@@ -173,15 +222,47 @@ bool
 int
   main (int argc, char** argv)
 {
-  last_table_objects.reserve (MAX_QUEUE);
+  // never the case, only to have the parameter descriptions in the code
+  if (argc < 1)
+  {
+    print_error ("Syntax is: %s [options] {kdtree.idx} {training_data.h5} {training_data.list}\n", argv[0]);
+    print_info  ("    where options are:  -metric = metric/distance type:  1 = Euclidean, 2 = Manhattan, 3 = Minkowski, 4 = Max, 5 = HIK, 6 = JM, 7 = Chi-Square (default: "); print_value ("%d", metric); print_info (")\n\n");
+    //
+    print_info  ("      * note: the metric_type has to match the metric that was used when the tree was created.\n");
+    print_info  ("              the last three parameters are optional and represent: the kdtree index file (default: "); print_value ("kdtree.idx"); print_info (")\n"
+                 "                                                                    the training data used to create the tree (default: "); print_value ("training_data.h5"); print_info (")\n"
+                 "                                                                    the list of models used in the training data (default: "); print_value ("training_data.list"); print_info (")\n");
+    return (-1);
+  }
+
+  // Check if classification can be done and repare everything for it
+  classify = false;
+  if (getParameters (argc, argv) == 1)
+  {
+    classify = true;
+    // Load trainin data into FLANN
+    loadFileList (models, training_data_list_file_name);
+    flann::Matrix<float> data;
+    flann::load_from_file (data, training_data_h5_file_name, "training_data");
+    print_highlight ("Training data found. Loaded %d VFH models from %s/%s.\n", (int)data.rows, training_data_h5_file_name.c_str (), training_data_list_file_name.c_str ());
+    // Initialize FLAN indices
+    flann_index = new flann::Index<float> (data, flann::SavedIndexParams (kdtree_idx_file_name));
+    flann_index->buildIndex ();
+  }
+  else
+    ROS_WARN ("VFH classification is disabled!");
+  
+  //last_table_objects.reserve (MAX_QUEUE);
   
   ros::init (argc, argv, "table_objects");
 
   ros::NodeHandle nh;
 
   ros::ServiceServer service = nh.advertiseService ("get_table_objects", getTableObjects);
-  ros::ServiceServer service2 = nh.advertiseService ("get_last_objects", getLastObjects);
+  //ros::ServiceServer service2 = nh.advertiseService ("get_last_objects", getLastObjects);
+  
   ros::spin ();
 
   return (0);
 }
+/* ]--- */
