@@ -11,11 +11,13 @@
 #include <kdl/chainfksolverpos_recursive.hpp>
 #include <kinematics_msgs/GetPositionFK.h>
 #include <kinematics_msgs/GetPositionIK.h>
+#include <kinematics_msgs/GetConstraintAwarePositionIK.h>
 #include <kinematics_msgs/GetKinematicSolverInfo.h>
 #include <kinematics_msgs/KinematicSolverInfo.h>
 using std::string;
 
 static const std::string IK_SERVICE = "get_ik";
+static const std::string COLL_IK_SERVICE = "get_collision_aware_ik";
 static const std::string FK_SERVICE = "get_fk";
 static const std::string IK_INFO_SERVICE = "get_ik_solver_info";
 static const std::string FK_INFO_SERVICE = "get_fk_solver_info";
@@ -36,7 +38,7 @@ class Kinematics {
         KDL::ChainIkSolverPos_NR_JL *ik_solver_pos;
         KDL::ChainIkSolverVel_pinv* ik_solver_vel;
 
-        ros::ServiceServer ik_service,ik_solver_info_service;
+  ros::ServiceServer ik_service,ik_solver_info_service, coll_ik_service;
         ros::ServiceServer fk_service,fk_solver_info_service;
 
         tf::TransformListener tf_listener;
@@ -55,6 +57,9 @@ class Kinematics {
          */
         bool getPositionIK(kinematics_msgs::GetPositionIK::Request &request,
                            kinematics_msgs::GetPositionIK::Response &response);
+  
+        bool getConstraintAwarePositionIK(kinematics_msgs::GetConstraintAwarePositionIK::Request  &request,
+                                          kinematics_msgs::GetConstraintAwarePositionIK::Response  &response);
 
         /**
          * @brief This is the basic kinematics info service that will return information about the kinematics node.
@@ -130,6 +135,7 @@ bool Kinematics::init() {
     ROS_INFO("Advertising services");
     fk_service = nh_private.advertiseService(FK_SERVICE,&Kinematics::getPositionFK,this);
     ik_service = nh_private.advertiseService(IK_SERVICE,&Kinematics::getPositionIK,this);
+    coll_ik_service = nh_private.advertiseService(COLL_IK_SERVICE,&Kinematics::getConstraintAwarePositionIK,this);
     ik_solver_info_service = nh_private.advertiseService(IK_INFO_SERVICE,&Kinematics::getIKSolverInfo,this);
     fk_solver_info_service = nh_private.advertiseService(FK_INFO_SERVICE,&Kinematics::getFKSolverInfo,this);
 
@@ -195,8 +201,13 @@ bool Kinematics::readJoints(urdf::Model &robot_model) {
             float lower, upper;
             int hasLimits;
             if ( joint->type != urdf::Joint::CONTINUOUS ) {
+              if(joint->safety) {
+                lower = joint->safety->soft_lower_limit;
+                upper = joint->safety->soft_upper_limit;
+              } else {
                 lower = joint->limits->lower;
                 upper = joint->limits->upper;
+              }
                 hasLimits = 1;
             } else {
                 lower = -M_PI;
@@ -292,6 +303,18 @@ bool Kinematics::getPositionIK(kinematics_msgs::GetPositionIK::Request &request,
         response.error_code.val = response.error_code.NO_IK_SOLUTION;
         return true;
     }
+}
+
+bool Kinematics::getConstraintAwarePositionIK(kinematics_msgs::GetConstraintAwarePositionIK::Request  &request,
+                                              kinematics_msgs::GetConstraintAwarePositionIK::Response  &response)
+{  
+  kinematics_msgs::GetPositionIK::Request ik_req;
+  kinematics_msgs::GetPositionIK::Response ik_res;
+  ik_req.ik_request = request.ik_request;
+  getPositionIK(ik_req, ik_res);
+  response.solution = ik_res.solution;
+  response.error_code = ik_res.error_code;
+  return true;
 }
 
 bool Kinematics::getIKSolverInfo(kinematics_msgs::GetKinematicSolverInfo::Request &request,
