@@ -1,14 +1,30 @@
 <launch>
   <node pkg="nodelet" type="nodelet" name="pcl_manager" args="manager" output="screen" />
 
-  <node pkg="point_cloud_converter" type="point_cloud_converter" name="full_cloud_filtered_converter">
-    <remap from="/points_in" to="/full_cloud_filtered"/>
-    <remap from="/points2_out" to="/full_cloud_filtered_2"/>
+  <node pkg="laser_assembler" type="laser_scan_assembler" output="screen"  name="laser_assembler_unfiltered">
+    <remap from="scan" to="/tilt_scan"/>
+    <remap from="build_cloud" to="/laser_assembler_unfiltered/build_cloud"/>
+    <param name="tf_cache_time_secs" type="double" value="10.0" />
+    <param name="tf_tolerance_secs" type="double" value="0.0" />
+    <param name="max_clouds" type="int" value="400" />
+    <param name="ignore_laser_skew" type="bool" value="true" />
+    <param name="fixed_frame" type="string" value="base_link" />
+  </node>
+
+  <node pkg="pr2_arm_navigation_perception" type="pr2_laser_snapshotter" output="screen" name="snapshotter_unfiltered">
+    <remap from="laser_scanner_signal" to="laser_tilt_controller/laser_scanner_signal"/>
+    <remap from="assemble_scans" to="/laser_assembler_unfiltered/build_cloud" />
+    <remap from="full_cloud" to="full_cloud_unfiltered" />
+  </node>
+  
+  <node pkg="point_cloud_converter" type="point_cloud_converter" name="full_cloud_unfiltered_converter">
+    <remap from="/points_in" to="/full_cloud_unfiltered"/>
+    <remap from="/points2_out" to="/full_cloud_2"/>
   </node>
 
   <!-- Run a VoxelGrid filter to clean NaNs and downsample the data -->
   <node pkg="nodelet" type="nodelet" name="passthrough" args="load pcl/PassThrough pcl_manager" output="screen">
-    <remap from="~input" to="/full_cloud_filtered_2" />
+    <remap from="~input" to="/full_cloud_2" />
     <rosparam>
       filter_field_name: z
       filter_limit_min: 0.5
