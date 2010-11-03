@@ -1,0 +1,15 @@
+<package>
+  <description brief="cram_emacs_repl">
+
+     cram_emacs_repl
+
+  </description>
+  <author>Lorenz Moesenlechner</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/cram_emacs_repl</url>
+  <depend package="rosemacs"/>
+
+</package>
+
+

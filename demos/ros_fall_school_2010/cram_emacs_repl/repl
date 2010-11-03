@@ -1,0 +1,3 @@
+#!/bin/bash
+
+emacs -q -L `rospack find cram_emacs_repl` --eval "(require 'repl-config)"
