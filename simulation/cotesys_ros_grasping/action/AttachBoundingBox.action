@@ -1,13 +1,8 @@
-#this attaches a bounding box of the given size to the indicated end effector
+#this attaches a bounding box of the given object detection to the indicated end effector
 
 string arm_name
-string object_name
-
 bool remove
 
-#attach_link aligned values
-float64 x_size
-float64 y_size
-float64 z_size
+mapping_msgs/CollisionObject object
 ---
 ---

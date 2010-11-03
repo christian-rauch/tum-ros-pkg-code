@@ -161,35 +161,14 @@ bool AttachBoundingBoxServer::execute(const cotesys_ros_grasping::AttachBounding
   }
 
   mapping_msgs::AttachedCollisionObject att_object;
+
   att_object.link_name = att_link_name;
-  if(req->object_name.empty()) {
-    att_object.object.id = default_object_name_;
-  } else {
-    att_object.object.id = req->object_name;
-  }
-  att_object.object.header.frame_id = att_link_name;
-  att_object.object.header.stamp = ros::Time::now();
+  att_object.object = req->object;
   if(req->remove) {
     att_object.object.operation.operation = mapping_msgs::CollisionObjectOperation::REMOVE;
   } else {
     att_object.object.operation.operation = mapping_msgs::CollisionObjectOperation::ADD;
-  
-    geometric_shapes_msgs::Shape object;
-    object.type = geometric_shapes_msgs::Shape::BOX;
-    object.dimensions.resize(3);
-    object.dimensions[0] = req->x_size;
-    object.dimensions[1] = req->y_size;
-    object.dimensions[2] = req->z_size;
-    geometry_msgs::Pose pose;
-    pose.position.x = link_to_gripper_x_diff_;
-    pose.position.y = link_to_gripper_y_diff_;
-    pose.position.z = link_to_gripper_z_diff_;
-    pose.orientation.x = 0;
-    pose.orientation.y = 0;
-    pose.orientation.z = 0;
-    pose.orientation.w = 1;
-    att_object.object.shapes.push_back(object);
-    att_object.object.poses.push_back(pose);
+
     att_object.touch_links = *touch_link_vector;
   }
 
