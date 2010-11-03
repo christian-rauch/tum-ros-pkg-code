@@ -167,7 +167,7 @@ bool AttachBoundingBoxServer::execute(const cotesys_ros_grasping::AttachBounding
   if(req->remove) {
     att_object.object.operation.operation = mapping_msgs::CollisionObjectOperation::REMOVE;
   } else {
-    att_object.object.operation.operation = mapping_msgs::CollisionObjectOperation::ADD;
+    att_object.object.operation.operation = mapping_msgs::CollisionObjectOperation::ATTACH_AND_REMOVE_AS_OBJECT;
 
     att_object.touch_links = *touch_link_vector;
   }
