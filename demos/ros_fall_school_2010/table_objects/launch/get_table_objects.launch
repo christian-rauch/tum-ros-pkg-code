@@ -130,5 +130,5 @@
   </node>
 
   <!-- Run the table objects service node -->
-  <node pkg="table_objects" type="table_objects" name="table_objects" output="screen" args="$(find table_objects)/kdtree.idx $(find table_objects)/training_data.h5 $(find table_objects)/training_data.list" />
+  <node pkg="table_objects" type="table_objects" name="table_objects" output="screen" args="$(find table_objects)/vfh_test_data/kdtree.idx $(find table_objects)/vfh_test_data/training_data.h5 $(find table_objects)/vfh_test_data/training_data.list" />
 </launch>

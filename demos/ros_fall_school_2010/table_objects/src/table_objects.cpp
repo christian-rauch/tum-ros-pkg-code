@@ -131,16 +131,24 @@ bool
 
       // extracting the label name
       std::string vfh_model = models.at (k_indices[0][0]).first.c_str ();
-      size_t pos1 = vfh_model.find ('/');
+      size_t pos1 = vfh_model.find_last_of ("/\\"); // just in case this will ever run on windows :P
       std::string vfh_label = vfh_model;
       if (pos1 != std::string::npos)
       {
-        size_t pos2 = vfh_model.find ('/', pos1+1);
+        size_t pos2 = vfh_model.find ('.', pos1+1);
         vfh_label = vfh_model.substr (pos1+1, pos2-pos1-1);
       }
       while (vfh_label.find (".bag") != std::string::npos || vfh_label.find (".pcd") != std::string::npos)
         vfh_label = vfh_label.substr (0, vfh_label.size () - 4);
-      ROS_INFO ("VFH label for cluster %zu: %s\n", i, vfh_label.c_str ());
+      
+      // hard-code some nice label names for knowledge processing
+      if (vfh_label.find ("cereal") != std::string::npos)
+        label = "cereal";
+      else if (vfh_label.find ("milk") != std::string::npos)
+        label = "milk";
+      else if (vfh_label.find ("lego") != std::string::npos)
+        label = "bowl"; // last minute change, as someone said bowls can not be grasped
+      ROS_INFO ("VFH label for cluster %zu: %s", i, label.c_str ());
     }
     
     // compute 3D centroid
