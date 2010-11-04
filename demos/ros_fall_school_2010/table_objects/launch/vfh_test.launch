@@ -1,0 +1,7 @@
+<launch>
+  <include file="$(find table_objects)/launch/get_table_objects.launch"/>
+
+  <node pkg="rosbag" type="rosbag" name="test_pcd_publisher" args="play $(find table_objects)/vfh_test_bags/cereal_2010-11-04-16-04-24.bag /cloud_pcd:=/full_cloud_unfiltered" />
+
+  <node pkg="table_objects" type="test_table_objects" name="test_table_objects" output="screen" respawn="true"/>
+</launch>
