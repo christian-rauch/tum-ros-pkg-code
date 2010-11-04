@@ -195,6 +195,7 @@ bool
     }
     //cerr << "Minimum corner: " << min_point.transpose () << endl;
     //cerr << "Maximum corner: " << max_point.transpose () << endl;
+    Eigen3::Array3f center_offset = min_point + (max_point - min_point)/2;
     
     // create the collison object
     mapping_msgs::CollisionObject collision_object;
@@ -208,9 +209,9 @@ bool
     collision_object.shapes[0].dimensions[1] = std::max (0.01f, max_point[1] - min_point[1]);
     collision_object.shapes[0].dimensions[2] = std::max (0.01f, max_point[2] - min_point[2]);
     collision_object.poses.resize (1);
-    collision_object.poses[0].position.x = centroid[0];
-    collision_object.poses[0].position.y = centroid[1];
-    collision_object.poses[0].position.z = centroid[2];
+    collision_object.poses[0].position.x = centroid[0] + center_offset[0];
+    collision_object.poses[0].position.y = centroid[1] + center_offset[1];
+    collision_object.poses[0].position.z = centroid[2] + center_offset[2];
     collision_object.poses[0].orientation.x = qt.x ();
     collision_object.poses[0].orientation.y = qt.y ();
     collision_object.poses[0].orientation.z = qt.z ();
