@@ -5,3 +5,4 @@
 - svn: {local-name: calonder_descriptor, uri: 'https://code.ros.org/svn/wg-ros-pkg/branches/trunk_cturtle/stacks/visual_feature_detectors/calonder_descriptor', version: '-r46164'}
 - svn: {local-name: fast_detector, uri: 'https://code.ros.org/svn/wg-ros-pkg/branches/trunk_cturtle/stacks/visual_feature_detectors/fast_detector', version: '-r46164'}
 - svn: {local-name: rosjava, uri: 'https://code.ros.org/svn/ros/stacks/ros_experimental/trunk/rosjava'}
+- svn: {local-name: roslisp_common, uri: 'https://code.ros.org/svn/ros-pkg/stacks/roslisp_common/trunk'}
