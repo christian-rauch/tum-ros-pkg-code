@@ -1,3 +1,6 @@
+java:
+  debian: sun-java6-jdk
+  ubuntu: sun-java6-jdk
 swi_prolog:
   debian: swi-prolog
   ubuntu: swi-prolog
