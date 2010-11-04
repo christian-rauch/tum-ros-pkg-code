@@ -31,6 +31,7 @@ add_classpath(${rosjava_PACKAGE_PATH}/bin)
 
 rosbuild_find_ros_package(rosjava_deps)
 add_classpath(${rosjava_deps_PACKAGE_PATH}/rosjava_msgs.jar)
+add_runtime_classpath(${rosjava_deps_PACKAGE_PATH}/rosjava_msgs.jar)
 
 rospack_add_java_executable(ROSClient edu.tum.cs.ias.knowrob.tutorial.ROSClient)
 

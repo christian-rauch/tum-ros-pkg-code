@@ -13,6 +13,7 @@
   <depend package="rosjava"/>
   <depend package="ias_semantic_map"/>
   <depend package="tabletop_object_detector"/>
+  <depend package="table_objects"/>
 
 
   <export>

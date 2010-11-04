@@ -24,7 +24,8 @@
 
 :- module(tabletop_obj,
     [
-      tabletop_object/1
+      tabletop_object/2,
+      comp_tabletop_object/2
     ]).
 
 :- use_module(library('semweb/rdfs')).
@@ -43,7 +44,7 @@
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %
 %
-% As part of the KnowRob tutorial, you are supposed to implement the
+% As part of the KnowRob tutorial, you are asked to implement the
 % following two predicates. You can use the predicates below for
 % creating the object and perception instances.
 %
@@ -54,7 +55,7 @@
 % Queries the tabletop_object_detector service and creates the
 % internal object representations in the knowledge base.
 %
-tabletop_object(Obj) :-
+tabletop_object(Obj, Type) :-
 
     % create ROS client object
 
@@ -62,11 +63,12 @@ tabletop_object(Obj) :-
     % call the method for retrieving objects from the tabletop_object_detector
 
 
-    % convert the result into a list of matches over which we can iterate
+    % convert the result into a prolog list over which we can iterate
+
 
     % create the object representations in the knowledge base
-    member(Match, Matches),
-    create_tabletop_object(Match, Obj).
+    member(Match, ObjList),
+    create_tabletop_object(Match, Obj, Type).
 
 
 
@@ -81,20 +83,21 @@ tabletop_object(Obj) :-
 % - link the object and the perception instance
 %
 
-create_tabletop_object(Match, Obj) :-
+create_tabletop_object(Match, Obj, Type) :-
 
     % retrieve the model ID
 
+
     % retrieve the pose as array of double values
 
-    % object instance
+    % create object instance
 
-    % perception instance
+    % create perception instance
 
     % set pose
 
     % link object and perception
-    .
+    fail.
 
 
 
@@ -104,6 +107,10 @@ create_tabletop_object(Match, Obj) :-
 %% %%
 %% %% PROVIDED LIBRARY METHODS FOR CREATING OBJECT AND PERCEPTION INSTANCES
 %% %%
+
+comp_tabletop_object(Obj, 'http://ias.cs.tum.edu/kb/knowrob.owl#HumanScaleObject') :-
+   tabletop_object(Obj, _).
+
 
 %% create_perception_instance(-Perception) is det.
 %
@@ -127,7 +134,8 @@ create_object_instance(ObjTypes, TabletopID, Obj) :-
 
   member(ObjType, ObjTypes),
   string_to_atom(ObjType, TypeAtom),
-  atom_concat(TypeAtom, TabletopID, Obj),
+  atom_concat('_', TabletopID, ObjID),
+  atom_concat(TypeAtom, ObjID, Obj),
 
   (rdf_has(Obj, rdf:type, TypeAtom),!;
   rdf_assert(Obj, rdf:type, TypeAtom)),
@@ -191,32 +199,5 @@ id_to_type(18808,'http://ias.cs.tum.edu/kb/knowrob.owl#Soup').%'campbell_soup_ha
 id_to_type(18699,'http://ias.cs.tum.edu/kb/knowrob.owl#Bowl-Eating').%'901.334.73';'{bowl}'
 id_to_type(18691,'http://ias.cs.tum.edu/kb/knowrob.owl#Bowl-Eating').%'800.572.57';'{bowl}'
 
-
-
-%% quaternion_to_matrix(?Quat, ?Mat) is det.
-%
-% Convert between quaternion and homography matrix
-%
-% @param Quat  Quaternion as list [X, Y, Z, W]
-% @param Mat   4x4 rotation matrix as row-based list [M00, M01, M02, M03, M10, M11, M12, M13, M20, M21, M22, M23, M30, M31, M32, M33]
-%
-% quaternion_to_matrix([X, Y, Z, W], [M00, M01, M02, M03, M10, M11, M12, M13, M20, M21, M22, M23, M30, M31, M32, M33]) :-
-% 
-%     XX is X * X,    XY is X * Y,    XZ is X * Z,    XW is X * W,
-%     YY is Y * Y,    YZ is Y * Z,    YW is Y * W,
-%     ZZ is Z * Z,    ZW is Z * W,
-% 
-%     M00 is 1 - 2 * ( YY + ZZ ),
-%     M01 is     2 * ( XY - ZW ),
-%     M02 is     2 * ( XZ + YW ),
-% 
-%     M10 is     2 * ( XY + ZW ),
-%     M11 is 1 - 2 * ( XX + ZZ ),
-%     M12 is     2 * ( YZ - XW ),
-% 
-%     M20 is     2 * ( XZ - YW ),
-%     M21 is     2 * ( YX + XW ),
-%     M22 is 1 - 2 * ( XX + YY ),
-% 
-%     M03 is 0, M13 is 0, M23 is 0, M30 is 0, M31 is 0, M32 is 0, M33 is 1.
-
+id_to_type('cluster_0','http://ias.cs.tum.edu/kb/knowrob.owl#BreakfastCereal').
+id_to_type('cluster_1','http://ias.cs.tum.edu/kb/knowrob.owl#CowsMilk-Product').
