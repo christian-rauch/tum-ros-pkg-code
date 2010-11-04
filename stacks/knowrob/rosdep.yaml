@@ -16,3 +16,12 @@ swi_prolog_semweb:
 swi_prolog_sgml:
   debian: swi-prolog-sgml
   ubuntu: swi-prolog-sgml
+swi_prolog_xpce:
+  debian: swi-prolog-xpce
+  ubuntu: swi-prolog-xpce
+libjson_java:
+  debian: libjson-java
+  ubuntu: libjson-java
+libjson_glib:
+  debian: libjson-glib-dev
+  ubuntu: libjson-glib-dev
