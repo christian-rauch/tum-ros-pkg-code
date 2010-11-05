@@ -1,0 +1,13 @@
+<launch>
+  <node pkg="point_cloud_converter" type="point_cloud_converter" name="point_cloud_converter" output="screen" respawn="true" >
+    <remap from="/points2_in" to="/cloud_pcd"/>
+  </node>
+
+  <node pkg="topic_tools" type="relay" name="relay_a" output="screen" respawn="true" args="/points_out /full_cloud_unfiltered">
+  </node>
+
+
+  <include file="$(find table_objects)/launch/get_table_objects.launch"/>
+
+  <node pkg="table_objects" type="test_table_objects" name="test_table_objects" output="screen" respawn="true"/>
+</launch>
