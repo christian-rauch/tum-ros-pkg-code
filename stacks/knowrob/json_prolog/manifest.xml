@@ -16,7 +16,7 @@
 
   <export>
     <cpp cflags="-I${prefix}/include"
-         lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -json_prolog"/>
+         lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -ljson_prolog"/>
     <java classpath="${prefix}/bin"/>
   </export>
 
