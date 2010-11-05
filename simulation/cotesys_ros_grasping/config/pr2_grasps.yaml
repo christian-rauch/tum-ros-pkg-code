@@ -15,6 +15,14 @@ grasps:
     ik_to_gripper_x_diff: 0.0
     ik_to_gripper_y_diff: 0.0
     ik_to_gripper_z_diff: .12
+  - name: top_rot_90
+    end_effector_x_rot: -0.5
+    end_effector_y_rot: 0.5
+    end_effector_z_rot: 0.5
+    end_effector_w_rot: 0.5
+    ik_to_gripper_x_diff: 0.0
+    ik_to_gripper_y_diff: 0.0
+    ik_to_gripper_z_diff: .12
   - name: default
     end_effector_x_rot: 0.0
     end_effector_y_rot: 0.0
