@@ -51,6 +51,10 @@ odufinder_listener(Listener) :-
     jpl_new('edu.tum.cs.ias.knowrob.CopROSClient', ['json_prolog'], Listener),
     jpl_call(Listener, 'startCopObjDetectionsListener', ['/odu_finder/TemplateName'], _).
 
+%% missing_obj_listener(-Listener)
+missing_obj_listener(Listener) :-
+    jpl_new('edu.tum.cs.ias.knowrob.CopROSClient', ['json_prolog'], Listener),
+    jpl_call(Listener, 'startCopObjDetectionsListener', ['/synthetic_percepts/tabletop_percepts'], _).
 
 
 %% cop_create_model_instance(+ModelType, +ObjectType) is det.
@@ -187,39 +191,47 @@ cop_compatible_results(A, B) :-
 % @param CopIdentifier     Atom identifying something in CoP
 % @param KnowrobIdentifier Corresponding atom identifying something in KnowRob
 %
-cop_to_knowrob('placemat',            'http://ias.cs.tum.edu/kb/knowrob.owl#PlaceMat').
-cop_to_knowrob('mug',                 'http://ias.cs.tum.edu/kb/knowrob.owl#DrinkingMug').
-cop_to_knowrob('plate',               'http://ias.cs.tum.edu/kb/knowrob.owl#DinnerPlate').
+cop_to_knowrob('placemat', K)    :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#PlaceMat',!.
+cop_to_knowrob('mug', K)         :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#DrinkingMug',!.
+cop_to_knowrob('plate', K)       :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#DinnerPlate',!.
 
-cop_to_knowrob('knife',               'http://ias.cs.tum.edu/kb/knowrob.owl#TableKnife').
-cop_to_knowrob('forknoteeth',         'http://ias.cs.tum.edu/kb/knowrob.owl#Fork-SilverwarePiece').
-cop_to_knowrob('forkwteeth',          'http://ias.cs.tum.edu/kb/knowrob.owl#Fork-SilverwarePiece').
-cop_to_knowrob('spoon',               'http://ias.cs.tum.edu/kb/knowrob.owl#Spoon-SilverwarePiece').
+cop_to_knowrob('knife', K)       :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#TableKnife',!.
+cop_to_knowrob('forknoteeth', K) :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#Fork-SilverwarePiece',!.
+cop_to_knowrob('forkwteeth', K)  :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#Fork-SilverwarePiece',!.
+cop_to_knowrob('spoon', K)       :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#Spoon-SilverwarePiece',!.
 
-cop_to_knowrob('icetea',              'http://ias.cs.tum.edu/kb/knowrob.owl#Tea-Iced').
-cop_to_knowrob('iceteafront',         'http://ias.cs.tum.edu/kb/knowrob.owl#Tea-Iced').
-cop_to_knowrob('bottle',              'http://ias.cs.tum.edu/kb/knowrob.owl#DrinkingBottle').
-cop_to_knowrob('assamblend',          'http://ias.cs.tum.edu/kb/knowrob.owl#Tea-Beverage').
+cop_to_knowrob('icetea', K)      :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#Tea-Iced',!.
+cop_to_knowrob('iceteafront', K) :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#Tea-Iced',!.
+cop_to_knowrob('bottle', K)      :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#DrinkingBottle',!.
+cop_to_knowrob('assamblend', K)  :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#Tea-Beverage',!.
 
-cop_to_knowrob('caltab',              'http://ias.cs.tum.edu/kb/knowrob.owl#CalibrationPlate').
-cop_to_knowrob('marker33',            'http://ias.cs.tum.edu/kb/knowrob.owl#CalibrationPlate').
+cop_to_knowrob('caltab', K)      :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#CalibrationPlate',!.
+cop_to_knowrob('marker33', K)    :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#CalibrationPlate',!.
 
-cop_to_knowrob('handle',              'http://ias.cs.tum.edu/kb/knowrob.owl#Handle').
-cop_to_knowrob('transobject',         'http://ias.cs.tum.edu/kb/knowrob.owl#ColorlessThing').
-cop_to_knowrob('cluster',             'http://ias.cs.tum.edu/kb/knowrob.owl#PointCloud').
-cop_to_knowrob('defaulttableobject',  'http://ias.cs.tum.edu/kb/knowrob.owl#PointCloud').
+cop_to_knowrob('handle', K)      :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#Handle',!.
+cop_to_knowrob('transobject', K) :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#ColorlessThing',!.
+cop_to_knowrob('cluster', K)     :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#PointCloud',!.
 
-cop_to_knowrob('face',                'http://ias.cs.tum.edu/kb/knowrob.owl#FaceOfAnimal').
-cop_to_knowrob('wallobj',             'http://ias.cs.tum.edu/kb/knowrob.owl#WallOfAConstruction').
+cop_to_knowrob('face', K)        :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#FaceOfAnimal',!.
+cop_to_knowrob('wallobj', K)     :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#WallOfAConstruction',!.
 
-cop_to_knowrob('black',               'http://ias.cs.tum.edu/kb/knowrob.owl#BlackColor').
-cop_to_knowrob('white',               'http://ias.cs.tum.edu/kb/knowrob.owl#WhiteColor').
-cop_to_knowrob('orange',              'http://ias.cs.tum.edu/kb/knowrob.owl#OrangeColor').
-cop_to_knowrob('red',                 'http://ias.cs.tum.edu/kb/knowrob.owl#RedColor').
-cop_to_knowrob('green',               'http://ias.cs.tum.edu/kb/knowrob.owl#GreenColor').
-cop_to_knowrob('blue',                'http://ias.cs.tum.edu/kb/knowrob.owl#BlueColor').
+cop_to_knowrob('black', K)       :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#BlackColor',!.
+cop_to_knowrob('white', K)       :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#WhiteColor',!.
+cop_to_knowrob('orange', K)      :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#OrangeColor',!.
+cop_to_knowrob('red', K)         :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#RedColor',!.
+cop_to_knowrob('green', K)       :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#GreenColor',!.
+cop_to_knowrob('blue', K)        :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#BlueColor',!.
 
-cop_to_knowrob('transobject',         'http://ias.cs.tum.edu/kb/knowrob.owl#ColorlessThing').
+cop_to_knowrob('transobject', K)        :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#ColorlessThing',!.
+cop_to_knowrob('defaulttableobject', K) :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#PointCloud',!.
+
+cop_to_knowrob('bowl-eating', K)        :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#Bowl-Eating',!.
+cop_to_knowrob('cowsmilk-product', K)   :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#CowsMilk-Product',!.
+cop_to_knowrob('breakfast-cereal', K)   :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#BreakfastCereal',!.
+
+
+
+
 
 % specially for germandeli: check if there is a class with the respective productID
 cop_to_knowrob(GermanDeliID, GermanDeliOWLClass) :-
@@ -227,3 +239,7 @@ cop_to_knowrob(GermanDeliID, GermanDeliOWLClass) :-
     owl_has(Restr, owl:onProperty, 'http://ias.cs.tum.edu/kb/germandeli.owl#productID'),
     owl_direct_subclass_of(GermanDeliOWLClass, Restr),
     owl_subclass_of(GermanDeliOWLClass, 'http://ias.cs.tum.edu/kb/germandeli.owl#GermanDeliObject'),!.
+
+% Fallback: directly use the class idenfier
+cop_to_knowrob(GermanDeliID, KnowrobIdentifier):-
+  atom_concat('http://ias.cs.tum.edu/kb/knowrob.owl#', GermanDeliID, KnowrobIdentifier).

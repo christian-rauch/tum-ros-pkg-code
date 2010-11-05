@@ -164,7 +164,7 @@ public class CopROSClient {
     				
     				res = copObjectDetectionsCallback.pop();
 
-System.err.println("GOT RESULT IN KNOWROB UPDATE");
+    				System.err.println("UpdateKnowRobObjectsThread: received data");
     				
         			// iterate over detected poses
         			for(aposteriori_position pose : res.found_poses) {
@@ -434,19 +434,8 @@ System.err.println("GOT RESULT IN KNOWROB UPDATE");
 	    		if(!q.hasSolution())
 	    			return new HashMap<String, Vector<Object>>();
 	    		
-	//    			// Due to bugs we have to check for one answer beforehand.
-	//    			if (!q.hasMoreSolutions())
-	//    				return new HashMap<String, Vector<Object>>();
-	//    			Hashtable oneSolution = q.nextSolution();
-	//    			if (oneSolution.isEmpty())	// Due to a bug consulting a file without anything else results in shutdown
-	//    				return new HashMap<String, Vector<Object>>();	// I will try to prevent it with this construction
-	    			
-	    		// Restart the query and fetch everything.
-	//    		q.rewind();
+	    		
 	    		solutions = q.allSolutions();
-	
-	
-	
 	    		for (Object key: solutions[0].keySet()) {
 	    			result.put(key.toString(), new Vector<Object>());
 	    		}

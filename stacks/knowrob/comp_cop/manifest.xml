@@ -14,7 +14,7 @@
   <author>Moritz Tenorth</author>
   <license>GPL</license>
   <review status="unreviewed" notes=""/>
-  <url>http://www.ros.org/wiki/comp_cop</url>
+  <url>http://ias.in.tum.de/kb/wiki/index.php/Comp_cop</url>
   <depend package="rosjava"/>
   <depend package="vision_srvs"/>
   <depend package="ias_knowledge_base"/>
