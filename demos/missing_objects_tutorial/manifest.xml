@@ -11,8 +11,8 @@
 <!--   <depend package="opencv2"/> -->
 <!--   <depend package="cv_bridge"/> -->
   <depend package="sensor_msgs"/>
-  <depend package="tf"/>
-  <depend package="vision_msgs"/>
+<!--   <depend package="tf"/> -->
+<!--   <depend package="vision_msgs"/> -->
   <depend package="json_prolog"/>
   <depend package="comp_cop"/>
   <depend package="comp_missingobj"/>
