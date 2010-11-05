@@ -1,7 +1,7 @@
 <launch>
 
  <!-- load perception -->
- <include file="$(find rosie_arm_navigation_launch)/launch/perception.launch"/>
+ <!--include file="$(find rosie_arm_navigation_launch)/launch/perception.launch"/-->
 
  <!-- load planning -->	
  <include file="$(find rosie_arm_navigation_launch)/launch/ompl_planning.launch"/>
@@ -19,5 +19,7 @@
 
  <!-- load ik -->
  <include file="$(find rosie_arm_kinematics)/rosie_right_arm_kinematics.launch"/>
+ 
+ <node pkg="rosie_arm_navigation_launch" type="joint_state_accumulator" name="joint_state_accumulator"/>
 
 </launch>
