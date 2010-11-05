@@ -244,6 +244,17 @@ bool MoveArmToPositionServer::execute(const cotesys_ros_grasping::MoveArmToPosit
   goal.motion_plan_request.ordered_collision_operations.collision_operations.push_back(coll);
   coll.object1 = "l_forearm_cam";
   goal.motion_plan_request.ordered_collision_operations.collision_operations.push_back(coll);
+  if(req->arm_name == left_arm_name_) {
+    coll.object1 = "l_forearm_link";
+    coll.object2 = coll.COLLISION_SET_ATTACHED_OBJECTS;
+    coll.operation = coll.ENABLE;
+    goal.motion_plan_request.ordered_collision_operations.collision_operations.push_back(coll);
+  } else {
+    coll.object1 = "r_forearm_link";
+    coll.object2 = coll.COLLISION_SET_ATTACHED_OBJECTS;
+    coll.operation = coll.ENABLE;
+    goal.motion_plan_request.ordered_collision_operations.collision_operations.push_back(coll);
+  }
 
   cotesys_ros_grasping::MoveArmToPositionResult res;
 
