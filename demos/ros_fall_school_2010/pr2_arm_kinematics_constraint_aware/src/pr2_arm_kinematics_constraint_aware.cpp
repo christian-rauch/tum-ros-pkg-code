@@ -313,10 +313,10 @@ void PR2ArmIKConstraintAware::initialPoseCheck(const KDL::JntArray &jnt_array,
                                                                       collision_operations_,
                                                                       operations);
   //now we need to turn off collisions with the default_collision_links and everything, as those aren't collisions we care about for this check
-  for(unsigned int i = 0; i < default_collision_links_.size(); i++) {
+  for(unsigned int i = 0; i < arm_links_.size(); i++) {
     //adding one for all attached objects and the default collision links
     motion_planning_msgs::CollisionOperation coll;
-    coll.object1 = default_collision_links_[i];
+    coll.object1 = arm_links_[i];
     coll.object2 = coll.COLLISION_SET_ALL;
     coll.operation = coll.DISABLE;
     operations.collision_operations.push_back(coll);
@@ -398,6 +398,7 @@ bool PR2ArmIKConstraintAware::setupCollisionEnvironment()
     ROS_INFO("Configuring action for '%s'", group_.c_str());
 
   std::vector<planning_models::KinematicModel::Joint*> p_joints = collision_models_->getKinematicModel()->getGroup(group_)->joints;
+  arm_links_ = collision_models_->getPlanningGroupLinks().at(group_);
   for(unsigned int i=0; i < p_joints.size(); i++)
   {
     default_collision_links_.push_back(p_joints[i]->after->name); 

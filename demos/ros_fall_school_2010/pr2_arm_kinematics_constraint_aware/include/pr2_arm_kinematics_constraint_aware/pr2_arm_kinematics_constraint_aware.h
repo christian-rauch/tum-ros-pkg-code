@@ -120,6 +120,7 @@ private:
   void contactFound(collision_space::EnvironmentModel::Contact &contact);
   std::vector<std::string> default_collision_links_;
   std::vector<std::string> end_effector_collision_links_;
+  std::vector<std::string> arm_links_;
   void initialPoseCheck(const KDL::JntArray &jnt_array, 
                         const KDL::Frame &p_in,
                         motion_planning_msgs::ArmNavigationErrorCodes &error_code);
