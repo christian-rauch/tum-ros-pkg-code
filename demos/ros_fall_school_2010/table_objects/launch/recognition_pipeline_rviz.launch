@@ -1,0 +1,3 @@
+<launch>
+  <node name="rviz" pkg="rviz" type="rviz" args="-d $(find table_objects)/launch/day6.vcg"/>
+</launch>

@@ -6,8 +6,5 @@
   <node pkg="topic_tools" type="relay" name="relay_a" output="screen" respawn="true" args="/points_out /full_cloud_unfiltered">
   </node>
 
-
   <include file="$(find table_objects)/launch/get_table_objects.launch"/>
-
-  <node pkg="table_objects" type="test_table_objects" name="test_table_objects" output="screen" respawn="true"/>
 </launch>
