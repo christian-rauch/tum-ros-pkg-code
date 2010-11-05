@@ -143,11 +143,11 @@ bool
       
       // hard-code some nice label names for knowledge processing
       if (vfh_label.find ("cereal") != std::string::npos)
-        label = "cereal";
+        label = "BreakfastCereal";
       else if (vfh_label.find ("milk") != std::string::npos)
-        label = "milk";
+        label = "CowsMilk-Product";
       else if (vfh_label.find ("lego") != std::string::npos)
-        label = "bowl"; // last minute change, as someone said bowls can not be grasped
+        label = "Bowl-Eating"; // last minute change, as someone said bowls can not be grasped
       ROS_INFO ("VFH label for cluster %zu: %s", i, label.c_str ());
     }
     
