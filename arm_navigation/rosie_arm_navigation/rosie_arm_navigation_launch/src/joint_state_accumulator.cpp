@@ -38,7 +38,7 @@ public:
     for (unsigned int i = 0 ; i < jointState->name.size(); ++i)
     {
       joint_values_[jointState->name[i]] = jointState->position[i];
-      joint_velocities_[jointState->name[i]] = jointState->position[i];
+      joint_velocities_[jointState->name[i]] = jointState->velocity[i]+rand()*.00000000000000001;
     }
   }
 
