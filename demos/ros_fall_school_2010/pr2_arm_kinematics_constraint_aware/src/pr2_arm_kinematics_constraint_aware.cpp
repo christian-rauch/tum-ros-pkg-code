@@ -312,15 +312,14 @@ void PR2ArmIKConstraintAware::initialPoseCheck(const KDL::JntArray &jnt_array,
   planning_monitor_->getOrderedCollisionOperationsForOnlyCollideLinks(end_effector_collision_links_,
                                                                       collision_operations_,
                                                                       operations);
-  //now we need to turn off collisions with the default_collision_links for the purposes of this request
+  //now we need to turn off collisions with the default_collision_links and everything, as those aren't collisions we care about for this check
   for(unsigned int i = 0; i < default_collision_links_.size(); i++) {
-    for(unsigned int j = 0; j < end_effector_collision_links_.size(); j++) {
-      motion_planning_msgs::CollisionOperation coll;
-      coll.object1 = default_collision_links_[i];
-      coll.object2 = end_effector_collision_links_[j];
-      coll.operation = coll.DISABLE;
-      operations.collision_operations.push_back(coll);
-    }
+    //adding one for all attached objects and the default collision links
+    motion_planning_msgs::CollisionOperation coll;
+    coll.object1 = default_collision_links_[i];
+    coll.object2 = coll.COLLISION_SET_ALL;
+    coll.operation = coll.DISABLE;
+    operations.collision_operations.push_back(coll);
   }
   planning_monitor_->applyOrderedCollisionOperationsToCollisionSpace(operations);
   planning_monitor_->setAllowedContacts(allowed_contacts_);
