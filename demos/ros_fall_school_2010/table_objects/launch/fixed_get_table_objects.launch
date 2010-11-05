@@ -1,0 +1,121 @@
+<launch>
+  <node pkg="nodelet" type="nodelet" name="pcl_manager" args="manager" output="screen" />
+
+  <node pkg="laser_assembler" type="laser_scan_assembler" output="screen"  name="laser_assembler_unfiltered">
+    <remap from="scan" to="/tilt_scan"/>
+    <remap from="build_cloud" to="/laser_assembler_unfiltered/build_cloud"/>
+    <param name="tf_cache_time_secs" type="double" value="10.0" />
+    <param name="tf_tolerance_secs" type="double" value="0.0" />
+    <param name="max_clouds" type="int" value="400" />
+    <param name="ignore_laser_skew" type="bool" value="true" />
+    <param name="fixed_frame" type="string" value="base_link" />
+  </node>
+
+  <node pkg="pr2_arm_navigation_perception" type="pr2_laser_snapshotter" output="screen" name="snapshotter_unfiltered">
+    <remap from="laser_scanner_signal" to="laser_tilt_controller/laser_scanner_signal"/>
+    <remap from="assemble_scans" to="/laser_assembler_unfiltered/build_cloud" />
+    <remap from="full_cloud" to="full_cloud_unfiltered" />
+  </node>
+  
+  <node pkg="point_cloud_converter" type="point_cloud_converter" name="full_cloud_unfiltered_converter">
+    <remap from="/points_in" to="/full_cloud_unfiltered"/>
+    <remap from="/points2_out" to="/full_cloud_2"/>
+  </node>
+
+  <!-- Run a VoxelGrid filter to clean NaNs and downsample the data -->
+  <node pkg="nodelet" type="nodelet" name="passthrough" args="load pcl/PassThrough pcl_manager" output="screen">
+    <remap from="~input" to="/full_cloud_2" />
+    <rosparam>
+      filter_field_name: z
+      filter_limit_min: 0.5
+      filter_limit_max: 1.5
+      input_frame: base_link
+      output_frame: base_link
+    </rosparam>
+  </node>
+  <!-- Run a VoxelGrid filter to clean NaNs and downsample the data -->
+  <node pkg="nodelet" type="nodelet" name="voxel_grid" args="load pcl/VoxelGrid pcl_manager" output="screen">
+    <remap from="~input" to="/passthrough/output" />
+    <rosparam>
+      filter_field_name: y
+      filter_limit_min: -0.5
+      filter_limit_max:  0.5
+    </rosparam>
+  </node>
+
+  <!-- Estimate point normals -->
+  <node pkg="nodelet" type="nodelet" name="normal_estimation" args="load pcl/NormalEstimation pcl_manager" output="screen">
+    <remap from="~input" to="/voxel_grid/output" />
+    <rosparam>
+      # -[ Mandatory parameters
+      k_search: 0
+      radius_search: 0.03
+      # Set the spatial locator. Possible values are: 0 (ANN), 1 (FLANN), 2 (organized)
+      spatial_locator: 0
+    </rosparam>
+  </node>
+
+  <!-- Segment the table plane -->
+  <node pkg="nodelet" type="nodelet" name="planar_segmentation" args="load pcl/SACSegmentationFromNormals pcl_manager" output="screen">
+    <remap from="~input"   to="/voxel_grid/output" />
+    <remap from="~normals" to="/normal_estimation/output" />
+    <rosparam>
+      # -[ Mandatory parameters
+      model_type: 11
+      distance_threshold: 0.1
+      max_iterations: 1000
+      method_type: 0
+      optimize_coefficients: true
+      normal_distance_weight: 0.1
+      eps_angle: 0.09
+      axis: [0.0, 0.0, 1.0]
+    </rosparam>
+  </node>
+
+  <node pkg="nodelet" type="nodelet" name="extract_plane_indices" args="load pcl/ExtractIndices pcl_manager" output="screen">
+    <remap from="~input"   to="/voxel_grid/output" />
+    <remap from="~indices" to="/planar_segmentation/inliers" />
+    <rosparam>
+      negative: true
+    </rosparam>
+  </node>
+
+  <!-- Project the planar inliers -->
+  <node pkg="nodelet" type="nodelet" name="project_plane_inliers" args="load pcl/ProjectInliers pcl_manager" output="screen">
+   <remap from="~input"   to="/voxel_grid/output" />
+   <remap from="~indices" to="/planar_segmentation/inliers" />
+   <remap from="~model"   to="/planar_segmentation/model" />
+   <rosparam>
+     model_type: 11
+     copy_all_data: false
+     copy_all_fields: true
+   </rosparam>
+  </node>
+
+  <!-- Compute the convex hull -->
+  <node pkg="nodelet" type="nodelet" name="convex_hull" args="load pcl/ConvexHull2D pcl_manager" output="screen">
+    <remap from="~input"   to="/project_plane_inliers/output" />
+  </node>
+
+  <!-- Extract the object clusters using a polygonal prism -->
+  <node pkg="nodelet" type="nodelet" name="extract_objects_table" args="load pcl/ExtractPolygonalPrismData pcl_manager" output="screen">
+   <remap from="~input"         to="/extract_plane_indices/output" />
+   <remap from="~planar_hull"   to="/convex_hull/output" />
+   <rosparam>
+     height_min: -0.5
+     height_max: 0
+   </rosparam>
+  </node>
+
+  <node pkg="nodelet" type="nodelet" name="extract_objects_indices" args="load pcl/ExtractIndices pcl_manager" output="screen">
+    <!-- Extract_plane_indices needs to be negated for this work -->
+    <remap from="~input"   to="/extract_plane_indices/output" />
+    <remap from="~indices" to="/extract_objects_table/output" />
+    <rosparam>
+      negative: false
+    </rosparam>
+  </node>
+
+  <!-- Run the table objects service node -->
+  <node pkg="table_objects" type="table_objects" name="table_objects" output="screen" />
+</launch>
