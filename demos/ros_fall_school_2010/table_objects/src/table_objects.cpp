@@ -178,25 +178,34 @@ bool
     cerr << "Rotation matrix: " << endl;
     cerr << rotation << endl;
     //cerr << "norms: " << rotation.row (0).norm () << " " << rotation.row (1).norm () << " " << rotation.row (2).norm () << endl;
-    Eigen3::Quaternion<float> qt (rotation);
-    qt.normalize ();
     //cerr << "Quaternions: " << qt.x () << " " << qt.y () << " " << qt.z () << " " << qt.w () << endl;
     
     //pcl::copyPointCloud (cloud, clusters[i], cloud_object_cluster);
-    Eigen3::Array3f min_point (+FLT_MAX, +FLT_MAX, +FLT_MAX);
-    Eigen3::Array3f max_point (-FLT_MAX, -FLT_MAX, -FLT_MAX);
+    Eigen3::Array3f min_point_projected (+FLT_MAX, +FLT_MAX, +FLT_MAX);
+    Eigen3::Array3f max_point_projected (-FLT_MAX, -FLT_MAX, -FLT_MAX);
+    Eigen3::Array3f min_point_base (+FLT_MAX, +FLT_MAX, +FLT_MAX);
+    Eigen3::Array3f max_point_base (-FLT_MAX, -FLT_MAX, -FLT_MAX);
     for (size_t cp = 0; cp < cloud_object_cluster.points.size (); cp ++)
     {
       Eigen3::Map<Eigen3::Vector3f> point (&cloud_object_cluster.points[cp].x);
       Eigen3::Array3f transformed = rotation * (point - centroid.head<3> ());
       //cerr << point[2] << "/" << (point - centroid2D.head<3> ())[2] << "/" << transformed[0] << " ";
-      min_point = min_point.min (transformed);
-      max_point = max_point.max (transformed);
+      
+      min_point_base = min_point_base.min (point.array());
+      max_point_base = max_point_base.max (point.array());
+
+      min_point_projected = min_point_projected.min (transformed);
+      max_point_projected = max_point_projected.max (transformed);
     }
     //cerr << "Minimum corner: " << min_point.transpose () << endl;
     //cerr << "Maximum corner: " << max_point.transpose () << endl;
-    Eigen3::Array3f center_offset = min_point + (max_point - min_point)/2;
+    Eigen3::Array3f center_offset = min_point_base + (max_point_base - min_point_base)/2;
+
     
+    rotation.transposeInPlace ();
+    Eigen3::Quaternion<float> qt (rotation);
+    qt.normalize ();
+
     // create the collison object
     mapping_msgs::CollisionObject collision_object;
     collision_object.header = cloud.header;
@@ -205,13 +214,13 @@ bool
     collision_object.shapes.resize (1);
     collision_object.shapes[0].type = geometric_shapes_msgs::Shape::BOX;
     collision_object.shapes[0].dimensions.resize (3);
-    collision_object.shapes[0].dimensions[0] = std::max (0.01f, max_point[0] - min_point[0]);
-    collision_object.shapes[0].dimensions[1] = std::max (0.01f, max_point[1] - min_point[1]);
-    collision_object.shapes[0].dimensions[2] = std::max (0.01f, max_point[2] - min_point[2]);
+    collision_object.shapes[0].dimensions[0] = std::max (0.01f, max_point_projected[0] - min_point_projected[0]);
+    collision_object.shapes[0].dimensions[1] = std::max (0.01f, max_point_projected[1] - min_point_projected[1]);
+    collision_object.shapes[0].dimensions[2] = std::max (0.01f, max_point_projected[2] - min_point_projected[2]);
     collision_object.poses.resize (1);
-    collision_object.poses[0].position.x = centroid[0] + center_offset[0];
-    collision_object.poses[0].position.y = centroid[1] + center_offset[1];
-    collision_object.poses[0].position.z = centroid[2] + center_offset[2];
+    collision_object.poses[0].position.x = center_offset[0];
+    collision_object.poses[0].position.y = center_offset[1];
+    collision_object.poses[0].position.z = center_offset[2];
     collision_object.poses[0].orientation.x = qt.x ();
     collision_object.poses[0].orientation.y = qt.y ();
     collision_object.poses[0].orientation.z = qt.z ();
