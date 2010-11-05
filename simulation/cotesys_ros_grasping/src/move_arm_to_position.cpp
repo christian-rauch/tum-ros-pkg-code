@@ -238,10 +238,10 @@ bool MoveArmToPositionServer::execute(const cotesys_ros_grasping::MoveArmToPosit
 
   //turning off collisions with the stupid camera frame
   motion_planning_msgs::CollisionOperation coll;
-  coll.object1 = "r_forearm_cam"
+  coll.object1 = "r_forearm_cam";
   coll.object2 = coll.COLLISION_SET_ALL;
   coll.operation = coll.DISABLE;
-  ogoal.motion_plan_request.ordered_collision_perations.collision_operations.push_back(coll);
+  goal.motion_plan_request.ordered_collision_operations.collision_operations.push_back(coll);
   coll.object1 = "l_forearm_cam";
   goal.motion_plan_request.ordered_collision_operations.collision_operations.push_back(coll);
 
