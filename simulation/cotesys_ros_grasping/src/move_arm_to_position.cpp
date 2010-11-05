@@ -214,9 +214,9 @@ bool MoveArmToPositionServer::execute(const cotesys_ros_grasping::MoveArmToPosit
   goal.motion_plan_request.goal_constraints.position_constraints[0].position.z = req->point.z-grasp.ik_to_gripper_z_diff_;
     
   goal.motion_plan_request.goal_constraints.position_constraints[0].constraint_region_shape.type = geometric_shapes_msgs::Shape::BOX;
-  goal.motion_plan_request.goal_constraints.position_constraints[0].constraint_region_shape.dimensions.push_back(0.06);
-  goal.motion_plan_request.goal_constraints.position_constraints[0].constraint_region_shape.dimensions.push_back(0.06);
-  goal.motion_plan_request.goal_constraints.position_constraints[0].constraint_region_shape.dimensions.push_back(0.06);
+  goal.motion_plan_request.goal_constraints.position_constraints[0].constraint_region_shape.dimensions.push_back(0.20);
+  goal.motion_plan_request.goal_constraints.position_constraints[0].constraint_region_shape.dimensions.push_back(0.20);
+  goal.motion_plan_request.goal_constraints.position_constraints[0].constraint_region_shape.dimensions.push_back(0.20);
 
   goal.motion_plan_request.goal_constraints.position_constraints[0].constraint_region_orientation.w = 1.0;
   goal.motion_plan_request.goal_constraints.position_constraints[0].weight = 1.0;
@@ -230,9 +230,9 @@ bool MoveArmToPositionServer::execute(const cotesys_ros_grasping::MoveArmToPosit
   goal.motion_plan_request.goal_constraints.orientation_constraints[0].orientation.z = grasp.end_effector_rot_z_;
   goal.motion_plan_request.goal_constraints.orientation_constraints[0].orientation.w = grasp.end_effector_rot_w_;
     
-  goal.motion_plan_request.goal_constraints.orientation_constraints[0].absolute_roll_tolerance = 0.04;
-  goal.motion_plan_request.goal_constraints.orientation_constraints[0].absolute_pitch_tolerance = 0.04;
-  goal.motion_plan_request.goal_constraints.orientation_constraints[0].absolute_yaw_tolerance = 0.04;
+  goal.motion_plan_request.goal_constraints.orientation_constraints[0].absolute_roll_tolerance = 0.15;
+  goal.motion_plan_request.goal_constraints.orientation_constraints[0].absolute_pitch_tolerance = 0.15;
+  goal.motion_plan_request.goal_constraints.orientation_constraints[0].absolute_yaw_tolerance = 0.15;
 
   goal.motion_plan_request.goal_constraints.orientation_constraints[0].weight = 1.0;
 
