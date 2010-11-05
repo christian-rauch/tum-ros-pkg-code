@@ -214,9 +214,9 @@ bool MoveArmToPositionServer::execute(const cotesys_ros_grasping::MoveArmToPosit
   goal.motion_plan_request.goal_constraints.position_constraints[0].position.z = req->point.z-grasp.ik_to_gripper_z_diff_;
     
   goal.motion_plan_request.goal_constraints.position_constraints[0].constraint_region_shape.type = geometric_shapes_msgs::Shape::BOX;
-  goal.motion_plan_request.goal_constraints.position_constraints[0].constraint_region_shape.dimensions.push_back(0.02);
-  goal.motion_plan_request.goal_constraints.position_constraints[0].constraint_region_shape.dimensions.push_back(0.02);
-  goal.motion_plan_request.goal_constraints.position_constraints[0].constraint_region_shape.dimensions.push_back(0.02);
+  goal.motion_plan_request.goal_constraints.position_constraints[0].constraint_region_shape.dimensions.push_back(0.06);
+  goal.motion_plan_request.goal_constraints.position_constraints[0].constraint_region_shape.dimensions.push_back(0.06);
+  goal.motion_plan_request.goal_constraints.position_constraints[0].constraint_region_shape.dimensions.push_back(0.06);
 
   goal.motion_plan_request.goal_constraints.position_constraints[0].constraint_region_orientation.w = 1.0;
   goal.motion_plan_request.goal_constraints.position_constraints[0].weight = 1.0;
