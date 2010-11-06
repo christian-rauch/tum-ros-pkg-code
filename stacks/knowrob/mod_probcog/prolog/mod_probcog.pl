@@ -89,12 +89,11 @@ probcog_query(QueryPredicates, Res) :-
 %% probcog_model(+QueryPredicates, -Model) is det.
 %
 % Determine the default model for a set of query predicates.
-% At the moment, the default model is always 'tablesetting_fall_09'
 %
-probcog_model(_, 'tableSetting_fall09').
+probcog_model(_, 'tableSetting_fall10').
 
 
 %% Mapping from model name to corresponding prolog module name
 %
 % Required for JPL interface to query evidences properly
-probcog_module_name('tableSetting_fall09', 'mod_probcog_tablesetting').
+probcog_module_name('tableSetting_fall10', 'mod_probcog_tablesetting').
