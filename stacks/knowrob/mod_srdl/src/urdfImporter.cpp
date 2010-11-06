@@ -1,5 +1,5 @@
 /*
- * UrdfConverter
+ * UrdfImporter
  * This small program converts an urdf file into a SRDL ontology
  * Author: Tobias Roehm, Jun 2010
  */
@@ -16,7 +16,7 @@ using namespace std;
 #define SRDL_COMP "SRDL_component"
 #define HAS_SUCCEEDING_LINK_NAME "hasSucceedingLink"
 #define HAS_SUCCEEDING_JOINT_NAME "hasSucceedingJoint"
-#define HAS_SUCCESSOR_NAME "hasSuccessorInCinematicChain"
+#define HAS_SUCCESSOR_NAME "hasSuccessorInKinematicChain"
 #define LINK_NAME "UrdfLink"
 #define JOINT_NAME "UrdfJoint"
 #define REVOLUTE_JOINT_NAME "RevoluteUrdfJoint"
@@ -25,8 +25,10 @@ using namespace std;
 #define FIXED_JOINT_NAME "FixedUrdfJoint" 
 #define FLOATING_JOINT_NAME "FloatingUrdfJoint"
 #define PLANAR_JOINT_NAME "PlanarUrdfJoint"
+#define HAS_URDF_NAME "hasUrdfName"
 
-class urdfConverter {
+
+class urdfImporter{
 
     // Shared variables
     string ontologyFilename;
@@ -59,9 +61,9 @@ class urdfConverter {
 
         // Creating file
         //ROS_INFO("Creating owl file ...");
-        //cout << "Please enter file name of ontology file: ";
-        //getline(cin, filename);
-        ontologyFilename = "ont.owl"; 
+        cout << "Please enter file name of ontology file:";
+        getline(cin, ontologyFilename);
+        //ontologyFilename = "ont.owl"; 
         out.open(ontologyFilename.c_str());
 
         // Write header
@@ -87,9 +89,9 @@ class urdfConverter {
       
         // Read needed information from user 
         // Read Ontology URL
-        //cout << "Please enter ontology url (will be used in exactly the entered way):";
-        //getline(cin, ontologyUri); 
-        ontologyUri = "http://ont.owl";
+        cout << "Please enter ontology url (will be used in exactly the entered way):";
+        getline(cin, ontologyUri); 
+        //ontologyUri = "http://ont.owl";
         // Read Path to SRDL ontology
         srdlUri = "file:///usr/stud/roehm/ros/tumros-internal/stacks/knowrob/mod_srdl/owl/SRDL.owl"; 
         //cout << "Please enter path of SRDL ontology (will be used in exactly the entered way):";
@@ -131,11 +133,23 @@ class urdfConverter {
     void writeModel() {
 
         // ask for a name prefix
-        //cout << "Please enter a prefix that will be put in front of all instance names:";
-        //getline(cin, namePrefix); 
-        namePrefix = "PR2_";
+        cout << "Please enter a prefix that will be put in front of all instance names:";
+        getline(cin, namePrefix); 
+        //namePrefix = "PR2_";
  
         // write general stuff
+        out << "    <!--\n" <<
+               "    ///////////////////////////////////////////////////////////////////////////////////////\n" <<
+               "    //\n" <<
+               "    // Datatype Properties\n" <<
+               "    //\n" << 
+               "    ///////////////////////////////////////////////////////////////////////////////////////\n" <<
+               "    -->\n\n";
+
+        out << "    <!-- " << HTTP << SRDL_COMP_URI << "#" << HAS_URDF_NAME << " -->\n" <<
+               "    <owl:DatatypeProperty rdf:about=\"&" << SRDL_COMP << ";" << HAS_URDF_NAME << "\"/>\n\n";
+
+
         out << "    <!--\n" <<
                "    ///////////////////////////////////////////////////////////////////////////////////////\n" <<
                "    //\n" <<
@@ -143,6 +157,9 @@ class urdfConverter {
                "    //\n" << 
                "    ///////////////////////////////////////////////////////////////////////////////////////\n" <<
                "    -->\n\n";
+
+        out << "    <!-- " << HTTP << SRDL_COMP_URI << "#" << HAS_SUCCESSOR_NAME << " -->\n" <<
+               "    <owl:ObjectProperty rdf:about=\"&" << SRDL_COMP << ";" << HAS_SUCCESSOR_NAME << "\"/>\n\n";
 
         out << "    <!-- " << HTTP << SRDL_COMP_URI << "#" << HAS_SUCCEEDING_JOINT_NAME << " -->\n" <<
                "    <owl:ObjectProperty rdf:about=\"&" << SRDL_COMP << ";" << HAS_SUCCEEDING_JOINT_NAME << "\"/>\n\n";
@@ -181,6 +198,8 @@ class urdfConverter {
             out << "    <owl:Thing rdf:about=\"#" << linkName << "\">\n";
             //<rdf:type rdf:resource="&SRDL_component;UrdfLink"/>
             out << "        <rdf:type rdf:resource=\"&" << SRDL_COMP << ";" << LINK_NAME << "\"/>\n";
+            // <SRDL_component:hasUrdfName>Dummy_Name</SRDL_component:hasUrdfName>
+            out << "        <"  << SRDL_COMP << ":" << HAS_URDF_NAME << ">" << linkKey << "</" << SRDL_COMP << ":" << HAS_URDF_NAME << ">\n" ;
             
             // Iterate over childJoint vector
             for(j=0; j < childJoints.size(); j++) {
@@ -243,6 +262,8 @@ class urdfConverter {
             out << "    <owl:Thing rdf:about=\"#" << jointName << "\">\n";
             //<rdf:type rdf:resource="&SRDL_component;UrdfJoint"/>
             out << "        <rdf:type rdf:resource=\"&" << SRDL_COMP << ";" << jointTypeName << "\"/>\n";
+            // <SRDL_component:hasUrdfName>Dummy_Name</SRDL_component:hasUrdfName>
+            out << "        <"  << SRDL_COMP << ":" << HAS_URDF_NAME << ">" << jointKey << "</" << SRDL_COMP << ":" << HAS_URDF_NAME << ">\n" ;
             //<SRDL_component:hasSucceedingLink rdf:resource="#Link1"/>
             out << "        <" << SRDL_COMP << ":" << HAS_SUCCEEDING_LINK_NAME << " rdf:resource=\"#" << childLinkName << "\"/>\n";
             out << "        <" << SRDL_COMP << ":" << HAS_SUCCESSOR_NAME << " rdf:resource=\"#" << childLinkName << "\"/>\n";
@@ -266,7 +287,7 @@ class urdfConverter {
         out << "</rdf:RDF>"; 
     }
 
-};  // end of class UrdfConverter
+};  // end of class UrdfImporter
 
 /* Main routine of urdf converter */
 int main(int argc, char** argv){
@@ -279,7 +300,7 @@ int main(int argc, char** argv){
 
     // Handover control to controller object
     int feedback;
-    urdfConverter c;
+    urdfImporter c;
     feedback = c.controllMethod(argc, argv);  
     return feedback;
 }

@@ -20,8 +20,5 @@
 :- register_ros_package(ias_knowledge_base).
 :- register_ros_package(mod_srdl).
 
-%:- use_module(library('comp_srdl')).
-
 :- consult('srdl'). % Consult file with srdl prolog predicates
-%:- consult('comp_srdl'). % Consult file with srdl computable predicates
 

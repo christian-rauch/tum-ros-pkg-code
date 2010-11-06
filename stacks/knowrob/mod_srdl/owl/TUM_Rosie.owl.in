@@ -34,6 +34,10 @@
      xmlns:SRDL_capability="http://ias.cs.tum.edu/kb/SRDL_capability.owl#"
      xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
     <owl:Ontology rdf:about="">
+        <rdfs:comment
+            >CAUTION
+This ontology contains low level individuals that are imported from URDF (links and joints) and high level individuals (like arms, ...) that were composed manually.
+Both levels are not yet integrated/ linked.</rdfs:comment>
         <owl:imports rdf:resource="file://@SRDL_PACKAGE_PATH@/owl/SRDL.owl"/>
     </owl:Ontology>
     
@@ -50,9 +54,9 @@
     
 
 
-    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#hasBase -->
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#hasBaseLinkInKinematicChain -->
 
-    <owl:ObjectProperty rdf:about="&SRDL;hasBase"/>
+    <owl:ObjectProperty rdf:about="&SRDL;hasBaseLinkInKinematicChain"/>
     
 
 
@@ -62,9 +66,9 @@
     
 
 
-    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#hasRequirement -->
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#hasComponent -->
 
-    <owl:ObjectProperty rdf:about="&SRDL;hasRequirement"/>
+    <owl:ObjectProperty rdf:about="&SRDL;hasComponent"/>
     
 
 
@@ -74,9 +78,38 @@
     
 
 
-    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#hasSuccessorInCinematicChain -->
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#hasSucceedingJoint -->
 
-    <owl:ObjectProperty rdf:about="&SRDL_component;hasSuccessorInCinematicChain"/>
+    <owl:ObjectProperty rdf:about="&SRDL_component;hasSucceedingJoint"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#hasSucceedingLink -->
+
+    <owl:ObjectProperty rdf:about="&SRDL_component;hasSucceedingLink"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#hasSuccessorInKinematicChain -->
+
+    <owl:ObjectProperty rdf:about="&SRDL_component;hasSuccessorInKinematicChain"/>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Data properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#hasUrdfName -->
+
+    <owl:DatatypeProperty rdf:about="&SRDL_component;hasUrdfName"/>
     
 
 
@@ -91,33 +124,15 @@
     
 
 
-    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#ManipulatingWithFingers -->
+    <!-- http://ias.cs.tum.edu/kb/SRDL.owl#SrdlRobot -->
 
-    <owl:Class rdf:about="&SRDL_capability;ManipulatingWithFingers"/>
+    <owl:Class rdf:about="&SRDL;SrdlRobot"/>
     
 
 
-    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#ObjectClassificationCapability -->
+    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#explore -->
 
-    <owl:Class rdf:about="&SRDL_capability;ObjectClassificationCapability"/>
-    
-
-
-    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#grasp_execution -->
-
-    <owl:Class rdf:about="&SRDL_capability;grasp_execution"/>
-    
-
-
-    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#move_arm -->
-
-    <owl:Class rdf:about="&SRDL_capability;move_arm"/>
-    
-
-
-    <!-- http://ias.cs.tum.edu/kb/SRDL_capability.owl#move_base -->
-
-    <owl:Class rdf:about="&SRDL_capability;move_base"/>
+    <owl:Class rdf:about="&SRDL_capability;explore"/>
     
 
 
@@ -133,9 +148,27 @@
     
 
 
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#ContinuousUrdfJoint -->
+
+    <owl:Class rdf:about="&SRDL_component;ContinuousUrdfJoint"/>
+    
+
+
     <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#DlrHitHand -->
 
     <owl:Class rdf:about="&SRDL_component;DlrHitHand"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#FixedUrdfJoint -->
+
+    <owl:Class rdf:about="&SRDL_component;FixedUrdfJoint"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#FlirThermalCamera -->
+
+    <owl:Class rdf:about="&SRDL_component;FlirThermalCamera"/>
     
 
 
@@ -163,6 +196,12 @@
     
 
 
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#ObjectRecognitionComponent -->
+
+    <owl:Class rdf:about="&SRDL_component;ObjectRecognitionComponent"/>
+    
+
+
     <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#PerceptionArchitecture_ObjectPerception -->
 
     <owl:Class rdf:about="&SRDL_component;PerceptionArchitecture_ObjectPerception"/>
@@ -184,6 +223,12 @@
     <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#RedCupClassification_LearningComp -->
 
     <owl:Class rdf:about="&SRDL_component;RedCupClassification_LearningComp"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#RevoluteUrdfJoint -->
+
+    <owl:Class rdf:about="&SRDL_component;RevoluteUrdfJoint"/>
     
 
 
@@ -211,6 +256,12 @@
     
 
 
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#UrdfLink -->
+
+    <owl:Class rdf:about="&SRDL_component;UrdfLink"/>
+    
+
+
     <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#VectorFieldArmController -->
 
     <owl:Class rdf:about="&SRDL_component;VectorFieldArmController"/>
@@ -223,42 +274,54 @@
     
 
 
+    <!-- http://ias.cs.tum.edu/kb/SRDL_component.owl#VisualSensorToBack -->
+
+    <owl:Class rdf:about="&SRDL_component;VisualSensorToBack"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_RosieSrdl -->
+
+    <owl:Class rdf:about="#TUM_RosieSrdl">
+        <rdfs:subClassOf rdf:resource="&SRDL;SrdlRobot"/>
+        <rdfs:subClassOf rdf:resource="&knowrob;TUM_Rosie"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&SRDL;hasCapability"/>
+                <owl:someValuesFrom rdf:resource="&SRDL_capability;explore"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#CupObjectModel -->
+
+    <owl:Class rdf:about="&knowrob;CupObjectModel"/>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#KnifeObjectModel -->
+
+    <owl:Class rdf:about="&knowrob;KnifeObjectModel"/>
+    
+
+
     <!-- http://ias.cs.tum.edu/kb/knowrob.owl#Map -->
 
     <owl:Class rdf:about="&knowrob;Map"/>
     
 
 
+    <!-- http://ias.cs.tum.edu/kb/knowrob.owl#PlateObjectModel -->
+
+    <owl:Class rdf:about="&knowrob;PlateObjectModel"/>
+    
+
+
     <!-- http://ias.cs.tum.edu/kb/knowrob.owl#TUM_Rosie -->
 
-    <owl:Class rdf:about="&knowrob;TUM_Rosie">
-        <rdfs:subClassOf>
-            <owl:Class>
-                <owl:intersectionOf rdf:parseType="Collection">
-                    <owl:Restriction>
-                        <owl:onProperty rdf:resource="&SRDL;hasCapability"/>
-                        <owl:someValuesFrom rdf:resource="&SRDL_capability;ManipulatingWithFingers"/>
-                    </owl:Restriction>
-                    <owl:Restriction>
-                        <owl:onProperty rdf:resource="&SRDL;hasCapability"/>
-                        <owl:someValuesFrom rdf:resource="&SRDL_capability;ObjectClassificationCapability"/>
-                    </owl:Restriction>
-                    <owl:Restriction>
-                        <owl:onProperty rdf:resource="&SRDL;hasCapability"/>
-                        <owl:someValuesFrom rdf:resource="&SRDL_capability;grasp_execution"/>
-                    </owl:Restriction>
-                    <owl:Restriction>
-                        <owl:onProperty rdf:resource="&SRDL;hasCapability"/>
-                        <owl:someValuesFrom rdf:resource="&SRDL_capability;move_arm"/>
-                    </owl:Restriction>
-                    <owl:Restriction>
-                        <owl:onProperty rdf:resource="&SRDL;hasCapability"/>
-                        <owl:someValuesFrom rdf:resource="&SRDL_capability;move_base"/>
-                    </owl:Restriction>
-                </owl:intersectionOf>
-            </owl:Class>
-        </rdfs:subClassOf>
-    </owl:Class>
+    <owl:Class rdf:about="&knowrob;TUM_Rosie"/>
     
 
 
@@ -295,6 +358,14 @@
     
 
 
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_CupObjectModel -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_CupObjectModel">
+        <rdf:type rdf:resource="&knowrob;CupObjectModel"/>
+    </owl:Thing>
+    
+
+
     <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_DlrHand1_Left -->
 
     <SRDL_component:DlrHitHand rdf:about="#TUM_Rosie_DlrHand1_Left">
@@ -315,10 +386,11 @@
 
     <SRDL_component:Torso rdf:about="#TUM_Rosie_Head">
         <rdf:type rdf:resource="&owl;Thing"/>
-        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_Camera1_Left"/>
-        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_Camera2_Right"/>
-        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_SwissRangerTOF1"/>
-        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_VidereStereoOnChip1"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_Camera1_Left"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_Camera2_Right"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_InfraredCamera"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_SwissRangerTOF1"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_VidereStereoOnChip1"/>
     </SRDL_component:Torso>
     
 
@@ -334,6 +406,7 @@
     <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_Hokuyo2_Rear -->
 
     <SRDL_component:HokuyoURG04LX rdf:about="#TUM_Rosie_Hokuyo2_Rear">
+        <rdf:type rdf:resource="&SRDL_component;VisualSensorToBack"/>
         <rdf:type rdf:resource="&owl;Thing"/>
     </SRDL_component:HokuyoURG04LX>
     
@@ -347,11 +420,27 @@
     
 
 
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_InfraredCamera -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_InfraredCamera">
+        <rdf:type rdf:resource="&SRDL_component;FlirThermalCamera"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_KnifeObjectModel -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_KnifeObjectModel">
+        <rdf:type rdf:resource="&knowrob;KnifeObjectModel"/>
+    </owl:Thing>
+    
+
+
     <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_KukaArm1_Left -->
 
     <SRDL_component:KukaLwr4 rdf:about="#TUM_Rosie_KukaArm1_Left">
         <rdf:type rdf:resource="&owl;Thing"/>
-        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_DlrHand1_Left"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_DlrHand1_Left"/>
     </SRDL_component:KukaLwr4>
     
 
@@ -361,6 +450,51 @@
     <SRDL_component:KukaLwr4 rdf:about="#TUM_Rosie_KukaArm2_Right">
         <rdf:type rdf:resource="&owl;Thing"/>
     </SRDL_component:KukaLwr4>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_LeftEyeCalc -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_LeftEyeCalc">
+        <rdf:type rdf:resource="&SRDL_component;UrdfLink"/>
+        <SRDL_component:hasUrdfName>LeftEyeCalc</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_LeftEyeCalc_sensor_fixed_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_LeftEyeCalc_sensor_fixed_joint"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_LeftEyeCalc_fixed_joint -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_LeftEyeCalc_fixed_joint">
+        <rdf:type rdf:resource="&SRDL_component;FixedUrdfJoint"/>
+        <SRDL_component:hasUrdfName
+            >LeftEyeCalc_fixed_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_LeftEyeCalc"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_LeftEyeCalc"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_LeftEyeCalc_sensor -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_LeftEyeCalc_sensor">
+        <rdf:type rdf:resource="&SRDL_component;UrdfLink"/>
+        <SRDL_component:hasUrdfName
+            >LeftEyeCalc_sensor</SRDL_component:hasUrdfName>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_LeftEyeCalc_sensor_fixed_joint -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_LeftEyeCalc_sensor_fixed_joint">
+        <rdf:type rdf:resource="&SRDL_component;FixedUrdfJoint"/>
+        <SRDL_component:hasUrdfName
+            >LeftEyeCalc_sensor_fixed_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_LeftEyeCalc_sensor"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_LeftEyeCalc_sensor"/>
+    </owl:Thing>
     
 
 
@@ -380,13 +514,76 @@
     
 
 
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_PlateObjectModel -->
+
+    <knowrob:PlateObjectModel rdf:about="#TUM_Rosie_PlateObjectModel">
+        <rdf:type rdf:resource="&owl;Thing"/>
+    </knowrob:PlateObjectModel>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_RightEyeCalc -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_RightEyeCalc">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName>RightEyeCalc</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_LeftEyeCalc_fixed_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_LeftEyeCalc_fixed_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_RightEyeCalc_sensor_fixed_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_RightEyeCalc_sensor_fixed_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_sr4_fixed_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_sr4_fixed_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_wide_stereo_frame_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_wide_stereo_frame_joint"/>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_RightEyeCalc_fixed_joint -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_RightEyeCalc_fixed_joint">
+        <rdf:type rdf:resource="&SRDL_component;FixedUrdfJoint"/>
+        <SRDL_component:hasUrdfName
+            >RightEyeCalc_fixed_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_RightEyeCalc"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_RightEyeCalc"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_RightEyeCalc_sensor -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_RightEyeCalc_sensor">
+        <rdf:type rdf:resource="&SRDL_component;UrdfLink"/>
+        <SRDL_component:hasUrdfName
+            >RightEyeCalc_sensor</SRDL_component:hasUrdfName>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_RightEyeCalc_sensor_fixed_joint -->
+
+    <SRDL_component:FixedUrdfJoint rdf:about="#TUM_Rosie_RightEyeCalc_sensor_fixed_joint">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >RightEyeCalc_sensor_fixed_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_RightEyeCalc_sensor"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_RightEyeCalc_sensor"/>
+    </SRDL_component:FixedUrdfJoint>
+    
+
+
     <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_RobotInstance1 -->
 
     <owl:Thing rdf:about="#TUM_Rosie_RobotInstance1">
-        <rdf:type rdf:resource="&knowrob;TUM_Rosie"/>
-        <SRDL:hasRequirement rdf:resource="#TUM_Rosie_Map"/>
-        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_WheeledOmnidirPlatform1"/>
-        <SRDL:hasBase rdf:resource="#TUM_Rosie_WheeledOmnidirPlatform1"/>
+        <rdf:type rdf:resource="#TUM_RosieSrdl"/>
+        <SRDL:hasComponent rdf:resource="#TUM_Rosie_CupObjectModel"/>
+        <SRDL:hasComponent rdf:resource="#TUM_Rosie_KnifeObjectModel"/>
+        <SRDL:hasComponent rdf:resource="#TUM_Rosie_Map"/>
+        <SRDL:hasComponent rdf:resource="#TUM_Rosie_PlateObjectModel"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_WheeledOmnidirPlatform1"/>
+        <SRDL:hasBaseLinkInKinematicChain rdf:resource="#TUM_Rosie_WheeledOmnidirPlatform1"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_base_link"/>
     </owl:Thing>
     
 
@@ -403,12 +600,13 @@
 
     <owl:Thing rdf:about="#TUM_Rosie_Torso1">
         <rdf:type rdf:resource="&SRDL_component;Torso"/>
-        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_Head"/>
-        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_Hokuyo1_Shoulder"/>
-        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_Hokuyo3_Front"/>
-        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_KukaArm1_Left"/>
-        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_KukaArm2_Right"/>
-        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_PC"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_Head"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_Hokuyo1_Shoulder"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_Hokuyo2_Rear"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_Hokuyo3_Front"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_KukaArm1_Left"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_KukaArm2_Right"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_PC"/>
     </owl:Thing>
     
 
@@ -425,8 +623,692 @@
 
     <SRDL_component:KukaOmnidirPlatform rdf:about="#TUM_Rosie_WheeledOmnidirPlatform1">
         <rdf:type rdf:resource="&owl;Thing"/>
-        <SRDL_component:hasSuccessorInCinematicChain rdf:resource="#TUM_Rosie_Torso1"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_Torso1"/>
     </SRDL_component:KukaOmnidirPlatform>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_base_joint -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_base_joint">
+        <rdf:type rdf:resource="&SRDL_component;ContinuousUrdfJoint"/>
+        <SRDL_component:hasUrdfName>base_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_base_link"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_base_link"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_base_left_arm_base_joint -->
+
+    <SRDL_component:FixedUrdfJoint rdf:about="#TUM_Rosie_base_left_arm_base_joint">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >base_left_arm_base_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_calib_left_arm_base_link"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_calib_left_arm_base_link"/>
+    </SRDL_component:FixedUrdfJoint>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_base_left_back_wheel_link -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_base_left_back_wheel_link">
+        <rdf:type rdf:resource="&SRDL_component;UrdfLink"/>
+        <SRDL_component:hasUrdfName
+            >base_left_back_wheel_link</SRDL_component:hasUrdfName>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_base_left_front_wheel_link -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_base_left_front_wheel_link">
+        <rdf:type rdf:resource="&SRDL_component;UrdfLink"/>
+        <SRDL_component:hasUrdfName
+            >base_left_front_wheel_link</SRDL_component:hasUrdfName>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_base_link -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_base_link">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName>base_link</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_base_left_arm_base_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_base_left_arm_base_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_base_right_arm_base_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_base_right_arm_base_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_base_torso_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_base_torso_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_laser_front_left_fixed_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_laser_front_left_fixed_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_laser_rear_right_fixed_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_laser_rear_right_fixed_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_left_back_wheel_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_left_back_wheel_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_left_front_wheel_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_left_front_wheel_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_ptu_base_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_ptu_base_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_right_back_wheel_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_right_back_wheel_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_right_front_wheel_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_right_front_wheel_joint"/>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_base_right_arm_base_joint -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_base_right_arm_base_joint">
+        <rdf:type rdf:resource="&SRDL_component;FixedUrdfJoint"/>
+        <SRDL_component:hasUrdfName
+            >base_right_arm_base_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_calib_right_arm_base_link"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_calib_right_arm_base_link"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_base_right_back_wheel_link -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_base_right_back_wheel_link">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >base_right_back_wheel_link</SRDL_component:hasUrdfName>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_base_right_front_wheel_link -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_base_right_front_wheel_link">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >base_right_front_wheel_link</SRDL_component:hasUrdfName>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_base_torso_joint -->
+
+    <SRDL_component:FixedUrdfJoint rdf:about="#TUM_Rosie_base_torso_joint">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >base_torso_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_torso_link"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_torso_link"/>
+    </SRDL_component:FixedUrdfJoint>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_calib_left_arm_base_link -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_calib_left_arm_base_link">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >calib_left_arm_base_link</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_left_arm_0_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_left_arm_0_joint"/>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_calib_right_arm_base_link -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_calib_right_arm_base_link">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >calib_right_arm_base_link</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_right_arm_0_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_right_arm_0_joint"/>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_head_pan_joint -->
+
+    <SRDL_component:RevoluteUrdfJoint rdf:about="#TUM_Rosie_head_pan_joint">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName>head_pan_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_head_pan_link"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_head_pan_link"/>
+    </SRDL_component:RevoluteUrdfJoint>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_head_pan_link -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_head_pan_link">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName>head_pan_link</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_head_tilt_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_head_tilt_joint"/>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_head_tilt_joint -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_head_tilt_joint">
+        <rdf:type rdf:resource="&SRDL_component;RevoluteUrdfJoint"/>
+        <SRDL_component:hasUrdfName>head_tilt_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_ptu_tilt_center"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_ptu_tilt_center"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_laser_front_left -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_laser_front_left">
+        <rdf:type rdf:resource="&SRDL_component;UrdfLink"/>
+        <SRDL_component:hasUrdfName
+            >laser_front_left</SRDL_component:hasUrdfName>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_laser_front_left_fixed_joint -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_laser_front_left_fixed_joint">
+        <rdf:type rdf:resource="&SRDL_component;FixedUrdfJoint"/>
+        <SRDL_component:hasUrdfName
+            >laser_front_left_fixed_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_laser_front_left"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_laser_front_left"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_laser_rear_right -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_laser_rear_right">
+        <rdf:type rdf:resource="&SRDL_component;UrdfLink"/>
+        <SRDL_component:hasUrdfName
+            >laser_rear_right</SRDL_component:hasUrdfName>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_laser_rear_right_fixed_joint -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_laser_rear_right_fixed_joint">
+        <rdf:type rdf:resource="&SRDL_component;FixedUrdfJoint"/>
+        <SRDL_component:hasUrdfName
+            >laser_rear_right_fixed_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_laser_rear_right"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_laser_rear_right"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_laser_tilt_fixed_joint -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_laser_tilt_fixed_joint">
+        <rdf:type rdf:resource="&SRDL_component;FixedUrdfJoint"/>
+        <SRDL_component:hasUrdfName
+            >laser_tilt_fixed_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_shoulder_tilting_laser"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_shoulder_tilting_laser"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_left_arm_0_joint -->
+
+    <SRDL_component:RevoluteUrdfJoint rdf:about="#TUM_Rosie_left_arm_0_joint">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >left_arm_0_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_left_arm_1_link"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_left_arm_1_link"/>
+    </SRDL_component:RevoluteUrdfJoint>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_left_arm_1_joint -->
+
+    <SRDL_component:RevoluteUrdfJoint rdf:about="#TUM_Rosie_left_arm_1_joint">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >left_arm_1_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_left_arm_2_link"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_left_arm_2_link"/>
+    </SRDL_component:RevoluteUrdfJoint>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_left_arm_1_link -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_left_arm_1_link">
+        <rdf:type rdf:resource="&SRDL_component;UrdfLink"/>
+        <SRDL_component:hasUrdfName>left_arm_1_link</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_left_arm_1_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_left_arm_1_joint"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_left_arm_2_joint -->
+
+    <SRDL_component:RevoluteUrdfJoint rdf:about="#TUM_Rosie_left_arm_2_joint">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >left_arm_2_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_left_arm_3_link"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_left_arm_3_link"/>
+    </SRDL_component:RevoluteUrdfJoint>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_left_arm_2_link -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_left_arm_2_link">
+        <rdf:type rdf:resource="&SRDL_component;UrdfLink"/>
+        <SRDL_component:hasUrdfName>left_arm_2_link</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_left_arm_2_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_left_arm_2_joint"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_left_arm_3_joint -->
+
+    <SRDL_component:RevoluteUrdfJoint rdf:about="#TUM_Rosie_left_arm_3_joint">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >left_arm_3_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_left_arm_4_link"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_left_arm_4_link"/>
+    </SRDL_component:RevoluteUrdfJoint>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_left_arm_3_link -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_left_arm_3_link">
+        <rdf:type rdf:resource="&SRDL_component;UrdfLink"/>
+        <SRDL_component:hasUrdfName>left_arm_3_link</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_left_arm_3_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_left_arm_3_joint"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_left_arm_4_joint -->
+
+    <SRDL_component:RevoluteUrdfJoint rdf:about="#TUM_Rosie_left_arm_4_joint">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >left_arm_4_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_left_arm_5_link"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_left_arm_5_link"/>
+    </SRDL_component:RevoluteUrdfJoint>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_left_arm_4_link -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_left_arm_4_link">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName>left_arm_4_link</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_left_arm_4_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_left_arm_4_joint"/>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_left_arm_5_joint -->
+
+    <SRDL_component:RevoluteUrdfJoint rdf:about="#TUM_Rosie_left_arm_5_joint">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >left_arm_5_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_left_arm_6_link"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_left_arm_6_link"/>
+    </SRDL_component:RevoluteUrdfJoint>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_left_arm_5_link -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_left_arm_5_link">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName>left_arm_5_link</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_left_arm_5_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_left_arm_5_joint"/>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_left_arm_6_joint -->
+
+    <SRDL_component:RevoluteUrdfJoint rdf:about="#TUM_Rosie_left_arm_6_joint">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >left_arm_6_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_left_arm_7_link"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_left_arm_7_link"/>
+    </SRDL_component:RevoluteUrdfJoint>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_left_arm_6_link -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_left_arm_6_link">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName>left_arm_6_link</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_left_arm_6_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_left_arm_6_joint"/>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_left_arm_7_link -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_left_arm_7_link">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName>left_arm_7_link</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_left_arm_hand_fixed_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_left_arm_hand_fixed_joint"/>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_left_arm_hand_fixed_joint -->
+
+    <SRDL_component:FixedUrdfJoint rdf:about="#TUM_Rosie_left_arm_hand_fixed_joint">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >left_arm_hand_fixed_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_left_arm_hand_link"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_left_arm_hand_link"/>
+    </SRDL_component:FixedUrdfJoint>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_left_arm_hand_link -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_left_arm_hand_link">
+        <rdf:type rdf:resource="&SRDL_component;UrdfLink"/>
+        <SRDL_component:hasUrdfName
+            >left_arm_hand_link</SRDL_component:hasUrdfName>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_left_back_wheel_joint -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_left_back_wheel_joint">
+        <rdf:type rdf:resource="&SRDL_component;FixedUrdfJoint"/>
+        <SRDL_component:hasUrdfName
+            >left_back_wheel_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_base_left_back_wheel_link"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_base_left_back_wheel_link"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_left_front_wheel_joint -->
+
+    <SRDL_component:FixedUrdfJoint rdf:about="#TUM_Rosie_left_front_wheel_joint">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >left_front_wheel_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_base_left_front_wheel_link"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_base_left_front_wheel_link"/>
+    </SRDL_component:FixedUrdfJoint>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_measured_ptu_base -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_measured_ptu_base">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >measured_ptu_base</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_head_pan_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_head_pan_joint"/>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_ptu_base_joint -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_ptu_base_joint">
+        <rdf:type rdf:resource="&SRDL_component;FixedUrdfJoint"/>
+        <SRDL_component:hasUrdfName>ptu_base_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_measured_ptu_base"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_measured_ptu_base"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_ptu_tilt_center -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_ptu_tilt_center">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName>ptu_tilt_center</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_RightEyeCalc_fixed_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_RightEyeCalc_fixed_joint"/>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_right_arm_0_joint -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_right_arm_0_joint">
+        <rdf:type rdf:resource="&SRDL_component;RevoluteUrdfJoint"/>
+        <SRDL_component:hasUrdfName
+            >right_arm_0_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_right_arm_1_link"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_right_arm_1_link"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_right_arm_1_joint -->
+
+    <SRDL_component:RevoluteUrdfJoint rdf:about="#TUM_Rosie_right_arm_1_joint">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >right_arm_1_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_right_arm_2_link"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_right_arm_2_link"/>
+    </SRDL_component:RevoluteUrdfJoint>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_right_arm_1_link -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_right_arm_1_link">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >right_arm_1_link</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_right_arm_1_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_right_arm_1_joint"/>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_right_arm_2_joint -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_right_arm_2_joint">
+        <rdf:type rdf:resource="&SRDL_component;RevoluteUrdfJoint"/>
+        <SRDL_component:hasUrdfName
+            >right_arm_2_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_right_arm_3_link"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_right_arm_3_link"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_right_arm_2_link -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_right_arm_2_link">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >right_arm_2_link</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_right_arm_2_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_right_arm_2_joint"/>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_right_arm_3_joint -->
+
+    <SRDL_component:RevoluteUrdfJoint rdf:about="#TUM_Rosie_right_arm_3_joint">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >right_arm_3_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_right_arm_4_link"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_right_arm_4_link"/>
+    </SRDL_component:RevoluteUrdfJoint>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_right_arm_3_link -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_right_arm_3_link">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >right_arm_3_link</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_right_arm_3_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_right_arm_3_joint"/>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_right_arm_4_joint -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_right_arm_4_joint">
+        <rdf:type rdf:resource="&SRDL_component;RevoluteUrdfJoint"/>
+        <SRDL_component:hasUrdfName
+            >right_arm_4_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_right_arm_5_link"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_right_arm_5_link"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_right_arm_4_link -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_right_arm_4_link">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >right_arm_4_link</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_right_arm_4_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_right_arm_4_joint"/>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_right_arm_5_joint -->
+
+    <SRDL_component:RevoluteUrdfJoint rdf:about="#TUM_Rosie_right_arm_5_joint">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >right_arm_5_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_right_arm_6_link"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_right_arm_6_link"/>
+    </SRDL_component:RevoluteUrdfJoint>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_right_arm_5_link -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_right_arm_5_link">
+        <rdf:type rdf:resource="&SRDL_component;UrdfLink"/>
+        <SRDL_component:hasUrdfName
+            >right_arm_5_link</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_right_arm_5_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_right_arm_5_joint"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_right_arm_6_joint -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_right_arm_6_joint">
+        <rdf:type rdf:resource="&SRDL_component;RevoluteUrdfJoint"/>
+        <SRDL_component:hasUrdfName
+            >right_arm_6_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_right_arm_7_link"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_right_arm_7_link"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_right_arm_6_link -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_right_arm_6_link">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >right_arm_6_link</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_right_arm_6_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_right_arm_6_joint"/>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_right_arm_7_link -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_right_arm_7_link">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >right_arm_7_link</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_right_arm_hand_fixed_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_right_arm_hand_fixed_joint"/>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_right_arm_hand_fixed_joint -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_right_arm_hand_fixed_joint">
+        <rdf:type rdf:resource="&SRDL_component;FixedUrdfJoint"/>
+        <SRDL_component:hasUrdfName
+            >right_arm_hand_fixed_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_right_arm_hand_link"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_right_arm_hand_link"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_right_arm_hand_link -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_right_arm_hand_link">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >right_arm_hand_link</SRDL_component:hasUrdfName>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_right_back_wheel_joint -->
+
+    <SRDL_component:FixedUrdfJoint rdf:about="#TUM_Rosie_right_back_wheel_joint">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >right_back_wheel_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_base_right_back_wheel_link"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_base_right_back_wheel_link"/>
+    </SRDL_component:FixedUrdfJoint>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_right_front_wheel_joint -->
+
+    <SRDL_component:FixedUrdfJoint rdf:about="#TUM_Rosie_right_front_wheel_joint">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >right_front_wheel_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_base_right_front_wheel_link"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_base_right_front_wheel_link"/>
+    </SRDL_component:FixedUrdfJoint>
     
 
 
@@ -445,6 +1327,15 @@
         <rdf:type rdf:resource="&owl;Thing"/>
         <SRDL_component:executedOn rdf:resource="#TUM_Rosie_PC"/>
     </SRDL_component:LocalizationAndNavigation>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_ros_ObjectRecognitionComponent1 -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_ros_ObjectRecognitionComponent1">
+        <rdf:type rdf:resource="&SRDL_component;ObjectRecognitionComponent"/>
+        <SRDL_component:executedOn rdf:resource="#TUM_Rosie_PC"/>
+    </owl:Thing>
     
 
 
@@ -489,6 +1380,272 @@
     <owl:Thing rdf:about="#TUM_Rosie_ros_Simulation1">
         <rdf:type rdf:resource="&SRDL_component;Simulation"/>
         <SRDL_component:executedOn rdf:resource="#TUM_Rosie_PC"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_shoulder_tilt_base -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_shoulder_tilt_base">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >shoulder_tilt_base</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_shoulder_tilting_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_shoulder_tilting_joint"/>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_shoulder_tilt_end -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_shoulder_tilt_end">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >shoulder_tilt_end</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_laser_tilt_fixed_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_laser_tilt_fixed_joint"/>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_shoulder_tilt_fixed_joint -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_shoulder_tilt_fixed_joint">
+        <rdf:type rdf:resource="&SRDL_component;FixedUrdfJoint"/>
+        <SRDL_component:hasUrdfName
+            >shoulder_tilt_fixed_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_shoulder_tilt_base"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_shoulder_tilt_base"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_shoulder_tilting_joint -->
+
+    <SRDL_component:RevoluteUrdfJoint rdf:about="#TUM_Rosie_shoulder_tilting_joint">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >shoulder_tilting_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_shoulder_tilt_end"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_shoulder_tilt_end"/>
+    </SRDL_component:RevoluteUrdfJoint>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_shoulder_tilting_laser -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_shoulder_tilting_laser">
+        <rdf:type rdf:resource="&SRDL_component;UrdfLink"/>
+        <SRDL_component:hasUrdfName
+            >shoulder_tilting_laser</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_shoulder_tilting_laser_sensor_fixed_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_shoulder_tilting_laser_sensor_fixed_joint"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_shoulder_tilting_laser_sensor -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_shoulder_tilting_laser_sensor">
+        <rdf:type rdf:resource="&SRDL_component;UrdfLink"/>
+        <SRDL_component:hasUrdfName
+            >shoulder_tilting_laser_sensor</SRDL_component:hasUrdfName>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_shoulder_tilting_laser_sensor_fixed_joint -->
+
+    <SRDL_component:FixedUrdfJoint rdf:about="#TUM_Rosie_shoulder_tilting_laser_sensor_fixed_joint">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >shoulder_tilting_laser_sensor_fixed_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_shoulder_tilting_laser_sensor"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_shoulder_tilting_laser_sensor"/>
+    </SRDL_component:FixedUrdfJoint>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_sr4 -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_sr4">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName>sr4</SRDL_component:hasUrdfName>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_sr4_fixed_joint -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_sr4_fixed_joint">
+        <rdf:type rdf:resource="&SRDL_component;FixedUrdfJoint"/>
+        <SRDL_component:hasUrdfName>sr4_fixed_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_sr4"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_sr4"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_torso_link -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_torso_link">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName>torso_link</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_shoulder_tilt_fixed_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_shoulder_tilt_fixed_joint"/>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_wide_stereo_frame_joint -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_wide_stereo_frame_joint">
+        <rdf:type rdf:resource="&SRDL_component;FixedUrdfJoint"/>
+        <SRDL_component:hasUrdfName
+            >wide_stereo_frame_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_wide_stereo_link"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_wide_stereo_link"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_wide_stereo_gazebo_l_stereo_camera_frame -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_wide_stereo_gazebo_l_stereo_camera_frame">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >wide_stereo_gazebo_l_stereo_camera_frame</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_wide_stereo_gazebo_l_stereo_camera_optical_frame_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_wide_stereo_gazebo_l_stereo_camera_optical_frame_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_wide_stereo_gazebo_r_stereo_camera_frame_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_wide_stereo_gazebo_r_stereo_camera_frame_joint"/>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_wide_stereo_gazebo_l_stereo_camera_frame_joint -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_wide_stereo_gazebo_l_stereo_camera_frame_joint">
+        <rdf:type rdf:resource="&SRDL_component;FixedUrdfJoint"/>
+        <SRDL_component:hasUrdfName
+            >wide_stereo_gazebo_l_stereo_camera_frame_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_wide_stereo_gazebo_l_stereo_camera_frame"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_wide_stereo_gazebo_l_stereo_camera_frame"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_wide_stereo_gazebo_l_stereo_camera_optical_frame -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_wide_stereo_gazebo_l_stereo_camera_optical_frame">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >wide_stereo_gazebo_l_stereo_camera_optical_frame</SRDL_component:hasUrdfName>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_wide_stereo_gazebo_l_stereo_camera_optical_frame_joint -->
+
+    <SRDL_component:FixedUrdfJoint rdf:about="#TUM_Rosie_wide_stereo_gazebo_l_stereo_camera_optical_frame_joint">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >wide_stereo_gazebo_l_stereo_camera_optical_frame_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_wide_stereo_gazebo_l_stereo_camera_optical_frame"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_wide_stereo_gazebo_l_stereo_camera_optical_frame"/>
+    </SRDL_component:FixedUrdfJoint>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_wide_stereo_gazebo_r_stereo_camera_frame -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_wide_stereo_gazebo_r_stereo_camera_frame">
+        <rdf:type rdf:resource="&SRDL_component;UrdfLink"/>
+        <SRDL_component:hasUrdfName
+            >wide_stereo_gazebo_r_stereo_camera_frame</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_wide_stereo_gazebo_r_stereo_camera_optical_frame_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_wide_stereo_gazebo_r_stereo_camera_optical_frame_joint"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_wide_stereo_gazebo_r_stereo_camera_frame_joint -->
+
+    <SRDL_component:FixedUrdfJoint rdf:about="#TUM_Rosie_wide_stereo_gazebo_r_stereo_camera_frame_joint">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >wide_stereo_gazebo_r_stereo_camera_frame_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_wide_stereo_gazebo_r_stereo_camera_frame"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_wide_stereo_gazebo_r_stereo_camera_frame"/>
+    </SRDL_component:FixedUrdfJoint>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_wide_stereo_gazebo_r_stereo_camera_optical_frame -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_wide_stereo_gazebo_r_stereo_camera_optical_frame">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >wide_stereo_gazebo_r_stereo_camera_optical_frame</SRDL_component:hasUrdfName>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_wide_stereo_gazebo_r_stereo_camera_optical_frame_joint -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_wide_stereo_gazebo_r_stereo_camera_optical_frame_joint">
+        <rdf:type rdf:resource="&SRDL_component;FixedUrdfJoint"/>
+        <SRDL_component:hasUrdfName
+            >wide_stereo_gazebo_r_stereo_camera_optical_frame_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_wide_stereo_gazebo_r_stereo_camera_optical_frame"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_wide_stereo_gazebo_r_stereo_camera_optical_frame"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_wide_stereo_link -->
+
+    <SRDL_component:UrdfLink rdf:about="#TUM_Rosie_wide_stereo_link">
+        <rdf:type rdf:resource="&owl;Thing"/>
+        <SRDL_component:hasUrdfName
+            >wide_stereo_link</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_wide_stereo_gazebo_l_stereo_camera_frame_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_wide_stereo_gazebo_l_stereo_camera_frame_joint"/>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_wide_stereo_optical_frame_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_wide_stereo_optical_frame_joint"/>
+    </SRDL_component:UrdfLink>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_wide_stereo_optical_frame -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_wide_stereo_optical_frame">
+        <rdf:type rdf:resource="&SRDL_component;UrdfLink"/>
+        <SRDL_component:hasUrdfName
+            >wide_stereo_optical_frame</SRDL_component:hasUrdfName>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_wide_stereo_optical_frame_joint -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_wide_stereo_optical_frame_joint">
+        <rdf:type rdf:resource="&SRDL_component;FixedUrdfJoint"/>
+        <SRDL_component:hasUrdfName
+            >wide_stereo_optical_frame_joint</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_wide_stereo_optical_frame"/>
+        <SRDL_component:hasSucceedingLink rdf:resource="#TUM_Rosie_wide_stereo_optical_frame"/>
+    </owl:Thing>
+    
+
+
+    <!-- http://ias.cs.tum.edu/kb/TUM_Rosie.owl#TUM_Rosie_world -->
+
+    <owl:Thing rdf:about="#TUM_Rosie_world">
+        <rdf:type rdf:resource="&SRDL_component;UrdfLink"/>
+        <SRDL_component:hasUrdfName>world</SRDL_component:hasUrdfName>
+        <SRDL_component:hasSucceedingJoint rdf:resource="#TUM_Rosie_base_joint"/>
+        <SRDL_component:hasSuccessorInKinematicChain rdf:resource="#TUM_Rosie_base_joint"/>
     </owl:Thing>
     
 
