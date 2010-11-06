@@ -227,7 +227,7 @@ cop_to_knowrob('defaulttableobject', K) :- K= 'http://ias.cs.tum.edu/kb/knowrob.
 
 cop_to_knowrob('bowl-eating', K)        :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#Bowl-Eating',!.
 cop_to_knowrob('cowsmilk-product', K)   :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#CowsMilk-Product',!.
-cop_to_knowrob('breakfast-cereal', K)   :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#BreakfastCereal',!.
+cop_to_knowrob('breakfastcereal', K)   :- K= 'http://ias.cs.tum.edu/kb/knowrob.owl#BreakfastCereal',!.
 
 
 
