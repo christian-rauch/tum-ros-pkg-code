@@ -7,6 +7,7 @@
 package edu.tum.cs.util.datastruct;
 
 import java.util.Iterator;
+import java.util.NoSuchElementException;
 import java.util.Vector;
 
 public class MultiIterator<T> implements Iterable<T> {
@@ -14,7 +15,7 @@ public class MultiIterator<T> implements Iterable<T> {
 	Vector<Iterable<T>> collections = new Vector<Iterable<T>>();	
 	
 	public Iterator<T> iterator() {
-		return new LocalIterator(collections);
+		return new LocalIterator<T>(collections);
 	}
 	
 	public void add(Iterable<T> i) {
@@ -33,7 +34,7 @@ public class MultiIterator<T> implements Iterable<T> {
 		return iterator().hasNext();
 	}
 	
-	public class LocalIterator implements Iterator<T> {
+	public class LocalIterator<T> implements Iterator<T> {
 
 		Vector<Iterable<T>> collections;
 		Iterator<Iterable<T>> ii;
@@ -56,6 +57,8 @@ public class MultiIterator<T> implements Iterable<T> {
 		}
 
 		public T next() {
+			if(!hasNext())
+				throw new NoSuchElementException();
 			return curI.next();
 		}
 

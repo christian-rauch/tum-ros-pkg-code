@@ -1,5 +1,6 @@
 package edu.tum.cs.util.datastruct;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.Vector;
@@ -44,5 +45,13 @@ public class Map2List<TKey, TValue> {
 	
 	public Set<Entry<TKey, Vector<TValue>>> entrySet() {
 		return map.entrySet();
+	}
+	
+	public Vector<TValue> remove(TKey key) {
+		return map.remove(key);
+	}
+	
+	public Collection<Vector<TValue>> values() {
+		return map.values();
 	}
 }

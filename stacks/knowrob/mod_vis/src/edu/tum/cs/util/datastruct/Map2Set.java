@@ -2,6 +2,7 @@ package edu.tum.cs.util.datastruct;
 
 import java.util.HashMap;
 import java.util.Set;
+import java.util.Vector;
 import java.util.Map.Entry;
 
 /**
