@@ -1,8 +1,0 @@
-
-<launch>
-  <include file="$(find rosie_executive)/launch/location_costmap_processing_rosie.launch"/>
-  <node name="cram_actionserver" pkg="rosie_executive" type="rosie_executive_action" output="screen">
-    <param name="record_execution_trace" value="true"/>
-    <param name="execution_trace_dir" value="$(find rosie_executive)/execution_traces"/>
-  </node>
-</launch>
