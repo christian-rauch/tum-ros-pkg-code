@@ -156,7 +156,7 @@ public:
 	else
 	  {
 	    const cv::Vec3b& bgr = image.at<cv::Vec3b>(round(uv.y), round(uv.x));
-	    int32_t rgb_packed = (bgr[0] << 16) | (bgr[1] << 8) | bgr[2];
+	    int32_t rgb_packed = (bgr[2] << 16) | (bgr[1] << 8) | bgr[0];
 	    point_xyzrgb.rgb = *reinterpret_cast<float*>(&rgb_packed);
 	  }
       }
