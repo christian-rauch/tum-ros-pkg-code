@@ -7,3 +7,4 @@
 - svn: {local-name: rosjava, uri: 'https://code.ros.org/svn/ros/stacks/ros_experimental/trunk/rosjava'}
 - svn: {local-name: roslisp_common, uri: 'https://code.ros.org/svn/ros-pkg/stacks/roslisp_common/trunk'}
 - svn: {local-name: tabletop_msgs, uri: 'https://code.ros.org/svn/wg-ros-pkg/branches/trunk_cturtle/demos/tabletop_manipulation/tabletop_msgs'}
+- svn: {local-name: stacks/knowrob, uri: 'http://code.in.tum.de/pubsvn/knowrob/tags/latest'}
