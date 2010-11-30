@@ -9,7 +9,7 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/rosie_2dnav_gazebo</url>
   <depend package="fake_localization"/>
-  <depend package="rosie_movie_base"/>
+  <depend package="rosie_move_base"/>
   <depend package="nav_pcontroller"/>
 
 </package>
