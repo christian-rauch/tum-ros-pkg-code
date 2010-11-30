@@ -1,0 +1,3 @@
+triangle_mesh_msgs/TriangleMesh mesh
+---
+string label

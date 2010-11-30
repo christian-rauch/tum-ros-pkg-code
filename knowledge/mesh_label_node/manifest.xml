@@ -1,0 +1,16 @@
+<package>
+  <description brief="mesh_label_node">
+
+     mesh_label_node
+
+  </description>
+  <author>Moritz Tenorth</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/mesh_label_node</url>
+
+  <depend package="mod_vis" />
+  <depend package="triangle_mesh_msgs" />
+</package>
+
+
