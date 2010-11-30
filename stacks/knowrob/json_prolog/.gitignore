@@ -1,6 +1,0 @@
-bin
-srv_gen
-srv/lisp
-*.class
-.project
-.classpath
