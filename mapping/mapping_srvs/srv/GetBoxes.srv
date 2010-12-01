@@ -1,4 +1,0 @@
----
-float64[] table
-geometry_msgs/Point32 table_center
-mapping_ias_msgs/Box[] boxes

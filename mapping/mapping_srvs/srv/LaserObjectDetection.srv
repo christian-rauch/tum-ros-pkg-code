@@ -1,5 +1,0 @@
-int64 type           # Request Type: -1 = find new obj's, else: query specific object id
-int64 num            # max number of obj's to return (1 if querying existing obj!)
-geometry_msgs/Point32[] AABB # AABB; ignored if all zero
----
-mapping_ias_msgs/LaserObjectIdWithPose[] objects

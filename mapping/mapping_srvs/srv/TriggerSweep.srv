@@ -1,5 +1,0 @@
-string object
-float32 angle_filename
----
-sensor_msgs/PointCloud cloud
-
