@@ -1,0 +1,7 @@
+# Starts publishing the corresponding tf frame and returns the poitns
+time start_time
+time end_time
+string tf_frame
+bool publish
+---
+geometry_msgs/Point[] points

@@ -1,0 +1,119 @@
+#!/usr/bin/env python
+
+import roslib; roslib.load_manifest('tf_trajectory_visualization')
+
+import rospy
+import tf
+import math
+import rosbag
+import sys
+
+import visualization_msgs.msg as visualization_msgs
+import geometry_msgs.msg as geometry_msgs
+import std_msgs.msg as std_msgs
+from tf_trajectory_visualization.srv import VisualizeTFTrajectory, VisualizeTFTrajectoryResponse
+
+def pt_dist(pt1, pt2):
+    return math.sqrt(math.pow(pt1[0]-pt2[0], 2)
+                     + math.pow(pt1[1]-pt2[1], 2)
+                     + math.pow(pt1[2]-pt2[2], 2))
+
+class TrajectoryGenerator(object):
+    def __init__(self, bag, fixed_frame, pose_distance_threshold):
+        self.tf = tf.Transformer()
+        self.bag = bag
+        self.pose_distance_threshold = pose_distance_threshold
+        self.fixed_frame = fixed_frame
+
+    def get_points(self, trajectory_frame, start_time=None, end_time=None):
+        self.tf.clear()
+        prev_pt = None
+        messages = self.bag.read_messages(topics='/tf',
+                                          start_time=start_time,
+                                          end_time=end_time)
+        for topic, msg, ts in messages:
+            for trans in msg.transforms:
+                self.tf.setTransform(trans)
+            if self.tf.canTransform(self.fixed_frame,
+                                    trajectory_frame,
+                                    rospy.Time(0)):
+                (trans, rot) = self.tf.lookupTransform(self.fixed_frame,
+                                                       trajectory_frame,
+                                                       rospy.Time(0))
+                if (not prev_pt) or (pt_dist(prev_pt, trans) > self.pose_distance_threshold):
+                    prev_pt = trans
+                    yield trans
+
+def make_marker_message(points):
+    marker = visualization_msgs.Marker()
+    marker.header.frame_id = fixed_frame
+    marker.ns = 'trajectory'
+    marker.id = len(marker_messages)
+    marker.type = visualization_msgs.Marker.LINE_STRIP
+    marker.action = visualization_msgs.Marker.ADD
+    marker.pose.position.x = 0
+    marker.pose.position.y = 0
+    marker.pose.position.z = 0
+    marker.pose.orientation.x = 0
+    marker.pose.orientation.y = 0
+    marker.pose.orientation.z = 0
+    marker.pose.orientation.w = 1.0
+    marker.color = std_msgs.ColorRGBA(*color)
+    marker.scale.x = line_width
+    marker.points = [ geometry_msgs.Point(*pt) for pt in points ]
+    return marker
+
+marker_messages = []
+
+def publish_trajectories():
+    pub = rospy.Publisher('~trajectory', visualization_msgs.Marker)
+    r = rospy.Rate(1)
+
+    while not rospy.is_shutdown():
+        for marker in marker_messages:
+            pub.publish(marker)
+        r.sleep()
+
+def playback_service_cb(req):
+    points = list(gen.get_points(req.tf_frame, req.start_time, req.end_time))
+    if req.publish:
+        marker_messages.append(make_marker_message(points))
+    return VisualizeTFTrajectoryResponse([geometry_msgs.Point(*pt) for pt in points])
+    
+def main():
+    rospy.init_node('tf_bag_trajectory_visualization')
+
+    if len(rospy.myargv()) < 2:
+        print "Usage: %s <bag> [start end]" % rospy.myargv()[0]
+        sys.exit(1)
+
+    global fixed_frame
+    fixed_frame = rospy.get_param('~fixed_frame', '/map')
+    trajectory_frame = rospy.get_param('~trajectory_frame', '/base_footprint')
+    pose_distance_threshold = rospy.get_param('~pose_distance_threshold', 0.05)
+
+    global line_width, color
+    line_width = rospy.get_param('~line_width', 0.05)
+    color = (rospy.get_param('~color/r', 1.0),
+             rospy.get_param('~color/g', 0.0),
+             rospy.get_param('~color/b', 0.0),
+             rospy.get_param('~color/a', 1.0))
+
+    global gen
+    gen = TrajectoryGenerator(rosbag.Bag(rospy.myargv()[1]),
+                              fixed_frame,
+                              pose_distance_threshold)
+    
+    if len(rospy.myargv()) == 4:
+        start_time = rospy.Time(float(rospy.myargv()[2]))
+        end_time = rospy.Time(float(rospy.myargv()[3]))
+        marker_messages.append(make_marker_message(
+                gen.get_points(trajectory_frame,
+                               start_time,
+                               end_time)))
+    else:
+        s = rospy.Service('~visualize_trajectory', VisualizeTFTrajectory, playback_service_cb)
+    publish_trajectories()
+
+if __name__ == '__main__':
+    main()
