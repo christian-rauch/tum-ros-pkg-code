@@ -1,4 +1,0 @@
-geometry_msgs/Point32 leaf_width
----
-perception_msgs/VoxelList vlist
-sensor_msgs/PointCloud[] clusters
