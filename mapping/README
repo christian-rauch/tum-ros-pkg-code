@@ -1,0 +1,5 @@
+mapping folder got better structure, tested and released as stack.
+It is from now on available from code.cs.tum.edu.
+You can use an enclosed mapping.rosinstall file to ROS-install it.
+
+dejan, nico, zoltan
