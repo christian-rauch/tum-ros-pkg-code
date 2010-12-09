@@ -60,7 +60,7 @@
 using namespace pcl;
 
 bool classify;
-flann::Index<float> *flann_index;
+flann::Index< flann::L2<float> > *flann_index;
 
 /*
 #define MAX_QUEUE 20
@@ -264,7 +264,7 @@ int
     flann::load_from_file (data, training_data_h5_file_name, "training_data");
     print_highlight ("Training data found. Loaded %d VFH models from %s/%s.\n", (int)data.rows, training_data_h5_file_name.c_str (), training_data_list_file_name.c_str ());
     // Initialize FLAN indices
-    flann_index = new flann::Index<float> (data, flann::SavedIndexParams (kdtree_idx_file_name));
+    flann_index = new flann::Index< flann::L2<float> > (data, flann::SavedIndexParams (kdtree_idx_file_name));
     flann_index->buildIndex ();
   }
   else
