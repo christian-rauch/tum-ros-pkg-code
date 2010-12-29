@@ -6,19 +6,19 @@ INCLUDE_DIR=$(shell pwd)/include
 INCLUDE_LIBSVM_DIR=$(shell pwd)/include/libsvm
 LIB_DIR=$(shell pwd)/lib
 
-VERSION=2.91
+VERSION=3.0
 
 checkedout:
 	mkdir -p $(BUILD_DIR) $(INCLUDE_DIR) $(INCLUDE_LIBSVM_DIR) $(LIB_DIR)
 	cd $(BUILD_DIR) &&\
-	wget http://www.csie.ntu.edu.tw/~cjlin/cgi-bin/libsvm.cgi?+http://www.csie.ntu.edu.tw/~cjlin/libsvm+tar.gz && tar xf libsvm-$(VERSION).tar.gz
+	wget -O libsvm-$(VERSION).tar.gz http://www.csie.ntu.edu.tw/~cjlin/cgi-bin/libsvm.cgi?+http://www.csie.ntu.edu.tw/~cjlin/libsvm+tar.gz && tar xf libsvm-$(VERSION).tar.gz
 	touch checkedout
 
 installed: wiped checkedout
 	cd $(BUILD_DIR)/libsvm-$(VERSION) && make && make lib
 	cd $(BUILD_DIR)/libsvm-$(VERSION) && cp svm.h $(INCLUDE_LIBSVM_DIR)
 	cd $(BUILD_DIR)/libsvm-$(VERSION) && cp libsvm*  $(LIB_DIR)
-	cd  $(LIB_DIR) && ln -s libsvm.so.1 libsvm.so
+	cd  $(LIB_DIR) && ln -s libsvm.so.2 libsvm.so
 	touch installed
 
 wiped: Makefile
