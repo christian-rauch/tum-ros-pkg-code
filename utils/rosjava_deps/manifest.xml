@@ -416,7 +416,6 @@
   <depend package="ronin" />
   <depend package="rosjava" />
   <depend package="rosh" />
-  <depend package="ros_epic_fail" />
   <depend package="session_tutorials" />
   <depend package="rospackwtf" />
   <depend package="rosproxy" />
