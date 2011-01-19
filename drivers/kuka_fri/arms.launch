@@ -1,0 +1,21 @@
+<launch>
+  <node name="lwr_right" pkg="kuka_fri" type="fri"
+        args="right" respawn="false" output="screen">
+    <param name="side" value="right"/>
+    <param name="rate" value="125"/>
+    <param name="local_port" value="7002"/>
+    <param name="remote_ip" value="192.168.139.10"/>
+    <param name="remote_port" value="7010"/>
+  </node>
+
+  <node name="lwr_left"
+        pkg="kuka_fri" type="fri"
+        args="left" respawn="false">
+    <param name="side" value="left"/>
+    <param name="rate" value="125"/>
+    <param name="local_port" value="7001"/>
+    <param name="remote_ip" value="192.168.139.12"/>
+    <param name="remote_port" value="7010"/>
+  </node>
+</launch>
+

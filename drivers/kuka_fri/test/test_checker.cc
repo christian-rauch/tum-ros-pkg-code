@@ -4,9 +4,9 @@
 
 #include <stdlib.h>
 
-#include <FRICheck_legacy.hh>
+#include "FRICheck_legacy.hh"
 
-#include <../src/FRICheck.hh>
+#include "../src/FRICheck.hh"
 
 #define DEG *M_PI/180.0
 #define RAD /M_PI*180.0

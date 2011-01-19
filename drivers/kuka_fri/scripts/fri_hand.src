@@ -1,5 +1,5 @@
 &ACCESS RVP
-&REL 11
+&REL 38
 &PARAM TEMPLATE = C:\KRC\Roboter\Template\vorgabe
 &PARAM EDITMASK = *
 DEF fri_hand( )
@@ -25,7 +25,7 @@ DECL E6AXIS START_POSE
 ;ENDFOLD (INI)
 
 ;stop FRI in case it's running
-;ret=FRISTOP()
+ret=FRISTOP()
 ;ret=FRICLOSE()
 
 ;;; set tool no. 2
@@ -97,9 +97,9 @@ $TIMER_STOP[1] = FALSE
 ; open with data rate 2 msec
 ret=friopen(2)
 
-wait sec 2.5
+;wait sec 2.5
 
-ret=FRISTART(1.0)
+;ret=FRISTART(1.0)
 
 while true
   ;;; here we command from remote
@@ -113,12 +113,15 @@ while true
     ; start control mode
     if ($fri_frm_int[1] == 1) then
       ret=FRISTART(1.0)
+      wait sec 0.2
     endif
 
     ; stop control mode
     if $FRI_FRM_INT[1]==2 then
       PTP CLAMP_AXES($AXIS_ACT)
+      wait sec 0.2
       ret=FRISTOP()
+      wait sec 0.2
     endif
  
     ; restart interface
@@ -127,12 +130,17 @@ while true
       ret=FRICLOSE()
       ret=FRIOPEN($FRI_FRM_INT[2])
     endif
-
-    ;acknowledge processing
-    $fri_to_bool[1] = false
   endif
 
-  PTP CLAMP_AXES($AXIS_ACT)
+  ;clear processing flag
+  $fri_to_bool[1] = false
+
+ ; IF $FRI_FRM_BOOL[8] THEN
+ ;   PTP CLAMP_AXES($AXIS_ACT_MES)
+ ; ELSE
+    PTP CLAMP_AXES($AXIS_ACT_CMD)
+ ; ENDIF
+
   $TIMER[1] = -3000
 endwhile
 

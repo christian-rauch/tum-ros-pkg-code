@@ -12,7 +12,15 @@ ROSComm::ROSComm() :
   runstop_(true), n_(0), diagnostic_(0),
   running_(false), exitRequested_(false)
 {
+  memset(&status_, 0, sizeof(status_));
+}
 
+ROSComm::~ROSComm()
+{
+  if(n_)
+    delete n_;
+  if(diagnostic_)
+    delete diagnostic_;
 }
 
 bool ROSComm::configure(FRIThread *fri)
@@ -66,15 +74,15 @@ bool ROSComm::configure(FRIThread *fri)
 void ROSComm::status_update(diagnostic_updater::DiagnosticStatusWrapper &s)
 {
   int quality = CLAMP(status_.quality, 0, 3);
-  int state = CLAMP(status_.state, 1, 2);
+  int state = CLAMP(status_.state, 0, 2);
   int control_mode = CLAMP(status_.controlMode, 0, 3);
 
   char qualities[] = {'x', '-', '+', '*'};
   char comm_states[] = {'0', 'M', 'C'};
 
   unsigned char level = (state == 2 && status_.power == 0x7f)
-    ? diagnostic_msgs::DiagnosticStatus::OK
-    : diagnostic_msgs::DiagnosticStatus::ERROR;
+    ? (unsigned char) diagnostic_msgs::DiagnosticStatus::OK
+    : (unsigned char) diagnostic_msgs::DiagnosticStatus::ERROR;
   
   s.summaryf(level, "%c%c",
     comm_states[state],
@@ -84,10 +92,12 @@ void ROSComm::status_update(diagnostic_updater::DiagnosticStatusWrapper &s)
   const char *state_strings[] = {"Reset", "Monitor", "Command"};
   const char *control_modes[] = {"Other", "Position", "Cartesian Impedance", "Joint Impedance"};
 
+  double freq = (status_.cmdSampleTime==0.0) ? 0.0 : 1.0/status_.cmdSampleTime;
+
   s.addf("Runstop", "%s", (status_.runstop) ? "ON" : "off");
   s.addf("Interface Mode", "%s", state_strings[state]);
   s.addf("Control Mode", "%s", control_modes[control_mode]);
-  s.addf("Comm. rate", "%3.1f Hz", 1.0/status_.cmdSampleTime);
+  s.addf("Comm. frequency", "%3.1f Hz", freq);
   s.addf("Comm. answer rate", "%3.3f", status_.answerRate);
   s.addf("Comm. latency", "%5.5f", status_.latency);
   s.addf("Comm. jitter", "%5.5f", status_.jitter);
@@ -98,7 +108,7 @@ void ROSComm::status_update(diagnostic_updater::DiagnosticStatusWrapper &s)
   s.addf("Motor State", "%s", (status_.power == 0x7f) ? "ON" : "OFF");
 
   float *t=status_.temperature;
-  s.addf("Temperatures [°C]", "%3.1f %3.1f %3.1f %3.1f %3.1f %3.1f %3.1f",
+  s.addf("Temperatures [deg C]", "%3.1f %3.1f %3.1f %3.1f %3.1f %3.1f %3.1f",
          t[0], t[1], t[2], t[3], t[4], t[5], t[6]);
 }
 
@@ -182,6 +192,8 @@ void* ROSComm::run()
   RobotData data;
   RobotStatus status;
   RobotCommand cmd;
+
+  memset(&status, 0, sizeof(status));
 
   int seq=0;
 

@@ -67,7 +67,7 @@ void RobotCommand::incrementPosition(float* newPos, float* currentPos, float rat
 
 RobotStatus::RobotStatus()
 {
-  memset(this, 0, sizeof(this));
+  memset(this, 0, sizeof(*this));
 }
 
 
@@ -91,7 +91,7 @@ FRIComm::FRIComm() :
   fri_cmd_.cmd.cmdFlags = FRI_CMD_JNTPOS | FRI_CMD_JNTSTIFF | FRI_CMD_JNTDAMP | FRI_CMD_JNTTRQ;
 }
 
-void FRIComm::configureNetwork(int local_port, const char* remote_address, int remote_port)
+void FRIComm::configureNetwork(int local_port, std::string remote_address, int remote_port)
 {
   local_port_ = local_port;
   remote_address_ = remote_address;
@@ -118,7 +118,7 @@ bool FRIComm::open()
 
   bzero((char *) &remote_addr_, sizeof(remote_addr_));
   remote_addr_.sin_family = AF_INET;
-  remote_addr_.sin_addr.s_addr = inet_addr(remote_address_);
+  remote_addr_.sin_addr.s_addr = inet_addr(remote_address_.c_str());
   remote_addr_.sin_port = htons(remote_port_);
 
   struct sockaddr_in local_addr;
@@ -276,14 +276,17 @@ void FRIComm::respond()
       max_offs = fabs(fri_msr_.data.cmdJntPosFriOffset[i]);
   }
 
-  fprintf(LOG, "%d (%f): kt=%f f=l%xr%x cmd=%d pwr=%d q=%d a=",
-    fri_msr_.head.sendSeqCount, fri_msr_.intf.timestamp,
-    krl_time_, fri_cmd_.krl.boolData, fri_msr_.krl.boolData, fri_cmd_.krl.intData[0], fri_msr_.robot.power, fri_msr_.intf.quality);
-  for(int i=0; i < 7; i++)
-    fprintf(LOG,"[%d]%5.5f+%5.5f!%5.5f ", i, fri_msr_.data.cmdJntPos[i],
-                                             fri_msr_.data.cmdJntPosFriOffset[i],
-                                             fri_cmd_.cmd.jntPos[i]);
-  fprintf(LOG, "\n");
+  if(LOG) {
+    fprintf(LOG, "%d (%f): kt=%f f=l%xr%x cmd=%d pwr=%d q=%d a=",
+      fri_msr_.head.sendSeqCount, fri_msr_.intf.timestamp,
+      krl_time_, fri_cmd_.krl.boolData, fri_msr_.krl.boolData,
+      fri_cmd_.krl.intData[0], fri_msr_.robot.power, fri_msr_.intf.quality);
+    for(int i=0; i < 7; i++)
+      fprintf(LOG,"[%d]%5.5f+%5.5f!%5.5f ", i, fri_msr_.data.cmdJntPos[i],
+                                               fri_msr_.data.cmdJntPosFriOffset[i],
+                                               fri_cmd_.cmd.jntPos[i]);
+    fprintf(LOG, "\n");
+  }
   // DEBUGGING END
 
   // send packet
@@ -293,8 +296,9 @@ void FRIComm::respond()
 
 bool FRIComm::postCommand(int iData[16], float rData[16])
 {
-  fprintf(LOG, "%d (%f): posted command %d\n",
-    fri_msr_.head.sendSeqCount, fri_msr_.intf.timestamp, iData[0]);
+  if(LOG)
+    fprintf(LOG, "%d (%f): posted command %d\n",
+      fri_msr_.head.sendSeqCount, fri_msr_.intf.timestamp, iData[0]);
 
   if(krl_time_ > fri_msr_.intf.timestamp)
     return false;  // command is being processed
@@ -475,7 +479,11 @@ RobotStatus FRIComm::status()
 FRIThread::FRIThread() :
   exitRequested_(false), runstop_buffer_(false)
 {
-
+  krlcmd_buffer_.fresh = false;
+  for(int i=0; i < 16; i++) {
+    krlcmd_buffer_.iData[i] = 0;
+    krlcmd_buffer_.rData[i] = 0.0;
+  }
 }
 
 
@@ -484,10 +492,16 @@ void FRIThread::configureNetwork(int local_port, const char* remote_address, int
   fri.configureNetwork(local_port, remote_address, remote_port);
 
   //DEBUGGING
-  if(!LOG && local_port==7001)
-    LOG=fopen("movelog_left.log", "w+");
-  if(!LOG && local_port==7002)
-    LOG=fopen("movelog_right.log", "w+");
+  char buff[1024];
+  time_t t = time(0);
+  struct tm *now = localtime(&t);
+
+  sprintf(buff, "/tmp/movelog_%s_%4d%02d%02d%02d%02d%02d.log",
+    (local_port==7001) ? "left" : "right",
+    1900+now->tm_year, now->tm_mon, now->tm_mday,
+    now->tm_hour, now->tm_min, now->tm_sec);
+
+  LOG=fopen(buff, "w+");
 }
 
 
@@ -547,6 +561,9 @@ void* FRIThread::run()
   RobotData data;
   RobotStatus status = fri.status();
 
+  KRLCmd krlcmd = {{0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+		   {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, false};
+
   printf("# waiting for LWR connection\n");
 
   bool communicating = false;
@@ -557,6 +574,10 @@ void* FRIThread::run()
     pthread_mutex_lock(&mutex_);
     runstop = runstop_buffer_;
     cmd = cmd_buffer_;
+    if(krlcmd_buffer_.fresh) {
+      krlcmd = krlcmd_buffer_;
+      krlcmd_buffer_.fresh = false;
+    }
     pthread_mutex_unlock(&mutex_);
 
     if(!fri.receive()) { // blocks for up to 0.1s
@@ -570,6 +591,11 @@ void* FRIThread::run()
     status = fri.status();
     fri.setRunstop(runstop);
     fri.setCmd(cmd);
+
+    if(krlcmd.fresh)
+      if(fri.postCommand(krlcmd.iData, krlcmd.rData))
+	krlcmd.fresh = false;
+
     fri.respond();
       
     // note: the data is not stored in a queue.
@@ -627,4 +653,15 @@ void FRIThread::setCmd(RobotCommand cmd)
 {
   pthread_scoped_lock lock(&mutex_);
   cmd_buffer_ = cmd;
+}
+
+
+void FRIThread::postCommand(int iData[16], float rData[16])
+{
+  pthread_scoped_lock lock(&mutex_);
+  for(int i=0; i < 16; i++) {
+    krlcmd_buffer_.iData[i] = iData[i];
+    krlcmd_buffer_.rData[i] = rData[i];
+    krlcmd_buffer_.fresh = true;
+  }
 }

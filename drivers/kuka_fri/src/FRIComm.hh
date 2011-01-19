@@ -7,6 +7,8 @@
 
 #include <friComm.h>  // KUKA proprietary header
 
+#include <string>
+
 #include "FRIData.hh"
 
 class FRICheck;
@@ -58,7 +60,7 @@ public:
   ~FRIComm();
 
   //! set network parameters
-  void configureNetwork(int local_port, const char* remote_address, int remote_port);
+  void configureNetwork(int local_port, std::string remote_address, int remote_port);
 
   bool open();  //!< opens  the UDP connection
   void close(); //!< closes the UDP connection
@@ -100,7 +102,7 @@ private:
   bool runstop_;
   
   int local_port_, remote_port_;
-  const char* remote_address_;
+  std::string remote_address_;
   int socket_;
   struct sockaddr_in remote_addr_;
 };
@@ -134,7 +136,7 @@ public:
 
   FRICheck* limitChecker();
 
-  bool postCommand(int iData[16], float rData[16]);
+  void postCommand(int iData[16], float rData[16]);
 private:
   FRIComm fri;
 
@@ -145,10 +147,18 @@ private:
   pthread_t thread_;
   pthread_mutex_t mutex_;
 
+  class KRLCmd {
+  public:
+    int iData[16];
+    float rData[16];
+    bool fresh;
+  };
+
   bool runstop_buffer_;
   RobotData data_buffer_;
   RobotCommand cmd_buffer_;
   RobotStatus status_buffer_;
+  KRLCmd krlcmd_buffer_;
 };
 
 #endif // FRICOMM_HH

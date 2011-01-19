@@ -14,6 +14,7 @@ class FRIThread;
 class ROSComm {
 public:
   ROSComm();
+  ~ROSComm();
   bool configure(FRIThread *fri);
   bool open();
   void publishData(const RobotData &data, const RobotCommand &cmd);

@@ -11,6 +11,7 @@ class FRIThread;
 class YARPComm {
 public:
   YARPComm(const char* prefix);
+  ~YARPComm();
   bool open();
   void publishData(const RobotData &data, const RobotCommand &cmd_old);
   bool receiveCommand(RobotCommand* cmd);
@@ -21,8 +22,11 @@ public:
 private:
   void sendData(yarp::os::BufferedPort<yarp::os::Bottle> &p, const float* data, int n);
   bool receiveBottle(yarp::os::BufferedPort<yarp::os::Bottle> &port, float* data, int n);
+  bool receiveKRLCmd(yarp::os::BufferedPort<yarp::os::Bottle> &port, int* iData, float* rData);
 
   const char* prefix_;
+
+  yarp::os::Network *net_;
 
   yarp::os::BufferedPort<yarp::os::Bottle> port_commands;
   yarp::os::BufferedPort<yarp::os::Bottle> port_commanded;

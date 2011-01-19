@@ -13,13 +13,24 @@
 
 using namespace yarp::os;
 
+
 YARPComm::YARPComm(const char* prefix) :
-  prefix_(prefix),
+  prefix_(prefix), net_(0),
   running_(false), exitRequested_(false)
 {
   // making checkNetwork() quiet
   yarp::os::impl::Logger::get().setVerbosity(-1);
 }
+
+
+YARPComm::~YARPComm()
+{
+  if(net_) {
+    net_->fini();
+    delete net_;
+  }
+}
+
 
 bool YARPComm::open()
 {
@@ -28,6 +39,11 @@ bool YARPComm::open()
 
   // returning to normal verbosity
   yarp::os::impl::Logger::get().setVerbosity(0);
+
+  if(net_ == 0) {
+    net_ = new Network();
+    net_->init();
+  }
 
   std::string tprefix(prefix_);
   port_commands.open((tprefix+"/cmd").c_str());
@@ -40,6 +56,8 @@ bool YARPComm::open()
   port_stiffness.open((tprefix+"/stiffness").c_str());
   port_damping.open((tprefix+"/damping").c_str());
   port_add_torque.open((tprefix+"/add_torque").c_str());
+
+  port_krlcommand.open((tprefix+"/krl_command").c_str());
 
   return true;
 }
@@ -59,6 +77,35 @@ bool YARPComm::receiveBottle(BufferedPort<Bottle> &port, float* data, int n)
     return true;
   }
 }
+
+
+bool YARPComm::receiveKRLCmd(BufferedPort<Bottle> &port, int* iData, float* rData)
+{
+  if(port.getPendingReads() <= 0) {
+    return false;
+  } else {
+    // read command
+    Bottle *b = port.read();
+    int i=0, n_i=0, n_f=0;
+    for(; i < b->size() && b->get(i).isInt() && i < 16; i++)
+      iData[i] = b->get(i).asInt();
+    n_i=i;
+    
+    for(; i < b->size() && b->get(i).isDouble() && i < 32; i++)
+      rData[i-n_i] = b->get(i).asDouble();
+    n_f=i-n_i;
+
+    printf("YARP: got command [");
+    if(n_i > 0) printf("%d", iData[0]);
+    for(i=1; i < n_i; i++) printf(", %d", iData[i]);
+    printf("] [");
+    if(n_f > 0) printf("%2.2f", rData[0]);
+    for(i=1; i < n_f; i++) printf(", %2.2f", rData[i]);
+    printf("]\n");
+  }
+  return true;
+}
+
 
 bool YARPComm::receiveCommand(RobotCommand* cmd)
 {
@@ -114,11 +161,17 @@ void* YARPComm::run()
   RobotData data;
   RobotCommand cmd;
 
+  int iData[16];
+  float rData[16];
+
   int seq = 0;
 
   while(!exitRequested_) {
     receiveCommand(&cmd);
     fri_->setCmd(cmd);
+
+    if(receiveKRLCmd(port_krlcommand, iData, rData))
+      fri_->postCommand(iData, rData);
 
     data = fri_->data();
     if(seq != data.seq)

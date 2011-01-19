@@ -1,0 +1,183 @@
+&ACCESS RV
+&REL 12
+&COMMENT PLC on control
+DEF sps( )
+  ;FOLD DECLARATIONS
+  ;FOLD BASISTECH DECL
+  ;Automatik extern
+  DECL STATE_T STAT
+  DECL MODUS_T MODE
+  DECL FRAME force
+  DECL FRAME variance
+  decl bool blink
+  decl int blink_counter
+  DECL INT ret
+
+  decl int commhandle
+  decl state_t commstate
+  decl modus_t commmode
+
+  ;ENDFOLD (BASISTECH DECL)
+  ;FOLD USER DECL
+  ; Please insert user defined declarations
+  DECL STIFFNESS USERSTIFF  
+  decl bool s1,s2,s3
+  decl int seq
+  ;ENDFOLD (USER DECL)
+  ;ENDFOLD (DECLARATIONS)
+  ;FOLD INI
+  ;FOLD DEFAULT MSG_T 
+  $MSG_T={MSG_T: VALID FALSE,RELEASE FALSE,TYP #NOTIFY,MODUL[] " ",KEY[] " ",PARAM_TYP #VALUE,PARAM[] " ",DLG_FORMAT[] " ",ANSWER 0}
+  ;ENDFOLD (DEFAULT MSG_T)
+  ;FOLD AUTOEXT INIT
+  INTERRUPT DECL 91 WHEN $PRO_STATE1==#P_FREE DO RESET_OUT ()
+  INTERRUPT ON 91
+  $LOOP_MSG[]="                                                            "
+  MODE=#SYNC
+  $H_POS=$H_POS
+  ;Automatik extern
+  ;IF $MODE_OP==#EX THEN
+  ;  CWRITE($CMD,STAT,MODE,"RUN /R1/CELL()")
+  ;ENDIF
+  ;ENDFOLD (AUTOEXT INIT)
+  ;FOLD USER INIT
+  ; Please insert user defined initialization commands
+  
+  ;ENDFOLD (USER INIT)
+  ;ENDFOLD (INI)
+
+
+seq = 0
+
+; open FRI with data rate 2 msec
+ret=FRIOPEN(2)
+
+; open serial port
+copen(:SER_3, commhandle)
+commmode=#SYNC
+
+
+  LOOP
+     WAIT FOR NOT($POWER_FAIL)
+    ;FOLD USER PLC
+    ;Make your modifications here
+
+    ;ENDFOLD (USER PLC)
+
+
+;Automatik Extern: select program
+if ($PRO_STATE1==#P_FREE) AND ($MODE_OP==#EX) THEN
+  CWRITE($CMD,STAT,MODE,"RUN /R1/FRI_HAND()")
+endif
+
+;;TODO: find out when we must send a reset
+;; ANSWER: no good - we can't switch to position mode here...
+;; just don't do it!
+;if $EXT and $STOPMESS and not ($PRO_STATE1==#P_FREE) then
+;  CWRITE($CMD,STAT,MODE,"STOP 1")  ; Stop the running program
+;  CWRITE($CMD,STAT,MODE,"RESET 1")  ; Reset program
+;endif
+
+if $ext and not $peri_rdy and (seq == 0) and ($fri_frm_bool[1] == true) and ($fri_frm_int[1]==10) then
+  seq = 5
+  ; guard time against failure
+  pulse($out[52],true,2.0)
+
+  cwrite(commhandle, commstate, commmode, "I")
+
+  $fri_to_bool[1] = true
+
+endif
+
+if (seq == 5) and ($peri_rdy or $out[52] == false) then
+  seq = 0
+  cwrite(commhandle, commstate, commmode, "O")
+  $fri_to_bool[1] = false
+endif
+
+; acknowledge all messages
+if $ext and $peri_rdy and (seq == 0) then
+  auto_quit()
+  pulse($out[50],true,0.7)
+  seq = 1
+endif
+
+;when drives are on, send the start signal
+if $peri_rdy and $ext and not $pro_act and ($out[50]==false) and (seq == 1) then
+  pulse($out[51],true,0.5)
+endif
+
+if (not $peri_rdy) and (not $pro_act) and (seq < 5) then
+  seq = 0
+endif
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+; old stuff, check how the data look like...
+force = $torque_tcp_est.ft
+
+$fri_to_rea[1]=force.x
+$fri_to_rea[2]=force.y
+$fri_to_rea[3]=force.z
+$fri_to_rea[4]=force.a
+$fri_to_rea[5]=force.b
+$fri_to_rea[6]=force.c
+variance = $torque_tcp_est.variance
+$fri_to_rea[7]=variance.x
+$fri_to_rea[8]=variance.y
+$fri_to_rea[9]=variance.z
+$fri_to_rea[10]=variance.a
+$fri_to_rea[11]=variance.b
+$fri_to_rea[12]=variance.c
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;,
+
+  ENDLOOP
+  ;FOLD ;%{H}
+  ;FOLD
+END
+  ;ENDFOLD
+
+
+DEF  RESET_OUT ( )
+  INT N
+  $LOOP_MSG[]="                                                            "
+  IF REFLECT_PROG_NR == 1 THEN
+    FOR N = 0 TO PGNO_LENGTH - 1
+      $OUT[PGNO_FBIT_REFL + N] = FALSE
+    ENDFOR
+  ENDIF
+  IF (PGNO_REQ>0) THEN
+    $OUT[PGNO_REQ]=FALSE
+  ELSE
+    IF (PGNO_REQ<0) THEN
+      $OUT[-PGNO_REQ]=TRUE
+    ENDIF
+  ENDIF
+END
+
+
+
+
+
+;FOLD USER SUBROUTINE
+; Integrate your user defined subroutines
+
+;ENDFOLD (USER SUBROUTINE)
+;ENDFOLD
+
+
+DEF AUTO_QUIT()
+INT M
+DECL STOPMESS MLD     ;vordefinierte Strukturtyp fuer Stopmeldungen
+IF $STOPMESS AND $EXT THEN      ;Stopmeldung und Betriebsart pruefen
+   WHILE MBX_REC($STOPMB_ID,MLD)==0    ;aktuellen Zustand in MLD einlesen
+ ;$loop_msg[]="quitting msg"
+ ;wait sec 0.6
+ ;  IF M==0 THEN         ;Ueberpruefen, ob Quittierung erfolgen darf
+;      IF ((MLD.GRO==2) AND (MLD.STATE==1)) THEN
+      IF (MLD.GRO==2) OR (MLD.MESSNO==3135) THEN
+         CONFIRM MLD.CONFNO     ;Quittierung dieser Meldung
+       ENDIF
+   ENDWHILE
+ENDIF
+END
