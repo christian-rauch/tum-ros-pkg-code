@@ -1,0 +1,5 @@
+<launch>
+  <!-- Detects SIFT Features and writes keypoints into keypoints file-->
+  <node pkg="sift_lowe" type="detect_sift.sh" name="detect_sift.sh" output="screen"  
+	args="$(find sift_lowe)/build/siftDemoV4/book.pgm $(find sift_lowe)/results/book.keys"/>
+</launch>

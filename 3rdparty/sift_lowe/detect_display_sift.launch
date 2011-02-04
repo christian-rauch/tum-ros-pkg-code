@@ -1,0 +1,5 @@
+<launch>
+  <!-- Detects SIFT Features and displays them in a result image-->
+  <node pkg="sift_lowe" type="detect_display_sift.sh" name="detect_display_sift" output="screen"  
+	args="$(find sift_lowe)/build/siftDemoV4/book.pgm $(find sift_lowe)/results/results.pgm"/>
+</launch>

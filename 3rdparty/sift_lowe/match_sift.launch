@@ -1,0 +1,5 @@
+<launch>
+<!--Matches features using fast nearest-neighbor algorithm and saves a composite result-->
+  <node pkg="sift_lowe" type="match_sift.sh" name="match_sift.sh" output="screen"  
+	args="$(find sift_lowe)/build/siftDemoV4/book.pgm $(find sift_lowe)/results/book.keys $(find sift_lowe)/build/siftDemoV4/scene.pgm $(find sift_lowe)/results/scene.keys $(find sift_lowe)/results/result.pgm"/>
+</launch>

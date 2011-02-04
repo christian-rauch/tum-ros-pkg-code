@@ -1,0 +1,14 @@
+<package>
+  <description brief="sift_lowe">
+
+     Classics - Lowe's Sift feature.
+
+  </description>
+  <author>David Lowe</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://people.cs.ubc.ca/~lowe/keypoints/</url>
+
+</package>
+
+
