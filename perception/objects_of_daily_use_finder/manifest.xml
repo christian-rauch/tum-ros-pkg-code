@@ -13,7 +13,7 @@
   <depend package="cv_bridge"/>
   <depend package="opencv2"/>
   <depend package="vocabulary_tree"/>
-  <depend package="eigen"/>
+  <depend package="eigen3"/>
   <depend package="ann"/>
 
 </package>

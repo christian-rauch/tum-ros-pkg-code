@@ -9,7 +9,7 @@
 #include <vocabulary_tree/database.h>
 #include <vocabulary_tree/tree_builder.h>
 #include <vocabulary_tree/simple_kmeans.h>
-#include <Eigen/StdVector>
+#include <Eigen3/StdVector>
 #include <dirent.h>
 #include <vocabulary_tree/simple_kmeans.h>
 #include <fstream>
@@ -19,8 +19,8 @@
 #include <ANN/ANN.h>
 #include <math.h>
 
-typedef Eigen::Matrix<float, 1, 128> Feature;
-typedef std::vector<Feature, Eigen::aligned_allocator<Feature> > FeatureVector;
+typedef Eigen3::Matrix<float, 1, 128> Feature;
+typedef std::vector<Feature, Eigen3::aligned_allocator<Feature> > FeatureVector;
 
 const int COLORS = 13;
 
