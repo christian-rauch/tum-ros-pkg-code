@@ -2,7 +2,7 @@ GermanDeli Website Crawler
 
 ===============START=========================
 To run the crawler execute the following command:
-"python3.1 start_extracting.py absolute_path_to_target_data_dir"
+"python2.6 start_extracting.py absolute_path_to_target_data_dir"
 
 ===============ABOUT=========================
 The script first extracts the structure of the site in the structure.xml file in the data directory. 
