@@ -1,0 +1,17 @@
+<launch>
+  <!-- <node pkg="point_cloud_converter" type="point_cloud_converter" name="convert_cloud" output="screen"> -->
+  <!--   <remap from="/points_in" to="/shoulder_cloud" /> -->
+  <!--   <remap from="/points2_out" to="/cloud_pcd" /> -->
+  <!-- </node> -->
+    
+  <node pkg="image_algos" type="pointcloud_to_image_projector_opencv_node" name="pointcloud_to_image_projector_opencv_node" output="screen" respawn="true" >
+    <param name="input_image_topic" value="/narrow_stereo/right/image_rect" />
+    <param name="input_cloud_topic" value="/urdf_cloud_filter/objects_on_island_counter" />
+    <param name="output_image_topic" value="image_with_projected_cluster" />
+    <param name="output_cluster_topic" value="output_cluster" />
+    <param name="cluster_cloud" value="true" />
+    <param name="location" value="island" />	
+    <param name="save_data" value="true" />	
+  </node>
+<!--   launch-prefix="xterm -e gdb -args" -->
+</launch>

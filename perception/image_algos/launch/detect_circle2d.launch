@@ -1,0 +1,6 @@
+<launch>                                      
+  <node pkg="image_algos" type="detect_circle_2d_node" name="detect_circle_2d_node" output="screen"> 
+    <param name="threshold" value="230"/>
+    <param name="canny_high_threshold" value="7"/>
+</node> 
+</launch>

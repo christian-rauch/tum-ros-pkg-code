@@ -28,6 +28,7 @@ rosbuild_add_executable (pointcloud_colorizer_node src/pointcloud_colorizer.cpp)
 rosbuild_add_executable (pointcloud_colorizer_with_head_movement_node src/pointcloud_colorizer_with_head_movement.cpp)
 
 rosbuild_add_executable (openCv_to_ros utils/openCV_to_ros.cpp)
+rosbuild_add_executable (detect_circle_2d_node src/detect_circle_2d.cpp)
 #rosbuild_add_executable (bgfg_codebook_node src/bgfg_codebook_node.cpp)
 #rosbuild_add_compile_flags(openCv_to_ros "-pg")
 #rosbuild_add_link_flags(openCv_to_ros "-pg")
