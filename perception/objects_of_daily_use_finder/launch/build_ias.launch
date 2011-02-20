@@ -1,0 +1,10 @@
+<launch>
+	<node  pkg="objects_of_daily_use_finder" type="odu_finder" name="odu_finder" output="screen">
+		<param  name="command" type="string" value="/init" />
+		<param  name="database_location" type="string" value="$(find objects_of_daily_use_finder)/ias_database/" />
+		<param  name="images_folder" type="string" value="$(find objects_of_daily_use_finder)/ias_data/" />
+
+		<param  name="tree_k" type="int" value="5" /> 
+		<param  name="tree_levels" type="int" value="5" /> 
+	</node>
+</launch>

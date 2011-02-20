@@ -13,9 +13,16 @@
   <depend package="cv_bridge"/>
   <depend package="opencv2"/>
   <depend package="vocabulary_tree"/>
-  <depend package="eigen3"/>
-  <depend package="ann"/>
-
+  <depend package="eigen"/>
+  <depend package="image_transport"/>
+  <depend package="ann2"/>
+  <!--for cop answer -->
+  <depend package="vision_msgs"/>
+  <export>
+      <cpp cflags="-I${prefix}/include/" lflags="-Wl,-rpath,${prefix}/lib
+      -L${prefix}/lib
+          -lodu_finder" />
+  </export>
 </package>
 
 

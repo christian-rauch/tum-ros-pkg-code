@@ -1,0 +1,28 @@
+<launch>
+  <node pkg="dynamic_reconfigure" type="dynparam" args="set_from_parameters prosilica_driver" name="prosilica_reconfigure">
+    <param name="trigger_mode" type="string" value="streaming"/>
+  </node>
+  
+  
+  <node  pkg="objects_of_daily_use_finder" type="odu_finder_node" name="odu_finder_node" output="screen">
+    <param  name="command" type="string" value="/load" />
+    <param  name="database_location" type="string" value="/u/pangerci/germandelidb/germandeli_big/" />
+    <param  name="images_folder" type="string" value="/u/pangerci/germandelidb/data_big/" />
+    <param  name="images_for_visualization_directory" type="string" value="/u/pangerci/germandelidb/data_big/" />
+    
+    <param  name="image_topic" type="string" value="/prosilica/image_raw" />
+    <!-- <param  name="image_topic" type="string" value="/narrow_stereo/left/image_rect" /> -->
+    <param  name="enable_visualization" type="int" value="0" />
+    
+    <param  name="votes_count" type="int" value="30" /> 
+    <param  name="grow_radius" type="int" value="300" /> 
+    
+    <param  name="tree_k" type="int" value="7" /> 
+    <param  name="tree_levels" type="int" value="7" /> 
+    
+    <param  name="unknown_object_threshold" type="double" value="0.0" />
+    
+    <param  name="enable_clustering" type="int" value="1" />
+    <param  name="enable_incremental_learning" type="int" value="0" />
+  </node>
+</launch>

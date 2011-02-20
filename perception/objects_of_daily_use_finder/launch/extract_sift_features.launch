@@ -1,0 +1,6 @@
+<launch>
+	<node  pkg="objects_of_daily_use_finder" type="odu_finder" name="odu_finder" output="screen">
+		<param  name="command" type="string" value="/sift_only" />
+		<param  name="images_folder" type="string" value="$(find objects_of_daily_use_finder)/images_with_keypoints/" />
+	</node>
+</launch>
