@@ -1,0 +1,14 @@
+<package>
+  <description brief="fast_match_template">
+     fast_match_template matches target templates in source images using speed-optimized cvMatchTemplate.
+  </description>
+  <author>Tristen Georgiou, Dejan Pangercic (for ROS and modifications)</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://opencv.willowgarage.com/wiki/FastMatchTemplate</url>
+  <depend package="opencv2"/>
+  <depend package="roscpp"/>
+
+</package>
+
+
