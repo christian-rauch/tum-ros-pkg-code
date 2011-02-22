@@ -10,7 +10,7 @@
 #include "odu_finder.h"
 
 //@TODO: make rosparam
-const int IMAGES_TO_SHOW = 5;
+const int IMAGES_TO_SHOW = 1;
 ////////////////////////////
 DocumentInfo::DocumentInfo() :
 	delete_document(false) 
@@ -88,10 +88,12 @@ ODUFinder::ODUFinder() :
 	
   // Logger
 	rospack::ROSPack rp;
-	//char *p[] = {"rospack", "find", "objects_of_daily_use_finder"};
-  std::string p("rospack find objects_of_daily_use_finder");
-	//rp.run(3, p);
-  rp.run(p);
+	char *p[] = {"rospack", "find", "objects_of_daily_use_finder"};
+  //std::string p("rospack find objects_of_daily_use_finder");
+	rp.run(3, p);
+ //ROS_INFO("ERROOORR %s",p.c_str());
+
+  //rp.run(p);
 	char loggerFileName[300];
 	strcpy(loggerFileName, rp.getOutput().c_str());
 	loggerFileName[strlen(loggerFileName)-1] = 0;
@@ -278,7 +280,7 @@ std::string ODUFinder::process_image(IplImage* camera_image_in)
 	} 
   else 
   {
-		for (int i = 0; i < votes_count; ++i)
+		for (int i = 0; (i < votes_count && i < (int)documents_map.size()); ++i)
 			ROS_INFO("%s, %f", documents_map[votes[i].first]->name.c_str(),
                votes[i].second);
     
@@ -479,7 +481,7 @@ void ODUFinder::save_database_without_tree(std::string& directory)
 	weights_file.append("/images.weights");
 	db->saveWeights(weights_file.c_str());
 	out.close();
-	ROS_INFO("READY!");
+	ROS_INFO("Done! Press Ctrl+C and roslaunch detect.launch");
 }
 
 /////////////////////////////////////////////////////
@@ -560,8 +562,9 @@ void ODUFinder::trace_directory(const char* dir, const char* prefix,
 			struct stat st_buf;
 			if (lstat(filename.c_str(), &st_buf) == -1) 
       {
-				ROS_ERROR("ERROR!");
-				return;
+				ROS_ERROR("ERROR: Invalid file name %s", filename.c_str());
+        ROS_ERROR("Exiting");
+        exit(2);
 			}
 
 			if (S_ISDIR(st_buf.st_mode)) 
@@ -596,6 +599,12 @@ void ODUFinder::visualize(IplImage *camera_image_in,
 	IplImage** template_images = new IplImage*[IMAGES_TO_SHOW];
 	int total_height = 0;
 	int max_width = 0;
+
+  /** 
+   * TODO: Get this to work for multiple images
+   */
+  
+  //calculate dimensions of the display image
 	for (int i = 0; i < IMAGES_TO_SHOW; ++i) 
   {
 		if (template_document_info[i] != NULL)
@@ -616,42 +625,38 @@ void ODUFinder::visualize(IplImage *camera_image_in,
 
 	int	height = camera_image_in->height;
 	float scale_factor = ((float) height) / ((float) total_height);
-	max_width = (int) (max_width * scale_factor);
-	IplImage* tmp_image = cvCreateImage(cvSize(camera_image_in->width + max_width, height),
+//	max_width = (int) (max_width * scale_factor);
+	IplImage* tmp_image = cvCreateImage(cvSize(camera_image_in->width + max_width, MAX(height, total_height)),
                                       camera_image_in->depth,
                                       camera_image_in->nChannels);
 
 	cvFillImage(tmp_image, 0);
-	//cvSetImageROI(tmp_image, cvRect(0, 0, camera_image_in->width, camera_image_in->height));
+	cvSetImageROI(tmp_image, cvRect(0, 0, camera_image_in->width, camera_image_in->height));
 	cvCopy(camera_image_in, tmp_image);
-	//int last_y = 0;
 
-	// for (int i=0; i<IMAGES_TO_SHOW; ++i)
-	// {
-	// 	if (template_images[i] == NULL)
-	// 		continue;
+  //show template images
+	int last_y = 0;
+	for (int i=0; i<IMAGES_TO_SHOW; ++i)
+	{
+		if (template_images[i] == NULL)
+			continue;
+    
+//		IplImage* tmp_template_image = cvCreateImage(cvSize(template_images[i]->width * scale_factor, 
+    //                                                      template_images[i]->height * scale_factor),
+    //                                           template_images[i]->depth, template_images[i]->nChannels);
+		//cvResize(template_images[i], tmp_template_image);
+		cvSetImageROI(tmp_image,
+                  cvRect(camera_image_in->width,
+                         last_y,
+                         template_images[i]->width,
+                         template_images[i]->height));
+		//last_y += tmp_template_image->height;
+        
+    //free resources
+		cvCopy(template_images[i], tmp_image);
+		//cvReleaseImage(&tmp_template_image);
+	}
 
-	// 	IplImage* tmp_template_image = cvCreateImage(cvSize(template_images[i]->width * scale_factor, template_images[i]->height * scale_factor),
-	// 												  template_images[i]->depth,
-	// 												  template_images[i]->nChannels);
-
-	// 	cvResize(template_images[i], tmp_template_image);
-
-	// 	cvSetImageROI(tmp_image,
-	// 				  cvRect(camera_image_in->width,
-	// 						 last_y,
-	// 						 tmp_template_image->width,
-	// 						 tmp_template_image->height));
-
-	// 	last_y += tmp_template_image->height;
-
-	// 	cvCopy(tmp_template_image, tmp_image);
-
-	// 	cvReleaseImage(&tmp_template_image);
-	// 	cvReleaseImage(&template_images[i]);
-	// }
-
-	delete[] template_images;
 	cvResetImageROI(tmp_image);
 	image = cvCreateImage(cvSize(tmp_image->width, tmp_image->height),
                         tmp_image->depth, 3);
@@ -667,34 +672,54 @@ void ODUFinder::visualize(IplImage *camera_image_in,
                color_table[camera_keypoints[i]->cluster % COLORS]);
 	}
 
-	//		// display template image keypoints
-	//		std::vector<KeypointExt*> template_keypoints;
-	//
-	//		if (template_document_info != NULL)
-	//		{
-	//			template_keypoints.resize(template_document_info->document->size());
-	//			Keypoint tmp_keypoints = extract_keypoints(template_image, true);
-	//			for (int i=0; tmp_keypoints != NULL; ++i, tmp_keypoints = tmp_keypoints->next)
-	//			{
-	//				cvCircle(image, cvPoint((int)(camera_image_in->width + tmp_keypoints->col), (int)(tmp_keypoints->row)), 3, cvScalar(0, 255, 255));
-	//				template_keypoints[i] = new KeypointExt(tmp_keypoints, template_document_info->document->at(i));
-	//			}
-	//		}
+  //display template keypoints
+  for (int i=0; i<IMAGES_TO_SHOW; ++i)
+	{
+		if (template_images[i] == NULL)
+			continue;
+    Keypoint template_keypoints = extract_keypoints(template_images[i], true);
+    for (int ii=0; template_keypoints != NULL; ++ii, template_keypoints = template_keypoints->next)
+    {
+      cvCircle(image, cvPoint((int)(camera_image_in->width + template_keypoints->col), 
+                              (int)(template_keypoints->row)), 3, 
+               color_table[1 % COLORS]); //0, 255, 0
+    }  
+    //free remaining resources
+    cvReleaseImage(&template_images[i]);
+  }
+  delete[] template_images;
 
+
+  //if the region of interest around keypoints is needed 
+  //useful for e.g. in-hand object modeling
+  if (extract_roi_)
+    extract_roi(camera_image, camera_keypoints);
+
+// 	// display template image keypoints
+//   std::vector<KeypointExt*> template_keypoints;
+//   if (template_document_info != NULL)
+//   {
+// //    template_keypoints.resize(template_document_info->document->size());
+//     Keypoint tmp_keypoints = extract_keypoints(template_image, true);
+//     for (int i=0; tmp_keypoints != NULL; ++i, tmp_keypoints = tmp_keypoints->next)
+//     {
+//       cvCircle(image, cvPoint((int)(camera_image_in->width + tmp_keypoints->col), (int)(tmp_keypoints->row)), 3, cvScalar(0, 255, 255));
+//       //    template_keypoints[i] = new KeypointExt(tmp_keypoints, template_document_info->document->at(i));
+//     }
+//   }
+  
 	cvShowImage("visualization", image);
 	// Free resources
 	for (std::vector<KeypointExt*>::iterator iter = camera_keypoints.begin(); iter
          != camera_keypoints.end(); ++iter)
 		delete *iter;
-	//		for (std::vector<KeypointExt*>::iterator iter = template_keypoints.begin(); iter != template_keypoints.end(); ++iter)
-	//			delete *iter;
 }
 
 
 /////////////////////////////////////////////////////////////////////
 void ODUFinder::update_matches_map(vt::Matches& matches, size_t size) 
 {
-	for (int i = 0; i < votes_count; ++i) 
+	for (int i = 0; (i < votes_count && i < (int)matches.size()); ++i) 
   {
 		if (matches_map.count(matches[i].id) == 0)
 			matches_map[matches[i].id] = 0;
@@ -798,5 +823,33 @@ void ODUFinder::write_stat_summary()
 	logger.close();
 }
 
+/////////////////////////////
+void ODUFinder::extract_roi(IplImage *image , std::vector<KeypointExt*> camera_keypoints)
+{
+  //create a sequence storage for projected points
+  CvMemStorage* stor = cvCreateMemStorage (0);
+  CvSeq* seq = cvCreateSeq (CV_SEQ_ELTYPE_POINT, sizeof (CvSeq), sizeof (CvPoint), stor);
 
+  	  for (unsigned long i = 0; i < camera_keypoints.size(); i++)
+  	  {
+  		  cv::Point2d uv;
+  		  CvPoint pt;
+  		  pt.x = camera_keypoints[i]->keypoint->col;
+  		  pt.y = camera_keypoints[i]->keypoint->row;
+  		  cvSeqPush( seq, &pt );
+  	  }
+ //draw rectangle around the points
+  CvRect rect = cvBoundingRect(seq);
+  ROS_DEBUG_STREAM("rect: " << rect.x << " " << rect.y << " " << rect.width << " " << rect.height);
+
+  //get subimage, aka region of interest
+
+  cvSetImageROI(image,rect);
+  //sub-image
+  image_roi = cvCreateImage( cvSize(rect.width, rect.height), image->depth, image->nChannels );
+
+  cvCopy(image, image_roi);
+  cvResetImageROI(image); // release image ROI
+  return;
+}
 

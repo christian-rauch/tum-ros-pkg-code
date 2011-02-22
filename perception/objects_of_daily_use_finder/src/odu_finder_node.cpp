@@ -13,10 +13,13 @@ private:
 	ros::NodeHandle node_handle;
 	ros::Subscriber image_subscriber;
 	ros::Publisher template_publisher;
+	ros::Publisher image_pub_;
 
 	// VISUALIZATION
 	sensor_msgs::CvBridge bridge;
-  std::string image_topic, template_topic;
+    std::string image_topic, template_topic;
+    std::string output_image_topic_;
+
 public:
 	ODUFinderNode(ros::NodeHandle &anode)
 		: node_handle(anode)
@@ -63,6 +66,11 @@ public:
       //template_publisher = node_handle.advertise<std_msgs::String>(template_topic, 1);
       //publish data for http://www.ros.org/wiki/cop
       template_publisher = node_handle.advertise<vision_msgs::cop_answer>(template_topic, 1);
+      node_handle.param ("output_image_topic" , output_image_topic_ , std::string("object_found"));
+  	  image_pub_ = node_handle.advertise<sensor_msgs::Image>(output_image_topic_,10);
+    
+      //shall we extract roi around the keypoints??
+      node_handle.param ("extract_roi" , extract_roi_, false);
 
       if (enable_visualization)
       {
@@ -138,6 +146,13 @@ private:
       //call main processing function
       std::string result = process_image(camera_image);
 
+      //image_pub_.publish(bridge.cvToImgMsg(image_roi));
+      image_pub_.publish(bridge.cvToImgMsg(camera_image));
+      ROS_INFO("[ODUFinder:] image published to %s", output_image_topic_.c_str());
+      cvReleaseImage(&image_roi);
+
+
+
       //msg.data = name.substr(0, name.find_last_of('.')).c_str();
       //publish the result to http://www.ros.org/wiki/cop
       if (result.length() > 0)
@@ -165,5 +180,5 @@ int main(int argc, char** argv)
 	int result = odu_finder.start();
 	if(result != -1)
 	  ros::spin();
-	odu_finder.write_stat_summary();
+	//odu_finder.write_stat_summary();
 }

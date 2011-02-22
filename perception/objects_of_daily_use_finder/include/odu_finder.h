@@ -42,11 +42,13 @@ public:
 	std::ofstream logger;
 	int frame_number;
 	std::map<std::string, int> stat_summary_map;
+  bool extract_roi_;
 
 	// VISUALIZATION
-	IplImage *camera_image, *template_image, *image;
+	IplImage *camera_image, *template_image, *image ,*image_roi;
 	CvScalar color_table[COLORS];
 	std::vector<unsigned int> cluster_sizes;
+	std::string output_image_topic_;
 
 	// DATABASE
 	std::vector<vt::Document> docs;
@@ -122,6 +124,14 @@ public:
   /** \brief writes the statistics of the recognition process in a package
    */
 	void write_stat_summary();
+
+
+	void extract_roi (IplImage *image , std::vector<KeypointExt*> camera_keypoints);
+
+	/** publish when object was detected
+	 * publish rect with ROI region of interest
+	 * extract an image from another one
+	 */
 
 protected:
   /** \brief recursively traces the directory with images
