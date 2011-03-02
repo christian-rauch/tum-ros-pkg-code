@@ -18,6 +18,7 @@
   <depend package="tf"/>
   <depend package="ias_table_msgs"/>
   <depend package="message_filters"/>
+  <depend package="cv_bridge"/>
 
 </package>
 

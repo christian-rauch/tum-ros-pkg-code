@@ -10,6 +10,7 @@
 #include <message_filters/subscriber.h>
 #include <message_filters/synchronizer.h>
 #include <sensor_msgs/CameraInfo.h>
+#include <cv_bridge/CvBridge.h>
 
 using namespace sensor_msgs;
 using namespace message_filters;
@@ -24,6 +25,7 @@ public:
   message_filters::Subscriber<Image> image_sub;
   message_filters::Subscriber<CameraInfo> cam_sub;
   message_filters::Subscriber<tf::tfMessage> tf_sub;
+  sensor_msgs::CvBridge bridge_;
 
   LatestMatchingTFMessage(ros::NodeHandle &nh, const std::string &source_frame)
     : source_frame_(source_frame),
@@ -51,19 +53,19 @@ public:
   }
 
   /////////////////////////////////////////////////
-  bool getTF(tf::tfMessageConstPtr& ret)
-  {
-    ros::Rate r(100);
-    while(!valid_)
-    {
-      if (nh_.ok())
-        r.sleep();
-      else
-        return false;
-    }
-    ret = last_matching_tf;
-    return true;
-  }
+  // bool getTF(tf::tfMessageConstPtr& ret)
+  // {
+  //   ros::Rate r(100);
+  //   while(!valid_)
+  //   {
+  //     if (nh_.ok())
+  //       r.sleep();
+  //     else
+  //       return false;
+  //   }
+  //   ret = last_matching_tf;
+  //   return true;
+  // }
   /////////////////////////////////////////////////////////
   int spin()
   {
@@ -120,11 +122,23 @@ private:
   boost::thread spin_thread_;
 
   /////////////////////////////////////////////////////////
-   void callback(const ImageConstPtr& image ,const tf::tfMessageConstPtr &msg )
+   void callback(const ImageConstPtr& image_msg ,const tf::tfMessageConstPtr &msg )
   {
     if(msg->transforms[0].header.frame_id == source_frame_)
     {
       last_matching_tf = msg;
+      //use cv_bridge to get the original image
+      try 
+      {
+        original_image = bridge_.imgMsgToCv(image_msg, "rgb8");
+      }
+      catch (sensor_msgs::CvBridgeException& ex) 
+      {
+        ROS_ERROR("[PointCloudToImageProjector:] Failed to convert image");
+        return;
+      }
+
+      //original_image = 
       valid_ = true;
     }
   }
