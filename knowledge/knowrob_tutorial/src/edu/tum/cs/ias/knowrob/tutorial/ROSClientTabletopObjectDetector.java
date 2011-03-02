@@ -25,7 +25,7 @@ import ros.pkg.tabletop_object_detector.msg.*;
 import ros.pkg.tabletop_object_detector.srv.*;
 
 
-public class ROSClient {
+public class ROSClientTabletopObjectDetector {
 
 	static Boolean rosInitialized = false;
 	static Ros ros;
@@ -37,7 +37,7 @@ public class ROSClient {
 	 * 
 	 * @param node_name A unique node name
 	 */
-	public ROSClient(String node_name) {
+	public ROSClientTabletopObjectDetector(String node_name) {
 		initRos(node_name);
 	}
 
@@ -70,8 +70,8 @@ public class ROSClient {
 
 			// call the tabletop_object_detector service
 			TabletopDetection.Request req = new TabletopDetection.Request();
-			req.return_clusters=0;
-			req.return_models=1;
+			req.return_clusters=false;
+			req.return_models=true;
 			
 			ServiceClient<TabletopDetection.Request, TabletopDetection.Response, TabletopDetection> cl = 
 				n.serviceClient("/object_detection", new TabletopDetection());
@@ -148,13 +148,13 @@ public class ROSClient {
 	 */
 	public static void main(String[] args) {
 		
-		ROSClient r = new ROSClient("knowrob_tabletop_test_123");
+		ROSClientTabletopObjectDetector r = new ROSClientTabletopObjectDetector("knowrob_tabletop_test_123");
 		
 		TabletopDetectionResult res = r.callTabletopObjDetection();
 
-		for(int i=0;i<res.models.length;i++) {
-			System.out.println(res.models[i].model_id);
-			System.out.println("Pos: "+res.models[i].pose.pose.position.x+","+res.models[i].pose.pose.position.y+","+res.models[i].pose.pose.position.z);
+		for(int i=0;i<res.models.size();i++) {
+			System.out.println(res.models.get(i).model_id);
+			System.out.println("Pos: "+res.models.get(i).pose.pose.position.x+","+res.models.get(i).pose.pose.position.y+","+res.models.get(i).pose.pose.position.z);
 		}
 	}
 
