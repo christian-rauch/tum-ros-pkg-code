@@ -5,7 +5,7 @@
 #include <cv_bridge/CvBridge.h>
 #include <image_geometry/pinhole_camera_model.h>
 //for pcl::transformPointCloud
-#include <pcl_tf/transforms.h>
+#include <pcl_ros/transforms.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
 #include <angles/angles.h>
@@ -212,7 +212,7 @@ public:
     tf_listener_.waitForTransform(cam_model_.tfFrame(), cloud_in_.header.frame_id, now, ros::Duration(5.0));
     tf::StampedTransform transform;
     tf_listener_.lookupTransform(cam_model_.tfFrame(), cloud_in_.header.frame_id, stamp_, transform);
-    pcl::transformPointCloud(cloud_in_, cloud_in_tranformed_, transform);
+    pcl_ros::transformPointCloud(cloud_in_, cloud_in_tranformed_, transform);
 
     ROS_INFO("[PointCloudColorizer:] cloud transformed to %s", cam_model_.tfFrame().c_str());
 

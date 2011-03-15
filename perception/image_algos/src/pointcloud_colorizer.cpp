@@ -5,7 +5,8 @@
 #include <cv_bridge/CvBridge.h>
 #include <image_geometry/pinhole_camera_model.h>
 //for pcl::transformPointCloud
-#include <pcl_tf/transforms.h>
+//#include <pcl_tf/transforms.h>
+#include <pcl_ros/transforms.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
 #include <angles/angles.h>
@@ -101,7 +102,7 @@ public:
 
   void process (pcl::PointCloud<pcl::PointXYZ> &cloud_in, cv::Mat image)
   {
-    pcl::transformPointCloud(cam_model_.tfFrame(), cloud_in, cloud_in_tranformed_, tf_listener_);
+    pcl_ros::transformPointCloud(cam_model_.tfFrame(), cloud_in, cloud_in_tranformed_, tf_listener_);
     ROS_INFO("[PointCloudColorizer:] cloud transformed to %s", cam_model_.tfFrame().c_str());
     //create a sequence storage for projected points 
     CvMemStorage* stor = cvCreateMemStorage (0);

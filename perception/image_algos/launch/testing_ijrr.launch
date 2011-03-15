@@ -2,7 +2,7 @@
 <!--map-->
 <include file="$(find ias_pr2_2dnav)/pr2_2dnav.launch"/>
 <!--localization correction -->
-<node pkg="ias_drawer_executive" type="SnapMapICP" name="SnapMapICP"  output="screen">
+<node pkg="SnapMapICP" type="SnapMapICP" name="SnapMapICP"  output="screen">
 </node>
 
 <!-- <node type="throttle" -->
@@ -14,8 +14,8 @@
 <!--       pkg="topic_tools" -->
 <!--       name="narrow_r_throttle" -->
 <!--       args="messages narrow_stereo/right/image_rect 2" /> -->
-<include file="$(find ias_kitchen_defs)/launch/ias_kitchen_model.launch"/>
-<include file="$(find dos_pcl_ros)/launch/urdf_cloud_filter_ijrr.launch"/>
+<!-- <include file="$(find ias_kitchen_defs)/launch/ias_kitchen_model.launch"/> -->
+<!-- <include file="$(find dos_pcl_ros)/launch/urdf_cloud_filter_ijrr.launch"/> -->
 </launch>
 
 

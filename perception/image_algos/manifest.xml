@@ -33,6 +33,7 @@
   <depend package="ias_table_msgs" />
   <depend package="pcl_tf" />
   <depend package="pcl" />
+  <depend package="pcl_ros" />
   <depend package="actionlib" />
   <depend package="pr2_controllers_msgs" />
   <export>
