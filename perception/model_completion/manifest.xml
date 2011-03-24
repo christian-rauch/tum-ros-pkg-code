@@ -1,25 +1,18 @@
 <package>
   <description brief="model_completion">
-
      model_completion
-
   </description>
-  <author>monica</author>
+  <author>Monica Opris</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/model_completion</url>
   <depend package="opencv2"/>
-  <depend package="features_2d"/>
   <depend package="roscpp"/>
   <depend package="sensor_msgs"/>
-  <depend package="image_transport"/>
   <depend package="cv_bridge"/>
   <depend package="robot_mask"/>
   <depend package="tf"/>
-  <depend package="ias_table_msgs"/>
-  <depend package="message_filters"/>
-  <depend package="cv_bridge"/>
-
+  <depend package="libsiftfast"/>
 </package>
 
 

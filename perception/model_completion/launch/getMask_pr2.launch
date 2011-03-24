@@ -1,0 +1,15 @@
+<launch>
+	<node  pkg="model_completion" type="getMask_ServiceClient" name="get_mask_client" output="screen" >
+	<param name="width" value="640" />
+	<param name="height" value="480" />
+	<param name="fovy" value="25" />
+	<param name="camera_frame" value="narrow_stereo_optical_frame" />
+	<param name="image_topic" value="/narrow_stereo/left/image_rect" />
+	<param name="tf_topic" value="/tf" />
+	</node>
+
+	<param name="robot_description" textfile="/etc/ros/cturtle/robot.xml"/>
+
+	<node  pkg="robot_mask" type="robot_mask" name="robot_mask" output="screen" >
+	</node>
+</launch>
