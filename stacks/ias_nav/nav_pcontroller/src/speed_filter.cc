@@ -107,13 +107,13 @@ SpeedFilter::SpeedFilter() : n_("~")
 
   //CHANGED
   //  dist_control_.setFootprint(0.42, -0.3075, 0.3075, -0.42, 0.0);
-  double top, bottom, right, left, tolerance;
-  n_.param("footprint/top", top, 0.309);
-  n_.param("footprint/bottom", bottom, -0.309);
-  n_.param("footprint/right", right, 0.43);
-  n_.param("footprint/left", left, -0.43);
+  double front, rear, left, right, tolerance;
+  n_.param("footprint/left", left, 0.309);
+  n_.param("footprint/right", right, -0.309);
+  n_.param("footprint/front", front, 0.43);
+  n_.param("footprint/rear", rear, -0.43);
   n_.param("footprint/tolerance", tolerance, 0.0);
-  dist_control_.setFootprint(top, left, right, bottom, tolerance);
+  dist_control_.setFootprint(front, rear, left, right, tolerance);
 }
 
 int main(int argc, char *argv[])

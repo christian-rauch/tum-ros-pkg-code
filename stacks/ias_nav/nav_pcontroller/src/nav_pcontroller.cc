@@ -264,16 +264,16 @@ void BasePController::parseParams()
   //CHANGED
   //  dist_control_.setFootprint(0.42, -0.3075, 0.3075, -0.42, 0.0);
   /*(0.309, -0.43, 0.43, -0.309, 0.0);*/
-  double top, bottom, left, right, tolerance;
+  double front, rear, left, right, tolerance;
   std::string stName;
   n_.param("speed_filter_name", stName, std::string("/speed_filter"));
-  n_.param(stName + "/footprint/top", top, 0.309);
-  n_.param(stName + "/footprint/bottom", bottom, -0.309);
-  n_.param(stName + "/footprint/right", right, 0.43);
-  n_.param(stName + "/footprint/left", left, -0.43);
+  n_.param(stName + "/footprint/left", left, 0.309);
+  n_.param(stName + "/footprint/right", right, -0.309);
+  n_.param(stName + "/footprint/front", front, 0.43);
+  n_.param(stName + "/footprint/rear", rear, -0.43);
   n_.param(stName + "/footprint/tolerance", tolerance, 0.0);
   
-  dist_control_.setFootprint(top, left, right, bottom, tolerance);
+  dist_control_.setFootprint(front, rear, left, right, tolerance);
 }
 
 #ifdef JLO_BASE_CONTROL
@@ -416,13 +416,22 @@ void BasePController::newGoal(const geometry_msgs::PoseStamped &msg)
 
   geometry_msgs::PoseStamped goal;
 
-  tf_.transformPose(global_frame_, msg, goal);
+
+  try
+  {
+    tf_.transformPose(global_frame_, msg, goal);
+  }
+  catch(tf::TransformException& ex)
+  {
+    ROS_WARN("no localization information yet %s",ex.what());
+    return;
+  }
 
   x_goal_ = goal.pose.position.x;
   y_goal_ = goal.pose.position.y;
 
   // th = atan2(r21/2,r11/2)
-  const geometry_msgs::Quaternion &q = msg.pose.orientation;
+  const geometry_msgs::Quaternion &q = goal.pose.orientation;
   th_goal_ = atan2(q.x*q.y + q.w*q.z, 0.5 - q.y*q.y -q.z*q.z);
 
   ROS_INFO("got goal: %f %f %f", x_goal_, y_goal_, th_goal_);

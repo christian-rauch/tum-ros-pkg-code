@@ -22,12 +22,15 @@
       n_lasers: 1
       complete_blind_spots: false
 
+      odom_frame: odom_combined
+      base_link_frame: base_link
+
       speed_filter_name: /nav_pcontroller
       footprint:
-        top: 0.33
-        bottom: -0.33
-        right: 0.33
-        left: -0.33
+        front: 0.33
+        rear: -0.33
+        right: -0.33
+        left: 0.33
         tolerance: 0.0
     </rosparam>
   </node>

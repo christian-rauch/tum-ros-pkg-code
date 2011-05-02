@@ -8,8 +8,7 @@
 
   <include file="$(find pr2_nav_pcontroller)/nav_pcontroller.launch" />
   
-  <!--node name="map_server" pkg="map_server" type="map_server" args="$(find ias_maps)/ias_karlstrasse_20101008.yaml" machine="c2" /-->
- <node name="map_server" pkg="map_server" type="map_server" args="$(find ias_maps)/ccrl_20101029.yaml" machine="c2" />
+  <node name="map_server" pkg="map_server" type="map_server" args="$(find ias_maps)/ias_karlstrasse_20110419.yaml" machine="c2" />
 
 
   <param name="/move_base_node/footprint_padding" value="0.03"/>

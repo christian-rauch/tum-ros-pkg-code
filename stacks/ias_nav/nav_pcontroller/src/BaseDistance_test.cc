@@ -37,6 +37,8 @@
 
 #include "BaseDistance.h"
 
+#define Vector2 BaseDistance::Vector2
+
 bool distance_test()
 {
   std::vector<Vector2> points;
@@ -44,11 +46,7 @@ bool distance_test()
   double d, eps=0.00001;
 
   BaseDistance tester;
-  tester.top_ = 0.5;
-  tester.bottom_ = -0.7;
-  tester.left_ = -0.3;
-  tester.right_ = 0.8;
-  tester.tolerance_ = 0.1;
+  tester.setFootprint(0.8, -0.3, 0.5, -0.7, 0.1);
 
   // edge cases
   points.push_back(Vector2(3.2f, 0.0f));
@@ -92,10 +90,11 @@ bool distance_test()
     d = tester.distance(points, &n);
     assert((d-1.13 < eps) && n.x == 0.95f && n.y == -1.82f);
   }
-
+  return true;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+  ros::init(argc, argv, "BaseDistance_test");
   distance_test();
 }

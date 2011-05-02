@@ -26,3 +26,4 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 ADD_DEFINITIONS(-DJLO_BASE_CONTROL)
 rosbuild_add_executable(nav_pcontroller src/nav_pcontroller.cc src/BaseDistance.cc)
 rosbuild_add_executable(speed_filter src/speed_filter.cc src/BaseDistance.cc)
+

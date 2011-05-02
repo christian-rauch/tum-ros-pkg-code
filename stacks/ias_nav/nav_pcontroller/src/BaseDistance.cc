@@ -43,10 +43,9 @@
 #include <tf/transform_listener.h>
 #include <visualization_msgs/Marker.h>
 #include <visualization_msgs/MarkerArray.h>
+#include <std_msgs/Float64MultiArray.h>
 
 #include "BaseDistance.h"
-
-#define MARKER_SCALE 0.13
 
 /* \todo: avoid unnecessary computation
 
@@ -56,26 +55,35 @@
   test
   debug print about activity
 
+  there are a lot of 'new' statements. -> performance problem?
 */
 
-#define TOP 1
-#define BOTTOM 2
-#define LEFT 4
-#define RIGHT 8
+
+#define MODE_FREE 0
+#define MODE_PROJECTING 1
+#define MODE_HARD_PROJECTING 2
+#define MODE_BRAKING 3
+#define MODE_REPELLING 4
+#define MODE_PROJECTION_MASK 3
 
 
-//!! evil hack
 BaseDistance::BaseDistance()
   : n_("~")
 {
   d_ = 1 / 10.0;
+  rob_x_ = rob_y_ = rob_th_ = 0.0;
+  vx_last_ = vy_last_ = vth_last_ = 0.0;
 
+  n_.param("marker_size", marker_size_, 0.1);
   n_.param("safety_dist", safety_dist_, 0.10);
   n_.param("slowdown_far", slowdown_far_, 0.30);
   n_.param("slowdown_near", slowdown_near_, 0.15);
   n_.param("repelling_dist", repelling_dist_, 0.20);
   n_.param("repelling_gain", repelling_gain_, 0.5);
   n_.param("repelling_gain_max", repelling_gain_max_, 0.015);
+
+  n_.param<std::string>("odom_frame", odom_frame_, "/odom");
+  n_.param<std::string>("base_link_frame", base_link_frame_, "/base_link");
 
   ROS_INFO("## safe=%f slow=%f..%f repell=%f repell_gain=%f\n", safety_dist_, slowdown_near_, slowdown_far_, repelling_dist_, repelling_gain_);
 
@@ -86,39 +94,55 @@ BaseDistance::BaseDistance()
   n_.param("complete_blind_spots", complete_blind_spots_, true);
   n_.param("blind_spot_threshold", blind_spot_threshold_, 0.85);
   
-  // Use only one marker topic plus namespaces
-  marker_pub_ = n_.advertise<visualization_msgs::Marker>("closest_point", 0);
-  marker_laser_pub_ = n_.advertise<visualization_msgs::Marker>("base_footprint", 0);
-
-  interpolated_points_pub_ = n_.advertise<sensor_msgs::PointCloud>("interpolated_points", 0);
+  marker_pub_ = n_.advertise<visualization_msgs::Marker>("/visualization_marker", 0);
+  laser_points_pub_ = n_.advertise<sensor_msgs::PointCloud>("laser_points", 0);
+  debug_pub_ = n_.advertise<std_msgs::Float64MultiArray>("debug_channels", 0);
 
   laser_subscriptions_[0] = n_.subscribe<sensor_msgs::LaserScan>
     ("laser_1", 2, boost::bind(&BaseDistance::laserCallback, this, 0, _1));
   if(n_lasers_ > 1)
     laser_subscriptions_[1] = n_.subscribe<sensor_msgs::LaserScan>
-      ("laser_2", 2, boost::bind(&BaseDistance::laserCallback, this, 1, _1)); 
+      ("laser_2", 2, boost::bind(&BaseDistance::laserCallback, this, 1, _1));
+
+  calculateEarlyRejectDistance();
 }
 
-void BaseDistance::setFootprint(double top, double left, double right, double bottom, double tolerance)
+
+
+BaseDistance::Vector2 BaseDistance::transform(const Vector2 &v, double x, double y, double th)
 {
-  top_ = top;
+  return Vector2(v.x*cos(th) - v.y*sin(th) + x,
+                 v.x*sin(th) + v.y*cos(th) + y);
+}
+
+
+void BaseDistance::setFootprint(double front, double rear, double left, double right, double tolerance)
+{
+  ROS_INFO("setting footprint. x : %f .. %f     y : %f .. %f", rear, front, right, left);
+
+  rear_ = rear;
+  front_ = front;
   left_ = left;
   right_ = right;
-  bottom_ = bottom;
   tolerance_ = tolerance;
+
+  calculateEarlyRejectDistance();
+}
+
+void BaseDistance::calculateEarlyRejectDistance()
+{
+  double movement_tolerance = 0.2;
+  double diameter = sqrt((front_ - rear_)*(front_ - rear_) + (right_ - left_)*(right_ - left_));
+  early_reject_distance_ = diameter + slowdown_far_ + tolerance_ + movement_tolerance;
 }
 
 
-bool BaseDistance::compute_pose2d(const char* from, const char* to, double *x, double *y, double *th)
+bool BaseDistance::compute_pose2d(const char* from, const char* to, const ros::Time time, double *x, double *y, double *th)
 {
-  tf::Stamped<tf::Pose> global_pose;
-  tf::Stamped<tf::Pose> robotPose;
-  robotPose.setIdentity();
-  robotPose.frame_id_ = to;
-  robotPose.stamp_ = ros::Time(0);
+  tf::StampedTransform pose;
   try
   {
-    tf_.transformPose(from, robotPose, global_pose);
+    tf_.lookupTransform(from, to, time, pose);
   }
   catch(tf::TransformException& ex)
   {
@@ -126,13 +150,11 @@ bool BaseDistance::compute_pose2d(const char* from, const char* to, double *x, d
     return false;
   }
 
-  // find out where we are now
-  *x = global_pose.getOrigin().x();
-  *y = global_pose.getOrigin().y();
-  
-  double unused_pitch, unused_roll;
-  btMatrix3x3 mat =  global_pose.getBasis();
-  mat.getEulerYPR(*th, unused_pitch, unused_roll);
+  *x = pose.getOrigin().x();
+  *y = pose.getOrigin().y();
+
+  btMatrix3x3 m = pose.getBasis();
+  *th = atan2(m[1][0], m[0][0]);
 
   return true;
 }
@@ -144,22 +166,44 @@ void BaseDistance::laserCallback(int index, const sensor_msgs::LaserScan::ConstP
   points->reserve(scan->ranges.size());
 
   double x, y, th;
-  compute_pose2d("/base_link", scan->header.frame_id.c_str(), &x, &y, &th);
+  compute_pose2d(odom_frame_.c_str(), scan->header.frame_id.c_str(), ros::Time(0), &x, &y, &th);
 
-  double angle, i;
-  
+  double angle;
+  int i, first_scan = 0, last_scan = 0;
+
+  // find last valid scan range
+  for(int i=scan->ranges.size()-1; i >= 0; i--)
+  {
+    if(!(scan->ranges[i] <= scan->range_min ||
+       scan->ranges[i] >= scan->range_max))
+    {
+      last_scan = i;
+      break;
+    }
+  }
+
+
   for(angle=scan->angle_min, i=0;
-      i<scan->ranges.size();
+      i < (int) scan->ranges.size();
       i++, angle+=scan->angle_increment)
   {
+    // reject invalid ranges
     if(scan->ranges[i] <= scan->range_min ||
        scan->ranges[i] >= scan->range_max)
+    {
+      first_scan++;
       continue;
+    }
+
+    // reject readings from far away
+    if(scan->ranges[i] >= early_reject_distance_ && i != first_scan && i != last_scan)
+      continue;
+
+    first_scan = -1;
 
     double xl = scan->ranges[i] * cos(angle);
     double yl = scan->ranges[i] * sin(angle);
-    points->push_back(Vector2(xl*cos(th) - yl*sin(th) + x,
-                              xl*sin(th) + yl*cos(th) + y));
+    points->push_back(transform(Vector2(xl, yl), x, y, th));
   }
 
   boost::mutex::scoped_lock mutex(lock);
@@ -168,21 +212,29 @@ void BaseDistance::laserCallback(int index, const sensor_msgs::LaserScan::ConstP
   if(complete_blind_spots_ && laser_points_[0] && laser_points_[1])
   {
     blind_spots_.clear();
-    interpolateBlindPoints(10, laser_points_[0]->front(), laser_points_[1]->back());
-    interpolateBlindPoints(10, laser_points_[0]->back(), laser_points_[1]->front());
-    publishLaserMarker(laser_points_[0]->front(), "laser_1", 0);
-    publishLaserMarker(laser_points_[0]->back(), "laser_1", 1);
-    publishLaserMarker(laser_points_[1]->front(), "laser_2", 0);
-    publishLaserMarker(laser_points_[1]->back(), "laser_2", 1);
 
-    publishPoints(blind_spots_);
+    if(interpolateBlindPoints(10, laser_points_[0]->front(), laser_points_[1]->back()))
+    {
+      publishLaserMarker(laser_points_[0]->front(), "blind_spots", 0);
+      publishLaserMarker(laser_points_[1]->back(),  "blind_spots", 1);
+    }
+
+    if(interpolateBlindPoints(10, laser_points_[0]->back(), laser_points_[1]->front()))
+    {
+      publishLaserMarker(laser_points_[0]->back(),  "blind_spots", 2);
+      publishLaserMarker(laser_points_[1]->front(), "blind_spots", 3);
+    }
+    //// publishPoints(blind_spots_);
   }
 }
 
-void BaseDistance::interpolateBlindPoints(int n, const Vector2 &pt1, const Vector2 &pt2)
+bool BaseDistance::interpolateBlindPoints(int n, const Vector2 &pt1, const Vector2 &pt2)
 {
-  if( pt1.x * pt1.x + pt1.y * pt1.y < blind_spot_threshold_ * blind_spot_threshold_ ||
-      pt2.x * pt2.x + pt2.y * pt2.y < blind_spot_threshold_ * blind_spot_threshold_)
+  Vector2 p1_rob = transform(pt1, rob_x_, rob_y_, rob_th_);
+  Vector2 p2_rob = transform(pt2, rob_x_, rob_y_, rob_th_);
+
+  if( p1_rob.len2() < blind_spot_threshold_ * blind_spot_threshold_ ||
+      p2_rob.len2() < blind_spot_threshold_ * blind_spot_threshold_)
   {
     for(int i=0; i < n; i++)
     {
@@ -190,13 +242,18 @@ void BaseDistance::interpolateBlindPoints(int n, const Vector2 &pt1, const Vecto
       blind_spots_.push_back(Vector2(t*pt1.x + (1.0-t)*pt2.x,
                                      t*pt1.y + (1.0-t)*pt2.y));
     }
+    return true;
+  }
+  else
+  {
+    return false;
   }
 }
 
 void BaseDistance::publishLaserMarker(const Vector2 &pt, const std::string &ns, int id)
 {
   visualization_msgs::Marker marker;
-  marker.header.frame_id = "/base_link";
+  marker.header.frame_id = odom_frame_;
   marker.header.stamp = ros::Time::now();
   marker.ns = ns;
   marker.type = visualization_msgs::Marker::CUBE;
@@ -206,9 +263,9 @@ void BaseDistance::publishLaserMarker(const Vector2 &pt, const std::string &ns, 
   marker.pose.orientation.y = 0.0;
   marker.pose.orientation.z = 0.0;
   marker.pose.orientation.w = 1.0;
-  marker.scale.x = MARKER_SCALE;
-  marker.scale.y = MARKER_SCALE;
-  marker.scale.z = MARKER_SCALE;
+  marker.scale.x = marker_size_;
+  marker.scale.y = marker_size_;
+  marker.scale.z = marker_size_;
   marker.color.r = 1;
   marker.color.g = 0;
   marker.color.b = 0;
@@ -218,6 +275,86 @@ void BaseDistance::publishLaserMarker(const Vector2 &pt, const std::string &ns, 
   marker.pose.position.x = pt.x;
   marker.pose.position.y = pt.y;
   marker.pose.orientation.w = 1.0;
+  marker_pub_.publish(marker);
+}
+
+void BaseDistance::publishNearestPoint()
+{
+  // visualize closest point
+  visualization_msgs::Marker marker;
+  marker.header.frame_id = base_link_frame_;
+  marker.header.stamp = ros::Time::now();
+  marker.ns = "nearest_point";
+  marker.id = 0;
+   marker.type = visualization_msgs::Marker::CUBE;
+
+  if(mode_ & MODE_REPELLING)
+    marker.type = visualization_msgs::Marker::SPHERE;
+  else
+    marker.type = visualization_msgs::Marker::CUBE;
+
+  marker.action = visualization_msgs::Marker::ADD;
+  marker.pose.position.x = nearest_.x;
+  marker.pose.position.y = nearest_.y;
+  marker.pose.position.z = 0.55;
+  marker.pose.orientation.x = 0.0;
+  marker.pose.orientation.y = 0.0;
+  marker.pose.orientation.z = 0.0;
+  marker.pose.orientation.w = 1.0;
+  marker.scale.x = marker_size_*2;
+  marker.scale.y = marker_size_*2;
+  marker.scale.z = marker_size_*2;
+
+  switch(mode_ & MODE_PROJECTION_MASK)
+  {
+    case(MODE_FREE):
+      marker.color.r = 0.0f;
+      marker.color.g = 1.0f;
+      break;
+    case(MODE_PROJECTING):
+      marker.color.r = 0.0f;
+      marker.color.g = 1.0f;
+      break;
+    case(MODE_HARD_PROJECTING):
+      marker.color.r = 1.0f;
+      marker.color.g = 0.5f;
+      break;
+    case(MODE_BRAKING):
+      marker.color.r = 1.0f;
+      marker.color.g = 0.0f;
+      break;
+  }
+  marker.color.b = 0.0f;
+  marker.color.a = 1.0;
+
+  marker.lifetime = ros::Duration(0.1);
+  marker_pub_.publish(marker);
+}
+
+void BaseDistance::publishBaseMarker()
+{
+  visualization_msgs::Marker marker;
+  marker.header.frame_id = base_link_frame_;
+  marker.header.stamp = ros::Time::now();
+  marker.ns = "base_footprint";
+  marker.id = 0;
+  marker.type = visualization_msgs::Marker::CUBE;
+  marker.action = visualization_msgs::Marker::ADD;
+  marker.pose.position.x = (front_ + rear_) * 0.5;
+  marker.pose.position.y = (right_ + left_) * 0.5;
+  marker.pose.position.z = 0.3;
+  marker.pose.orientation.x = 0.0;
+  marker.pose.orientation.y = 0.0;
+  marker.pose.orientation.z = 0.0;
+  marker.pose.orientation.w = 1.0;
+  marker.scale.x = front_ - rear_;
+  marker.scale.y = right_ - left_;
+  marker.scale.z = 0.6;
+  marker.color.r = 0.5f;
+  marker.color.g = 0.5f;
+  marker.color.b = 1.0f;
+  marker.color.a = 0.5;
+  marker.lifetime = ros::Duration();
   marker_pub_.publish(marker);
 }
 
@@ -231,7 +368,7 @@ void BaseDistance::publishPoints(const std::vector<Vector2> &points)
   sensor_msgs::PointCloud::_points_type::iterator dest_it;
 
   cloud.header.stamp = ros::Time::now();
-  cloud.header.frame_id = "/base_link";
+  cloud.header.frame_id = odom_frame_;
   for(src_it=points.begin(), dest_it=cloud.points.begin();
       src_it != points.end();
       src_it++, dest_it++)
@@ -241,327 +378,76 @@ void BaseDistance::publishPoints(const std::vector<Vector2> &points)
     dest_it->z = 0.3;
   }
 
-  interpolated_points_pub_.publish(cloud);
+  // add one dummy point to clear the display
+  if(points.size() == 0)
+  {
+    cloud.points.resize(1);
+    cloud.points[0].x = 0.0;
+    cloud.points[0].y = 0.0;
+    cloud.points[0].z = 0.0;
+  }
+
+  laser_points_pub_.publish(cloud);
 }
 
-// void BaseDistance::laser_points(const sensor_msgs::LaserScan &scan, std::vector<Vector2> &points)
-// {
-//   int nScans = scan.ranges.size();
-//   int firstPoint = points.size();
-//   double inc = (scan.angle_max - scan.angle_min) / (nScans-1.0);
-//   points.resize(points.size() + nScans);
-
-//   double x, y, th;
-//   compute_pose2d("/base_link", scan.header.frame_id.c_str(), &x, &y, &th);
-//   //printf("frame %s is (%f %f %f)\n", scan.header.frame_id.c_str(), x, y, th);
-
-//   if(x < 0)
-//     scans_received_ |= 1;
-//   if(x > 0)
-//     scans_received_ |= 2;
-
-//   int i0=0;
-
-//   // TODO: clean up this method
-//   static Vector2 vleft_;
-//   // static Vector2 vright_;
-//   static Vector2 vfront_;
-//   // static Vector2 vrear_;
-
-
-//   for(int i=0, j=firstPoint; i < nScans; i++, j++) {
-//     double a,r, xl,yl, xr,yr;
-//     a = scan.angle_min + i*inc;
-//     r = scan.ranges[i];
-
-//     if(r <= scan.range_min || r >= scan.range_max)
-//       continue;
-
-//     // convert polar -> cartesian
-//     xl = r*cos(a);
-//     yl = r*sin(a);
-//     // convert from laser frame to robot frame
-//     xr = xl*cos(th) - yl*sin(th) + x;
-//     yr = xl*sin(th) + yl*cos(th) + y;
-//     // store point
-//     points[j] = Vector2(xr, yr);
-
-
-//     // if(x > 0)
-//     {
-//       vleft_ = Vector2(xr, yr);
-//       if(i0 == 0)
-//         vfront_ = Vector2(xr, yr);
-//     }
-
-//     // if(x < 0) {
-//     //   vright_ = Vector2(xr, yr);
-//     //   if(i0 == 0)
-//     //     vrear_ = Vector2(xr, yr);
-//     // }
-
-//     if(i0==0) i0 = i; 
-
-//   }
-
-  
-//   // deal with "blind spots"
-
-//   double threshold_short_ = 0.6;
-//   double threshold_long_ = 0.7;
-
-//   // store readings
-//   if(x > 0) {  // front laser
-// //    reading_blind_front_ = scan.ranges[i0];
-// //    reading_blind_left_ = scan.ranges[i1];
-
-// //    laser_x_front_ = x;
-// //    laser_y_front_ = y;
-//   } else {  // rear laser
-// //    reading_blind_right_ = scan.ranges[i0];
-// //    reading_blind_rear_ = scan.ranges[i1];
-
-// //    laser_x_rear_ = x;
-// //    laser_y_rear_ = y;
-//   }
-
-
-//   // create intermediate points
-
-//   // create front points if necessary
-//   if(x > 0 &&
-//        (vfront_.y > -threshold_short_ ||
-//         vright_.x <  threshold_long_)) {
-
-// /*
-//     double x_front = laser_x_front_ + reading_blind_front_ * sin(15.0*M_PI/180.0);
-//     double y_front = laser_y_front_ - reading_blind_front_ * cos(15.0*M_PI/180.0);
-
-//     double x_right = laser_x_rear_ + reading_blind_right_ * sin(75.0*M_PI/180.0);
-//     double y_right = laser_y_rear_ - reading_blind_right_ * cos(75.0*M_PI/180.0);
-
-//     Vector2 pp = points[points.size()-nScans];
-//     printf("points.size()=%d\n", points.size());
-//     printf("laser: (%f %f), additional (%f %f)\n", pp.x, pp.y, x_front, y_front);
-//     pp = points[points.size()-1];
-//     printf("laser: (%f %f), additional (%f %f) d=%f\n", pp.x, pp.y, x_right, y_right, reading_blind_right_);
-// */
-
-
-
-//     // create 10 intermediate points
-//     int n=10;
-//     for(int i=0; i < n; i++) {
-//       double t = (i/(n-1.0));
-//       double px = t*vfront_.x + (1.0-t)*vright_.x;
-//       double py = t*vfront_.y + (1.0-t)*vright_.y;
-//       points.push_back(Vector2(px, py));
-//     }
-//   }
-
-//   // create rear points if necessary
-//   if(x < 0 &&
-//        (vrear_.y <  threshold_short_ ||
-//         vleft_.x > -threshold_long_)) {
-
-// /*    double x_rear = laser_x_rear_ - reading_blind_rear_ * sin(15*M_PI/180);
-//     double y_rear = laser_y_rear_ + reading_blind_rear_ * cos(15*M_PI/180);
-
-//     double x_left = laser_x_front_ - reading_blind_left_ * cos(15*M_PI/180);
-//     double y_left = laser_y_front_ + reading_blind_left_ * sin(15*M_PI/180);
-// */
-//     //    Vector2 pp = points[points.size()-nScans];
-// /*    Vector2 pp = points[points.size()-nScans];
-//     printf("laser: (%f %f), additional (%f %f) d=%f\n", pp.x, pp.y, x_rear, y_rear, reading_blind_rear_);
-//     pp = points[points.size()-1];
-//     printf("laser: (%f %f), additional (%f %f) d=%f\n", pp.x, pp.y, x_left, y_left, reading_blind_left_);
-// */
-
-//     // create 10 intermediate points
-//     int n=10;
-//     for(int i=0; i < n; i++) {
-//       double t = (i/(n-1.0));
-//       double px = t*vrear_.x + (1.0-t)*vleft_.x;
-//       double py = t*vrear_.y + (1.0-t)*vleft_.y;
-//       points.push_back(Vector2(px, py));
-//     }
-//   }
-  
-
-
-//   visualization_msgs::Marker marker;
-//   marker.header.frame_id = "/base_link";
-//   marker.header.stamp = ros::Time::now();
-//   marker.ns = "front";
-//   marker.type = visualization_msgs::Marker::CUBE;
-//   marker.action = visualization_msgs::Marker::ADD;
-//   marker.pose.position.z = 0.55;
-//   marker.pose.orientation.x = 0.0;
-//   marker.pose.orientation.y = 0.0;
-//   marker.pose.orientation.z = 0.0;
-//   marker.pose.orientation.w = 1.0;
-//   marker.scale.x = MARKER_SCALE;
-//   marker.scale.y = MARKER_SCALE;
-//   marker.scale.z = MARKER_SCALE;
-//   marker.color.r = 1;
-//   marker.color.g = 0;
-//   marker.color.b = 0;
-//   marker.color.a = 1.0;
-//   marker.lifetime = ros::Duration(0.2);
-
-//   marker.id = 0;
-//   marker.pose.position.x = vfront_.x;
-//   marker.pose.position.y = vfront_.y;
-//   // if(vfront_.y > -threshold_short_)
-//     marker_pub_.publish(marker);
-
-//   // marker.id = 1;
-//   // marker.pose.position.x = vright_.x;
-//   // marker.pose.position.y = vright_.y;
-//   // if(vright_.x <  threshold_long_)
-//   //   marker_pub_.publish(marker);
- 
-//   // marker.id = 2;
-//   // marker.pose.position.x = vrear_.x;
-//   // marker.pose.position.y = vrear_.y;
-//   // if(vrear_.y < threshold_short_)
-//   //   marker_pub_.publish(marker);
-
-//   marker.id = 3;
-//   marker.pose.position.x = vleft_.x;
-//   marker.pose.position.y = vleft_.y;
-//   // if(vleft_.x > -threshold_long_)
-//     marker_pub_.publish(marker);
-// }
-
-// void BaseDistance::swap_point_buffers()
-// {
-//   //printf("swapping\n");
-//   boost::mutex::scoped_lock curr_lock(lock);
-  
-//   current_points = receiving_points;
-//   receiving_points = (&points1 == current_points) ? &points2 : &points1;
-//   receiving_points->clear();
-// }
-
-
-// void BaseDistance::laser_collect(const sensor_msgs::LaserScan::ConstPtr& scan)
-// {
-
-//   //printf("laser data\n");
-
-//   laser_points(*scan, *receiving_points);
-
-//   // if(scans_received_ == 3)
-//   {
-//     swap_point_buffers();
-//     scans_received_ = 0;
-//   }
-// }
+#define CLAMP(x, min, max) (x < min) ? min : ((x > max) ? max : x)
 
 double BaseDistance::grad(std::vector<Vector2> &points, double *gx, double *gy, double *gth)
 {
   if(!gx || !gy || !gth)
     return 0;
 
-  double d=0.005;
-  double d0, dx, dy, dth;
+  double d0, dx_p, dy_p, dth_p, dx_n, dy_n, dth_n;
 
-  Vector2 nearest;
+  double v_len = sqrt(vx_last_*vx_last_ + vy_last_*vy_last_ + vth_last_*vth_last_);
+  double dd = CLAMP(v_len*d_*2, 0.005, 0.15);
 
-  d0  = distance(points, &nearest, 0, 0, 0);
-  dx  = distance(points, 0, d, 0, 0);
-  dy  = distance(points, 0, 0, d, 0);
-  dth = distance(points, 0, 0, 0, d);
+  d0   = distance(points, &nearest_, 0, 0, 0);
 
-  *gx  = dx  - d0;
-  *gy  = dy  - d0;
-  *gth = dth - d0;
+  dx_p  = distance(points, 0,  dd,  0,  0);
+  dx_n  = distance(points, 0, -dd,  0,  0);
 
-/*
-  visualization_msgs::MarkerArray laserMarkers;
-  for(int i=0; i < points.size(); i++) {
-//  static int i=0;
-//  i = (i + 1) % points.size();
-//  {  
-  visualization_msgs::Marker marker;
-  marker.header.frame_id = "/base_link";
-  marker.header.stamp = ros::Time();
-  marker.ns = "laser_points";
-  marker.id = 0;
-  marker.type = visualization_msgs::Marker::CUBE;
-  marker.action = visualization_msgs::Marker::ADD;
-  marker.pose.position.x = points[i].x;
-  marker.pose.position.y = points[i].y;
-  marker.pose.position.z = 0.5;
-  marker.pose.orientation.x = 0.0;
-  marker.pose.orientation.y = 0.0;
-  marker.pose.orientation.z = 0.0;
-  marker.pose.orientation.w = 1.0;
-  marker.scale.x = 0.03;
-  marker.scale.y = 0.03;
-  marker.scale.z = 0.03;
-  marker.color.r = (i%2 == 0)? 1 : 0;
-  marker.color.g = (i%2 == 1)? 1 : 0;
-  marker.color.b = (i%3 == 2)? 1 : 0;
-  marker.color.a = 1.0;
-  marker.lifetime = ros::Duration(0.1);
-//  marker_pub_.publish(marker);
-  laserMarkers.markers.push_back(marker);
-  }
-*/
-//  marker_laser_pub_.publish(laserMarkers);
+  dy_p  = distance(points, 0,  0,  dd,  0);
+  dy_n  = distance(points, 0,  0, -dd,  0);
 
-  // visualize closest point
-  visualization_msgs::Marker marker;
-  marker.header.frame_id = "/base_link";
-  marker.header.stamp = ros::Time::now();
-  marker.ns = "nearest_point";
-  marker.id = 0;
-  marker.type = visualization_msgs::Marker::CUBE;
-  marker.action = visualization_msgs::Marker::ADD;
-  marker.pose.position.x = nearest.x;
-  marker.pose.position.y = nearest.y;
-  marker.pose.position.z = 0.55;
-  marker.pose.orientation.x = 0.0;
-  marker.pose.orientation.y = 0.0;
-  marker.pose.orientation.z = 0.0;
-  marker.pose.orientation.w = 1.0;
-  marker.scale.x = MARKER_SCALE*2;
-  marker.scale.y = MARKER_SCALE*2;
-  marker.scale.z = MARKER_SCALE*2;
-  marker.color.r = 0.0f;
-  marker.color.g = 1.0f;
-  marker.color.b = 0.0f;
-  marker.color.a = 1.0;
-  marker.lifetime = ros::Duration(0.1);
-  marker_pub_.publish(marker);
+  dth_p = distance(points, 0,  0,  0,  dd);
+  dth_n = distance(points, 0,  0,  0, -dd);
 
+  *gx  = (dx_p  - dx_n)  / (2.0 * dd);
+  *gy  = (dy_p  - dy_n)  / (2.0 * dd);
+  *gth = (dth_p - dth_n) / (2.0 * dd);
 
+  // compute second derivatives for finding saddle points
+  double g2x = (dx_p  + dx_n - 2*d0) / (dd*dd);
+  double g2y = (dy_p  + dy_n - 2*d0) / (dd*dd);
+  double g2th = (dth_p  + dth_n - 2*d0) / (dd*dd);
 
-  //visualization_msgs::Marker marker;
-  marker.header.frame_id = "/base_link";
-  marker.header.stamp = ros::Time::now();
-  marker.ns = "base_footprint";
-  marker.id = 10;
-  marker.type = visualization_msgs::Marker::CUBE;
-  marker.action = visualization_msgs::Marker::ADD;
-  marker.pose.position.x = 0;
-  marker.pose.position.y = 0;
-  marker.pose.position.z = 0.3;
-  marker.pose.orientation.x = 0.0;
-  marker.pose.orientation.y = 0.0;
-  marker.pose.orientation.z = 0.0;
-  marker.pose.orientation.w = 1.0;
-  marker.scale.x = 2*left_;
-  marker.scale.y = 2*top_;
-  marker.scale.z = 0.6;
-  marker.color.r = 0.5f;
-  marker.color.g = 0.5f;
-  marker.color.b = 1.0f;
-  marker.color.a = 0.5;
-  marker.lifetime = ros::Duration();
-  marker_laser_pub_.publish(marker);
+  //ROS_DEBUG("ddx=%f, ddy=%f, ddth=%f\n", ddx, ddy, ddth);
+  //ROS_DEBUG("gx: %f (+- %f)  gy: %f (+-%f)  gth: %f (+- %f)\n", *gx, g2x, *gy, g2y, *gth, g2th);
+
+  // "dampen" if second derivative is big
+  double g2_scaledown = 2.0;
+  double gx_damp = (fabs(g2x) < g2_scaledown) ? 1.0 : g2_scaledown / fabs(g2x);
+  double gy_damp = (fabs(g2y) < g2_scaledown) ? 1.0 : g2_scaledown / fabs(g2y);
+  double gth_damp = (fabs(g2th) < g2_scaledown) ? 1.0 : g2_scaledown / fabs(g2th);
+
+  *gx = *gx * gx_damp;
+  *gy = *gy * gy_damp;
+  *gth = *gth * gth_damp;
+
+  std_msgs::Float64MultiArray msg;
+  msg.data.resize(7);
+  msg.data[0] = dd;
+
+  msg.data[1] = *gx;
+  msg.data[2] = *gy;
+  msg.data[3] = *gth;
+
+  msg.data[4] = g2x;
+  msg.data[5] = g2y;
+  msg.data[6] = g2th;
+
+  debug_pub_.publish(msg);  
 
   return d0;
 }
@@ -578,9 +464,10 @@ void BaseDistance::setSafetyLimits(double safety_dist, double slowdown_near, dou
 
 double BaseDistance::brake(std::vector<Vector2> &points, double *vx, double *vy, double *vth)
 {
-  double factor = 3;
-  double d = distance(points, 0, *vx*d_*factor, *vy*d_*factor, *vth*d_*factor);
-  if(d < safety_dist_) {
+  double factor = 1.5;
+  double d = distance(points, 0, -*vx*d_*factor, -*vy*d_*factor, -*vth*d_*factor);
+  if(d < safety_dist_) { // if we are stuck in the NEXT timestep...
+    mode_ |= MODE_BRAKING;
     *vx = 0.0;
     *vy = 0.0;
     *vth = 0.0;
@@ -590,11 +477,11 @@ double BaseDistance::brake(std::vector<Vector2> &points, double *vx, double *vy,
 
 double BaseDistance::project(std::vector<Vector2> &points, double *vx, double *vy, double *vth)
 {
-  double d, gx, gy, gth;
+  double d, gx, gy, gth, factor=0;
   d = grad(points, &gx, &gy, &gth);
 
+  // normalize gradient
   double l_grad = 1/sqrt(gx*gx + gy*gy + gth*gth);
-
   gx*=l_grad;
   gy*=l_grad;
   gth*=l_grad;
@@ -603,9 +490,17 @@ double BaseDistance::project(std::vector<Vector2> &points, double *vx, double *v
     // project (vx,vy,vth) onto (gx,gy,gth)
     double dp = *vx*gx + *vy*gy + *vth*gth;
     if(dp > 0) { // we are moving towards the obstacle
-      double factor = (d - slowdown_far_)/(slowdown_near_ - slowdown_far_);
-      if(d < slowdown_near_) {factor=1; printf("hard "); }
-      printf("projecting... (%f %f %f) ", gx *dp*factor, gy *dp*factor, gth*dp*factor);
+      if(d < slowdown_near_)
+      {
+        mode_ |= MODE_HARD_PROJECTING;
+        factor = 1;
+      }
+      else
+      {
+        mode_ |= MODE_PROJECTING;
+        factor = (d - slowdown_far_)/(slowdown_near_ - slowdown_far_);
+      }
+
       *vx  -= gx *dp*factor;
       *vy  -= gy *dp*factor;
       *vth -= gth*dp*factor;
@@ -613,7 +508,7 @@ double BaseDistance::project(std::vector<Vector2> &points, double *vx, double *v
   }
 
   if(d < repelling_dist_) {
-    printf("repelling\n");
+    mode_ |= MODE_REPELLING;
     double l_grad_2d = 1/sqrt(gx*gx + gy*gy);
     double a = (1.0/d - 1.0/repelling_dist_)
              * (1.0/d - 1.0/repelling_dist_)
@@ -630,8 +525,13 @@ double BaseDistance::project(std::vector<Vector2> &points, double *vx, double *v
 
 void BaseDistance::compute_distance_keeping(double *vx, double *vy, double *vth)
 {
+
+  // compute last known robot position in odom frame
+  compute_pose2d(base_link_frame_.c_str(), odom_frame_.c_str(), ros::Time(0), &rob_x_, &rob_y_, &rob_th_);
+
+  // collect all relevant obstacle points
   std::vector<Vector2> current_points;
-  
+
   {
     boost::mutex::scoped_lock current_lock(lock);
 
@@ -652,27 +552,28 @@ void BaseDistance::compute_distance_keeping(double *vx, double *vy, double *vth)
     std::copy(blind_spots_.begin(), blind_spots_.end(),
               std::back_insert_iterator<std::vector<Vector2> >(current_points));
   }
-    
-              
-  //printf("ld: ");
 
-  double d = project(current_points, vx, vy, vth);
-  //double d = brake(*current_points, vx, vy, vth);
+  mode_ = MODE_FREE;
 
-  printf("d=%f  ", d);
+  // modify velocity vector vector
+  project(current_points, vx, vy, vth);
 
-  double dx = distance(current_points, 0, -*vx*d_, -*vy*d_, -*vth*d_);
+  // if necessary, do braking
+  brake(current_points, vx, vy, vth);
 
-  if(dx < safety_dist_) {  // if we are stuck in the NEXT timestep...
-    printf("[braking %f < %f]", dx, safety_dist_);
-    *vx = 0.0;
-    *vy = 0.0;
-    *vth = 0.0;
-  }
+  vx_last_ = *vx;
+  vy_last_ = *vy;
+  vth_last_ = *vth;
 
-  printf("\n");
+  publishNearestPoint();
+  publishBaseMarker();
+  publishPoints(current_points);
 }
 
+#define LEFT 1
+#define RIGHT 2
+#define REAR 4
+#define FRONT 8
 
 double BaseDistance::distance(std::vector<Vector2> &points, Vector2 *nearest, double dx, double dy, double dth)
 {
@@ -684,58 +585,72 @@ double BaseDistance::distance(std::vector<Vector2> &points, Vector2 *nearest, do
   if(points.size() == 0)
     ROS_WARN("No points received. Maybe the laser topic is wrong?");
 
-  for(unsigned int i=0; i < points.size(); i++) {
-    double px = points[i].x*cos(dth) - points[i].y*sin(dth) + dx;
-    double py = points[i].x*sin(dth) + points[i].y*cos(dth) + dy;
+  // transform from odom to base_link
+  btMatrix3x3 rob(cos(rob_th_), -sin(rob_th_), rob_x_,
+                  sin(rob_th_),  cos(rob_th_), rob_y_,
+                  0,             0,            1);
 
-    double dbottom  = -py + bottom_;
-    double dtop     =  py - top_;
-    double dleft    = -px + left_;
-    double dright   =  px - right_;
+  // this transform adds some adjustment
+  btMatrix3x3 adj(cos(dth), -sin(dth), dx,
+                  sin(dth),  cos(dth), dy,
+                  0,         0,        1);
+
+  // create transformation matrix
+  btMatrix3x3 m = adj*rob;
+
+  for(unsigned int i=0; i < points.size(); i++) {
+    double px = points[i].x*m[0][0] + points[i].y*m[0][1] + m[0][2];
+    double py = points[i].x*m[1][0] + points[i].y*m[1][1] + m[1][2];
+
+    double dright = -py + right_;
+    double dleft  =  py - left_;
+    double drear  = -px + rear_;
+    double dfront =  px - front_;
 
     int area=0;
-    area |= BOTTOM * (dbottom > -tolerance_);
-    area |= TOP    * (dtop    > -tolerance_);
-    area |= LEFT   * (dleft   > -tolerance_);
-    area |= RIGHT  * (dright  > -tolerance_);
+    area |= RIGHT * (dright > -tolerance_);
+    area |= LEFT  * (dleft  > -tolerance_);
+    area |= REAR  * (drear  > -tolerance_);
+    area |= FRONT * (dfront > -tolerance_);
 
     double rqdist=INFINITY, ldist=INFINITY;
     switch(area) {
-    case(TOP):     ldist = dtop; break;
-    case(BOTTOM):  ldist = dbottom; break;
-    case(LEFT):    ldist = dleft; break;
-    case(RIGHT):   ldist = dright; break;
+    case(RIGHT): ldist = dright; break;
+    case(LEFT):  ldist = dleft; break;
+    case(REAR):  ldist = drear; break;
+    case(FRONT): ldist = dfront; break;
 
-    case(TOP | LEFT):     rqdist = dtop*dtop + dleft*dleft; break;
-    case(TOP | RIGHT):    rqdist = dtop*dtop + dright*dright; break;
-    case(BOTTOM | LEFT):  rqdist = dbottom*dbottom + dleft*dleft; break;
-    case(BOTTOM | RIGHT): rqdist = dbottom*dbottom + dright*dright; break;
+    case(LEFT  | REAR):  rqdist = dleft*dleft + drear*drear; break;
+    case(LEFT  | FRONT): rqdist = dleft*dleft + dfront*dfront; break;
+    case(RIGHT | REAR):  rqdist = dright*dright + drear*drear; break;
+    case(RIGHT | FRONT): rqdist = dright*dright + dfront*dfront; break;
     }
 
     if(ldist < ldistance) {
       ldistance = ldist;
-      lnearest = points[i];
+      lnearest = Vector2(px, py);
       larea = area;
     }
 
     if(rqdist < rqdistance) {
       rqdistance = rqdist;
-      rnearest = points[i];
+      rnearest = Vector2(px, py);
       rarea = area;
     }
   }
 
+
   double rdistance = sqrt(rqdistance);
   if(rdistance < ldistance) {
 
-    //printf("area=%d\n", rarea);
+    //ROS_DEBUG("area=%d\n", rarea);
 
     if(nearest)
       *nearest = rnearest;
     return rdistance;
   } else {
 
-    //printf("area=%d\n", larea);
+    //ROS_DEBUG("area=%d\n", larea);
 
     if(nearest)
       *nearest = lnearest;
