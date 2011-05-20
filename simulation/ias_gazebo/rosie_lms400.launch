@@ -3,7 +3,7 @@
   <include file="$(find ias_gazebo)/environments/empty_world.launch"/>
   
   <param name="/use_sim_time" value="true" />
-  <param name="robot_description" command="$(find xacro)/xacro.py '$(find ias_robot_defs)/robots/rosie_sim.lms400.urdf.xml'"/>  
+  <param name="robot_description" command="$(find xacro)/xacro.py '$(find rosie_description)/robots/rosie_sim.lms400.urdf.xacro'"/> 
 
   <node name="robot_loader" pkg="gazebo_tools" type="gazebo_model" args="-p robot_description -x 0 -y 0 spawn rosie_model" respawn="false" output="screen" />
  

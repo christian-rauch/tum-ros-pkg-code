@@ -8,7 +8,7 @@
   <depend package="rospy"/>
     
   <depend package="ogre_tools"/>
-  <depend package="ias_robot_defs"/>
+  <depend package="rosie_description"/>
   <depend package="gazebo_tools"/>
   <depend package="pr2_gazebo_plugins"/>
   <depend package="jlo"/>
