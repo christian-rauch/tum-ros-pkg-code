@@ -1,0 +1,4 @@
+<launch> 
+    <rosparam command="load" ns="robot_description_collision" file="$(find rosie_description)/collision/rosie_collision_checks_both_arms.yaml" />
+    <rosparam command="load" ns="robot_description_planning" file="$(find rosie_description)/collision/rosie_planning.yaml" />
+</launch>

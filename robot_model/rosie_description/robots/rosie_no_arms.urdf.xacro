@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<robot name="kimp">
+
+  <include filename="$(find rosie_description)/calibration/default_cal.xml"/>
+  <include filename="$(find rosie_description)/urdf/base.urdf.xacro"/>
+  <include filename="$(find rosie_description)/urdf/torso.urdf.xacro"/>
+  <include filename="$(find rosie_description)/urdf/head.urdf.xacro"/>
+  <include filename="$(find rosie_description)/urdf/shoulder_laser.urdf.xacro"/>
+  <include filename="$(find rosie_description)/urdf/gazebo.urdf.xacro"/>
+  <include filename="$(find rosie_description)/urdf/common/materials.xml"/>
+
+  <property name="base_upper_size_x" value="0.52"/>
+  <property name="base_upper_size_y" value="0.47"/>
+
+  <property name="chest_offset_x" value="0.135" />
+  <property name="chest_offset_z" value="-0.443" />
+
+  <rosie_base name="base">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </rosie_base>
+
+  <rosie_torso name="torso" parent="base"
+              pos_x="${base_upper_size_x / 2}"
+              pos_y="0"
+              pos_z="${base_size_z + base_offset_z}"/>
+
+
+  <rosie_head parent="base_link"/>
+  <rosie_shoulder_laser parent="base_link"/>
+
+</robot>

@@ -1,0 +1,97 @@
+<?xml version="1.0"?>
+
+<root>
+
+  <!-- ********** Head ********** -->
+  <!-- PTU -> Camera projection center extra offsets-->
+  <property name="cal_ptu_to_r_cam_x"     value="0.0450085" />
+  <property name="cal_ptu_to_r_cam_y"     value="-0.0690627" />
+  <property name="cal_ptu_to_r_cam_z"     value="0.110697" />
+  <property name="cal_ptu_to_r_cam_roll"  value="4.71005" />
+  <property name="cal_ptu_to_r_cam_pitch" value="0.00426654" />
+  <property name="cal_ptu_to_r_cam_yaw"   value="4.71095" />
+  
+  <!-- Robot Base -> tilting lms400 base -->
+  <property name="msr_base_to_lms400_x"     value="0.363" />
+  <property name="msr_base_to_lms400_y"     value="-0.238" />
+  <property name="msr_base_to_lms400_z"     value="1.576" />
+  <property name="msr_base_to_lms400_roll"  value="0.0" />
+  <property name="msr_base_to_lms400_pitch" value="0.0" />
+  <property name="msr_base_to_lms400_yaw"   value="0.0" />
+  
+  <!--second cube -> tilting lms400  -->
+  <property name="msr_cube_to_lms400_x"     value="-0.00683" />
+  <property name="msr_cube_to_lms400_y"     value="-0.01921" />
+  <property name="msr_cube_to_lms400_z"     value="0.14286" />
+  <property name="msr_cube_to_lms400_roll"  value="0.0" />
+  <property name="msr_cube_to_lms400_pitch" value="0.0" />
+  <property name="msr_cube_to_lms400_yaw"   value="0.0" />
+
+  <!-- Robot Base -> Ptu base -->
+  <property name="msr_base_to_ptu_x"     value="0.405" />
+  <property name="msr_base_to_ptu_y"     value="0.0" />
+  <property name="msr_base_to_ptu_z"     value="1.53" />
+  <property name="msr_base_to_ptu_roll"  value="0.0" />
+  <property name="msr_base_to_ptu_pitch" value="0.0" />
+  <property name="msr_base_to_ptu_yaw"   value="0.0" />
+
+  <!-- Robot Base -> Left arm base -->
+  <property name="cal_base_to_left_arm_x"     value="0.395" />
+  <property name="cal_base_to_left_arm_y"     value="0.059" />
+  <property name="cal_base_to_left_arm_z"     value="1.149" />
+  <property name="cal_base_to_left_arm_roll"  value="0.71372" />
+  <property name="cal_base_to_left_arm_pitch" value="-0.84806" />
+  <property name="cal_base_to_left_arm_yaw"   value="-2.42787" />
+
+  <!-- Robot Base -> Right arm base -->
+  [0.385121, -0.0570121, 1.15408, 5.57141, 5.42596, 2.4299]
+  <property name="cal_base_to_right_arm_x"     value="0.385121" />
+  <property name="cal_base_to_right_arm_y"     value="-0.0570121" />
+  <property name="cal_base_to_right_arm_z"     value="1.15408" />
+  <property name="cal_base_to_right_arm_roll"  value="0.71178" />
+  <property name="cal_base_to_right_arm_pitch" value="0.85723" />
+  <property name="cal_base_to_right_arm_yaw"   value="-0.71169" />
+
+  <!-- Right Camera -> LeftCamera complete transformation-->
+  <property name="cal_r_cam_to_l_cam_x"   value="-0.125335" />
+  <property name="cal_r_cam_to_l_cam_y"  value="-0.000453696" />
+  <property name="cal_r_cam_to_l_cam_z" value="-0.000652368" />
+  <property name="cal_r_cam_to_l_cam_roll"     value="0.00104896" />
+  <property name="cal_r_cam_to_l_cam_pitch"   value="6.27783" />
+  <property name="cal_r_cam_to_l_cam_yaw"     value="0.00559089" />
+ 
+  <!-- Right Camera -> SwissRanger complete transformation (todo) -->
+  <property name="cal_r_cam_to_sr4_x"   value="-0.0619785" />
+  <property name="cal_r_cam_to_sr4_y"  value="0.001762617" />
+  <property name="cal_r_cam_to_sr4_z" value="-0.0379636" />
+  <property name="cal_r_cam_to_sr4_roll" value="0.0208719" />
+  <property name="cal_r_cam_to_sr4_pitch"   value="6.27334" />
+  <property name="cal_r_cam_to_sr4_yaw"     value="3.1418" />
+
+  <!-- Right Camera -> Kinect complete transformation -->
+  <property name="cal_r_cam_to_kinect_x"       value="-0.125577"/>
+  <property name="cal_r_cam_to_kinect_y"       value="-0.158735" />
+  <property name="cal_r_cam_to_kinect_z"       value="-0.0101134" />
+  <property name="cal_r_cam_to_kinect_roll"    value=" 0.0750699" />
+  <property name="cal_r_cam_to_kinect_pitch"   value=" 4.78097" />
+  <property name="cal_r_cam_to_kinect_yaw"     value=" 1.51834" />
+
+
+  <!-- Right Camera -> Videre  STOC Camera (rpy in degrees) -->
+  <!-- TODO: Replace manually measured values with calibrated ones -->
+  <property name="cal_r_cam_to_stoc_x"   value="-0.07" />
+  <property name="cal_r_cam_to_stoc_y"  value="-0.07" />
+  <property name="cal_r_cam_to_stoc_z" value="0.0" />
+  <property name="cal_r_cam_to_stoc_roll" value="0" />
+  <property name="cal_r_cam_to_stoc_pitch"   value="${-0.5 * M_PI}" />
+  <property name="cal_r_cam_to_stoc_yaw"     value="${-0.5 * M_PI}" />
+
+  <!-- base -> neck scanner (calibrated against RightCam using a CalTab --> 
+  <property name="cal_base_to_neck_scanner_x"      value="0.405376" />
+  <property name="cal_base_to_neck_scanner_y"      value="0.063816" />
+  <property name="cal_base_to_neck_scanner_z"      value="1.410532" />
+  <property name="cal_base_to_neck_scanner_roll"   value="0.000707" />
+  <property name="cal_base_to_neck_scanner_pitch"  value="-0.007788" />
+  <property name="cal_base_to_neck_scanner_yaw"    value="-0.023937" />
+  
+</root>

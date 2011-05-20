@@ -1,0 +1,180 @@
+<?xml version="1.0"?>
+
+<robot name = "dlr_hit_right_hand">
+
+  <include filename="$(find rosie_description)/urdf/common/util_defs.xml"/>
+  <include filename="$(find rosie_description)/urdf/finger.urdf.xacro"/>
+  
+  <!-- inertial model of the hands uses dummy weight values and 
+  inertial matrix definition based on the bounding boxes of the 
+  links.-->
+    
+  <property name="testing_damping_value" value="0.005"/>
+  
+  <macro name = "dlr_hit_right_hand" params = "name parent *origin">
+    
+    <joint name = "${name}_mount_joint" type = "fixed">
+      <parent link = "${parent}" />
+      <child link = "${name}_palm" />
+      <insert_block name = "origin" />
+    </joint>
+
+    <link name = "${name}_palm">
+      <inertial>
+        <origin xyz = "-0.004 0.002 0.076" rpy = "0 0 0" />
+        <mass value = "0.5" />
+        <cuboid_inertia_def width = "0.122" length = "0.082" height = "0.165" mass = "0.5"/>
+      </inertial>
+      <visual>
+        <origin xyz = "0 0 0" rpy = "0 0 0" />
+        <geometry>
+          <mesh filename = "package://rosie_description/meshes/hand/right_palm.dae" />
+        </geometry>
+        <material name = "HandGray" />
+      </visual>
+      <collision>
+        <origin xyz = "0 0 0" rpy = "0 0 0" />
+        <geometry>
+          <mesh filename = "package://rosie_description/meshes/hand/convex/right_palm_convex.stl" />
+        </geometry>
+      </collision>
+    </link>
+    
+    <link name = "${name}_thumb_base">
+      <inertial>
+        <origin xyz = "-0.003 0.065 0.051" rpy = "0 0 0" />
+        <mass value = "0.1" />
+        <cuboid_inertia_def width = "0.092" length = "0.045" height = "0.1" mass = "0.1"/>
+      </inertial>
+      <visual>
+        <origin xyz = "0 0 0" rpy = "0 0 0" />
+        <geometry>
+          <mesh filename = "package://rosie_description/meshes/hand/right_thumb_base.dae" />
+        </geometry>
+        <material name = "HandGray" />
+      </visual>
+      <collision>
+        <origin xyz = "0 0 0" rpy = "0 0 0" />
+        <geometry>
+          <mesh filename = "package://rosie_description/meshes/hand/convex/right_thumb_base_convex.stl" />
+        </geometry>
+      </collision>
+    </link>
+    
+    <joint name = "${name}_thumb_joint" type = "revolute">
+      <parent link = "${name}_palm" />
+      <child link = "${name}_thumb_base" />
+      <origin xyz = "-0.003 0.0271 0" rpy = "0 0 0" />
+      <axis xyz = "0 0 -1" />
+      <limit lower="0" upper="1.570796" effort="100" velocity="100" />  <!-- lowStop = 0 highStop = 90 -->
+      <dynamics damping="${testing_damping_value}"/>
+    </joint>
+    
+    <transmission name="${name}_thumb_trans" type="pr2_mechanism_model/SimpleTransmission">
+      <actuator name="${name}_thumb_motor"/>
+      <joint name="${name}_thumb_joint"/>
+      <mechanicalReduction>1.0</mechanicalReduction>
+    </transmission>
+
+    <dlr_hit_hand_finger name = "${name}_ring_finger" parent = "${name}_palm">
+      <origin xyz = "-0.0043 -0.040165 0.14543" rpy = "1.570796 -1.536488 1.570796" />
+    </dlr_hit_hand_finger>
+    
+    <dlr_hit_hand_finger name = "${name}_middle_finger" parent = "${name}_palm">
+      <origin xyz = "-0.0043 0 0.15015" rpy = "-3.141593 -1.570796 0" />
+    </dlr_hit_hand_finger>
+     
+    <dlr_hit_hand_finger name = "${name}_fore_finger" parent = "${name}_palm">
+      <origin xyz = "-0.0043 0.040165 0.14545" rpy = "-1.570796 -1.536489 -1.570796" />
+    </dlr_hit_hand_finger>
+    
+    <dlr_hit_hand_finger name = "${name}_thumb" parent = "${name}_thumb_base">
+      <origin xyz = "-0.006 0.0869 0.0970" rpy="0.0 -0.959927 1.570796" />
+    </dlr_hit_hand_finger>
+
+  </macro>
+  
+  <macro name = "dlr_hit_left_hand" params = "name parent *origin">
+
+    <joint name = "${name}_mount_joint" type = "fixed">
+      <parent link = "${parent}" />
+      <child link = "${name}_palm" />
+      <insert_block name = "origin" />
+    </joint>
+
+    <link name = "${name}_palm">
+      <inertial>
+        <origin xyz = "-0.003 0 0.074" rpy = "0 0 0" />
+        <mass value = "0.5" />
+        <cuboid_inertia_def width = "0.123" length = "0.076" height = "0.164" mass = "0.5"/>
+      </inertial>
+      <visual>
+        <origin xyz = "0 0 0" rpy = "0 0 0" />
+        <geometry>
+          <mesh filename = "package://rosie_description/meshes/hand/left_palm.dae" />
+        </geometry>
+        <material name = "HandGray" />
+      </visual>
+      <collision>
+        <origin xyz = "0 0 0" rpy = "0 0 0" />
+        <geometry>
+          <mesh filename = "package://rosie_description/meshes/hand/convex/left_palm_convex.stl" />
+        </geometry>
+      </collision>
+    </link>
+
+    <link name = "${name}_thumb_base">
+      <inertial>
+        <origin xyz = "-0.003 -0.065 0.051" rpy = "0 0 0" />
+        <mass value = "0.1" />
+        <cuboid_inertia_def width = "0.092" length = "0.046" height = "0.101" mass = "0.1"/>
+      </inertial>
+      <visual>
+        <origin xyz = "0 0 0" rpy = "0 0 0" />
+        <geometry>
+          <mesh filename = "package://rosie_description/meshes/hand/left_thumb_base.dae" />
+        </geometry>
+        <material name = "HandGray" />
+      </visual>
+      <collision>
+        <origin xyz = "0 0 0" rpy = "0 0 0" />
+        <geometry>
+          <mesh filename = "package://rosie_description/meshes/hand/convex/left_thumb_base_convex.stl" />
+        </geometry>
+      </collision>
+    </link>
+    
+    <joint name = "${name}_thumb_joint" type = "revolute">
+      <parent link = "${name}_palm" />
+      <child link = "${name}_thumb_base" />
+      <origin xyz = "-0.003 -0.0271 0" rpy = "0 0 0" />
+      <axis xyz = "0 0 1" />
+      <limit lower="0" upper="1.570796" effort="100" velocity="100" />  <!-- lowStop = 0 highStop = 90 -->
+      <dynamics damping="${testing_damping_value}"/>
+    </joint>
+    
+    <transmission name="${name}_thumb_trans" type="pr2_mechanism_model/SimpleTransmission">
+      <actuator name="${name}_thumb_motor"/>
+      <joint name="${name}_thumb_joint"/>
+      <mechanicalReduction>1.0</mechanicalReduction>
+    </transmission>
+    
+    <dlr_hit_hand_finger name = "${name}_ring_finger" parent = "${name}_palm">
+      <origin xyz = "-0.0043 0.040165 0.14543" rpy = "1.570796 -1.536488 1.570796" />
+    </dlr_hit_hand_finger>
+    
+    <dlr_hit_hand_finger name = "${name}_middle_finger" parent = "${name}_palm">
+      <origin xyz = "-0.0043 0 0.15015" rpy = "-3.141593 -1.570796 0" />
+    </dlr_hit_hand_finger>
+    
+    <dlr_hit_hand_finger name = "${name}_fore_finger" parent = "${name}_palm">
+      <origin xyz = "-0.0043 -0.040165 0.14545" rpy = "-1.570796 -1.536489 -1.570796" />
+    </dlr_hit_hand_finger>
+    
+    <dlr_hit_hand_finger name = "${name}_thumb" parent = "${name}_thumb_base">
+      <origin xyz = "-0.006 -0.0869 0.0970" rpy="0.0 -0.959927 -1.570796" />
+    </dlr_hit_hand_finger>
+
+  </macro>
+
+</robot>

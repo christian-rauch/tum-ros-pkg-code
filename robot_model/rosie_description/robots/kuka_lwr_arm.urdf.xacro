@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<robot name="rosie">
+
+  <include filename="$(find rosie_description)/urdf/kuka_lwr_arm.urdf.xacro"/>
+  <include filename="$(find rosie_description)/urdf/gazebo.urdf.xacro"/>
+  <include filename="$(find rosie_description)/urdf/common/materials.xml"/>
+-
+-  <link name="base_link"/>
+
+  
+  <kuka_lwr_arm parent="base" name="arm" right="1" tool_name="">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </kuka_lwr_arm>
+  
+</robot>

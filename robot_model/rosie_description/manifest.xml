@@ -1,0 +1,14 @@
+<package>
+  <description brief="rosie_description">
+
+     URDF definitions of the ROSIE platform used at TU Muenchen.
+
+  </description>
+  <author>Lorenz Moesenlechner</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <depend package="xacro"/>
+
+</package>
+
+
