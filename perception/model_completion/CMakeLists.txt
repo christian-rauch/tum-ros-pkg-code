@@ -28,7 +28,5 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #rosbuild_link_boost(${PROJECT_NAME} thread)
 #rosbuild_add_executable(example examples/example.cpp)
 
-#rosbuild_add_executable(openCV_to_ros2 src/openCV_to_ros2.cpp)
-rosbuild_add_executable(getMask_ServiceClient src/getMask_ServiceClient.cpp)
-#rosbuild_add_executable(desc_match src/desc_match.cpp)
+rosbuild_add_executable(in_hand_object_modeling src/in_hand_object_modeling.cpp)
 #target_link_libraries(example ${PROJECT_NAME})

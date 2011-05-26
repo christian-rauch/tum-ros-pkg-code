@@ -1,5 +1,5 @@
 <launch>
-	<node  pkg="model_completion" type="getMask_ServiceClient" name="get_mask_client" output="screen" >
+	<node  pkg="model_completion" type="in_hand_object_modeling" name="get_mask_client" output="screen" >
 	<param name="width" value="640" />
 	<param name="height" value="480" />
 	<param name="fovy" value="25" />
