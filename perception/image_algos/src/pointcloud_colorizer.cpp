@@ -4,8 +4,6 @@
 #include <opencv/highgui.h>
 #include <cv_bridge/CvBridge.h>
 #include <image_geometry/pinhole_camera_model.h>
-//for pcl::transformPointCloud
-//#include <pcl_tf/transforms.h>
 #include <pcl_ros/transforms.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>

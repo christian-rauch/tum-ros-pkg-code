@@ -59,6 +59,7 @@ class PointCloudColorizer
   ros::Time stamp_;
   boost::shared_ptr<pcl::PointCloud<pcl::PointXYZRGB> > cloud_xyzrgb_;
   boost::thread spin_thread_;
+  std::map<int, std::pair<int, int32_t> > rgb_average_;
 public:
   PointCloudColorizer(ros::NodeHandle &n)
     :  nh_(n), it_(nh_)
@@ -69,7 +70,7 @@ public:
     nh_.param("monochrome", monochrome_, false);
     nh_.param("save_image", save_image_, false);
     nh_.param("cloud_rgb_topic", cloud_rgb_topic_, std::string("cloud_rgb"));
-    image_sub_ = it_.subscribeCamera(input_image_topic_, 1, &PointCloudColorizer::image_cb, this);
+    image_sub_ = it_.subscribeCamera(input_image_topic_, 10, &PointCloudColorizer::image_cb, this);
     cloud_sub_= nh_.subscribe (input_cloud_topic_, 10, &PointCloudColorizer::cloud_cb, this);
     pub_output_ = nh_.advertise<sensor_msgs::PointCloud2> (cloud_rgb_topic_, 1);
     ROS_INFO("[PointCloudColorizer:] Subscribing to image topic %s", input_image_topic_.c_str());
@@ -84,10 +85,10 @@ public:
     image_received_ = cloud_received_ = false;
     move_head_ = true;
     //TODO: parametrize
-    move_offset_y_min_ = -0.5;
-    move_offset_y_max_ = 0.5;
-    step_y_ = 0.1;
-    move_offset_z_max_ = 1.2;
+    move_offset_y_min_ = -2.0;
+    move_offset_y_max_ = 2.0;
+    step_y_ = 0.3;
+    move_offset_z_max_ = 1.5;
     move_offset_z_min_ = 0.0;
     step_z_ = 0.3;
     move_offset_x_ = 1.0;
@@ -144,33 +145,33 @@ public:
 
   void image_cb(const sensor_msgs::ImageConstPtr& image_msg, const sensor_msgs::CameraInfoConstPtr& info_msg)
   {
-    //    ROS_INFO("[PointCloudColorizer: ] Image received in frame %s", 
-    //        image_msg->header.frame_id.c_str());
+    // ROS_INFO("[PointCloudColorizer: ] Image received in frame %s", 
+    // 	     image_msg->header.frame_id.c_str());
     if (!image_received_ && cloud_received_)
       {
-	ROS_INFO("[PointCloudColorizer:] Image received with encoding %s", image_msg->encoding.c_str());
-	//image_ = NULL;
-	try 
-	  {
-	    ros_image_ = bridge_.imgMsgToCv(image_msg, "passthrough");
-	  }
-	catch (sensor_msgs::CvBridgeException& ex) 
-	  {
-	    ROS_ERROR("[PointCloudColorizer:] Failed to convert image");
-	    return;
-	  }
-	ros_image_.copyTo(image_);
-	cam_model_.fromCameraInfo(info_msg);
-	stamp_ = info_msg->header.stamp;
-	image_received_ = true;
+    	ROS_INFO("[PointCloudColorizer:] Image received with encoding %s", image_msg->encoding.c_str());
+    	//image_ = NULL;
+    	try 
+    	  {
+    	    ros_image_ = bridge_.imgMsgToCv(image_msg, "passthrough");
+    	  }
+    	catch (sensor_msgs::CvBridgeException& ex) 
+    	  {
+    	    ROS_ERROR("[PointCloudColorizer:] Failed to convert image");
+    	    return;
+    	  }
+    	ros_image_.copyTo(image_);
+    	cam_model_.fromCameraInfo(info_msg);
+    	stamp_ = info_msg->header.stamp;
+    	image_received_ = true;
 
-	if (save_image_)
-	  {
-	    std::stringstream stamp;
-	    stamp << stamp_;
-	    ROS_INFO("Saving image to %s", ("cb_" + stamp.str()).c_str());
-	    cv::imwrite("cb_" + stamp.str() + ".png", image_);
-	  }
+    	if (save_image_)
+    	  {
+    	    std::stringstream stamp;
+    	    stamp << stamp_;
+    	    ROS_INFO("Saving image to %s", ("cb_" + stamp.str()).c_str());
+    	    cv::imwrite("cb_" + stamp.str() + ".png", image_);
+    	  }
       }
   }
 
@@ -199,7 +200,20 @@ public:
     point_head_client_->sendGoal(goal);
     
     //wait for it to get there
-    point_head_client_->waitForResult();
+    bool finished_within_time = point_head_client_->waitForResult(ros::Duration(20.0));
+    if (!finished_within_time)
+      {
+	ROS_ERROR("Head did not move to pose: %f %f %f", point.point.x, point.point.y, point.point.z);
+      }
+    else
+      {
+	actionlib::SimpleClientGoalState state = point_head_client_->getState();
+	bool success = (state == actionlib::SimpleClientGoalState::SUCCEEDED);
+	if(success)
+	  ROS_INFO("Action move head finished: %s position: %f %f %f", state.toString().c_str(), point.point.x, point.point.y, point.point.z);
+	else
+	  ROS_ERROR("Action move head failed: %s", state.toString().c_str());
+      }
   }
 
   void process (cv::Mat image)
@@ -209,7 +223,7 @@ public:
     CvSeq* seq = cvCreateSeq (CV_SEQ_ELTYPE_POINT, sizeof (CvSeq), sizeof (CvPoint), stor);
     // pcl::transformPointCloud(cam_model_.tfFrame(), cloud_in_, cloud_in_tranformed_, tf_listener_);
     ros::Time now = ros::Time::now();
-    tf_listener_.waitForTransform(cam_model_.tfFrame(), cloud_in_.header.frame_id, now, ros::Duration(5.0));
+    tf_listener_.waitForTransform(cam_model_.tfFrame(), cloud_in_.header.frame_id, now, ros::Duration(20.0));
     tf::StampedTransform transform;
     tf_listener_.lookupTransform(cam_model_.tfFrame(), cloud_in_.header.frame_id, stamp_, transform);
     pcl_ros::transformPointCloud(cloud_in_, cloud_in_tranformed_, transform);
@@ -264,8 +278,25 @@ public:
           int32_t rgb_packed = (bgr[0] << 16) | (bgr[1] << 8) | bgr[2];
           //point_xyzrgb.rgb = *reinterpret_cast<float*>(&rgb_packed);
           if (cloud_xyzrgb_->points[i].rgb ==  getRGB(0.9, 0.0, 0.0))
-            cloud_xyzrgb_->points[i].rgb = *reinterpret_cast<float*>(&rgb_packed);
-
+	    {
+	      std::pair <int, int32_t> freq_rgb;
+	      freq_rgb.first = 1;
+	      freq_rgb.second = rgb_packed;
+	      rgb_average_[i] = freq_rgb;
+	      cloud_xyzrgb_->points[i].rgb = *reinterpret_cast<float*>(&(rgb_packed));
+	    }
+	  else
+	    {
+	        std::pair <int, int32_t> freq_rgb = rgb_average_[i];
+		freq_rgb.first = freq_rgb.first + 1;
+		freq_rgb.second = freq_rgb.second + rgb_packed;
+		rgb_average_[i] = freq_rgb;
+		rgb_packed = freq_rgb.second/freq_rgb.first;
+		cloud_xyzrgb_->points[i].rgb = *reinterpret_cast<float*>(&rgb_packed);
+	    }
+          //   cloud_xyzrgb_->points[i].rgb = *reinterpret_cast<float*>(&rgb_packed);
+	  // else
+	  //   cloud_xyzrgb_->points[i].rgb = (cloud_xyzrgb_->points[i].rgb + *reinterpret_cast<float*>(&rgb_packed))/2;
         }
       }
       //fill in points
@@ -288,6 +319,7 @@ public:
     pcl::toROSMsg (*cloud_xyzrgb_, *output_cloud);
     ROS_INFO("Publishing PointXZYRGB cloud with %ld points in frame %s", cloud_xyzrgb_->points.size(), 
              output_cloud->header.frame_id.c_str());
+    output_cloud->header.stamp = ros::Time::now();
     pub_output_.publish (output_cloud);
     cvClearSeq(seq);
     cvClearMemStorage(stor);
@@ -296,17 +328,16 @@ public:
 
 void spin ()
 {
-  ros::Rate loop_rate(1);
+  ros::Rate loop_rate(5);
   while (ros::ok())
     {
       //HEAD moving part
       if (move_head_ && move_offset_y_max_ >= move_offset_y_min_ && move_offset_z_max_ >= move_offset_z_min_)
       	{
       	  move_head("base_link", 1.0, move_offset_y_max_, move_offset_z_max_);
-      	  ROS_INFO("Head moved to position");
       	  sleep(5);
       	  move_offset_y_max_ = move_offset_y_max_ - step_y_;
-      	  if (move_offset_y_max_ == move_offset_y_min_ && move_offset_z_max_ != move_offset_z_min_)
+      	  if (move_offset_y_max_ <= move_offset_y_min_ && move_offset_z_max_ != move_offset_z_min_)
       	    {
       	      move_offset_z_max_ = move_offset_z_max_ - step_z_;
       	      //TODO: only works if min/max offsets are symetrical
@@ -317,8 +348,9 @@ void spin ()
       	  move_head_ = false; 
       	  image_received_ = false;
       	}
-      else if (move_offset_y_max_ == move_offset_y_min_ && move_offset_z_max_ == move_offset_z_min_)
+      else if (move_offset_y_max_ <= move_offset_y_min_ && move_offset_z_max_ == move_offset_z_min_)
 	{
+	  ROS_INFO("DONE - exiting");
 	  break;
 	}
 		  
