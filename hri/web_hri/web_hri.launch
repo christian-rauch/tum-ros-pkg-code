@@ -1,3 +1,0 @@
-<launch>
-  <node name="web_hri" pkg="web_hri" type="web_hri.py" args="socket localhost 9999" required="true" output="screen"/>
-</launch>

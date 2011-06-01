@@ -1,3 +1,0 @@
-<launch>
-  <node name="web_hri" pkg="web_hri" type="web_hri.py" args="jabber lenz@jabber.ccc.de" required="true" output="screen"/>
-</launch>
