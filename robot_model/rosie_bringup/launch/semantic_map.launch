@@ -1,6 +1,0 @@
-<launch>
-  <include file="$(find kbquery)/kbquery_ias_semantic_map.launch"/>
-  <node name="semantic_map_rviz_display" pkg="semantic_map_rviz_display" type="semantic_map_rviz_display"/>
-  <node name="semantic_map_tf_origin" pkg="tf" type="static_transform_publisher"
-        args="2.744750 2.677505 -0.225 0 0 0.999657 0.026177 /map /semantic_map 1000"/>
-</launch>
