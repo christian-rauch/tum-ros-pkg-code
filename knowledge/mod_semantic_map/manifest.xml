@@ -12,6 +12,7 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/mod_semantic_map</url>
   <depend package="rosjava" />
+  <depend package="geometry_msgs" />
 </package>
 
 

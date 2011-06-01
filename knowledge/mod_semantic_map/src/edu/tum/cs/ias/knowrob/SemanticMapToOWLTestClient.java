@@ -47,66 +47,62 @@ public class SemanticMapToOWLTestClient {
 		req.map.header.frame_id="/map";
 		req.map.header.stamp=ros.now();
 		
-		req.map.objects = new SemMapObject[4];
+//		req.map.objects = new SemMapObject[4];
 		
 		// create cupboard
-		req.map.objects[0] = new SemMapObject();
+                req.map.objects.add(new SemMapObject());
+		req.map.objects.get(0).id=1;
+		req.map.objects.get(0).partOf=0;
+		req.map.objects.get(0).type="cupboard";
 
-		req.map.objects[0].id=1;
-		req.map.objects[0].partOf=0;
-		req.map.objects[0].type="cupboard";
+		req.map.objects.get(0).depth  = 55.6f;
+		req.map.objects.get(0).width  = 60.7f;
+		req.map.objects.get(0).height = 70.6f;
 
-		req.map.objects[0].depth  = 55.6f;
-		req.map.objects[0].width  = 60.7f;
-		req.map.objects[0].height = 70.6f;
-
-		req.map.objects[0].pose = new float[] { 1.0f,0.0f,0.0f,2.3f,
+		req.map.objects.get(0).pose = new float[] { 1.0f,0.0f,0.0f,2.3f,
 											0.0f,1.0f,0.0f,1.2f,
 											0.0f,0.0f,1.0f,0.4f,
 											0.0f,0.0f,0.0f,1.0f};		
 		// create door
-		req.map.objects[1] = new SemMapObject();
+                req.map.objects.add(new SemMapObject());
+		req.map.objects.get(1).id=2;
+		req.map.objects.get(1).partOf=1;
+		req.map.objects.get(1).type="door";
 
-		req.map.objects[1].id=2;
-		req.map.objects[1].partOf=1;
-		req.map.objects[1].type="door";
+		req.map.objects.get(1).depth  = 0.6f;
+		req.map.objects.get(1).width  = 60.7f;
+		req.map.objects.get(1).height = 70.6f;
 
-		req.map.objects[1].depth  = 0.6f;
-		req.map.objects[1].width  = 60.7f;
-		req.map.objects[1].height = 70.6f;
-
-		req.map.objects[1].pose = new float[] { 1.0f,0.0f,0.0f,2.4f,
+		req.map.objects.get(1).pose = new float[] { 1.0f,0.0f,0.0f,2.4f,
 											0.0f,1.0f,0.0f,1.3f,
 											0.0f,0.0f,1.0f,0.4f,
 											0.0f,0.0f,0.0f,1.0f};		
 		// create hinge
-		req.map.objects[2] = new SemMapObject();
+                req.map.objects.add(new SemMapObject());
+		req.map.objects.get(2).id=3;
+		req.map.objects.get(2).partOf=2;
+		req.map.objects.get(2).type="hinge";
 
-		req.map.objects[2].id=3;
-		req.map.objects[2].partOf=2;
-		req.map.objects[2].type="hinge";
+		req.map.objects.get(2).depth  = 5.6f;
+		req.map.objects.get(2).width  = 0.7f;
+		req.map.objects.get(2).height = 0.6f;
 
-		req.map.objects[2].depth  = 5.6f;
-		req.map.objects[2].width  = 0.7f;
-		req.map.objects[2].height = 0.6f;
-
-		req.map.objects[2].pose = new float[] { 1.0f,0.0f,0.0f,2.5f,
+		req.map.objects.get(2).pose = new float[] { 1.0f,0.0f,0.0f,2.5f,
 											0.0f,1.0f,0.0f,1.4f,
 											0.0f,0.0f,1.0f,0.4f,
 											0.0f,0.0f,0.0f,1.0f};
 		
 		// create handle
-		req.map.objects[3] = new SemMapObject();
+                req.map.objects.add(new SemMapObject());
+		req.map.objects.get(3).id=4;
+		req.map.objects.get(3).partOf=2;
+		req.map.objects.get(3).type="handle";
 
-		req.map.objects[3].id=4;
-		req.map.objects[3].partOf=2;
-		req.map.objects[3].type="handle";
+		req.map.objects.get(3).depth  = 5.6f;
+		req.map.objects.get(3).width  = 6.7f;
+		req.map.objects.get(3).height = 7.6f;
 
-		req.map.objects[3].depth  = 5.6f;
-		req.map.objects[3].width  = 6.7f;
-		req.map.objects[3].height = 7.6f;
-
-		req.map.objects[3].pose = new float[] { 1.0f,0.0f,0.0f,2.6f,
+		req.map.objects.get(3).pose = new float[] { 1.0f,0.0f,0.0f,2.6f,
 											0.0f,1.0f,0.0f,1.5f,
 											0.0f,0.0f,1.0f,0.4f,
 											0.0f,0.0f,0.0f,1.0f};

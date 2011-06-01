@@ -15,7 +15,8 @@ import org.semanticweb.owlapi.vocab.PrefixOWLOntologyFormat;
 import ros.*;
 import ros.pkg.mod_semantic_map.srv.*;
 import ros.pkg.mod_semantic_map.msg.*;
-
+import ros.pkg.geometry_msgs.msg.Point;
+import ros.pkg.geometry_msgs.msg.Quaternion;
 
 /**
  * 
@@ -29,7 +30,7 @@ import ros.pkg.mod_semantic_map.msg.*;
  *
  */
 
-public class SemanticMapToOWL {
+public class PosesToOWL {
 
 
 	////////////////////////////////////////////////////////////////////////////////
@@ -46,7 +47,7 @@ public class SemanticMapToOWL {
 	public final static String RDFS = "http://www.w3.org/2000/01/rdf-schema#";
 
 	// Base IRI for semantic map ontology	
-	public final static String IAS_MAP = "http://ias.cs.tum.edu/kb/ccrl2_semantic_map.owl#";
+	public final static String IAS_MAP = "http://ias.cs.tum.edu/kb/ccrl2_semantic_map_addons.owl#";
 	
 	
 	// Prefix manager
@@ -78,13 +79,13 @@ public class SemanticMapToOWL {
 		rosToKnowrob.put("horizontal_plane", "knowrob:CounterTop");
 	}
 	
-	HashMap<Integer, OWLNamedIndividual> idToInst; 
+	HashMap<String, ArrayList<OWLNamedIndividual>> pointsInTrajectories; 
 	
 	OWLDataFactory factory;
 	OWLOntologyManager manager;
 	DefaultPrefixManager pm;
 	
-	int inst_counter=0;	// counter to create unique instance identifiers
+	int inst_counter=150;	// counter to create unique instance identifiers
 	
 	////////////////////////////////////////////////////////////////////////////////
 	// ROS stuff
@@ -96,7 +97,21 @@ public class SemanticMapToOWL {
 	////////////////////////////////////////////////////////////////////////////////
 
 		
+	/**
+	 * Initialize the ROS environment if it has not yet been initialized
+	 * 
+	 * @param node_name A unique node name
+	 */
+	protected static void initRos(String node_name) {
 
+		ros = Ros.getInstance();
+
+		if(!Ros.getInstance().isInitialized()) {
+			ros.init(node_name);
+		}
+		n = ros.createNodeHandle();
+
+	}
 
 	/**
 	 * Constructor. Advertises the needed ROS services.
@@ -104,64 +119,13 @@ public class SemanticMapToOWL {
 	 * @param n the node handle
 	 * @throws RosException if advertising ROS services failed
 	 */
-	public SemanticMapToOWL() {
+	public PosesToOWL() {
 
-		idToInst = new HashMap<Integer, OWLNamedIndividual>();
+		pointsInTrajectories = new HashMap<String, ArrayList<OWLNamedIndividual>>();
 	
-		try {
-			
-			initRos();
-			
-			n.advertiseService("/generate_owl_map", new GenerateSemanticMapOWL(), new ConvertToOwlCallback());
-			ros.spin();
-			
-		} catch (RosException e) {
-			e.printStackTrace();	
-		}
+		initRos("bla");
 		
 	}
-
-	
-	/**
-	 * Thread-safe ROS initialization
-	 */
-	protected static void initRos() {
-
-    	ros = Ros.getInstance();
-
-		if(!Ros.getInstance().isInitialized()) {
-	    	ros.init("knowrob_semantic_map_to_owl");
-		}
-		n = ros.createNodeHandle();
-
-	}
-	
-	/**
-	 * 
-	 * Callback class for querying the Web for the object type of a barcode
-	 * 
-	 * @author Moritz Tenorth, tenorth@cs.tum.edu
-	 *
-	 */
-	class ConvertToOwlCallback implements ServiceServer.Callback<GenerateSemanticMapOWL.Request, GenerateSemanticMapOWL.Response> {
-		
-		@Override
-		public GenerateSemanticMapOWL.Response call(GenerateSemanticMapOWL.Request req) {
-
-			GenerateSemanticMapOWL.Response res = new GenerateSemanticMapOWL.Response();
-			res.owlmap="";
-
-			if (req.map != null && req.map.objects.size()>0) {
-				
-				OWLOntology owlmap = buildOWLMapDescription(req.map);
-				res.owlmap = saveOntologytoString(owlmap, owlmap.getOWLOntologyManager().getOntologyFormat(owlmap));
-				
-			}
-			
-			return res;
-		}
-	}
-	
 	
 	
 	/**
@@ -169,19 +133,24 @@ public class SemanticMapToOWL {
 	 * @param ros_map
 	 * @return
 	 */
-	protected OWLOntology buildOWLMapDescription(SemMap ros_map) {
-		
+	public OWLOntology buildOWLDescription(String filename) {
+
 		OWLOntology ontology = null;
-		idToInst.clear();
-		try {
-			
+		pointsInTrajectories.clear();
+
+		
+	    
+	    try{
+	    	
+	    	BufferedReader reader = new BufferedReader(new FileReader(filename));
+	    	
 			// Create ontology manager and data factory
 			manager = OWLManager.createOWLOntologyManager();
 			factory = manager.getOWLDataFactory();
 			
 			// Get prefix manager using the base IRI of the JoystickDrive ontology as default namespace
 			pm = PREFIX_MANAGER;
-
+			
 			// Create empty OWL ontology
 			ontology = manager.createOntology(IRI.create(IAS_MAP));
 			manager.setOntologyFormat(ontology, new RDFXMLOntologyFormat());
@@ -190,85 +159,110 @@ public class SemanticMapToOWL {
 			OWLImportsDeclaration oid = factory.getOWLImportsDeclaration(IRI.create(KNOWROB));
 			AddImport addImp = new AddImport(ontology,oid);
 			manager.applyChange(addImp);
+			
+			
+
+			// create time point 
+			OWLNamedIndividual time_inst = createTimePointInst(ros.now(), ontology);
+			
 
 			
-			// create SemanticMap object in the ontology
-			createSemMapInst(ontology);
-			
-			// create time point 
-			OWLNamedIndividual time_inst = createTimePointInst(ros_map.header.stamp, ontology);
-			
-			
 			// iterate over all objects and create the respective OWL representations
-			for(SemMapObject ros_obj : ros_map.objects) {
-				createObjectDescription(ros_obj, time_inst, ontology);
+			String line;
+			String objname="";
+			
+			while(true) {
+			        
+		        line = reader.readLine();
+		        if(line==null){break;}
+		        if(line.equals("")){continue;}
+		        
+	
+		        // new object: line is object name
+		        if(line.matches("[a-zA-Z].*")) {
+		          
+		        	objname=line;
+		        	this.pointsInTrajectories.put(objname, new ArrayList<OWLNamedIndividual>());
+		        	continue;
+		        	
+		        	
+		        } else { 
+		          
+		        	String[] qpose = line.split(",");
+		        	Point p = new Point();
+		        	p.x = Float.valueOf(qpose[0]);
+		        	p.y = Float.valueOf(qpose[1]);
+		        	p.z = Float.valueOf(qpose[2]);
+		        	
+		        	Quaternion q = new Quaternion();
+		        	q.x = Float.valueOf(qpose[3]);
+		        	q.y = Float.valueOf(qpose[4]);
+		        	q.z = Float.valueOf(qpose[5]);
+		        	q.w = Float.valueOf(qpose[6]);
+		        	
+		        	double[] matrix = quaternionToMatrix(p,q);
+		        	createPointDescription(objname, matrix, time_inst, ontology);
+		        	
+		        	continue;
+		        }
+		        
 			}
+
+			for(String obj : pointsInTrajectories.keySet()) {
+				
+				OWLIndividual owl_traj = createTrajInst(ontology);
+				
+				OWLNamedIndividual owl_obj = factory.getOWLNamedIndividual("knowrob:"+obj, pm);
+				OWLObjectProperty prop = factory.getOWLObjectProperty("knowrob:openingTrajectory", pm);
+				manager.addAxiom(ontology, factory.getOWLObjectPropertyAssertionAxiom(prop,  owl_obj, owl_traj));
+
+				
+				prop = factory.getOWLObjectProperty("knowrob:pointOnTrajectory", pm);
+				
+				for(OWLIndividual point : pointsInTrajectories.get(obj)) {
+					manager.addAxiom(ontology, factory.getOWLObjectPropertyAssertionAxiom(prop,  owl_traj, point));
+				}
+				
+			}
+			
+			
 			
 			SimpleDateFormat sdf = new SimpleDateFormat("yy-MM-dd_HH-mm-ss-SSS");
 			String outfile = "ias_semantic_map_"+sdf.format(new Date())+".owl";
 			saveOntologyToFile(ontology, outfile);
 
+	      
 		} catch (Exception e) {
 			ontology = null;
 			e.printStackTrace();
 		}
 		
 		return ontology;
-		
 	}
 	
 	
-	/**
-	 * Create the OWL description for an object, including the object instance with its dimension,
-	 * a pose instance where the object has been detected, and a perception instance linking object,
-	 * pose, and detection time
-	 * 
-	 * @param ros_obj   SemMapObject input data
-	 * @param timestamp OWLIndividual for the time when ros_obj has been perceived
-	 * @param ontology  Ontology to which the axioms are to be added
-	 */
-	protected void createObjectDescription(SemMapObject ros_obj, OWLNamedIndividual timestamp, OWLOntology ontology) {
+	
+	
+
+	
+	protected void createPointDescription(String objname, double[] matrix, OWLNamedIndividual timestamp, OWLOntology ontology) {
 				
 		// create object instance
-		OWLNamedIndividual obj_inst = createObjectInst(ros_obj, ontology);
+		OWLNamedIndividual obj_inst = createPointInst(ontology);
 
 		// create pose matrix instance
-		OWLNamedIndividual pose_inst = createPoseInst(ros_obj, ontology);
+		OWLNamedIndividual pose_inst = createPoseInst(matrix, ontology);
 		
 		// create perception instance
 		createPerceptionInst(obj_inst, pose_inst, timestamp, ontology);
 		
 		// remember mapping of ROS object ID and OWL instance (for being able to link to parents)
-		this.idToInst.put(ros_obj.id, obj_inst);
+		this.pointsInTrajectories.get(objname).add(obj_inst);
 				
 	}
 	
-	/**
-	 * Create an instance of a knowrob:SemanticEnvironmentMap
-	 * 
-	 * @param ontology  Ontology to which the axioms are to be added
-	 * @return 			Created instance of a SemanticEnvironmentMap
-	 */
-	protected OWLNamedIndividual createSemMapInst(OWLOntology ontology) {
 
-		OWLClass sem_map_class = factory.getOWLClass("knowrob:SemanticEnvironmentMap", pm);
-		OWLNamedIndividual sem_map_inst = factory.getOWLNamedIndividual(
-				                                  instForClass("ias_map:SemanticEnvironmentMap"), pm);
-		manager.addAxiom(ontology, factory.getOWLClassAssertionAxiom(sem_map_class, sem_map_inst));
-		
-		this.idToInst.put(0, sem_map_inst);
-		
-		return sem_map_inst;
-	}
-	
 
-	/**
-	 * Create an instance of a knowrob:TimePoint for time t
-	 * 
-	 * @param t         Time to be translated into a TimePoint
-	 * @param ontology  Ontology to which the axioms are to be added
-	 * @return 			Created instance of a TimePoint
-	 */
 	protected OWLNamedIndividual createTimePointInst(ros.communication.Time stamp, OWLOntology ontology) {
 		
 		OWLNamedIndividual time_inst = factory.getOWLNamedIndividual("ias_map:timepoint_"+stamp.secs, pm);
@@ -279,86 +273,33 @@ public class SemanticMapToOWL {
 	}
 	
 	
-	/**
-	 * Generate an instance of the object class indicated by ros_obj.type and link it to its parent object
-	 * 
-	 * @param ros_obj   SemMapObject input data
-	 * @param ontology  Ontology to which the axioms are to be added
-	 * @return 			Created instance of the respective object
-	 */
-	protected OWLNamedIndividual createObjectInst(SemMapObject ros_obj, OWLOntology ontology) {
+
+	protected OWLNamedIndividual createPointInst(OWLOntology ontology) {
 		
 		// create object instance
-		OWLClass obj_class = factory.getOWLClass(rosToKnowrob.get(ros_obj.type), pm);
+		OWLClass obj_class = factory.getOWLClass("knowrob:Point3D", pm);
 		OWLNamedIndividual obj_inst = factory.getOWLNamedIndividual(
-										      instForClass(rosToKnowrob.get(ros_obj.type)), pm);
+										      instForClass("knowrob:Point3D"), pm);
 		manager.addAxiom(ontology, factory.getOWLClassAssertionAxiom(obj_class, obj_inst));
-		
-		// set object dimensions
-		OWLDataProperty width  = factory.getOWLDataProperty("knowrob:widthOfObject",  pm);
-		OWLDataProperty depth  = factory.getOWLDataProperty("knowrob:depthOfObject",  pm);
-		OWLDataProperty height = factory.getOWLDataProperty("knowrob:heightOfObject", pm);
-		
-		manager.addAxiom(ontology, factory.getOWLDataPropertyAssertionAxiom(width,  obj_inst, ros_obj.width));
-		manager.addAxiom(ontology, factory.getOWLDataPropertyAssertionAxiom(depth,  obj_inst, ros_obj.depth));
-		manager.addAxiom(ontology, factory.getOWLDataPropertyAssertionAxiom(height, obj_inst, ros_obj.height));
-		
-		
-		
-		// link to parent objects
-		OWLNamedIndividual parent = idToInst.get(ros_obj.partOf);
-		if(parent!=null) {
-			
-			// select linking property based on the object type
-			if(ros_obj.type.equals("cupboard") ||
-			   ros_obj.type.equals("drawer") ||
-			   ros_obj.type.equals("oven") ||
-			   ros_obj.type.equals("refrigerator") ||
-			   ros_obj.type.equals("dishwasher") ||
-			   ros_obj.type.equals("table") ||
-			   ros_obj.type.equals("countertop") ||
-			   ros_obj.type.equals("horizontal_plane") ||
-			   ros_obj.type.equals("sink")) {
-			
-				// top-level object, link to map
-				OWLObjectProperty describedInMap = factory.getOWLObjectProperty("knowrob:describedInMap", pm);
-				manager.addAxiom(ontology, factory.getOWLObjectPropertyAssertionAxiom(describedInMap, obj_inst, parent));
-
-				
-			} else if(ros_obj.type.equals("door")) {
-				
-				// doors are both part of parent and hinged to it
-				OWLObjectProperty properPhysicalParts = factory.getOWLObjectProperty("knowrob:properPhysicalParts", pm);
-				manager.addAxiom(ontology, factory.getOWLObjectPropertyAssertionAxiom(properPhysicalParts, parent, obj_inst));
-				
-				OWLObjectProperty hingedTo = factory.getOWLObjectProperty("knowrob:hingedTo", pm);
-				manager.addAxiom(ontology, factory.getOWLObjectPropertyAssertionAxiom(hingedTo, obj_inst, parent));
-
-			} else {
-				
-				// other objects are only part of their parents
-				OWLObjectProperty properPhysicalParts = factory.getOWLObjectProperty("knowrob:properPhysicalParts", pm);
-				manager.addAxiom(ontology, factory.getOWLObjectPropertyAssertionAxiom(properPhysicalParts, parent, obj_inst));
-				
-			}
-			
-		} else {
-			ros.logError("GenerateSemanticMapOWL: Did not find parent object with ID " + ros_obj.partOf);
-		}
 		
 		return obj_inst;
 	}
 	
+
+	protected OWLNamedIndividual createTrajInst(OWLOntology ontology) {
+		
+		// create object instance
+		OWLClass traj_class = factory.getOWLClass("knowrob:ArmTrajectory", pm);
+		OWLNamedIndividual traj_inst = factory.getOWLNamedIndividual(
+										      instForClass("knowrob:ArmTrajectory"), pm);
+		manager.addAxiom(ontology, factory.getOWLClassAssertionAxiom(traj_class, traj_inst));
+		
+		return traj_inst;
+	}
 	
 	
-	/**
-	 * Create a RotationMatrix3D with all m_ij components set according to the pose of the ros_obj
-	 * 
-	 * @param ros_obj   SemMapObject input data
-	 * @param ontology  Ontology to which the axioms are to be added
-	 * @return 			Created instance of a RotationMatrix3D
-	 */
-	protected OWLNamedIndividual createPoseInst(SemMapObject ros_obj, OWLOntology ontology) { 
+
+	protected OWLNamedIndividual createPoseInst(double[] ros_obj, OWLOntology ontology) { 
 	
 		// create pose matrix instance
 		OWLClass pose_class = factory.getOWLClass("knowrob:RotationMatrix3D", pm);
@@ -366,37 +307,29 @@ public class SemanticMapToOWL {
 										      instForClass("ias_map:RotationMatrix3D"), pm);
 		manager.addAxiom(ontology, factory.getOWLClassAssertionAxiom(pose_class, pose_inst));
 		
-		System.out.println("\n\n"+ros_obj.id + " " + ros_obj.type);
-		
 		// set pose properties
 		for(int i=0;i<4;i++) {
 			for(int j=0;j<4;j++) {
 				
-				System.out.println("m"+i+j+"="+ros_obj.pose[4*i+j]);
+				System.out.println("m"+i+j+"="+ros_obj[4*i+j]);
 				
 				OWLDataProperty prop = factory.getOWLDataProperty("knowrob:m"+i+j, pm);
-				manager.addAxiom(ontology, factory.getOWLDataPropertyAssertionAxiom(prop,  pose_inst, ros_obj.pose[4*i+j]));
+				manager.addAxiom(ontology, factory.getOWLDataPropertyAssertionAxiom(prop,  pose_inst, ros_obj[4*i+j]));
 			}
 		}
 		
 		return pose_inst;
 	}	
 
+	
+	
 
-	/**
-	 * Create an instance of a SemanticMapPerception linking objects to poses and times
-	 * @param obj_inst  The object that was detected
-	 * @param pose_inst Pose where the object was detected
-	 * @param timestamp Time when the object was detected
-	 * @param ontology  Ontology to which the axioms are to be added
-	 * @return 			Created instance of SemanticMapPerception
-	 */
 	protected OWLNamedIndividual createPerceptionInst(OWLNamedIndividual obj_inst, OWLNamedIndividual pose_inst, OWLNamedIndividual timestamp, OWLOntology ontology) {
 		
 		// create perception instance
-		OWLClass perc_class = factory.getOWLClass("knowrob:SemanticMapPerception", pm);
+		OWLClass perc_class = factory.getOWLClass("knowrob:TouchPerception", pm);
 		OWLNamedIndividual perc_inst = factory.getOWLNamedIndividual(
-										      instForClass("ias_map:SemanticMapPerception"), pm);
+										      instForClass("knowrob:TouchPerception"), pm);
 		manager.addAxiom(ontology, factory.getOWLClassAssertionAxiom(perc_class, perc_inst));
 		
 		// link to the object instance and the pose instance
@@ -415,17 +348,56 @@ public class SemanticMapToOWL {
 	
 	
 	
-	/**
-	 * Create a unique instance identifier from a class string
-	 * @param cl 	Class string
-	 * @return 		Instance identifier (class string plus index)
-	 */
+
+	
+	
+	
+	
 	protected String instForClass(String cl) {
-		cl.replaceAll("knorob", "ias_map");
+		cl.replaceAll("knowrob", "ias_map");
 		return cl+(inst_counter++);
 	}
 	
 
+	protected static double[] quaternionToMatrix(Point p, Quaternion q) {
+
+		double[] m = new double[16];
+		
+	    double xx = q.x * q.x;
+	    double xy = q.x * q.y;
+	    double xz = q.x * q.z;
+	    double xw = q.x * q.w;
+
+	    double yy = q.y * q.y;
+	    double yz = q.y * q.z;
+	    double yw = q.y * q.w;
+
+	    double zz = q.z * q.z;
+	    double zw = q.z * q.w;
+
+	    m[0]  = 1 - 2 * ( yy + zz );
+	    m[1]  =     2 * ( xy - zw );
+	    m[2]  =     2 * ( xz + yw );
+	    m[3]  = p.x;
+	    
+	    m[4]  =     2 * ( xy + zw );
+	    m[5]  = 1 - 2 * ( xx + zz );
+	    m[6]  =     2 * ( yz - xw );
+	    m[7]  = p.y;
+	    
+	    m[8]  =     2 * ( xz - yw );
+	    m[9]  =     2 * ( yz + xw );
+	    m[10] = 1 - 2 * ( xx + yy );
+	    m[11]=p.z;
+	    
+	    m[12]=0;
+	    m[13]=0;
+	    m[14]=0;
+	    m[15]=1;
+	    return m;
+	}
+	
+	
 	
 	
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -598,7 +570,8 @@ public class SemanticMapToOWL {
 	
 	public static void main(String[] args) {
 
-		new SemanticMapToOWL();
+		PosesToOWL p2o = new PosesToOWL();
+		p2o.buildOWLDescription("poses.txt");
 		
 	}
 
