@@ -1,0 +1,160 @@
+sensors:
+  -
+    description:
+      device: coretemp-isa-0000
+      name: Core 0
+    thresholds:
+      ok_range:
+        maximum: 65
+      warning_range:
+        minimum: 65
+        maximum: 75
+      error_range:
+        minimum: 75
+  -
+    description:
+      device: coretemp-isa-0001
+      name: Core 1
+    thresholds:
+      ok_range:
+        maximum: 65
+      warning_range:
+        minimum: 65
+        maximum: 75
+      error_range:
+        minimum: 75
+
+  -
+    description:
+      device: w83627thf-isa-0a00
+      name: Vcore
+    thresholds:
+      ok_range:
+        minimum: 0.70
+        maximum: 1.87
+      warning_range:
+        maximum: 0.70
+      error_range:
+        minimum: 1.87
+  -
+    description:
+      device: w83627thf-isa-0a00
+      name: +12V
+    thresholds:
+      ok_range:
+        minimum: 11.37
+        maximum: 12.59
+      warning_range:
+        maximum: 11.37
+      error_range:
+        minimum: 12.59
+  -
+    description:
+      device: w83627thf-isa-0a00
+      name: +3.3V
+    thresholds:
+      ok_range:
+        minimum: 3.14
+        maximum: 3.47
+      warning_range:
+        maximum: 3.14
+      error_range:
+        minimum: 3.47
+  -
+    description:
+      device: w83627thf-isa-0a00
+      name: +5V
+    thresholds:
+      ok_range:
+        minimum: 4.75
+        maximum: 5.25
+      warning_range:
+        maximum: 4.75
+      error_range:
+        minimum: 5.25
+  -
+    description:
+      device: w83627thf-isa-0a00
+      name: +1.5V
+    thresholds:
+      ok_range:
+        minimum: 1.42
+        maximum: 1.57
+      warning_range:
+        maximum: 1.42
+      error_range:
+        minimum: 1.57
+  -
+    description:
+      device: w83627thf-isa-0a00
+      name: 5VSB
+    thresholds:
+      ok_range:
+        minimum: 4.51
+        maximum: 5.49
+      warning_range:
+        maximum: 4.51
+      error_range:
+        minimum: 5.49
+  -
+    description:
+      device: w83627thf-isa-0a00
+      name: Vbat
+    thresholds:
+      ok_range:
+        minimum: 2.70
+        maximum: 3.46
+      warning_range:
+        maximum: 2.70
+      error_range:
+        minimum: 3.46
+
+  -
+    description:
+      device: w83627thf-isa-0a00
+      name: CPU Fan
+    thresholds:
+      ok_range:
+        minimum: 700
+        maximum: 6000
+      warning_range:
+        minimum: 6000
+      error_range:
+        maximum: 700
+
+  -
+    description:
+      device: w83627thf-isa-0a00
+      name: M/B Temp
+    thresholds:
+      ok_range:
+        maximum: 60
+      warning_range:
+        minimum: 60
+        maximum: 70
+      error_range:
+        minimum: 70
+  -
+    description:
+      device: w83627thf-isa-0a00
+      name: CPU Temp
+    thresholds:
+      ok_range:
+        maximum: 60
+      warning_range:
+        minimum: 60
+        maximum: 70
+      error_range:
+        minimum: 70
+  -
+    description:
+      device: w83627thf-isa-0a00
+      name: Ext Temp
+    thresholds:
+      ok_range:
+        maximum: 60
+      warning_range:
+        minimum: 60
+        maximum: 70
+      error_range:
+        minimum: 70

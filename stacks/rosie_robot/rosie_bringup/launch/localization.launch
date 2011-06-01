@@ -1,0 +1,54 @@
+<launch>
+  <node name="map_server" pkg="map_server" type="map_server" args="$(find ias_maps)/ias_karlstrasse_20101008.yaml" respawn="false" output="log" machine="localhost"/>
+  <node name="amcl" pkg="amcl" type="amcl" respawn="false" output="log" machine="calculon">
+    <remap from="scan" to="base_scan"/>
+    <param name="global_frame_id" value="/map"/>
+    <param name="laser_max_beams" value="50"/>
+    <param name="min_particles" value="100"/>
+    <param name="max_particles" value="5000"/>
+    <param name="kld_err" value="0.04"/>
+    <param name="kld_z" value="0.95"/>
+    <param name="odom_model_type" value="omni"/>
+    <param name="odom_alpha1" value="0.3"/>
+    <param name="odom_alpha2" value="0.3"/>
+    <param name="odom_alpha3" value="0.3"/>
+    <param name="odom_alpha4" value="0.3"/>
+    <param name="odom_alpha5" value="0.3"/>
+    <param name="laser_z_hit" value="0.95"/>
+    <param name="laser_z_short" value="0.1"/>
+    <param name="laser_z_max" value="0.05"/>
+    <param name="laser_z_rand" value="0.05"/>
+    <param name="laser_sigma_hit" value="0.3"/>
+    <param name="laser_lambda_short" value="0.1"/>
+    <param name="laser_lambda_short" value="0.1"/>
+    <param name="laser_model_type" value="likelihood_field"/>
+    <param name="laser_likelihood_max_dist" value="1.0"/>
+    <param name="update_min_d" value="0.05"/>
+    <param name="update_min_a" value="0.1"/>
+    <param name="odom_frame_id" value="odom"/>
+    <param name="resample_interval" value="2"/>
+    <param name="transform_tolerance" value="0.2"/>
+    <param name="recovery_alpha_slow" value="0.0"/>
+    <param name="recovery_alpha_fast" value="0.0"/>
+    <param name="gui_publish_rate" value="-1.0"/>
+  </node>
+
+  <node pkg="nav_pcontroller" type="nav_pcontroller" name="nav_pcontroller" respawn="false"  machine="calculon">
+    <param name="slowdown_far" value="0.20"/>
+    <param name="slowdown_near" value="0.08"/>
+    <param name="safety_dist" value="0.06"/>
+    <param name="repelling_dist" value="0.10"/>
+    <param name="repelling_gain" value="0.5"/>
+    <param name="repelling_gain_max" value="0.015"/>
+
+    <param name="vel_ang_max" value="0.6"/>
+    <param name="vel_lin_max" value="0.1"/>
+    <param name="acc_ang_max" value="0.4"/>
+    <param name="acc_lin_max" value="0.4"/>
+    <param name="loop_rate" value="30"/>
+    <param name="p" value="1.2"/>
+
+    <remap from="~laser_1" to="/base_scan_front"/>
+    <remap from="~laser_2" to="/base_scan_rear"/>
+  </node>
+</launch>

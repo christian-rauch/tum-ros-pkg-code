@@ -1,0 +1,12 @@
+<launch>
+  <include file="$(find rosie_bringup)/machines/$(optenv MACHINE_DEF kimp.machine)"/>
+  <node pkg="swissranger_camera" type="swissranger_camera" name="swissranger_test" output="log" respawn="false" machine="amy" >
+    <param name="~sr_dump_to_disk" value="false" />
+    <param name="frame_id" value="/sr4" />	
+    <param name="use_filter" value="false" />
+    <remap from="~pointcloud_raw" to="~cloud_sr"/>
+  </node>
+
+  <node pkg="topic_tools" type="throttle" name="swissranger_throttle" output="log" respawn="false" machine="amy" args="messages /swissranger_test/cloud_sr 5 /swissranger_test/cloud_throttled" />
+
+</launch>

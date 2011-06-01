@@ -1,0 +1,17 @@
+<launch>
+  <include file="$(find rosie_bringup)/machines/$(optenv MACHINE_DEF kimp.machine)"/>
+  <node pkg="openni_camera" type="openni_node" name="openni_camera" output="screen" machine="amy">
+    <remap from="camera" to="kinect" />
+    <param name="registration_type" value="2" />
+    <param name="image_input_format" value="6" />
+    <rosparam command="load" file="$(find openni_camera)/info/openni_params.yaml" />
+  </node>
+  <include file="$(find openni_camera)/launch/kinect_frames.launch"/>
+  <node pkg="topic_tools" type="throttle" name="kinect_throttle" output="screen" respawn="false" 
+        args="messages /kinect/depth/points2 2 /kinect/cloud_throttled" machine="amy"/>
+  <!--node pkg="point_cloud_converter" type="point_cloud_converter" name="kinect_converter"
+     args="/points2_in:=/kinect/cloud_throttled /points_out:=/kinect/pc1" machine="amy"/-->
+  <!--node pkg="topic_tools" type="throttle" name="kinect_throttle_much" output="screen" respawn="false" 
+        args="messages /kinect/cloud_throttled 2 /kinect/cloud_throttled_much" /-->
+
+</launch>

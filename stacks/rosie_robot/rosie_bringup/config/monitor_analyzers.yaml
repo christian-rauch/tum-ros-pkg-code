@@ -1,0 +1,61 @@
+analyzers:
+
+  computers:
+    type: diagnostic_aggregator/AnalyzerGroup
+    path: Computers
+    analyzers:
+      leela:
+        type: diagnostic_aggregator/GenericAnalyzer
+        path: Leela
+        remove_prefix: leela
+        expected: ['leela CPU Usage', 'leela CPU Temperature', 'leela HD Usage', 'leela HD Temperature', 'leela Sensors']
+      amy:
+        type: diagnostic_aggregator/GenericAnalyzer
+        path: Amy
+        remove_prefix: amy
+        expected: ['amy CPU Usage', 'amy CPU Temperature', 'amy Sensors']
+      calculon:
+        type: diagnostic_aggregator/GenericAnalyzer
+        path: Calculon
+        remove_prefix: calculon
+        expected: ['calculon CPU Usage', 'calculon CPU Temperature', 'calculon HD Usage', 'calculon HD Temperature', 'calculon Sensors']
+      yivo:
+        type: diagnostic_aggregator/GenericAnalyzer
+        path: Yivo
+        remove_prefix: yivo
+        expected: ['yivo CPU Usage', 'yivo CPU Temperature', 'yivo HD Usage', 'yivo HD Temperature', 'yivo Sensors']
+      ntp:
+        type: diagnostic_aggregator/GenericAnalyzer
+        path: Time
+        remove_prefix: NTP
+        expected: ['NTP self-offset for leela', 'NTP self-offset for amy', 'NTP self-offset for calculon', 'NTP self-offset for yivo', 'NTP offset from leela to ntp1.lrz-muenchen.de', 'NTP offset from amy to ntp1.lrz-muenchen.de', 'NTP offset from calculon to leela', 'NTP offset from yivo to leela']
+
+  lasers:
+    type: diagnostic_aggregator/AnalyzerGroup
+    path: Lasers
+    analyzers:
+      laser_front:
+        type: diagnostic_aggregator/GenericAnalyzer
+        path: Laser Front
+        remove_prefix: laser_front
+        expected: ['laser_front: Driver Status', 'laser_front: /base_scan_front topic status']
+      laser_rear:
+        type: diagnostic_aggregator/GenericAnalyzer
+        path: Laser Rear
+        remove_prefix: laser_rear
+        expected: ['laser_rear: Driver Status', 'laser_rear: /base_scan_rear topic status']
+      neck_laser_scanner:
+        type: diagnostic_aggregator/GenericAnalyzer
+        path: Neck Scanner
+        remove_prefix: neck_laser_scanner
+        expected: ['neck_laser_scanner: Driver Status', 'neck_laser_scanner: /neck_laser topic status']
+
+  actuators:
+    type: diagnostic_aggregator/GenericAnalyzer
+    path: Actuators
+    expected: ['lwr_left: status', 'lwr_right: status', 'omnidrive: Base Controller Status', 'powercube_node: PTU/Tilting_Laser', 'powercube_action_node: Action server for the PTU', 'hands']
+
+  wiimote:
+    type: diagnostic_aggregator/GenericAnalyzer
+    path: Wiimote
+    expected: ['wii: status']

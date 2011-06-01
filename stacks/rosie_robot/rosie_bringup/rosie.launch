@@ -1,0 +1,30 @@
+<launch>
+  <param name="/use_sim_time" value="false" />
+
+  <include file="$(find rosie_description)/launch/upload_rosie.launch"/>
+  <include file="$(find rosie_bringup)/machines/$(optenv MACHINE_DEF kimp.machine)"/>
+
+  <include file="$(find rosie_bringup)/launch/monitor.launch"/>
+  <include file="$(find rosie_bringup)/launch/arms_driver.launch"/>
+  <include file="$(find rosie_bringup)/launch/runstop.launch"/>
+  <include file="$(find motionControl)/arms.launch"/>
+  <include file="$(find motionControl)/hands.launch"/>
+  <include file="$(find vfmarkers)/vfmarkers.launch"/>
+  <include file="$(find rosie_bringup)/launch/arms_action.launch"/>
+  <include file="$(find amcl_to_jlo)/amcl_to_jlo.launch"/>
+  <include file="$(find powercube_node)/ptu.launch"/>
+  <include file="$(find cop)/cop.launch"/>
+  <include file="$(find rosie_bringup)/launch/openni_kinect.launch" />
+  <include file="$(find rosie_bringup)/launch/state_publisher.launch"/>
+  <include file="$(find rosie_bringup)/launch/hand_positions.launch"/>
+  <include file="$(find rosie_bringup)/launch/base.launch"/>
+  <include file="$(find rosie_bringup)/launch/localization.launch"/>
+  <include file="$(find rosie_bringup)/launch/sr4k.launch"/>
+  <include file="$(find rosie_bringup)/launch/neck_scanner.launch"/>
+  <include file="$(find rosie_bringup)/launch/wii_head_remote.launch"/>
+  <include file="$(find rosie_bringup)/launch/power_relay.launch"/>
+  <include file="$(find rosie_bringup)/launch/costmaps.launch"/>
+  <include file="$(find ias_kitchen_defs)/launch/ias_kitchen_model.launch"/>
+  <include file="$(find rosie_arm_kinematics)/rosie_arm_kinematics.launch"/>
+  <include file="$(find rosie_controller_manager)/launch/start.launch"/>
+</launch>

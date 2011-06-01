@@ -1,0 +1,110 @@
+min_sensor_dist: .05
+self_see_default_padding: .01
+self_see_default_scale: 1.0
+self_see_links:
+  - name: left_arm_1_link
+    padding: .04
+  - name: left_arm_2_link
+    padding: .04
+  - name: left_arm_3_link
+    padding: .04
+  - name: left_arm_4_link
+    padding: .04
+  - name: left_arm_5_link
+    padding: .04
+  - name: left_arm_6_link
+    padding: .04
+  - name: left_arm_7_link
+    padding: .04
+  - name: right_arm_1_link
+    padding: .04
+  - name: right_arm_2_link
+    padding: .04
+  - name: right_arm_3_link
+    padding: .04
+  - name: right_arm_4_link
+    padding: .04
+  - name: right_arm_5_link
+    padding: .04
+  - name: right_arm_6_link
+    padding: .04
+  - name: right_arm_7_link
+    padding: .04
+  - name: base_link
+    padding: .01
+  - name: left_hand_palm 
+    padding: 0.15
+  - name: left_hand_fore_finger_base_link
+    padding: 0.05
+  - name: left_hand_fore_finger_proximal_link  
+    padding: 0.15
+  - name: left_hand_fore_finger_middle_link 
+    padding: 0.15
+  - name: left_hand_fore_finger_distal_link 
+    padding: 0.15
+  - name: left_hand_middle_finger_base_link
+    padding: 0.15
+  - name: left_hand_middle_finger_proximal_link 
+    padding: 0.15
+  - name: left_hand_middle_finger_middle_link 
+    padding: 0.15
+  - name: left_hand_middle_finger_distal_link 
+    padding: 0.15
+  - name: left_hand_ring_finger_base_link
+    padding: 0.15
+  - name: left_hand_ring_finger_proximal_link 
+    padding: 0.15
+  - name: left_hand_ring_finger_middle_link 
+    padding: 0.15
+  - name: left_hand_ring_finger_distal_link 
+    padding: 0.15
+  - name: left_hand_thumb_base
+    padding: 0.15
+  - name: left_hand_thumb_base_link 
+    padding: 0.15
+  - name: left_hand_thumb_base_link 
+    padding: 0.15
+  - name: left_hand_thumb_proximal_link 
+    padding: 0.15
+  - name: left_hand_thumb_middle_link 
+    padding: 0.15
+  - name: left_hand_thumb_distal_link 
+    padding: 0.15
+  - name: right_hand_palm 
+    padding: 0.15
+  - name: right_hand_fore_finger_base_link
+    padding: 0.05
+  - name: right_hand_fore_finger_proximal_link  
+    padding: 0.15
+  - name: right_hand_fore_finger_middle_link 
+    padding: 0.15
+  - name: right_hand_fore_finger_distal_link 
+    padding: 0.15
+  - name: right_hand_middle_finger_base_link
+    padding: 0.15
+  - name: right_hand_middle_finger_proximal_link 
+    padding: 0.15
+  - name: right_hand_middle_finger_middle_link 
+    padding: 0.15
+  - name: right_hand_middle_finger_distal_link 
+    padding: 0.15
+  - name: right_hand_ring_finger_base_link
+    padding: 0.15
+  - name: right_hand_ring_finger_proximal_link 
+    padding: 0.15
+  - name: right_hand_ring_finger_middle_link 
+    padding: 0.15
+  - name: right_hand_ring_finger_distal_link 
+    padding: 0.15
+  - name: right_hand_thumb_base
+    padding: 0.15
+  - name: right_hand_thumb_base_link 
+    padding: 0.15
+  - name: right_hand_thumb_base_link 
+    padding: 0.15
+  - name: right_hand_thumb_proximal_link 
+    padding: 0.15
+  - name: right_hand_thumb_middle_link 
+    padding: 0.15
+  - name: right_hand_thumb_distal_link 
+    padding: 0.15

@@ -1,0 +1,337 @@
+sensors:
+  -
+    description:
+      device: coretemp-isa-0000
+      name: Core 0
+    thresholds:
+      ok_range:
+        maximum: 85
+      warning_range:
+        minimum: 85
+        maximum: 95
+      error_range:
+        minimum: 95
+  -
+    description:
+      device: coretemp-isa-0001
+      name: Core 1
+    thresholds:
+      ok_range:
+        maximum: 85
+      warning_range:
+        minimum: 85
+        maximum: 95
+      error_range:
+        minimum: 95
+  -
+    description:
+      device: coretemp-isa-0002
+      name: Core 9
+    thresholds:
+      ok_range:
+        maximum: 85
+      warning_range:
+        minimum: 85
+        maximum: 95
+      error_range:
+        minimum: 95
+  -
+    description:
+      device: coretemp-isa-0003
+      name: Core 10
+    thresholds:
+      ok_range:
+        maximum: 85
+      warning_range:
+        minimum: 85
+        maximum: 95
+      error_range:
+        minimum: 95
+  -
+    description:
+      device: coretemp-isa-0004
+      name: Core 0
+    thresholds:
+      ok_range:
+        maximum: 85
+      warning_range:
+        minimum: 85
+        maximum: 95
+      error_range:
+        minimum: 95
+  -
+    description:
+      device: coretemp-isa-0005
+      name: Core 1
+    thresholds:
+      ok_range:
+        maximum: 85
+      warning_range:
+        minimum: 85
+        maximum: 95
+      error_range:
+        minimum: 95
+  -
+    description:
+      device: coretemp-isa-0006
+      name: Core 9
+    thresholds:
+      ok_range:
+        maximum: 85
+      warning_range:
+        minimum: 85
+        maximum: 95
+      error_range:
+        minimum: 95
+  -
+    description:
+      device: coretemp-isa-0007
+      name: Core 10
+    thresholds:
+      ok_range:
+        maximum: 85
+      warning_range:
+        minimum: 85
+        maximum: 95
+      error_range:
+        minimum: 95
+  -
+    description:
+      device: w83795adg-i2c-0-2f
+      name: VCore 1
+    thresholds:
+      ok_range:
+        minimum: 0.7
+        maximum: 1.4
+      warning_range:
+        maximum: 0.7
+      error_range:
+        minimum: 1.4
+  -
+    description:
+      device: w83795adg-i2c-0-2f
+      name: VCore 2
+    thresholds:
+      ok_range:
+        minimum: 0.7
+        maximum: 1.4
+      warning_range:
+        maximum: 0.7
+      error_range:
+        minimum: 1.4
+  -
+    description:
+      device: w83795adg-i2c-0-2f
+      name: +1.5 V ICH
+    thresholds:
+      ok_range:
+        minimum: 1.35
+        maximum: 1.65
+      warning_range:
+        maximum: 1.35
+      error_range:
+        minimum: 1.65
+  -
+    description:
+      device: w83795adg-i2c-0-2f
+      name: +1.5 V P1 DDR3
+    thresholds:
+      ok_range:
+        minimum: 1.35
+        maximum: 1.65
+      warning_range:
+        maximum: 1.35
+      error_range:
+        minimum: 1.65
+  -
+    description:
+      device: w83795adg-i2c-0-2f
+      name: +1.5 V P2 DDR3
+    thresholds:
+      ok_range:
+        minimum: 1.35
+        maximum: 1.65
+      warning_range:
+        maximum: 1.35
+      error_range:
+        minimum: 1.65
+  -
+    description:
+      device: w83795adg-i2c-0-2f
+      name: +5 VSB
+    thresholds:
+      ok_range:
+        minimum: 4.5
+        maximum: 5.5
+      warning_range:
+        maximum: 4.5
+      error_range:
+        minimum: 5.5
+  -
+    description:
+      device: w83795adg-i2c-0-2f
+      name: +5 V
+    thresholds:
+      ok_range:
+        minimum: 4.5
+        maximum: 5.5
+      warning_range:
+        maximum: 4.5
+      error_range:
+        minimum: 5.5
+  -
+    description:
+      device: w83795adg-i2c-0-2f
+      name: +12 V
+    thresholds:
+      ok_range:
+        minimum: 10.82
+        maximum: 13.22
+      warning_range:
+        maximum: 10.82
+      error_range:
+        minimum: 13.22
+  -
+    description:
+      device: w83795adg-i2c-0-2f
+      name: +1.1 V IOH
+    thresholds:
+      ok_range:
+        minimum: 1.0
+        maximum: 1.2
+      warning_range:
+        maximum: 1.0
+      error_range:
+        minimum: 1.2
+  -
+    description:
+      device: w83795adg-i2c-0-2f
+      name: +3.3 V
+    thresholds:
+      ok_range:
+        minimum: 3.0
+        maximum: 3.6
+      warning_range:
+        maximum: 3.0
+      error_range:
+        minimum: 3.6
+  -
+    description:
+      device: w83795adg-i2c-0-2f
+      name: +3.3 VSB
+    thresholds:
+      ok_range:
+        minimum: 3.0
+        maximum: 3.6
+      warning_range:
+        maximum: 3.0
+      error_range:
+        minimum: 3.6
+  -
+    description:
+      device: w83795adg-i2c-0-2f
+      name: V Battery
+    thresholds:
+      ok_range:
+        minimum: 1.9
+        maximum: 3.6
+      warning_range:
+        maximum: 1.9
+      error_range:
+        minimum: 3.6
+  -
+    description:
+      device: w83795adg-i2c-0-2f
+      name: P1 VTT
+    thresholds:
+      ok_range:
+        minimum: 0.90
+        maximum: 1.35
+      warning_range:
+        maximum: 0.90
+      error_range:
+        minimum: 1.35
+  -
+    description:
+      device: w83795adg-i2c-0-2f
+      name: P2 VTT
+    thresholds:
+      ok_range:
+        minimum: 0.90
+        maximum: 1.35
+      warning_range:
+        maximum: 0.90
+      error_range:
+        minimum: 1.35
+  -
+    description:
+      device: w83795adg-i2c-0-2f
+      name: CPU Fan 1
+    thresholds:
+      ok_range:
+        minimum: 700
+        maximum: 6000
+      warning_range:
+        minimum: 6000
+      error_range:
+        maximum: 700
+  -
+    description:
+      device: w83795adg-i2c-0-2f
+      name: CPU Fan 2
+    thresholds:
+      ok_range:
+        minimum: 700
+        maximum: 6000
+      warning_range:
+        minimum: 6000
+      error_range:
+        maximum: 700
+  -
+    description:
+      device: w83795adg-i2c-0-2f
+      name: Front Fan 2
+    thresholds:
+      ok_range:
+        minimum: 700
+        maximum: 6000
+      warning_range:
+        minimum: 6000
+      error_range:
+        maximum: 700
+  -
+    description:
+      device: w83795adg-i2c-0-2f
+      name: Front Fan 3
+    thresholds:
+      ok_range:
+        minimum: 700
+        maximum: 6000
+      warning_range:
+        minimum: 6000
+      error_range:
+        maximum: 700
+  -
+    description:
+      device: w83795adg-i2c-0-2f
+      name: Rear Fan 1
+    thresholds:
+      ok_range:
+        minimum: 700
+        maximum: 6000
+      warning_range:
+        minimum: 6000
+      error_range:
+        maximum: 700
+  -
+    description:
+      device: w83795adg-i2c-0-2f
+      name: Rear Fan 2
+    thresholds:
+      ok_range:
+        minimum: 700
+        maximum: 6000
+      warning_range:
+        minimum: 6000
+      error_range:
+        maximum: 700

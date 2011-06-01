@@ -1,0 +1,6 @@
+<launch>
+  <include file="$(find rosie_bringup)/machines/$(optenv MACHINE_DEF kimp.machine)"/>
+
+  <node name="wii_head_remote" pkg="wii_head_remote" type="wii_head_remote.py" respawn="false" output="log" machine="calculon" />
+
+</launch>

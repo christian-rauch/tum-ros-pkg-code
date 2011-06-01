@@ -1,0 +1,22 @@
+<launch>
+  <node launch-prefix="with_realtime" name="lwr_right"
+        pkg="kuka_fri" type="fri" machine="yivo"
+        args="right" respawn="false" output="log">
+    <param name="side" value="right"/>
+    <param name="rate" value="125"/>
+    <param name="local_port" value="7002"/>
+    <param name="remote_ip" value="192.168.139.10"/>
+    <param name="remote_port" value="7010"/>
+  </node>
+
+  <node launch-prefix="with_realtime" name="lwr_left"
+        pkg="kuka_fri" type="fri" machine="yivo"
+        args="left" respawn="false" output="log">
+    <param name="side" value="left"/>
+    <param name="rate" value="125"/>
+    <param name="local_port" value="7001"/>
+    <param name="remote_ip" value="192.168.139.12"/>
+    <param name="remote_port" value="7010"/>
+  </node>
+</launch>
+

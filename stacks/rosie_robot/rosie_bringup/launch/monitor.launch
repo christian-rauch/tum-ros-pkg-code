@@ -1,0 +1,54 @@
+<launch>
+  <include file="$(find rosie_bringup)/machines/$(optenv MACHINE_DEF kimp.machine)"/>
+
+  <node name="leela_cpu_monitor" pkg="ias_computer_monitor" type="cpu_monitor.py" output="screen" machine="leela">
+    <param name="check_ipmi_tool" value="false" type="bool"/>
+    <param name="enforce_clock_speed" value="false" type="bool"/>
+    <param name="num_cores" value="8"/>
+  </node>
+  <node name="leela_hd_monitor" pkg="pr2_computer_monitor" type="hd_monitor.py" output="screen" machine="leela" args="$(optenv HOME /home)"/>
+  <node name="leela_ntp_monitor" pkg="pr2_computer_monitor" type="ntp_monitor.py" output="screen" machine="leela" args="--offset-tolerance 100000 ntp1.lrz-muenchen.de"/>
+  <node name="leela_sensors_monitor" pkg="ias_computer_monitor" type="sensors_monitor.py" output="screen" machine="leela">
+    <param name="machine" value="leela" type="string"/>
+    <rosparam command="load" file="$(find rosie_bringup)/config/sensors_leela.yaml"/>
+  </node>
+
+  <node name="amy_cpu_monitor" pkg="ias_computer_monitor" type="cpu_monitor.py" output="screen" machine="amy">
+    <param name="check_ipmi_tool" value="false" type="bool"/>
+    <param name="enforce_clock_speed" value="false" type="bool"/>
+    <param name="num_cores" value="8"/>
+  </node>
+  <node name="amy_ntp_monitor" pkg="pr2_computer_monitor" type="ntp_monitor.py" output="screen" machine="amy" args="--offset-tolerance 100000 ntp1.lrz-muenchen.de"/>
+  <node name="amy_sensors_monitor" pkg="ias_computer_monitor" type="sensors_monitor.py" output="screen" machine="amy">
+    <param name="machine" value="amy" type="string"/>
+    <rosparam command="load" file="$(find rosie_bringup)/config/sensors_amy.yaml"/>
+  </node>
+
+  <node name="calculon_cpu_monitor" pkg="pr2_computer_monitor" type="cpu_monitor.py" output="screen" machine="calculon">
+    <param name="check_ipmi_tool" value="false" type="bool"/>
+    <param name="enforce_clock_speed" value="false" type="bool"/>
+    <param name="num_cores" value="2"/>
+  </node>
+  <node name="calculon_hd_monitor" pkg="pr2_computer_monitor" type="hd_monitor.py" output="screen" machine="calculon" args="$(optenv HOME /home)"/>
+  <node name="calculon_ntp_monitor" pkg="pr2_computer_monitor" type="ntp_monitor.py" output="screen" machine="calculon" args="--offset-tolerance 1500 leela"/>
+  <node name="calculon_sensors_monitor" pkg="ias_computer_monitor" type="sensors_monitor.py" output="log" machine="calculon">
+    <param name="machine" value="calculon" type="string"/>
+    <rosparam command="load" file="$(find rosie_bringup)/config/sensors_calculon.yaml"/>
+  </node>
+
+  <node name="yivo_cpu_monitor" pkg="pr2_computer_monitor" type="cpu_monitor.py" output="screen" machine="yivo">
+    <param name="check_ipmi_tool" value="false" type="bool"/>
+    <param name="enforce_clock_speed" value="false" type="bool"/>
+    <param name="num_cores" value="4"/>
+  </node>
+  <node name="yivo_hd_monitor" pkg="pr2_computer_monitor" type="hd_monitor.py" output="screen" machine="yivo" args="$(optenv HOME /home)"/>
+  <node name="yivo_ntp_monitor" pkg="pr2_computer_monitor" type="ntp_monitor.py" output="screen" machine="yivo" args="--offset-tolerance 1500 leela"/>
+  <node name="yivo_sensors_monitor" pkg="ias_computer_monitor" type="sensors_monitor.py" output="screen" machine="yivo">
+    <param name="machine" value="yivo" type="string"/>
+    <rosparam command="load" file="$(find rosie_bringup)/config/sensors_yivo.yaml"/>
+  </node>
+
+  <node name="kimp_aggregator" pkg="diagnostic_aggregator" type="aggregator_node" output="screen" machine="leela" clear_params="true">
+    <rosparam command="load" file="$(find rosie_bringup)/config/monitor_analyzers.yaml"/>
+  </node>
+</launch>

@@ -1,0 +1,63 @@
+<launch>
+  <!-- navigation laser -->
+  <node name="laser_front" pkg="hokuyo_node" type="hokuyo_node" respawn="true" machine="calculon">
+    <param name="skip" type="int" value="0" />
+    <param name="port" type="str" value="/dev/sensors/hokuyo_H0506272" />
+    <param name="hokuyoLaserModel04LX" type="bool" value="true"/>
+    <param name="frame_id" type="str" value="/laser_front_left" />
+    <param name="min_ang" type="double" value="-2.086213" />
+    <param name="max_ang" type="double" value="2.086213" />
+    <param name="calibrate_time" value="true" />
+    <remap from="scan" to="base_scan_front" />
+  </node>
+
+  <!-- navigation laser -->
+  <node name="laser_rear" pkg="hokuyo_node" type="hokuyo_node" respawn="true" machine="calculon">
+    <param name="skip" type="int" value="0" />
+    <param name="port" type="str" value="/dev/sensors/hokuyo_H0506270" />
+    <param name="hokuyoLaserModel04LX" type="bool" value="true"/>
+    <param name="frame_id" type="str" value="/laser_rear_right" />
+    <param name="min_ang" type="double" value="-2.086213" />
+    <param name="max_ang" type="double" value="2.086213" />
+    <param name="calibrate_time" value="true" />
+    <remap from="scan" to="base_scan_rear" />
+  </node>
+
+  <node pkg="topic_tools" type="relay" name="relay_front" args="base_scan_front base_scan" respawn="false" output="screen" machine="calculon"/>
+  <node pkg="topic_tools" type="relay" name="relay_rear" args="base_scan_rear base_scan" respawn="false" output="screen" machine="calculon"/>
+
+  <node name="wii" pkg="teleop_wii" type="teleop_wii" respawn="false" output="screen" machine="calculon">
+    <param name="address" value="e0:e7:51:36:13:5a"/>
+    <!-- Our white wii: 00:17:ab:39:c9:18 -->
+    <!-- Our black wii: e0:e7:51:36:13:5a -->
+    <!-- Tom's black wii: e8:4e:ce:c9:e5:1e -->
+    <param name="speed" type="double" value="0.35" />
+    <remap from="/cmd_vel" to="/input_vel" />
+  </node>
+  <node name="speed_filter" pkg="nav_pcontroller" type="speed_filter" machine="calculon">
+    <param name="slowdown_far" value="0.20"/>
+    <param name="slowdown_near" value="0.08"/>
+    <param name="safety_dist" value="0.06"/>
+    <param name="repelling_dist" value="0.10"/>
+    <param name="repelling_gain" value="0.5"/>
+    <param name="repelling_gain_max" value="0.015"/>
+
+    <param name="footprint/left" value="0.309"/>
+    <param name="footprint/right" value="-0.309"/>
+    <param name="footprint/front" value="0.53"/>
+    <param name="footprint/rear" value="-0.43"/>
+
+    <remap from="~laser_1" to="/base_scan_front"/>
+    <remap from="~laser_2" to="/base_scan_rear"/>
+  </node>
+
+  <node name="omnidrive" launch-prefix="with_realtime" pkg="omni_ethercat" type="omni_ethercat"  machine="calculon">
+    <param name="speed" type="double" value="0.5" />
+    <param name="acceleration" type="double" value="4.0" />
+    <param name="frame_id" value="/odom" />
+    <param name="child_frame_id" value="/base_footprint" />
+    <param name="tf_frequency" value="20"/>
+  </node>
+  <node name="tf_footprint" pkg="tf" type="static_transform_publisher" args="0 0 0 0 0 0 /base_footprint /base_link 50" machine="calculon"/>
+
+</launch>
