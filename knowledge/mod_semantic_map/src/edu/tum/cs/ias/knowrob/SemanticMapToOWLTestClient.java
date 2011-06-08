@@ -44,13 +44,14 @@ public class SemanticMapToOWLTestClient {
 
 		GenerateSemanticMapOWL.Request req = new GenerateSemanticMapOWL.Request();
 		req.map= new SemMap();
-		req.map.header.frame_id="/map";
+    // Set the IRI for the map that will be created
+		req.map.header.frame_id="http://www.example.com/foo.owl#";
 		req.map.header.stamp=ros.now();
 		
 //		req.map.objects = new SemMapObject[4];
 		
 		// create cupboard
-                req.map.objects.add(new SemMapObject());
+    req.map.objects.add(new SemMapObject());
 		req.map.objects.get(0).id=1;
 		req.map.objects.get(0).partOf=0;
 		req.map.objects.get(0).type="cupboard";
@@ -67,7 +68,7 @@ public class SemanticMapToOWLTestClient {
                 req.map.objects.add(new SemMapObject());
 		req.map.objects.get(1).id=2;
 		req.map.objects.get(1).partOf=1;
-		req.map.objects.get(1).type="door";
+		req.map.objects.get(1).type="Door";
 
 		req.map.objects.get(1).depth  = 0.6f;
 		req.map.objects.get(1).width  = 60.7f;
@@ -81,7 +82,7 @@ public class SemanticMapToOWLTestClient {
                 req.map.objects.add(new SemMapObject());
 		req.map.objects.get(2).id=3;
 		req.map.objects.get(2).partOf=2;
-		req.map.objects.get(2).type="hinge";
+		req.map.objects.get(2).type="HINGEDJOINT";
 
 		req.map.objects.get(2).depth  = 5.6f;
 		req.map.objects.get(2).width  = 0.7f;

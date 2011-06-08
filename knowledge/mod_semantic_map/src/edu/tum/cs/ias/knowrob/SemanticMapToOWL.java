@@ -1,16 +1,20 @@
 package edu.tum.cs.ias.knowrob;
 
 import java.io.*;
+import java.util.Collection;
 import java.util.Date;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.text.SimpleDateFormat;
+
 
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.io.RDFXMLOntologyFormat;
 import org.semanticweb.owlapi.model.*;
 import org.semanticweb.owlapi.util.DefaultPrefixManager;
 import org.semanticweb.owlapi.vocab.PrefixOWLOntologyFormat;
+import org.semanticweb.owlapi.reasoner.*;
+import org.semanticweb.owlapi.reasoner.structural.*;
 
 import ros.*;
 import ros.pkg.mod_semantic_map.srv.*;
@@ -26,6 +30,7 @@ import ros.pkg.mod_semantic_map.msg.*;
  * as to retrieve object models from the database and add them to CoP.
  * 
  * @author Moritz Tenorth, tenorth@cs.tum.edu
+ * @author Lars Kunze, kunzel@cs.tum.edu
  *
  */
 
@@ -47,43 +52,49 @@ public class SemanticMapToOWL {
 
 	// Base IRI for semantic map ontology	
 	public final static String IAS_MAP = "http://ias.cs.tum.edu/kb/ccrl2_semantic_map.owl#";
+
+  // Ros package name for KnowRob
+  public final static String KNOWROB_PKG = "ias_knowledge_base";
 	
+  // OWL file of the KnowRob ontology (relative to KNOWROB_PKG)
+  public final static String KNOWROB_OWL = "owl/knowrob.owl";
 	
 	// Prefix manager
 	public final static DefaultPrefixManager PREFIX_MANAGER = new DefaultPrefixManager(IAS_MAP);
 	static {
 		PREFIX_MANAGER.setPrefix("knowrob:", KNOWROB);
 		PREFIX_MANAGER.setPrefix("ias_map:", IAS_MAP);
-		PREFIX_MANAGER.setPrefix("owl:", OWL);
+		PREFIX_MANAGER.setPrefix("owl:",    OWL);
 		PREFIX_MANAGER.setPrefix("rdfs:", RDFS);
 	}
 	
 	// mapping ROS-KnowRob identifiers
 	protected static final HashMap<String, String> rosToKnowrob = new HashMap<String, String>();
-	static {
-		rosToKnowrob.put("cupboard",     "knowrob:Cupboard");
-		rosToKnowrob.put("drawer",       "knowrob:Drawer");
-		rosToKnowrob.put("oven",         "knowrob:Oven");
-		rosToKnowrob.put("refrigerator", "knowrob:Refrigerator");
-		rosToKnowrob.put("dishwasher",    "knowrob:Dishwasher");
-		rosToKnowrob.put("table",        "knowrob:Table");
-		rosToKnowrob.put("countertop",   "knowrob:CounterTop");
-		rosToKnowrob.put("sink",         "knowrob:Sink");
-		rosToKnowrob.put("door",         "knowrob:Door");
-		rosToKnowrob.put("hinge",        "knowrob:HingedJoint");
-		rosToKnowrob.put("handle",       "knowrob:Handle");
-		rosToKnowrob.put("knob",         "knowrob:ControlKnob");
+	// static {
+	// 	rosToKnowrob.put("cupboard",     "knowrob:Cupboard");
+	// 	rosToKnowrob.put("drawer",       "knowrob:Drawer");
+	// 	rosToKnowrob.put("oven",         "knowrob:Oven");
+	// 	rosToKnowrob.put("refrigerator", "knowrob:Refrigerator");
+	// 	rosToKnowrob.put("dishwasher",   "knowrob:Dishwasher");
+	// 	rosToKnowrob.put("table",        "knowrob:Table");
+	// 	rosToKnowrob.put("countertop",   "knowrob:CounterTop");
+	// 	rosToKnowrob.put("sink",         "knowrob:Sink");
+	// 	rosToKnowrob.put("door",         "knowrob:Door");
+	// 	rosToKnowrob.put("hinge",        "knowrob:HingedJoint");
+	// 	rosToKnowrob.put("handle",       "knowrob:Handle");
+	// 	rosToKnowrob.put("knob",         "knowrob:ControlKnob");
 		
-		// TODO: add a concept for horizontal planes to knowrob
-		rosToKnowrob.put("horizontal_plane", "knowrob:CounterTop");
-	}
+	// 	// TODO: add a concept for horizontal planes to knowrob
+	// 	rosToKnowrob.put("horizontal_plane", "knowrob:CounterTop");
+	// }
 	
 	HashMap<Integer, OWLNamedIndividual> idToInst; 
 	
 	OWLDataFactory factory;
 	OWLOntologyManager manager;
 	DefaultPrefixManager pm;
-	
+
+  
 	int inst_counter=0;	// counter to create unique instance identifiers
 	
 	////////////////////////////////////////////////////////////////////////////////
@@ -104,8 +115,10 @@ public class SemanticMapToOWL {
 	 * @param n the node handle
 	 * @throws RosException if advertising ROS services failed
 	 */
-	public SemanticMapToOWL() {
+  public SemanticMapToOWL() {
 
+    initRosToKnowrob();
+      
 		idToInst = new HashMap<Integer, OWLNamedIndividual>();
 	
 		try {
@@ -120,6 +133,68 @@ public class SemanticMapToOWL {
 		}
 		
 	}
+    
+  /**
+   * Initialization of the mapping between object types that are send via 
+   * the ros service and concepts of the KnowRob ontology.
+   */
+  protected static void initRosToKnowrob() {
+    
+    //OWLOntology ont = manager.loadOntology(IRI.create(KNOWROB));
+    try {
+
+      // Create ontology manager, data factory, and prefix manager
+      OWLOntologyManager manager = OWLManager.createOWLOntologyManager();
+			OWLDataFactory factory = manager.getOWLDataFactory();
+      DefaultPrefixManager pm = PREFIX_MANAGER;
+        
+      // Find ros package holding the knowrob ontology
+      String knowrob_pkg = rospackFind(KNOWROB_PKG);
+      String knowrob_owl = knowrob_pkg + "/" + KNOWROB_OWL;
+
+      //System.out.println("Path to Knowrob: " + knowrob_owl);
+
+      // Load the knowrob ontology  
+      OWLOntology ont = manager.loadOntologyFromOntologyDocument(new File(knowrob_owl));
+            
+      // Retrieve only subclasses of SpatialThing-Localized
+      OWLReasoner reasoner = new StructuralReasoner(ont, new SimpleConfiguration(), BufferingMode.NON_BUFFERING);
+      OWLClass spatialThing = factory.getOWLClass("knowrob:SpatialThing-Localized", pm);
+      NodeSet<OWLClass> ns = reasoner.getSubClasses(spatialThing, false);
+
+      java.util.Set<Node<OWLClass>>  set = ns.getNodes();       
+      
+      // Iterate over all subclasses and put them into the mapping hashmap
+      for(Node n : set) {
+        OWLClass c = (OWLClass) n.getRepresentativeElement();
+        
+        String iri = c.toStringID().replaceAll(KNOWROB, "knowrob:");
+        String key = c.toStringID().substring(c.toStringID().lastIndexOf('#') + 1).toLowerCase();
+        
+        //System.out.println(key + " - " + iri);
+        rosToKnowrob.put(key, iri);
+      }
+      // to support backward compability (should be removed)
+      rosToKnowrob.put("hinge", "knowrob:HingedJoint");
+      rosToKnowrob.put("knob",  "knowrob:ControlKnob");
+      rosToKnowrob.put("horizontal_plane", "knowrob:CounterTop");
+
+      //System.out.println("Number of supported object types: " + rosToKnowrob.size());
+    }
+    catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
+
+  protected static void printObjectTypes() {
+    
+    Collection c = rosToKnowrob.values();
+    
+    for(Object o : c) {
+      System.out.println(((String)o).replaceAll("knowrob:",""));
+    }
+    
+  }
 
 	
 	/**
@@ -174,7 +249,18 @@ public class SemanticMapToOWL {
 		OWLOntology ontology = null;
 		idToInst.clear();
 		try {
-			
+      
+      // Get iri of target map from the frame_id of header msg
+      String map_id = ros_map.header.frame_id.toString();
+      if (map_id.length() != 0) {
+        // use provided map_id
+        PREFIX_MANAGER.setPrefix("ias_map:", map_id);
+      } else {
+        //use IAS_MAP as default, PREFIX_MANAGER ist set by default 
+        map_id = IAS_MAP;
+      }
+      System.out.println("Using map id: " + map_id);
+      
 			// Create ontology manager and data factory
 			manager = OWLManager.createOWLOntologyManager();
 			factory = manager.getOWLDataFactory();
@@ -183,7 +269,7 @@ public class SemanticMapToOWL {
 			pm = PREFIX_MANAGER;
 
 			// Create empty OWL ontology
-			ontology = manager.createOntology(IRI.create(IAS_MAP));
+			ontology = manager.createOntology(IRI.create(map_id));
 			manager.setOntologyFormat(ontology, new RDFXMLOntologyFormat());
 			
 			// Import KnowRob ontology
@@ -191,21 +277,19 @@ public class SemanticMapToOWL {
 			AddImport addImp = new AddImport(ontology,oid);
 			manager.applyChange(addImp);
 
-			
 			// create SemanticMap object in the ontology
 			createSemMapInst(ontology);
 			
 			// create time point 
 			OWLNamedIndividual time_inst = createTimePointInst(ros_map.header.stamp, ontology);
-			
-			
+						
 			// iterate over all objects and create the respective OWL representations
 			for(SemMapObject ros_obj : ros_map.objects) {
 				createObjectDescription(ros_obj, time_inst, ontology);
 			}
 			
 			SimpleDateFormat sdf = new SimpleDateFormat("yy-MM-dd_HH-mm-ss-SSS");
-			String outfile = "ias_semantic_map_"+sdf.format(new Date())+".owl";
+			String outfile = "semantic_map_"+sdf.format(new Date())+".owl";
 			saveOntologyToFile(ontology, outfile);
 
 		} catch (Exception e) {
@@ -289,10 +373,11 @@ public class SemanticMapToOWL {
 	protected OWLNamedIndividual createObjectInst(SemMapObject ros_obj, OWLOntology ontology) {
 		
 		// create object instance
-		OWLClass obj_class = factory.getOWLClass(rosToKnowrob.get(ros_obj.type), pm);
+		OWLClass obj_class = factory.getOWLClass(rosToKnowrob.get(ros_obj.type.toLowerCase()), pm);
 		OWLNamedIndividual obj_inst = factory.getOWLNamedIndividual(
-										      instForClass(rosToKnowrob.get(ros_obj.type)), pm);
-		manager.addAxiom(ontology, factory.getOWLClassAssertionAxiom(obj_class, obj_inst));
+                                                                instForClass(rosToKnowrob.get(ros_obj.type.toLowerCase())), pm);
+		
+    manager.addAxiom(ontology, factory.getOWLClassAssertionAxiom(obj_class, obj_inst));
 		
 		// set object dimensions
 		OWLDataProperty width  = factory.getOWLDataProperty("knowrob:widthOfObject",  pm);
@@ -310,22 +395,22 @@ public class SemanticMapToOWL {
 		if(parent!=null) {
 			
 			// select linking property based on the object type
-			if(ros_obj.type.equals("cupboard") ||
-			   ros_obj.type.equals("drawer") ||
-			   ros_obj.type.equals("oven") ||
-			   ros_obj.type.equals("refrigerator") ||
-			   ros_obj.type.equals("dishwasher") ||
-			   ros_obj.type.equals("table") ||
-			   ros_obj.type.equals("countertop") ||
-			   ros_obj.type.equals("horizontal_plane") ||
-			   ros_obj.type.equals("sink")) {
-			
+			if(ros_obj.type.equalsIgnoreCase("cupboard") ||
+			   ros_obj.type.equalsIgnoreCase("drawer") ||
+			   ros_obj.type.equalsIgnoreCase("oven") ||
+			   ros_obj.type.equalsIgnoreCase("refrigerator") ||
+			   ros_obj.type.equalsIgnoreCase("dishwasher") ||
+			   ros_obj.type.equalsIgnoreCase("table") ||
+			   ros_obj.type.equalsIgnoreCase("countertop") ||
+			   ros_obj.type.equalsIgnoreCase("horizontal_plane") ||
+			   ros_obj.type.equalsIgnoreCase("sink")) {
+	
 				// top-level object, link to map
 				OWLObjectProperty describedInMap = factory.getOWLObjectProperty("knowrob:describedInMap", pm);
 				manager.addAxiom(ontology, factory.getOWLObjectPropertyAssertionAxiom(describedInMap, obj_inst, parent));
 
 				
-			} else if(ros_obj.type.equals("door")) {
+			} else if(ros_obj.type.equalsIgnoreCase("door")) {
 				
 				// doors are both part of parent and hinged to it
 				OWLObjectProperty properPhysicalParts = factory.getOWLObjectProperty("knowrob:properPhysicalParts", pm);
@@ -366,7 +451,7 @@ public class SemanticMapToOWL {
 										      instForClass("ias_map:RotationMatrix3D"), pm);
 		manager.addAxiom(ontology, factory.getOWLClassAssertionAxiom(pose_class, pose_inst));
 		
-		System.out.println("\n\n"+ros_obj.id + " " + ros_obj.type);
+		System.out.println("\n\n"+ros_obj.id + " " + ros_obj.type + " - " + rosToKnowrob.get(ros_obj.type.toLowerCase()));
 		
 		// set pose properties
 		for(int i=0;i<4;i++) {
@@ -421,7 +506,7 @@ public class SemanticMapToOWL {
 	 * @return 		Instance identifier (class string plus index)
 	 */
 	protected String instForClass(String cl) {
-		cl.replaceAll("knorob", "ias_map");
+		cl = cl.replaceAll("knowrob", "ias_map");
 		return cl+(inst_counter++);
 	}
 	
@@ -587,6 +672,33 @@ public class SemanticMapToOWL {
 		return ok;
 	}
 
+  /**
+   * Finds a ros package using rospack and returns its path. 
+   * @param name of the ros package
+	 * @return path to the package - if it was found<br>
+	 * <tt>null</tt> - otherwise
+	 */
+  public static String rospackFind(String pkg) {
+    
+    String path = null;
+    try
+      {
+        Process p = Runtime.getRuntime().exec("rospack find " + pkg);
+        p.waitFor();
+        BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()));
+        
+        if ((path = br.readLine()) != null){
+          ;//System.out.println("Package: " + pkg + ", Path: " + path);                    
+        } 
+        else
+          ;//System.out.println("Package: " + pkg + ", Error: package not found!");
+      }
+    catch (Exception e)
+      {
+        e.printStackTrace();
+      }
+    return path;
+  }
 	
 	
 //
@@ -597,9 +709,22 @@ public class SemanticMapToOWL {
 
 	
 	public static void main(String[] args) {
-
-		new SemanticMapToOWL();
-		
+    
+    
+    if (args.length == 0) {
+      // run service
+      new SemanticMapToOWL();
+    } else if (args.length == 1 && args[0].equals("list")){
+      initRosToKnowrob();
+      printObjectTypes();
+    } else {
+      System.out.println("usage: rosrun mod_semantic_map SemanticMapToOWL");
+      System.out.println("Commands:");
+      System.out.println("        rosrun mod_semantic_map SemanticMapToOWL       Runs the service");
+      System.out.println("        rosrun mod_semantic_map SemanticMapToOWL list  Show supported object types");
+      System.out.println();
+    }
+    
 	}
 
 	
