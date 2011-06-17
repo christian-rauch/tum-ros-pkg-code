@@ -106,7 +106,7 @@ private:
   double vx_, vy_, vth_;
   double x_goal_, y_goal_, th_goal_;
   double x_now_, y_now_, th_now_;
-  bool goal_set_;
+  bool goal_set_, keep_distance_;
 
   std::string global_frame_;
   std::string base_link_frame_;
@@ -253,6 +253,7 @@ void BasePController::parseParams()
   n_.param<double>("acc_lin_max", acc_lin_max_, 0.4);
   n_.param<int>("loop_rate", loop_rate_, 30);
   n_.param<double>("p", p_, 1.2);
+  n_.param<bool>("keep_distance", keep_distance_, true);
 
 #ifdef JLO_BASE_CONTROL
   n_.param<bool>("enable_jlo", jlo_enabled_, true);
@@ -523,8 +524,9 @@ void BasePController::cycle()
   }
 
   compute_p_control();
-
-  dist_control_.compute_distance_keeping(&vx_, &vy_, &vth_);
+  
+  if (keep_distance_)
+    dist_control_.compute_distance_keeping(&vx_, &vy_, &vth_);
 
   sendVelCmd(vx_, vy_, vth_);
 
