@@ -1,0 +1,14 @@
+<package>
+  <description brief="ias_kitchen_defs">
+
+    URDF definitions of the kitchen lab used at IAS@TUM.
+
+  </description>
+  <author>Nico Blodow, Lucian Cosmin Goron</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+
+  <depend package="xacro"/>
+  <depend package="robot_state_chain_publisher"/>
+
+</package>

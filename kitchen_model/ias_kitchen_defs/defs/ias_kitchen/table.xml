@@ -1,0 +1,127 @@
+<?xml version="1.0"?>
+<robot xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor"
+       xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface"
+       xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller">
+
+  <!--       -->
+  <!-- Table -->
+  <!--       -->
+
+  <macro name="table" params="block_pos block_rpy">
+
+    <counter parent="table"
+      name="table_top"
+      pos_x="0" pos_y="0" pos_z="0.705"
+      roll="0" pitch="0" yaw="0"
+      size_x="1.600" size_y="0.600" size_z="0.025"
+    />
+
+    <joint name="first_leg_joint" type="fixed">
+      <origin xyz="${block_pos}" rpy="${block_rpy}"/>
+      <parent link="kitchen_link"/>
+      <child link="first_leg_link"/>
+    </joint>
+
+    <link name="first_leg_link">
+      <visual>
+        <origin xyz="${0 + 0.025} ${0 + 0.025} 0.350" rpy="0 0 0" />
+        <geometry>
+          <cylinder length="0.700" radius="0.025"/>
+        </geometry>
+        <material name="KitchenLightGrey"/>
+      </visual>
+      <collision>
+        <origin xyz="${0 + 0.025} ${0 + 0.025} 0.350" rpy="0 0 0" />
+        <geometry>
+          <cylinder length="0.700" radius="0.025"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <joint name="second_leg_joint" type="fixed">
+      <origin xyz="${block_pos}" rpy="${block_rpy}"/>
+      <parent link="kitchen_link"/>
+      <child link="second_leg_link"/>
+    </joint>
+
+    <link name="second_leg_link">
+      <visual>
+        <origin xyz="${1.600 - 0.025} ${0 + 0.025} 0.350" rpy="0 0 0" />
+        <geometry>
+          <cylinder length="0.700" radius="0.025"/>
+        </geometry>
+        <material name="KitchenLightGrey"/>
+      </visual>
+      <collision>
+        <origin xyz="${1.600 - 0.025} ${0 + 0.025} 0.350" rpy="0 0 0" />
+        <geometry>
+          <cylinder length="0.700" radius="0.025"/>
+        </geometry>
+        <material name="KitchenLightGrey"/>
+      </collision>
+    </link>
+
+    <joint name="third_leg_joint" type="fixed">
+      <origin xyz="${block_pos}" rpy="${block_rpy}"/>
+      <parent link="kitchen_link"/>
+      <child link="third_leg_link"/>
+    </joint>
+
+    <link name="third_leg_link">
+      <visual>
+        <origin xyz="${0 + 0.025} ${0.600 - 0.025} 0.350" rpy="0 0 0" />
+        <geometry>
+          <cylinder length="0.700" radius="0.025"/>
+        </geometry>
+        <material name="KitchenLightGrey"/>
+      </visual>
+      <collision>
+        <origin xyz="${0 + 0.025} ${0.600 - 0.025} 0.350" rpy="0 0 0" />
+        <geometry>
+          <cylinder length="0.700" radius="0.025"/>
+        </geometry>
+        <material name="KitchenLightGrey"/>
+      </collision>
+    </link>
+
+    <joint name="fourth_leg_joint" type="fixed">
+      <origin xyz="${block_pos}" rpy="${block_rpy}"/>
+      <parent link="kitchen_link"/>
+      <child link="fourth_leg_link"/>
+    </joint>
+
+    <link name="fourth_leg_link">
+      <visual>
+        <origin xyz="${1.600 - 0.025} ${0.600 - 0.025} 0.350" rpy="0 0 0" />
+        <geometry>
+          <cylinder length="0.700" radius="0.025"/>
+        </geometry>
+        <material name="KitchenLightGrey"/>
+      </visual>
+      <collision>
+        <origin xyz="${1.600 - 0.025} ${0.600 - 0.025} 0.350" rpy="0 0 0" />
+        <geometry>
+          <cylinder length="0.700" radius="0.025"/>
+        </geometry>
+        <material name="KitchenLightGrey"/>
+      </collision>
+    </link>
+
+    <joint name="table_joint" type="fixed">
+      <origin xyz="${block_pos}" rpy="${block_rpy}"/>
+      <parent link="kitchen_link"/>
+      <child link="table_link"/>
+    </joint>
+
+    <link name="table_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <box size=".1 .1 .1" />
+        </geometry>
+      </visual>
+    </link>
+
+  </macro>
+
+</robot>

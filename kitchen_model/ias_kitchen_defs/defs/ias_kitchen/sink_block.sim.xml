@@ -1,0 +1,133 @@
+<?xml version="1.0"?>
+<robot xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor"
+       xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller"
+       xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface">
+
+  <!--           -->
+  <!-- Sink Area -->
+  <!--           -->
+
+  <macro name="sink_block" params="pose_x pose_y pose_z pose_roll pose_pitch pose_yaw">
+  
+    <joint name="sink_block_sink_joint" type="fixed">
+      <origin rpy="${pose_roll} ${pose_pitch} ${pose_yaw}" xyz="${pose_x} ${pose_y} ${pose_z}"/>
+      <parent link="kitchen_link"/>
+      <child link="sink_link"/>
+    </joint>
+
+    <link name="sink_link">
+      <inertial>
+        <mass value="1.0"/>
+        <origin xyz=".295 1.485 .8535" rpy="0 0 0"/>
+        <cuboid_inertia_def width = ".86" length = ".50" height = ".005" mass = "1.0" />
+      </inertial>
+
+      <visual>
+        <origin xyz=".295 1.485 .8535" rpy="0 0 0"/>
+        <geometry>
+          <box size=".50 .86 0.005"/>
+        </geometry>
+        <material name="KitchenSink"/>
+      </visual>
+
+      <collision>
+        <origin xyz=".295 1.485 .8535" rpy="0 0 0"/>
+        <geometry>
+          <box size=".50 .86 0.005"/>
+        </geometry>
+      </collision>
+    </link>
+    
+    <gazebo reference="sink_link">
+      <material value="Ias/KitchenSink" />
+    </gazebo>
+
+    <counter_side parent="kitchen"
+      name="counter_side_sink_left"
+      pos_x="${0+pose_x}" pos_y="${0+pose_y}" pos_z="${0+pose_z}"
+      roll="${pose_roll}" pitch="${pose_pitch}" yaw="${pose_yaw}"
+      size_x="0.58" size_y="0.03" size_z="0.82"
+    />
+    <drawer parent="kitchen"
+      name="drawer_sink_col1_bottom"
+      pos_x="${0+pose_x}" pos_y="${0.03+pose_y}" pos_z="${0.1+pose_z}"
+      roll="${pose_roll}" pitch="${pose_pitch}" yaw="${pose_yaw}"
+      size_x="0.58" size_y="0.8" size_z="0.29"
+    />
+    <drawer parent="kitchen"
+      name="drawer_sink_col1_center"
+      pos_x="${0+pose_x}" pos_y="${0.03+pose_y}" pos_z="${0.39+pose_z}"
+      roll="${pose_roll}" pitch="${pose_pitch}" yaw="${pose_yaw}"
+      size_x="0.58" size_y="0.8" size_z="0.29"
+    />
+    <drawer parent="kitchen"
+      name="drawer_sink_col1_top"
+      pos_x="${0+pose_x}" pos_y="${0.03+pose_y}" pos_z="${0.68+pose_z}"
+      roll="${pose_roll}" pitch="${pose_pitch}" yaw="${pose_yaw}"
+      size_x="0.58" size_y="0.8" size_z="0.14"
+    />
+    <drawer parent="kitchen"
+      name="drawer_sink_col2"
+      pos_x="${0+pose_x}" pos_y="${0.83+pose_y}" pos_z="${0.1+pose_z}"
+      roll="${pose_roll}" pitch="${pose_pitch}" yaw="${pose_yaw}"
+      size_x="0.58" size_y="0.6" size_z="0.72"
+    />
+    <drawer parent="kitchen"
+      name="drawer_sink_col3_bottom"
+      pos_x="${0+pose_x}" pos_y="${1.43+pose_y}" pos_z="${0.1+pose_z}"
+      roll="${pose_roll}" pitch="${pose_pitch}" yaw="${pose_yaw}"
+      size_x="0.58" size_y="0.6" size_z="0.58"
+    />
+    <drawer parent="kitchen"
+      name="drawer_sink_col3_top"
+      pos_x="${0+pose_x}" pos_y="${1.43+pose_y}" pos_z="${0.68+pose_z}"
+      roll="${pose_roll}" pitch="${pose_pitch}" yaw="${pose_yaw}"
+      size_x="0.58" size_y="0.6" size_z="0.14"
+    />
+    <counter parent="kitchen"
+      name="counter_top_sink"
+      pos_x="${0+pose_x}" pos_y="${0+pose_y}" pos_z="${0.82+pose_z}"
+      roll="${pose_roll}" pitch="${pose_pitch}" yaw="${pose_yaw}"
+      size_x="0.58" size_y="2.06" size_z="0.03"
+    />
+<!--
+    <white_counter_top parent="kitchen"
+      name="white_counter_top_sink"
+      pos_x="${0+pose_x}" pos_y="${0+pose_y}" pos_z="${0.852+pose_z}"
+      roll="${pose_roll}" pitch="${pose_pitch}" yaw="${pose_yaw}"
+      size_x="0.58" size_y="2.06" size_z="0.001"
+    />
+-->
+    <counter_side parent="kitchen"
+      name="counter_side_sink_right"
+      pos_x="${0+pose_x}" pos_y="${2.03+pose_y}" pos_z="${0+pose_z}"
+      roll="${pose_roll}" pitch="${pose_pitch}" yaw="${pose_yaw}"
+      size_x="0.58" size_y="0.03" size_z="0.82"
+    />
+    <skirting parent="kitchen"
+      name="skirting_sink"
+      pos_x="${0+pose_x}" pos_y="${0.03+pose_y}" pos_z="${0+pose_z}"
+      roll="${pose_roll}" pitch="${pose_pitch}" yaw="${pose_yaw}"
+      size_x="0.51" size_y="2.0" size_z="0.10"
+      />
+
+<!--
+    <joint name="sink_block_joint" type="fixed">
+      <origin xyz="${block_pos}" rpy="${block_rpy}"/>
+      <parent link="kitchen_link"/>
+      <child link="sink_block_link"/>
+    </joint>
+  
+    <link name="sink_block_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <box size=".1 .1 .1" />
+        </geometry>
+      </visual>
+    </link>
+-->
+  
+  </macro>
+
+</robot>

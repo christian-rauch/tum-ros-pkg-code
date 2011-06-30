@@ -1,0 +1,47 @@
+
+HOW TO RUN AND WHAT TO DO
+
+============== Visualize the URDF model of kitchen =============
+roslaunch ias_kitchen_defs ias_kitchen_model.launch
+rosrun rviz rviz
+in <rviz> add <Robot Model> display type and set <Robot Description> to /ias_kitchen/kitchen_description and set <TF Prefix> to /ias_kitchen
+
+OR
+
+roslaunch ias_kitchen_defs display_ias_kitchen_model.launch
+=================================================================
+
+
+============== Open/Close Drawers =============
+Open/Close Drawer
+rostopic pub /ias_kitchen/joint_states sensor_msgs/JointState '{name : [sink_block_drawer_sink_col1_top_joint], position: [0.25]}'
+rostopic pub /ias_kitchen/joint_states sensor_msgs/JointState '{name : [sink_block_drawer_sink_col1_top_joint], position: [-0.25]}'
+
+Open/Close Fridge
+rostopic pub /ias_kitchen/joint_states sensor_msgs/JointState '{name : [fridge_block_fridge_joint], position : [1.50]}'
+rostopic pub /ias_kitchen/joint_states sensor_msgs/JointState '{name : [fridge_block_fridge_joint], position : [0.0]}'
+===============================================
+
+============== Exploration and Next-Best-View ==============
+roslaunch /etc/ros/cturtle/robot.launch
+roslaunch cloud_tools point_cloud_assembler_with_filter.launch
+roslaunch autonomous_mapping localization.launch
+roslaunch autonomous_mapping autonomous_exploration.launch 
+roslaunch autonomous_mapping  next_best_view.launch
+rostopic pub /robot_pose geometry_msgs/Pose """
+position:
+   x: -0.636
+   y: 1.011
+   z: 0.05 
+orientation:
+   x: -0.014
+   y: 0.013
+   z: -0.060
+   w: 1.0
+"""
+
+OR
+
+bash scripts/send_to_pose*.sh
+============================================================
+

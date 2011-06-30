@@ -1,0 +1,170 @@
+<?xml version="1.0"?>
+<robot xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor"
+       xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller"
+       xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface">
+
+  <!--             -->
+  <!-- Island Area -->
+  <!--             -->
+
+  <macro name="island_block" params="pose_x pose_y pose_z pose_roll pose_pitch pose_yaw">
+    <joint name="island_block_stove_joint" type="fixed">
+      <origin rpy="0 0 0" xyz="0 0 0"/>
+      <parent link="island_block_link"/>
+      <child link="stove_link"/>
+    </joint>
+
+    <link name="stove_link">
+      <inertial>
+        <mass value="1.0"/>
+        <origin xyz=".30 1.895 .8535" rpy="0 0 0"/>
+        <cuboid_inertia_def width = ".50" length = ".57" height = ".005" mass = "1.0" />
+      </inertial>
+
+      <visual>
+        <origin xyz=".30 1.895 .8535" rpy="0 0 0"/>
+        <geometry>
+          <box size=".50 .57 0.005"/>
+        </geometry>
+        <material name="KitchenStove"/>
+      </visual>
+
+      <collision>
+        <origin xyz=".30 1.895 .8535" rpy="0 0 0"/>
+        <geometry>
+          <box size=".50 .57 0.005"/>
+        </geometry>
+      </collision>
+    </link>
+    
+    <gazebo reference="stove_link">
+      <material value="Ias/KitchenStove" />
+    </gazebo>
+    
+    <island_root parent="kitchen"
+      name="island_block"
+      pos_x="${pose_x}" pos_y="${pose_y}" pos_z="${pose_z}"
+      roll="${pose_roll}" pitch="${pose_pitch}" yaw="${pose_yaw}"
+      size_x="0.60" size_y="0.03" size_z="0.82"
+    />
+    <counter parent="island_block"
+      name="counter_top_island"
+      pos_x="-0.1" pos_y="-0.1" pos_z="0.82"
+      roll="0" pitch="0" yaw="0"
+      size_x="0.80" size_y="2.45" size_z="0.03"
+    />
+<!--
+    <white_counter_top parent="island_block"
+      name="white_counter_top_island"
+      pos_x="-0.1" pos_y="-0.1" pos_z="0.852"
+      roll="0" pitch="0" yaw="0"
+      size_x="0.80" size_y="2.45" size_z="0.001"
+    />
+-->
+    <counter_side parent="island_block"
+      name="counter_side_island_right"
+      pos_x="0" pos_y="2.23" pos_z="0"
+      roll="0" pitch="0" yaw="0"
+      size_x="0.60" size_y="0.03" size_z="0.82"
+    />
+    <drawer parent="island_block"
+      name="drawer_island_col1_bottom"
+      pos_x="0" pos_y="0.03" pos_z="0.1"
+      roll="0" pitch="0" yaw="0"
+      size_x="0.58" size_y="0.6" size_z="0.29"
+    />
+    <drawer parent="island_block"
+      name="drawer_island_col1_center"
+      pos_x="0" pos_y="0.03" pos_z="0.39"
+      roll="0" pitch="0" yaw="0"
+      size_x="0.58" size_y="0.6" size_z="0.29"
+    />
+    <drawer parent="island_block"
+      name="drawer_island_col1_top"
+      pos_x="0" pos_y="0.03" pos_z="0.68"
+      roll="0" pitch="0" yaw="0"
+      size_x="0.58" size_y="0.6" size_z="0.14"
+    />
+    <drawer parent="island_block"
+      name="drawer_island_col2_bottom"
+      pos_x="0" pos_y="0.63" pos_z="0.1"
+      roll="0" pitch="0" yaw="0"
+      size_x="0.58" size_y="1.0" size_z="0.29"
+    />
+    <drawer parent="island_block"
+      name="drawer_island_col2_center"
+      pos_x="0" pos_y="0.63" pos_z="0.39"
+      roll="0" pitch="0" yaw="0"
+      size_x="0.58" size_y="1.0" size_z="0.29"
+    />
+    <drawer parent="island_block"
+      name="drawer_island_col2_top"
+      pos_x="0" pos_y="0.63" pos_z="0.68"
+      roll="0" pitch="0" yaw="0"
+      size_x="0.58" size_y="1.0" size_z="0.14"
+    />
+    <drawer parent="island_block"
+      name="drawer_island_col3_bottom"
+      pos_x="0" pos_y="1.63" pos_z="0.1"
+      roll="0" pitch="0" yaw="0"
+      size_x="0.58" size_y="0.6" size_z="0.29"
+    />
+    <drawer parent="island_block"
+      name="drawer_island_col3_center"
+      pos_x="0" pos_y="1.63" pos_z="0.39"
+      roll="0" pitch="0" yaw="0"
+      size_x="0.58" size_y="0.6" size_z="0.29"
+    />
+    <drawer parent="island_block"
+      name="drawer_island_col3_top"
+      pos_x="0" pos_y="1.63" pos_z="0.68"
+      roll="0" pitch="0" yaw="0"
+      size_x="0.58" size_y="0.6" size_z="0.14"
+    />
+    <skirting parent="island_block"
+      name="skirting_island"
+      pos_x="0.02" pos_y="0.03" pos_z="0"
+      roll="0" pitch="0" yaw="0"
+      size_x="0.51" size_y="2.2" size_z="0.10"
+    />
+    <counter_side parent="island_block"
+      name="counter_side_island_back"
+      pos_x="0" pos_y="0.03" pos_z="0"
+      roll="0" pitch="0" yaw="0"
+      size_x="0.02" size_y="2.2" size_z="0.82"
+    />
+
+<!--
+    <joint name="island_block_joint" type="fixed">
+      <origin xyz="${block_pos}" rpy="${block_rpy}"/>
+      <parent link="kitchen_link"/>
+      <child link="island_block_link"/>
+    </joint>
+  
+    <link name="island_block_link">
+      <inertial>
+        <mass value="0.01"/>
+        <origin xyz="0 -0.2 0.05" rpy="0 0 0"/>
+          <cuboid_inertia_def width = "0.1" length = "0.1" height = "0.1" mass = "0.01" />
+      </inertial>
+
+      <visual>
+        <origin xyz="0 -0.2 0.05" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.1 0.1 0.1"/>
+        </geometry>
+        <material name="KitchenWallWhite"/>
+      </visual>
+
+      <collision>
+        <origin xyz="0 -0.2 0.05" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.1 0.1 0.1"/>
+        </geometry>
+      </collision>
+    </link>
+-->
+
+  </macro>
+  
+</robot>

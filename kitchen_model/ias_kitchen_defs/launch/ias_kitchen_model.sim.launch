@@ -1,0 +1,20 @@
+<launch>
+  <group ns="ias_kitchen">
+   
+  <param name="kitchen_description" 
+    command="$(find xacro)/xacro.py '$(find ias_kitchen_defs)/kitchen/ias_kitchen.urdf.sim.xml'"
+  />
+
+  <node pkg="tf" type="static_transform_publisher" name="kitchen_link_broadcaster" 
+    args="1.4 2.8 0 3.21 0 0 /map /ias_kitchen/kitchen_link 200">
+  </node>
+
+  <node pkg="robot_state_chain_publisher" type="state_chain_publisher"
+    name="kitchen_state_publisher" output="screen">
+    <param name="tf_prefix" value="ias_kitchen"/>
+    <param name="publish_frequency" value="2"/>
+    <remap from="robot_description" to="kitchen_description" />
+  </node>
+
+  </group>
+</launch>

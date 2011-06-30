@@ -1,0 +1,110 @@
+<?xml version="1.0"?>
+<robot name="ias_kitchen">
+
+  <include filename="$(find ias_kitchen_defs)/defs/materials.xml"/>
+  <include filename="$(find ias_kitchen_defs)/defs/ias_kitchen/furniture_defs.sim.xml"/>
+  <include filename="$(find ias_kitchen_defs)/defs/ias_kitchen/island_block.sim.xml"/>
+  <include filename="$(find ias_kitchen_defs)/defs/ias_kitchen/oven_block.sim.xml"/>
+  <include filename="$(find ias_kitchen_defs)/defs/ias_kitchen/fridge_block.sim.xml"/>
+  <include filename="$(find ias_kitchen_defs)/defs/ias_kitchen/sink_block.sim.xml"/>
+  <include filename="$(find ias_kitchen_defs)/defs/util_defs.xml"/>
+
+  <link name="world"/>
+  
+  <joint name="world_kitchen_joint" type="fixed">
+    <origin rpy="0 0 3.21" xyz="1.4 2.8 0"/>
+    <parent link="world"/>
+    <child link="kitchen_link"/>
+  </joint>
+  
+  <!-- This is the top level joint /tf frame. 
+       Something (like the provided launch file) should publish a transform to /map. -->
+  <link name="kitchen_link">
+    <inertial>
+      <mass value="100"/>
+      <origin xyz="-0.1 1.93 1.36" rpy="0 0 0"/>
+      <cuboid_inertia_def width = "6.26" length = "0.2" height = "2.72" mass = "100" />
+    </inertial>
+
+    <visual>
+      <origin xyz="-0.1 1.93 1.36" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.2 6.26 2.72"/>
+      </geometry>
+      <material name="KitchenWallWhite"/>
+    </visual>
+
+    <collision>
+      <origin xyz="-0.1 1.93 1.36" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.2 6.26 2.72"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <gazebo reference="kitchen_link">
+    <material value="Ias/KitchenWallWhite" />
+  </gazebo>
+
+  <joint name="kitchen_wall_stickout_joint" type="fixed">
+    <origin rpy="0 0 0" xyz="0 0 0"/>
+    <parent link="kitchen_link"/>
+    <child link="wall_stickout_link"/>
+  </joint>
+
+  <link name="wall_stickout_link">
+    <inertial>
+      <mass value="100"/>
+      <origin xyz="0.105 2.415 1.36" rpy="0 0 0"/>
+      <cuboid_inertia_def width = "1.67" length = "0.21" height = "2.72" mass = "100" />
+    </inertial>
+
+    <visual>
+      <origin xyz="0.105 2.415 1.36" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.21 1.67 2.72"/>
+      </geometry>
+      <material name="KitchenWallWhite"/>
+    </visual>
+
+    <collision>
+      <origin xyz="0.105 2.415 1.36" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.21 1.67 2.72"/>
+      </geometry>
+    </collision>
+  </link>
+
+  <gazebo reference="wall_stickout_link">
+    <material value="Ias/KitchenWallWhite" />
+  </gazebo>
+
+  <!-- Shelves on top of kitchen counter -->
+  <counter parent="kitchen"
+        name="shelf_bottom"
+        pos_x="0" pos_y="1.2" pos_z="0.85"
+        roll="0" pitch="0" yaw="0"
+        size_x="0.25" size_y="0.38" size_z="0.025"
+  />
+  <counter parent="kitchen"
+        name="shelf_center"
+        pos_x="0" pos_y="1.2" pos_z="1.15"
+        roll="0" pitch="0" yaw="0"
+        size_x="0.21" size_y="0.38" size_z="0.025"
+  />
+  <counter parent="kitchen"
+        name="shelf_top"
+        pos_x="0" pos_y="1.2" pos_z="1.48"
+        roll="0" pitch="0" yaw="0"
+        size_x="0.25" size_y="0.38" size_z="0.025"
+  />
+
+  <island_block pose_x="3.7" pose_y="1.7" pose_z="0" pose_roll="0" pose_pitch="0" pose_yaw="3.141"/>
+
+  <oven_block pose_x="0" pose_y="0" pose_z="0" pose_roll="0" pose_pitch="0" pose_yaw="0"/>
+
+  <sink_block pose_x="0.21" pose_y="1.2" pose_z="0" pose_roll="0" pose_pitch="0" pose_yaw="0"/>
+
+  <fridge_block pose_x="0" pose_y="3.26" pose_z="0" pose_roll="0" pose_pitch="0" pose_yaw="0"/>
+
+</robot>

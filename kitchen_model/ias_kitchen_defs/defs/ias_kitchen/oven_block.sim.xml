@@ -1,0 +1,74 @@
+<?xml version="1.0"?>
+<robot xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor"
+       xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller"
+       xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface">
+
+  <!--           -->
+  <!-- Oven Area -->
+  <!--           -->
+
+  <macro name="oven_block" params="pose_x pose_y pose_z pose_roll pose_pitch pose_yaw">
+
+    <counter parent="kitchen"
+      name="counter_top_oven"
+      pos_x="${0+pose_x}" pos_y="${0+pose_y}" pos_z="${1.48+pose_z}"
+      roll="${pose_roll}" pitch="${pose_pitch}" yaw="${pose_yaw}"
+      size_x="0.58" size_y="1.2" size_z="0.03"
+    />
+    <drawer_vert parent="kitchen"
+      name="drawer_oven_left"
+      pos_x="${0+pose_x}" pos_y="${0+pose_y}" pos_z="${0.15+pose_z}"
+      roll="${pose_roll}" pitch="${pose_pitch}" yaw="${pose_yaw}"
+      size_x="0.58" size_y="0.30" size_z="1.33"
+    />
+    <drawer parent="kitchen"
+      name="drawer_oven_bottom"
+      pos_x="${0+pose_x}" pos_y="${0.3+pose_y}" pos_z="${0.15+pose_z}"
+      roll="${pose_roll}" pitch="${pose_pitch}" yaw="${pose_yaw}"
+      size_x="0.58" size_y="0.6" size_z="0.58"
+    />
+    <drawer parent="kitchen"
+      name="drawer_oven_center"
+      pos_x="${0+pose_x}" pos_y="${0.3+pose_y}" pos_z="${0.73+pose_z}"
+      roll="${pose_roll}" pitch="${pose_pitch}" yaw="${pose_yaw}"
+      size_x="0.58" size_y="0.6" size_z="0.14"
+    />
+    <drawer parent="kitchen"
+      name="drawer_oven_oven"
+      pos_x="${0+pose_x}" pos_y="${0.3+pose_y}" pos_z="${0.88+pose_z}"
+      roll="${pose_roll}" pitch="${pose_pitch}" yaw="${pose_yaw}"
+      size_x="0.58" size_y="0.6" size_z="0.62"
+    />
+    <drawer_vert parent="kitchen"
+      name="drawer_oven_right"
+      pos_x="${0+pose_x}" pos_y="${0.9+pose_y}" pos_z="${0.15+pose_z}"
+      roll="${pose_roll}" pitch="${pose_pitch}" yaw="${pose_yaw}"
+      size_x="0.58" size_y="0.30" size_z="1.33"
+    />
+    <skirting parent="kitchen"
+      name="skirting_oven"
+      pos_x="${0+pose_x}" pos_y="${0+pose_y}" pos_z="${0+pose_z}"
+      roll="${pose_roll}" pitch="${pose_pitch}" yaw="${pose_yaw}"
+      size_x="0.51" size_y="1.2" size_z="0.15"
+      />
+
+<!--
+     <joint name="oven_block_joint" type="fixed">
+       <origin xyz="${block_pos}" rpy="${block_rpy}"/>
+       <parent link="kitchen_link"/>
+       <child link="oven_block_link"/>
+    </joint>
+  
+    <link name="oven_block_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <box size=".1 .1 .1" />
+        </geometry>
+      </visual>
+    </link>
+-->
+  
+  </macro>
+
+</robot>
