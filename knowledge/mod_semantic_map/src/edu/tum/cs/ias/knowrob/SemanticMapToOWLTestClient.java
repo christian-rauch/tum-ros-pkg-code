@@ -5,17 +5,6 @@ import ros.pkg.mod_semantic_map.srv.*;
 import ros.pkg.mod_semantic_map.msg.*;
 
 
-/**
- * 
- * Interface between the CoP cognitive perception system (http://www.ros.org/wiki/cop)
- * and the RoboEarth database.
- * 
- * Provides ROS services to upload CoP object models to the RoboEarth database as well
- * as to retrieve object models from the database and add them to CoP.
- * 
- * @author Moritz Tenorth, tenorth@cs.tum.edu
- *
- */
 
 public class SemanticMapToOWLTestClient {
 

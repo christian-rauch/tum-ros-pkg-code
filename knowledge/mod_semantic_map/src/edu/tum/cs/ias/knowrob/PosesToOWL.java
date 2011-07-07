@@ -5,30 +5,25 @@ import java.util.Date;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.text.SimpleDateFormat;
-
 import org.semanticweb.owlapi.apibinding.OWLManager;
 import org.semanticweb.owlapi.io.RDFXMLOntologyFormat;
 import org.semanticweb.owlapi.model.*;
 import org.semanticweb.owlapi.util.DefaultPrefixManager;
 import org.semanticweb.owlapi.vocab.PrefixOWLOntologyFormat;
-
 import ros.*;
-import ros.pkg.mod_semantic_map.srv.*;
-import ros.pkg.mod_semantic_map.msg.*;
 import ros.pkg.geometry_msgs.msg.Point;
 import ros.pkg.geometry_msgs.msg.Quaternion;
 
-/**
- * 
- * Interface between the CoP cognitive perception system (http://www.ros.org/wiki/cop)
- * and the RoboEarth database.
- * 
- * Provides ROS services to upload CoP object models to the RoboEarth database as well
- * as to retrieve object models from the database and add them to CoP.
- * 
- * @author Moritz Tenorth, tenorth@cs.tum.edu
- *
- */
+
+
+
+//
+//
+// export trajectory points to OWL
+//
+//
+
+
 
 public class PosesToOWL {
 

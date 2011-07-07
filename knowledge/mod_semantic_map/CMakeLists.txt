@@ -28,5 +28,7 @@ add_runtime_classpath(${PROJECT_SOURCE_DIR}/lib/owlapi-bin.jar)
 # generate launch script
 rospack_add_java_executable(SemanticMapToOWL edu.tum.cs.ias.knowrob.SemanticMapToOWL)
 rospack_add_java_executable(SemanticMapToOWLTestClient edu.tum.cs.ias.knowrob.SemanticMapToOWLTestClient)
+rospack_add_java_executable(SemanticMapEditor edu.tum.cs.ias.knowrob.SemanticMapEditor)
+
 
 add_java_source_dir(${PROJECT_SOURCE_DIR}/src)
