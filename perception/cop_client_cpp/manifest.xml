@@ -1,0 +1,11 @@
+<package>
+<description>cop_client_cpp</description>
+<author>Ulrich F Klank</author>
+<license>GPL</license>
+<depend package="roscpp" />
+<depend package="vision_srvs" />
+<depend package="tf" />
+<export>
+ <cpp cflags="-I${prefix}/include" lflags="-L${prefix}/lib -lcopclientcpp" />
+</export>
+</package>
