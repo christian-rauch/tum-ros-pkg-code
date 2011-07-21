@@ -1,0 +1,5 @@
+<launch>
+  <node name="pr2_relay_tf"
+        pkg="foreign_relay" type="foreign_relay"
+        args="adv $(env FOREIGN_MASTER_URI) /tf_pr2 /tf"/>
+</launch>

@@ -1,0 +1,8 @@
+<launch>
+  <node name="rosie_relay_tf"
+        pkg="foreign_relay" type="foreign_relay"
+        args="adv $(env FOREIGN_MASTER_URI) /tf_rosie /tf"/>
+  <node name="rosie_relay_shoulder_cloud"
+        pkg="foreign_relay" type="foreign_relay"
+        args="adv $(env FOREIGN_MASTER_URI) /rosie/shoulder_cloud /shoulder_cloud"/>
+</launch>

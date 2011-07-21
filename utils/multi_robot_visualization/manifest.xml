@@ -1,0 +1,20 @@
+<package>
+  <description brief="multi_robot_visualization">
+
+     multi_robot_visualization
+
+  </description>
+  <author>Lorenz Moesenlechner</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/multi_robot_visualization</url>
+  <depend package="tf_relay"/>
+  <depend package="foreign_relay"/>
+  <depend package="rosie_description"/>
+  <depend package="pr2_description"/>
+  <depend package="map_server"/>
+  <depend package="ias_maps"/>
+
+</package>
+
+

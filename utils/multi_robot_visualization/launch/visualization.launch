@@ -1,0 +1,31 @@
+<launch>
+  <param name="rosie_description" command="$(find xacro)/xacro.py '$(find rosie_description)/robots/rosie.urdf.xacro'"/>
+  <param name="pr2_description" command="$(find xacro)/xacro.py '$(find pr2_description)/robots/pr2.urdf.xacro'" />
+  <param name="icub_description" command="cat $(find icub_robot_defs)/robots/icub_basic.urdf.xml"/>
+
+  <node name="rosie_tf" pkg="tf_relay" type="tf_relay.py">
+    <remap from="tf_in" to="/tf_rosie"/>
+    <remap from="tf_out" to="/tf"/>
+    <param name="fixed_frame" value="/map"/>
+    <param name="tf_prefix" value="/rosie"/>
+  </node>
+
+  <node name="pr2_tf" pkg="tf_relay" type="tf_relay.py">
+    <remap from="tf_in" to="/tf_pr2"/>
+    <remap from="tf_out" to="/tf"/>
+    <param name="fixed_frame" value="/map"/>
+    <param name="tf_prefix" value="/pr2"/>
+  </node>
+
+  <node name="icub_tf" pkg="tf_relay" type="tf_relay.py">
+    <remap from="tf_in" to="/tf_icub"/>
+    <remap from="tf_out" to="/tf"/>
+    <param name="fixed_frame" value="/map"/>
+    <param name="tf_prefix" value="/icub"/>
+  </node>
+
+  <node name="map_server" pkg="map_server" type="map_server" args="$(find ias_maps)/ias_karlstrasse_20100830.yaml" />
+
+  <include file="$(find ias_kitchen_defs)/launch/ias_kitchen_model.launch"/>
+  
+</launch>

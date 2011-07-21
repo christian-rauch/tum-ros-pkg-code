@@ -1,0 +1,8 @@
+<launch>
+  <node name="icub_map_transform"
+        pkg="tf" type="static_transform_publisher"
+        args="-4.73 2.2 1.0 0 0 -0.682 0.731 /map /base_link 250"/>
+  <node name="icub_relay_tf"
+        pkg="foreign_relay" type="foreign_relay"
+        args="adv $(env FOREIGN_MASTER_URI) /tf_icub /tf"/>
+</launch>
