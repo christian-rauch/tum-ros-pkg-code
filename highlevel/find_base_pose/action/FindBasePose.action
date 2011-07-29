@@ -1,0 +1,6 @@
+geometry_msgs/PoseStamped[] target_poses
+std_msgs/Int32[] arm
+---
+geometry_msgs/PoseStamped[] base_poses
+---
+
