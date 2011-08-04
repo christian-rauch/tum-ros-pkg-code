@@ -1,10 +1,10 @@
-/* 
+/*
  * Copyright (c) 2010, Thomas Ruehr <ruehr@cs.tum.edu>
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
@@ -13,7 +13,7 @@
  *     * Neither the name of Willow Garage, Inc. nor the names of its
  *       contributors may be used to endorse or promote products derived from
  *       this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -30,16 +30,16 @@
 
 #include <ias_drawer_executive/AverageTF.h>
 
-tf::StampedTransform AverageTF::getMarkerTransform(const char tf_frame[], double numSamples)
+tf::Stamped<tf::Pose> AverageTF::getMarkerTransform(const char tf_frame[], double numSamples)
 {
-  tf::StampedTransform marker;
+  tf::Stamped<tf::Pose> marker;
   tf::TransformListener listener;
   ros::NodeHandle node;
   ros::Rate rate(100.0);
   int count = 0;
 
   double lastTime = 0;
-  tf::StampedTransform transSum;
+  tf::Stamped<tf::Pose> transSum;
   int i = 0;
   geometry_msgs::Quaternion rot[500];
   geometry_msgs::Vector3 trans[500];
@@ -65,7 +65,11 @@ tf::StampedTransform AverageTF::getMarkerTransform(const char tf_frame[], double
     if (actTime!=lastTime) {
       lastTime=actTime;
      // ROS_INFO("NEW MARKER POSITION %i" , count);
-      marker = transform;
+      marker.frame_id_ = transform.frame_id_;
+      marker.setOrigin(transform.getOrigin());
+      marker.setRotation(transform.getRotation());
+      marker.stamp_ = transform.stamp_;
+
       transform.setRotation(transform.getRotation().normalize());
       trans[count].x = transform.getOrigin().x();
       trans[count].y = transform.getOrigin().y();
@@ -94,14 +98,14 @@ tf::StampedTransform AverageTF::getMarkerTransform(const char tf_frame[], double
       ROS_INFO("CURRENT MARKER OR %f %f %f %f", transform.getRotation().x(), transform.getRotation().y(), transform.getRotation().z(), transform.getRotation().w());
 
 
-      tf::StampedTransform decid;
+      tf::Stamped<tf::Pose> decid;
       decid.frame_id_ = "none";
       decid.stamp_ = ros::Time();
       decid.setOrigin(btVector3(1,0,0));
       decid.setRotation(btQuaternion(0,0,0,1));
       btTransform classify = transform * decid;
 
-      tf::StampedTransform decid2;
+      tf::Stamped<tf::Pose> decid2;
       decid2.frame_id_ = "none";
       decid2.stamp_ = ros::Time();
       decid2.setOrigin(btVector3(0,1,0));
@@ -119,7 +123,7 @@ tf::StampedTransform AverageTF::getMarkerTransform(const char tf_frame[], double
           ROS_INFO("VERTICAL %i", numv);
       }
 
-      //tf::StampedTransform rot;
+      //tf::Stamped<tf::Pose> rot;
       //rot.setRotation(btQuaternion(0,0,-M_PI/2));
 
       //btQuaternion myq(transform.getRotation().x(),transform.getRotation().y(),transform.getRotation().z(),transform.getRotation().w());

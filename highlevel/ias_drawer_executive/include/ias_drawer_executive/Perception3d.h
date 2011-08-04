@@ -1,5 +1,7 @@
+
+
 /*
- * Copyright (c) 2010, Thomas Ruehr <ruehr@cs.tum.edu>
+ * Copyright (c) 2011, Thomas Ruehr <ruehr@cs.tum.edu>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,58 +29,64 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __GRIPPER_H__
-#define __GRIPPER_H__
+
+#ifndef __Perception3d_H__
+#define __Perception3d_H__
 
 #include <ros/ros.h>
 
-#include <actionlib/client/simple_action_client.h>
-#include <actionlib/client/terminal_state.h>
-#include <pr2_controllers_msgs/Pr2GripperCommandAction.h>
-#include <pr2_gripper_sensor_msgs/PR2GripperGrabAction.h>
-#include <pr2_gripper_sensor_msgs/PR2GripperFindContactAction.h>
-#include <std_srvs/Empty.h>
+#include <pcl/point_types.h>
+#include <pcl/io/pcd_io.h>
+#include "pcl/common/common.h"
 
-// Our Action interface type, provided as a typedef for convenience
-typedef actionlib::SimpleActionClient<pr2_controllers_msgs::Pr2GripperCommandAction> GripperClient;
-typedef actionlib::SimpleActionClient<pr2_gripper_sensor_msgs::PR2GripperGrabAction> GrabAC;
-typedef actionlib::SimpleActionClient<pr2_gripper_sensor_msgs::PR2GripperFindContactAction> FindContactAC;
+#include <boost/thread.hpp>
+#include <tf/transform_listener.h>
 
-class Gripper{
-private:
-  GripperClient* gripper_client_;
-  GrabAC* grab_;
-  FindContactAC* contact_;
+#define ROSCPP_DEPRECATED
 
-  std_srvs::Empty serv;
-  //Action client initialization
-  Gripper(int side = 0);
+#include <ias_table_msgs/TableCluster.h>
 
-  ~Gripper();
 
-  static Gripper *instance[];
+typedef pcl::PointCloud<pcl::PointXYZ> PointCloudT;
 
-  int side_;
+class Perception3d{
 
-public:
+    public:
 
-  static Gripper *getInstance(int side=0);
+  static boost::mutex handle_cloud_mutex;
+  static boost::mutex handle_mutex;
+  static boost::mutex plane_mutex;
+  static PointCloudT lastCloud;
+  static btVector3 handleHint;
+  static btVector3 handleResult;
+  static ros::Time cloud_time;
+  static ros::Time query_time;
+  static float handleMinDist;
+  static std::vector<tf::Stamped<tf::Pose> *> handlePoses;
+  static std::vector<tf::Stamped<tf::Pose> *> planePoses;
 
-  //Open the gripper
-  void open(float amount = 0.09);
+  //get handles by pose
+  static void handleCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
 
-  //Close the gripper
-  void close(float amount = 0.00);
+  static tf::Stamped<tf::Pose> getHandlePoseFromLaser(int pos);
 
-    //Close the gripper
-  void closeHard(float amount = 0.00);
+  //get inslied cloud of handles
+  static void handleCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
-  void updatePressureZero();
+  static tf::Stamped<tf::Pose> getHandlePoseFromLaser(tf::Stamped<tf::Pose> hint);
 
-  void closeCompliant(float gain = 0.0001);
+  //get plane center inside fridge
+  static void fridgePlaneCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
-  float getAmountOpen();
+  static tf::Stamped<tf::Pose> getFridgePlaneCenterPose();
+
+  // get bottle
+  static void bottleCallback(const ias_table_msgs::TableCluster::ConstPtr& msg);
+
+  static tf::Stamped<tf::Pose> getBottlePose();
 
 };
+
+
 
 #endif

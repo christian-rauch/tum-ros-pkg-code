@@ -1,10 +1,10 @@
-/* 
+/*
  * Copyright (c) 2010, Thomas Ruehr <ruehr@cs.tum.edu>
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
@@ -13,7 +13,7 @@
  *     * Neither the name of Willow Garage, Inc. nor the names of its
  *       contributors may be used to endorse or promote products derived from
  *       this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -31,6 +31,7 @@
 #include <ias_drawer_executive/Torso.h>
 #include <ias_drawer_executive/RobotDriver.h>
 #include <ias_drawer_executive/Poses.h>
+#include <ias_drawer_executive/Perception3d.h>
 #include <ias_drawer_executive/RobotArm.h>
 #include <ias_drawer_executive/Pressure.h>
 #include <ias_drawer_executive/Gripper.h>
@@ -43,6 +44,173 @@
 #include <ias_drawer_executive/PickBottleAction.h>
 #include <ias_drawer_executive/PickPlateAction.h>
 #include <ias_drawer_executive/GenericAction.h>
+
+#include <ias_drawer_executive/OpenContainerAction.h>
+#include <ias_drawer_executive/CloseContainerAction.h>
+
+#include "boost/date_time/posix_time/posix_time.hpp"
+
+
+class OpenContainerAction
+{
+protected:
+
+    ros::NodeHandle nh_;
+    actionlib::SimpleActionServer<ias_drawer_executive::OpenContainerAction> as_;
+    std::string action_name_;
+    // create messages that are used to published feedback/result
+    ias_drawer_executive::OpenContainerFeedback feedback_;
+    ias_drawer_executive::OpenContainerResult result_;
+
+public:
+
+    OpenContainerAction(std::string name) :
+            as_(nh_, name, boost::bind(&OpenContainerAction::executeCB, this, _1)),
+            action_name_(name)
+    {
+        ROS_INFO("%s up and running..", action_name_.c_str());
+    }
+
+    ~OpenContainerAction(void)
+    {
+    }
+
+    void executeCB(const ias_drawer_executive::OpenContainerGoalConstPtr &goal)
+    {
+        // helper variables
+        ros::Rate r(20);
+        bool success = true;
+
+        int arm  = goal->arm;
+        geometry_msgs::PoseStamped position = goal->position;
+
+        tf::Stamped<tf::Pose> aM; //OperateHandleController::getHandlePoseFromMarker(arm,hgtIdx);
+        aM.frame_id_ = position.header.frame_id;
+        aM.setOrigin(btVector3(position.pose.position.x, position.pose.position.y, position.pose.position.z));
+        aM.setRotation(btQuaternion(position.pose.orientation.x,position.pose.orientation.y,position.pose.orientation.z,position.pose.orientation.w));
+        tf::Stamped<tf::Pose> aMb;
+        aMb = RobotArm::getInstance(0)->getPoseIn("base_link",aM);
+
+        int handle = OperateHandleController::maxHandle + 1;
+        boost::thread t = boost::thread(&OperateHandleController::operateHandle,arm,aMb,0);
+
+        //int handle = OperateHandleController::operateHandle(arm,aMb);
+
+        using namespace boost::posix_time;
+
+        //time_duration td = hours(1) + seconds(10); //01:00:01
+        time_duration td = seconds(1); //01:00:01
+        //td = hours(1) + nanoseconds(5); //01:00:00.000000005
+
+        while (!t.timed_join(td) && ros::ok()) {
+
+            if (as_.isPreemptRequested() || !ros::ok())
+               {
+               ROS_INFO("%s: Preempted", action_name_.c_str());
+               // set the action state to preempted
+               as_.setPreempted();
+               success = false;
+               break;
+            }
+        }
+
+        //static std::vector<tf::Stamped<tf::Pose> *> handlePoses;
+        result_.trajectory.poses.resize(OperateHandleController::openingTraj[handle].size());
+        result_.trajectory.header.frame_id = "map";
+
+        std::vector<tf::Stamped<tf::Pose> *>::iterator it;
+        int i = 0;
+        for (it = OperateHandleController::openingTraj[handle].begin(); it != OperateHandleController::openingTraj[handle].end(); ++it, ++i)
+        {
+            geometry_msgs::Pose curr;
+            curr.position.x=(*it)->getOrigin().x();
+            curr.position.y=(*it)->getOrigin().y();
+            curr.position.z=(*it)->getOrigin().z();
+            curr.orientation.x=(*it)->getRotation().x();
+            curr.orientation.y=(*it)->getRotation().y();
+            curr.orientation.z=(*it)->getRotation().z();
+            curr.orientation.w=(*it)->getRotation().w();
+            result_.trajectory.poses[i] = curr;
+        }
+        //result_.
+        // result_.trajectoryHandle = handle;
+
+        if (success)
+        {
+            //result_.sequence = feedback_.sequence;
+            ROS_INFO("%s: Succeeded", action_name_.c_str());
+            // set the action state to succeeded
+            as_.setSucceeded(result_);
+        }
+    }
+};
+
+
+class CloseContainerAction
+{
+protected:
+
+    ros::NodeHandle nh_;
+    actionlib::SimpleActionServer<ias_drawer_executive::CloseContainerAction> as_;
+    std::string action_name_;
+    // create messages that are used to published feedback/result
+    ias_drawer_executive::CloseContainerFeedback feedback_;
+    ias_drawer_executive::CloseContainerResult result_;
+
+public:
+
+    CloseContainerAction(std::string name) :
+            as_(nh_, name, boost::bind(&CloseContainerAction::executeCB, this, _1)),
+            action_name_(name)
+    {
+        ROS_INFO("%s up and running..", action_name_.c_str());
+    }
+
+    ~CloseContainerAction(void)
+    {
+    }
+
+    void executeCB(const ias_drawer_executive::CloseContainerGoalConstPtr &goal)
+    {
+        // helper variables
+        ros::Rate r(20);
+        bool success = true;
+
+        int arm  = goal->arm;
+        //geometry_msgs::PoseStamped position = goal->position;
+        geometry_msgs::PoseArray traj = goal->opening_trajectory;
+
+        int handle = ++OperateHandleController::maxHandle;
+        ROS_INFO("handle : %i", handle);
+        std::vector<tf::Stamped<tf::Pose> * > openingTrajAct;
+        OperateHandleController::openingTraj.push_back(openingTrajAct);
+        //openingTrajAct.resize(traj.poses.size());
+        OperateHandleController::openingTraj[handle].resize(traj.poses.size());
+        ROS_INFO("OHC trajec size %zu" , OperateHandleController::openingTraj.size());
+        ROS_INFO("OHC trajec[handle] size %zu" , OperateHandleController::openingTraj[handle].size());
+        ROS_INFO("traj size %zu" , traj.poses.size());
+        for (size_t i=0; i < traj.poses.size(); ++i) {
+            tf::Stamped<tf::Pose> *pose = new tf::Stamped<tf::Pose>();
+            pose->frame_id_ = "map";
+            pose->setOrigin(btVector3(traj.poses[i].position.x, traj.poses[i].position.y, traj.poses[i].position.z));
+            pose->setRotation(btQuaternion(traj.poses[i].orientation.x,traj.poses[i].orientation.y,traj.poses[i].orientation.z,traj.poses[i].orientation.w));
+
+            ROS_INFO("TRAJ PT %zu: %f %f %f, %f %f %f %f",i ,traj.poses[i].position.x, traj.poses[i].position.y, traj.poses[i].position.z,
+             traj.poses[i].orientation.x,traj.poses[i].orientation.y,traj.poses[i].orientation.z,traj.poses[i].orientation.w);
+            OperateHandleController::openingTraj[handle][i] = pose;
+        }
+
+        OperateHandleController::close(arm,handle);
+
+        if (success)
+        {
+            //result_.sequence = feedback_.sequence;
+            ROS_INFO("%s: Succeeded", action_name_.c_str());
+            // set the action state to succeeded
+            as_.setSucceeded(result_);
+        }
+    }
+};
 
 
 
@@ -107,14 +275,10 @@ public:
         if (posIdx >= 0)
         {
             Torso *torso = Torso::getInstance();
-            boost::thread *t;
-            if (posIdx==8)
-                t = &boost::thread(&Torso::up, torso);
-            else
-                t = &boost::thread(&Torso::down, torso);
+            boost::thread t = boost::thread((posIdx == 8) ? &Torso::up : &Torso::down, torso);
             ROS_INFO("TARGET POSE IN MAP %f %f %f %f",Poses::poses[posIdx][0],Poses::poses[posIdx][1],Poses::poses[posIdx][2],Poses::poses[posIdx][3]);
             RobotDriver::getInstance()->moveBase(Poses::poses[posIdx]);
-            t->join();
+            t.join();
         }
         if (hgtIdx >= 0)
         {
@@ -124,7 +288,7 @@ public:
         }
         else   // close the thing again, expects base to be in a good spot where good means it wont crush the door when driving from current to next closing position
         {
-            OperateHandleController::close(hgtIdx);
+            OperateHandleController::close(0,hgtIdx);
             result_.trajectoryHandle = hgtIdx;
         }
 
@@ -173,9 +337,9 @@ public:
         // publish info to the console for the user
         ROS_INFO("%s: Executing, creating CloseHandleAction  arm %i handle %i ", action_name_.c_str(), goal->arm, goal->handle);
 
-        int arm  = goal->arm;
+        //int arm  = goal->arm;
         int handle  = goal->handle;
-        OperateHandleController::close(handle);
+        OperateHandleController::close(0,handle);
 
         result_.trajectoryHandle = handle;
 
@@ -230,7 +394,7 @@ public:
         {
 
             pr2_controllers_msgs::JointTrajectoryGoal goalB = RobotArm::getInstance(1)->lookAtMarker(Poses::prepDishL1,Poses::prepDishL1);
-            boost::thread t3(&RobotArm::startTrajectory, RobotArm::getInstance(1), goalB);
+            boost::thread t3(&RobotArm::startTrajectory, RobotArm::getInstance(1), goalB,true);
 
             Torso *torso = Torso::getInstance();
             boost::thread t2(&Torso::up, torso);
@@ -245,12 +409,12 @@ public:
             //t2.join();t3.join();
 
             RobotHead::getInstance()->lookAt("/map", 1.243111, -0.728864, 0.9);
-            tf::Stamped<tf::Pose> bottle = OperateHandleController::getBottlePose();
+            tf::Stamped<tf::Pose> bottle = Perception3d::getBottlePose();
 
 
             {
                 //float fridgeLink = atof(argv[2]);
-                float fridgeLink = .1;
+                //float fridgeLink = .1;
 
 
                 std::vector<int> arm;
@@ -306,7 +470,7 @@ public:
             RobotArm::getInstance(arm_)->universal_move_toolframe_ik(bottle.getOrigin().x(), bottle.getOrigin().y(), bottle.getOrigin().z() + .03, 0.005, -0.053, -0.029005, 0.998160, "map");
 
             Gripper::getInstance(arm_)->closeCompliant();
-            Gripper::getInstance(arm_)->close(0.5);
+            Gripper::getInstance(arm_)->close(0.04);
             //RobotArm::getInstance(1)->universal_move_toolframe_ik(1.065, -0.655, 1.151, 0.005, -0.053, -0.029, 0.998, "map");
             RobotArm::getInstance(arm_)->universal_move_toolframe_ik(bottle.getOrigin().x() - .1, bottle.getOrigin().y(), bottle.getOrigin().z() + .03, 0.005, -0.053, -0.029005, 0.998160, "map");
             RobotArm::getInstance(arm_)->universal_move_toolframe_ik(0.8, -0.655, 1.251, 0.005, -0.053, -0.029, 0.998, "map");
@@ -362,7 +526,7 @@ public:
         // publish info to the console for the user
         ROS_INFO("%s: Executing, creating PickPlateAction ", action_name_.c_str());
 
-        int arm  = goal->arm;
+        //int arm  = goal->arm;
         //int handle  = goal->handle;
         // in drawer
         RobotHead::getInstance()->lookAt("/map", .4 ,1.13, .7);
@@ -376,14 +540,14 @@ public:
 
 
         Torso *torso = Torso::getInstance();
-        boost::thread *t = &boost::thread(&Torso::up, torso);
+        boost::thread t = boost::thread(&Torso::up, torso);
 
         //RobotArm::getInstance(0)->tucked = true;
 
         pr2_controllers_msgs::JointTrajectoryGoal goalA = RobotArm::getInstance(0)->lookAtMarker(Poses::prepDishR1,Poses::prepDishR1);
         pr2_controllers_msgs::JointTrajectoryGoal goalB = RobotArm::getInstance(1)->lookAtMarker(Poses::prepDishL1,Poses::prepDishL1);
-        boost::thread t2(&RobotArm::startTrajectory, RobotArm::getInstance(0), goalA);
-        boost::thread t3(&RobotArm::startTrajectory, RobotArm::getInstance(1), goalB);
+        boost::thread t2(&RobotArm::startTrajectory, RobotArm::getInstance(0), goalA,true);
+        boost::thread t3(&RobotArm::startTrajectory, RobotArm::getInstance(1), goalB,true);
         //RobotArm::getInstance(1)->startTrajectory(RobotArm::getInstance(1)->lookAtMarker(Poses::prepDishL0,Poses::prepDishL1));
         t2.join();
         t3.join();
@@ -391,9 +555,10 @@ public:
         RobotArm::getInstance(0)->tucked = true;
         RobotDriver::getInstance()->moveBase(target,false);
 
-        system("rosrun dynamic_reconfigure dynparam set  /camera_synchronizer_node projector_mode 1");
+        int sysret =  system("rosrun dynamic_reconfigure dynparam set  /camera_synchronizer_node projector_mode 1");
+        ROS_INFO("sytem call: switch projector on: %i", sysret);
 
-        t->join();
+        t.join();
 
         //in drawer
         RobotHead::getInstance()->lookAt("/map", .4 ,1.13, .7);
@@ -494,6 +659,9 @@ int main(int argc, char** argv)
     GenericAction serveToTable("serve_to_table", &DemoScripts::serveToTable);
 
     GenericAction takePlateFromIsland("take_plate_from_island", &DemoScripts::takePlateFromIsland);
+
+    OpenContainerAction openContainer("open_container_action");
+    CloseContainerAction closeContainer("close_container_action");
 
     ros::spin();
 

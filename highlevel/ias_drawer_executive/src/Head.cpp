@@ -1,10 +1,10 @@
-/* 
+/*
  * Copyright (c) 2010, Thomas Ruehr <ruehr@cs.tum.edu>
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
@@ -13,7 +13,7 @@
  *     * Neither the name of Willow Garage, Inc. nor the names of its
  *       contributors may be used to endorse or promote products derived from
  *       this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -48,6 +48,10 @@ RobotHead::RobotHead()
     {
         ROS_INFO("Waiting for the point_head_action server to come up");
     }
+
+    stop = true;
+
+    t1 = 0;
 }
 
 RobotHead::~RobotHead()
@@ -56,8 +60,11 @@ RobotHead::~RobotHead()
 }
 
 //! Points the high-def camera frame at a point in a given frame
-void RobotHead::lookAt(std::string frame_id, double x, double y, double z)
+void RobotHead::lookAt(std::string frame_id, double x, double y, double z, bool waitfor)
 {
+
+    if (t1)
+       stopThread();
     //the goal message we will be sending
     pr2_controllers_msgs::PointHeadGoal goal;
 
@@ -74,15 +81,73 @@ void RobotHead::lookAt(std::string frame_id, double x, double y, double z)
     goal.pointing_frame = "narrow_stereo_optical_frame";
 
     //take at least 5 seconds to get there
-    goal.min_duration = ros::Duration(1);
+    goal.min_duration = ros::Duration(2);
 
     //and go no faster than 0.1 rad/s
-    goal.max_velocity = 1;
+    goal.max_velocity = 0.5;
 
     //send the goal
     point_head_client_->sendGoal(goal);
 
     //wait for it to get there
-    point_head_client_->waitForResult();
+    if (waitfor)
+        point_head_client_->waitForResult();
+}
+
+
+void RobotHead::spinner(std::string frame_id, double x, double y, double z, double rate)
+{
+    ros::Rate rt(rate);
+
+    while (!stop && ros::ok())
+    {
+        rt.sleep();
+        //the goal message we will be sending
+        pr2_controllers_msgs::PointHeadGoal goal;
+
+        //the target point, expressed in the requested frame
+        geometry_msgs::PointStamped point;
+        point.header.frame_id = frame_id;
+        point.point.x = x;
+        point.point.y = y;
+        point.point.z = z;
+        goal.target = point;
+
+        //we are pointing the wide_stereo camera frame
+        //(pointing_axis defaults to X-axis)
+        goal.pointing_frame = "narrow_stereo_optical_frame";
+
+        //take at least 5 seconds to get there
+        goal.min_duration = ros::Duration(0.3);
+
+        //and go no faster than 0.1 rad/s
+        goal.max_velocity = 2.5;
+
+        //send the goal
+        point_head_client_->sendGoal(goal);
+    }
+
+    ROS_INFO("SPINNER STOPPED");
+
+    t1 = 0;
+
+}
+
+//! Points the high-def camera frame at a point in a given frame
+void RobotHead::lookAtThreaded(std::string frame_id, double x, double y, double z, bool waitfor)
+{
+    if (t1)
+       stopThread();
+    stop = false;
+    t1 = new boost::thread(&RobotHead::spinner, this, frame_id, x, y, z, 15);
+}
+
+void RobotHead::stopThread()
+{
+    ros::Rate rt(10);
+    stop = true;
+    while (t1) {
+        rt.sleep();
+    }
 }
 

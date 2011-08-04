@@ -13,6 +13,7 @@
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/ias_drawer_executive</url>
   <depend package="move_arm_msgs"/>
+  <depend package="articulation_pr2"/>
   <depend package="actionlib"/>
   <depend package="actionlib_msgs"/>
   <!--depend package="ar_pose"/-->
@@ -26,21 +27,35 @@
   <depend package="geometry_msgs"/>
   <depend package="kinematics_msgs"/>
   <depend package="std_srvs"/>
+  <depend package="pr2_gripper_sensor_msgs"/>
 <depend package="visualization_msgs"/>
 
-  <!-- for map2pc2 -->
+  <!-- for listening to clouds from handle detector -->
   <depend package="pcl"/>
-  <depend package="nav_msgs"/>
+  <!-- for projecting laser and not driving into obstacles-->
   <depend package="laser_geometry"/>
+
+  <depend package="object_manipulation_msgs"/>
+
+  <!-- <depend package="pcl_cloud_tools"/> -->
+  <depend package="pr2_gripper_sensor_msgs"/>
+
+  <!-- for SnapMapICP
+
+  <depend package="nav_msgs"/>
+
+  <depend package="point_cloud_converter"/>
+
+   -->
 
   <!-- for cop plate detection -->
   <depend package="cop_client_cpp"/>
 
-  <!-- Stuff other people forgot to add ;) -->
-  <depend package="pcl_cloud_tools"/>
-  <depend package="point_cloud_converter"/>
-
   <depend package="ias_table_msgs"/>
+
+  <!-- needed for localization (make will produce pgm's from png's) -->
+  <depend package="ias_maps"/>
+
   <export>
     <cpp cflags="-I${prefix}/include/" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lias_drawer_executive_library"/>
   </export>

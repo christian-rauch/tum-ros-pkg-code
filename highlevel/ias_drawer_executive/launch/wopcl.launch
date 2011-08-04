@@ -1,0 +1,15 @@
+<launch>
+
+  <include file="$(find ias_pr2_2dnav)/pr2_2dnav.launch"/>
+
+  <include file="$(find ias_drawer_executive)/launch/grip.launch"/>
+
+  <param name="/reactive_grasp_node_left/min_contact_row" value="3" />
+  <param name="/reactive_grasp_node_right/min_contact_row" value="3" />
+  <param name="/l_arm_ik/free_angle" value="2" />
+  <param name="/r_arm_ik/free_angle" value="2" />
+
+  <node name="SnapMapICP" pkg="SnapMapICP" type="SnapMapICP" respawn="true" />
+
+
+</launch>

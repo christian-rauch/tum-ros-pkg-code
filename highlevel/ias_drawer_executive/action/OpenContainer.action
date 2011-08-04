@@ -1,0 +1,25 @@
+# Define the goal 
+# 0 = right 1 = left
+int32 arm
+
+# Pose of handle. Coordinate system has X axis along handle direction, pull along Z (or whatever)
+geometry_msgs/PoseStamped position
+
+---
+
+# Indicate success # 0 = success, 1 = failed ??
+int32 success 
+
+# the distance the gripper travelled, e.g. detected depth of drawer
+float32 distance 
+
+# Trajectory (selected poses) during the action
+geometry_msgs/PoseArray trajectory
+
+---
+
+# Define a feedback message ??
+float32 current_distance
+
+# Maybe: current end effector pose ?? (might help perception to find front of drawer?)
+# geometry_msgs/PoseStamped

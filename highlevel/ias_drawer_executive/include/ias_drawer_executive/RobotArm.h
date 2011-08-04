@@ -1,10 +1,10 @@
-/* 
+/*
  * Copyright (c) 2010, Thomas Ruehr <ruehr@cs.tum.edu>
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
@@ -13,7 +13,7 @@
  *     * Neither the name of Willow Garage, Inc. nor the names of its
  *       contributors may be used to endorse or promote products derived from
  *       this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -58,108 +58,151 @@ typedef actionlib::SimpleActionClient< pr2_controllers_msgs::JointTrajectoryActi
 class RobotArm
 {
 private:
-  // Action client for the joint trajectory action
-  // used to trigger the arm movement action
+    // Action client for the joint trajectory action
+    // used to trigger the arm movement action
 
-  int side_;
+    int side_;
 
-  TrajClient* traj_client_;
-  static tf::TransformListener *listener_;
-  actionlib::SimpleActionClient<pr2_common_action_msgs::ArmMoveIKAction> *ac_;
-  ros::Subscriber jointStateSubscriber_;
-  ros::NodeHandle n_;
-  boost::mutex mutex_;
+    TrajClient* traj_client_;
+    static tf::TransformListener *listener_;
+    actionlib::SimpleActionClient<pr2_common_action_msgs::ArmMoveIKAction> *ac_;
+    ros::Subscriber jointStateSubscriber_;
+    ros::NodeHandle n_;
+    boost::mutex mutex_;
 
-  ros::ServiceClient ik_client;
+    ros::ServiceClient query_client;
+    ros::ServiceClient fk_client;
+    ros::ServiceClient ik_client;
 
-  bool haveJointState;
-  double jointState[7];
+    volatile bool haveJointState;
+    double jointState[7];
+    double jointStateDes[7];
+    double jointStateErr[7];
+    std::string joint_names[7];
 
-  void jointStateCallback(const  pr2_controllers_msgs::JointTrajectoryControllerState::ConstPtr& msg);
+    void jointStateCallback(const  pr2_controllers_msgs::JointTrajectoryControllerState::ConstPtr& msg);
 
-  static RobotArm *instance[];
+    static RobotArm *instance[];
 
-  //! Initialize the action client and wait for action server to come up
-  RobotArm(int side);
+    //! Initialize the action client and wait for action server to come up
+    RobotArm(int side);
 
-  //! Clean up the action client
-  ~RobotArm();
+    //! Clean up the action client
+    ~RobotArm();
 
 public:
-  //will be private again one day
-  bool tucked;
+    //will be private again one day
+    bool tucked;
 
-  actionlib::SimpleActionClient<pr2_common_action_msgs::ArmMoveIKAction> *getActionClient(){
-      return ac_;
-  }
+    int retries;
 
-  static RobotArm* getInstance(int side = 0);
+    bool raise_elbow;
+    float preset_angle;
 
-  bool isTucked() {return tucked;}
+    actionlib::SimpleActionClient<pr2_common_action_msgs::ArmMoveIKAction> *getActionClient()
+    {
+        return ac_;
+    }
 
-  void getJointState(double state[]);
+    static RobotArm* getInstance(int side = 0);
 
-  tf::Stamped<tf::Transform> getTransformIn(const char target_frame[], tf::Stamped<tf::Transform>src);
+    bool isTucked()
+    {
+        return tucked;
+    }
 
-  static tf::Stamped<tf::Pose> getPoseIn(const char target_frame[], tf::Stamped<tf::Pose>src);
+    void getJointState(double state[]);
+    void getJointStateDes(double state[]);
+    void getJointStateErr(double state[]);
 
-  //run inverse kinematics on a PoseStamped (7-dof pose
-  //(position + quaternion orientation) + header specifying the
-  //frame of the pose)
-  //tries to stay close to double start_angles[7]
-  //returns the solution angles in double solution[7]
-  bool run_ik(geometry_msgs::PoseStamped pose, double start_angles[7],double solution[7], std::string link_name);
+    tf::Stamped<tf::Pose> getTransformIn(const char target_frame[], tf::Stamped<tf::Pose>src);
 
-  //! Sends the command to start a given trajectory
-  void startTrajectory(pr2_controllers_msgs::JointTrajectoryGoal goal);
+  // static helpers
+    //scales the transform, e.g. scale .10 = apply returned transform 10 times on the right side to get the same result as applying in once
+    static tf::Stamped<tf::Pose> scaleStampedPose(const tf::Stamped<tf::Pose> &in, double scale);
+    static tf::Stamped<tf::Pose> scaleStampedTransform(const tf::Stamped<tf::Pose> &in, double scale);
 
-  // Generates a simple trajectory with two waypoints, used as an example
-  pr2_controllers_msgs::JointTrajectoryGoal lookAtMarker(float *poseA, float *poseB);
+    static tf::Stamped<tf::Pose> getPoseIn(const char target_frame[], tf::Stamped<tf::Pose> src);
 
-  //! Returns the current state of the action
-  actionlib::SimpleClientGoalState getState();
+    //run inverse kinematics on a PoseStamped (7-dof pose
+    //(position + quaternion orientation) + header specifying the
+    //frame of the pose)
+    //tries to stay close to double start_angles[7]
+    //returns the solution angles in double solution[7]
+    bool run_ik(geometry_msgs::PoseStamped pose, double start_angles[7],double solution[7], std::string link_name);
 
-  void printPose(tf::Stamped<tf::Pose> &toolTargetPose);
-
-  void getToolPose(tf::StampedTransform &marker);
-
-  tf::Stamped<tf::Pose> getToolPose(const char frame[] = "base_link");
-
-  tf::StampedTransform getRelativeTransform(const char source_frameid[], const char target_frameid[]);
-
-  tf::StampedTransform getTransform(const char baseframe[], const char toolframe[]);
-
-  void getToolPose(tf::Stamped<tf::Pose> &marker, const char frame[] = "base_link");
-  void getWristPose(tf::Stamped<tf::Pose> &marker, const char frame[] = "base_link");
+    tf::Stamped<tf::Pose> runFK(double jointAngles[], tf::Stamped<tf::Pose> *elbow = 0);
 
 
-  // rotate gripper around gripper tool frame
-  bool rotate_toolframe_ik(float r_x, float r_y, float r_z);
+    //! cartesian difference at end effector resulting from difference between desired and actual joint state
+    btVector3 cartError();
 
-  // rotate gripper arounr some frame down from wrist
-  bool rotate_toolframe_ik(float r_x, float r_y, float r_z, const char frame_id[]);
+    //! Sends the command to start a given trajectory
+    void startTrajectory(pr2_controllers_msgs::JointTrajectoryGoal goal,bool wait = true);
 
-  //moves the toolframe to the given position
-  bool move_toolframe_ik_pose(tf::Stamped<tf::Pose> toolTargetPose);
-  bool move_toolframe_ik(float x, float y, float z, float ox, float oy, float oz, float ow);
+    // Generates a simple trajectory with two waypoints, used as an example
+    pr2_controllers_msgs::JointTrajectoryGoal lookAtMarker(float *poseA, float *poseB);
 
-  void stabilize_grip();
+    // 0 velocity at goal point
+    pr2_controllers_msgs::JointTrajectoryGoal goalTraj(float *poseA, float dur=1.0);
+    // some velocity at goal point
+    pr2_controllers_msgs::JointTrajectoryGoal goalTraj(float *poseA, float *vel);
 
-  // rosrun tf tf_echo /base_link /r_wrist_roll_link -> position
-  bool move_ik(float x, float y, float z, float ox, float oy, float oz, float ow, float time = 1.0);
+    //! Returns the current state of the action
+    actionlib::SimpleClientGoalState getState();
 
-  tf::Stamped<tf::Pose> tool2wrist(tf::Stamped<tf::Pose> toolPose);
-  tf::Stamped<tf::Pose> wrist2tool(tf::Stamped<tf::Pose> toolPose);
+    void printPose(tf::Stamped<tf::Pose> &toolTargetPose);
 
-  static bool findBaseMovement(btVector3 &result, std::vector<int> arm, std::vector<tf::Stamped<tf::Pose> > goal, bool drive, bool reach);
+    //void getToolPose(tf::Stamped<tf::Pose> &marker);
 
-  //moves the toolframe to an ik position given in any frame, moving the base without rotating when necessary
-  btVector3 universal_move_toolframe_ik_pose(tf::Stamped<tf::Pose> toolTargetPose);
+    tf::Stamped<tf::Pose> getToolPose(const char frame[] = "base_link");
 
-  btVector3 universal_move_toolframe_ik(float x, float y, float z, float ox, float oy, float oz, float ow, const char target_frame[]="base_link");
+    tf::Stamped<tf::Pose> getRelativeTransform(const char source_frameid[], const char target_frameid[]);
 
-  float time_to_target;
+    tf::Stamped<tf::Pose> getTransform(const char baseframe[], const char toolframe[]);
 
+    void getToolPose(tf::Stamped<tf::Pose> &marker, const char frame[] = "base_link");
+
+    void getWristPose(tf::Stamped<tf::Pose> &marker, const char frame[] = "base_link");
+
+    tf::Stamped<tf::Pose>  rotateAroundBaseAxis(tf::Stamped<tf::Pose> toolPose, float r_x,float r_y,float r_z);
+    tf::Stamped<tf::Pose>  rotateAroundToolframeAxis(tf::Stamped<tf::Pose> toolPose, float r_x,float r_y,float r_z);
+    tf::Stamped<tf::Pose>  rotateAroundPose(tf::Stamped<tf::Pose> toolPose, tf::Stamped<tf::Pose> pivot, float r_x, float r_y, float r_z);
+    tf::Stamped<tf::Pose>  rotateAroundPose(tf::Stamped<tf::Pose> toolPose, tf::Stamped<tf::Pose> pivot, btQuaternion qa);
+
+    // rotate gripper around gripper tool frame
+    bool rotate_toolframe_ik(float r_x, float r_y, float r_z);
+
+    // rotate gripper arounr some frame down from wrist
+    bool rotate_toolframe_ik(float r_x, float r_y, float r_z, const char frame_id[]);
+    tf::Stamped<tf::Pose> rotate_toolframe_ik(tf::Stamped<tf::Pose> current,float r_x, float r_y, float r_z);
+
+    //moves the toolframe to the given position
+    bool move_toolframe_ik_pose(tf::Stamped<tf::Pose> toolTargetPose);
+    bool move_toolframe_ik(float x, float y, float z, float ox, float oy, float oz, float ow);
+
+    void stabilize_grip();
+
+    // rosrun tf tf_echo /base_link /r_wrist_roll_link -> position
+    bool move_ik(float x, float y, float z, float ox, float oy, float oz, float ow, float time = 1.0);
+
+    tf::Stamped<tf::Pose> tool2wrist(tf::Stamped<tf::Pose> toolPose);
+    tf::Stamped<tf::Pose> wrist2tool(tf::Stamped<tf::Pose> toolPose);
+
+    static bool findBaseMovement(btVector3 &result, std::vector<int> arm, std::vector<tf::Stamped<tf::Pose> > goal, bool drive, bool reach);
+
+    //moves the toolframe to an ik position given in any frame, moving the base without rotating when necessary
+    btVector3 universal_move_toolframe_ik_pose(tf::Stamped<tf::Pose> toolTargetPose);
+
+    btVector3 universal_move_toolframe_ik(float x, float y, float z, float ox, float oy, float oz, float ow, const char target_frame[]="base_link");
+
+    void moveElbowOutOfWay(tf::Stamped<tf::Pose> toolTargetPose);
+
+    float time_to_target;
+
+    bool evil_switch;
+
+    bool excludeBaseProjectionFromWorkspace;
 };
 
 

@@ -1,10 +1,10 @@
-/* 
+/*
  * Copyright (c) 2010, Thomas Ruehr <ruehr@cs.tum.edu>
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
@@ -13,7 +13,7 @@
  *     * Neither the name of Willow Garage, Inc. nor the names of its
  *       contributors may be used to endorse or promote products derived from
  *       this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -95,7 +95,7 @@ bool RobotDriver::checkCollision(float relativePose[])
     return good;
 }
 
-void RobotDriver::getRobotPose(tf::StampedTransform &marker)
+void RobotDriver::getRobotPose(tf::Stamped<tf::Pose> &marker)
 {
     tf::StampedTransform transform;
 
@@ -109,7 +109,13 @@ void RobotDriver::getRobotPose(tf::StampedTransform &marker)
     {
         ROS_ERROR("%s",ex.what());
     }
-    marker = transform;
+    tf::Stamped<tf::Pose> ret;
+    ret.frame_id_ = transform.frame_id_;
+    ret.stamp_ = transform.stamp_;
+    ret.setOrigin(transform.getOrigin());
+    ret.setRotation(transform.getRotation());
+    //marker = transform;
+    marker = ret;
 }
 
 void RobotDriver::QuaternionToEuler(const btQuaternion &TQuat, btVector3 &TEuler)
@@ -128,20 +134,12 @@ void RobotDriver::QuaternionToEuler(const btQuaternion &TQuat, btVector3 &TEuler
 //   TEuler *= RADTODEG;
 }
 
-
-bool RobotDriver::driveInMap(const float targetPose[], bool exitWhenStuck)
+bool RobotDriver::driveInMap(tf::Stamped<tf::Pose> targetPoseMap,bool exitWhenStuck)
 {
-
-    //double distance = 0;
-    tf::Stamped<tf::Pose> targetPoseMap;
-    targetPoseMap.frame_id_ = "map";
-    targetPoseMap.stamp_ = ros::Time();
-    targetPoseMap.setOrigin(btVector3( targetPose[0], targetPose[1], 0));
-    targetPoseMap.setRotation(btQuaternion(0,0, targetPose[2],  targetPose[3]));
 
     tf::Stamped<tf::Pose> targetPoseBase;
 
-    tf::StampedTransform startPose;
+    tf::Stamped<tf::Pose> startPose;
     getRobotPose(startPose);
 
     btVector3 diff = targetPoseMap.getOrigin() - startPose.getOrigin();
@@ -169,7 +167,7 @@ bool RobotDriver::driveInMap(const float targetPose[], bool exitWhenStuck)
     int cntbad = 0;
     float lastDistMoved = 0;
 
-    ROS_INFO("TARGET POSE IN MAP %f %f", targetPose[0], targetPose[1]);
+    ROS_INFO("TARGET POSE IN MAP %f %f", targetPoseMap.getOrigin().x(), targetPoseMap.getOrigin().y());
 
     while (ros::ok() && !done)
     {
@@ -254,36 +252,32 @@ bool RobotDriver::driveInMap(const float targetPose[], bool exitWhenStuck)
             done = true;
         //  while (!done && nh_.ok())
 
-
-        /*if (distToTarg > 1.0f) {
-            float used = (distToTarg < lastDistMoved) ? distToTarg : lastDistMoved;
-            float dscale = distToTarg * distToTarg;
-            if (dscale > 3.0)
-              dscale = 3.0;
-            base_cmd.linear.x *= dscale;
-            base_cmd.linear.y *= dscale;
-            base_cmd.angular.z *= dscale;
-        }*/
-
         //if (distToTarg > 0.3f) {
 
-        tf::StampedTransform actPose;
+        tf::Stamped<tf::Pose> actPose;
         getRobotPose(actPose);
-        float trav = (actPose.getOrigin() - startPose.getOrigin()).length();
+        float trav = 3 * (actPose.getOrigin() - startPose.getOrigin()).length();
         float used = (distToTarg < trav) ? distToTarg : trav;
-        if (used > 0.25f) {
+        //float used = distToTarg;
+        //! limit speed depening on already travelled distance (start slowly) and distance to goal (final approach slow)
+        float approach_dist = 0.125; // 0.25;
+        //if (used > 0.25f) {
+        if (used > approach_dist)
+        {
             //float used = (distToTarg < lastDistMoved) ? distToTarg : lastDistMoved;
             //float dscale = (distToTarg + .7) * (distToTarg + .7);
-            float dscale = (used + .75) * (used + .75) * (used + .75);
+            float dscale = (used + (1-approach_dist)) * (used + (1-approach_dist)) * (used + (1-approach_dist));
             if (dscale > 5.0)
-              dscale = 5.0;
+                dscale = 5.0;
             //ROS_INFO("USED %f TRAV %f TOTARG %f SCALE %f", used, trav, distToTarg, dscale);
             base_cmd.linear.x *= dscale;
             base_cmd.linear.y *= dscale;
             base_cmd.angular.z *= dscale;
-        } else {
-   	   //ROS_INFO("USED %f TRAV %f TOTARG %f", used, trav, distToTarg);
- 	}
+        }
+        else
+        {
+            //ROS_INFO("USED %f TRAV %f TOTARG %f", used, trav, distToTarg);
+        }
 
 
         //send the drive command after safety check
@@ -319,7 +313,7 @@ bool RobotDriver::driveInMap(const float targetPose[], bool exitWhenStuck)
 
         if (cntbad > 10)
         {
-            ROS_ERROR("ROBOTDRIVER: could not reach gole, stuck");
+            ROS_ERROR("RobotDriver: could not reach goal, stuck");
 
             if (exitWhenStuck)
             {
@@ -331,10 +325,10 @@ bool RobotDriver::driveInMap(const float targetPose[], bool exitWhenStuck)
     }
 
 
-    tf::StampedTransform actPose;
+    tf::Stamped<tf::Pose> actPose;
     getRobotPose(actPose);
     float travelled = (actPose.getOrigin() - startPose.getOrigin()).length();
-    ROS_ERROR("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+    //ROS_ERROR("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
     btVector3 euler;
     ROS_INFO("TRAVELLED %f", travelled);
     QuaternionToEuler(targetPoseMap.getRotation(),euler);
@@ -343,6 +337,18 @@ bool RobotDriver::driveInMap(const float targetPose[], bool exitWhenStuck)
     ROS_INFO("Curr in Map: %f %f %f", actPose.getOrigin().x(), actPose.getOrigin().y(), euler.z());
     //if (done) return true;
     return true;
+}
+
+
+bool RobotDriver::driveInMap(const float targetPose[], bool exitWhenStuck)
+{
+    tf::Stamped<tf::Pose> targetPoseMap;
+    targetPoseMap.frame_id_ = "map";
+    targetPoseMap.stamp_ = ros::Time();
+    targetPoseMap.setOrigin(btVector3( targetPose[0], targetPose[1], 0));
+    targetPoseMap.setRotation(btQuaternion(0,0, targetPose[2],  targetPose[3]));
+
+    driveInMap(targetPoseMap,exitWhenStuck);
 }
 
 bool RobotDriver::driveInOdom(const float targetPose[], bool exitWhenStuck)
@@ -383,13 +389,13 @@ void RobotDriver::moveBase(const float pose[], bool useNavigation)
     float oz = pose[2];
     float ow = pose[3];
 
-    RobotArm *arm = RobotArm::getInstance();
+    //RobotArm *arm = RobotArm::getInstance();
     // Start the trajectory
 
     //if (!arm->isTucked())
     //{
-        //arm->startTrajectory(arm->lookAtMarker(Poses::untuckPoseB, Poses::untuckPoseB));
-      ///  //arm->startTrajectory(arm->lookAtMarker(Poses::untuckPoseA, Poses::tuckPose));
+    //arm->startTrajectory(arm->lookAtMarker(Poses::untuckPoseB, Poses::untuckPoseB));
+    ///  //arm->startTrajectory(arm->lookAtMarker(Poses::untuckPoseA, Poses::tuckPose));
     //}
 
     //tell the action client that we want to spin a thread by default
@@ -432,7 +438,8 @@ void RobotDriver::moveBase(const float pose[], bool useNavigation)
     driver->driveInMap(pose);
 }
 
-void RobotDriver::moveBaseP(float x, float y, float oz, float ow, bool useNavigation){
+void RobotDriver::moveBaseP(float x, float y, float oz, float ow, bool useNavigation)
+{
     float p[4];
     p[0] = x;
     p[1] = y;
@@ -474,14 +481,14 @@ void RobotDriver::driveToMatch(std::vector<tf::Stamped<tf::Pose> > targetPose, s
 
 
         /*- Translation: [-1.657, 1.727, 0.982]
-- Rotation: in Quaternion [-0.618, -0.312, 0.674, 0.256]
+        - Rotation: in Quaternion [-0.618, -0.312, 0.674, 0.256]
             in RPY [-1.516, 0.739, 1.713]
-ruehr@satie:~/sandbox/tumros-internal/highlevel/ias_drawer_executive$ rosrun tf tf_echo map r_gripper_tool_frame
-At time 1286556189.961
-- Translation: [-1.679, 1.987, 0.971]
-- Rotation: in Quaternion [-0.285, 0.654, -0.282, 0.641]
+        ruehr@satie:~/sandbox/tumros-internal/highlevel/ias_drawer_executive$ rosrun tf tf_echo map r_gripper_tool_frame
+        At time 1286556189.961
+        - Translation: [-1.679, 1.987, 0.971]
+        - Rotation: in Quaternion [-0.285, 0.654, -0.282, 0.641]
             in RPY [-1.597, 0.746, -1.592]
-At time 1286556191.008*/
+        At time 1286556191.008*/
 
 
         //tf::Stamped<tf::Pose> rightTarget = targetPose[1];
@@ -505,17 +512,6 @@ At time 1286556191.008*/
     }
 
 }
-
-// tool frame target poses
-/*- Translation: [-1.728, 2.191, 0.976]
-- Rotation: in Quaternion [-0.308, 0.646, -0.287, 0.637]
-        in RPY [-1.602, 0.702, -1.569]
-ruehr@satie:~/sandbox/tumros-internal/highlevel/ias_drawer_executive$ rosrun tf tf_echo map l_gripper_tool_frame
-At time 1286303719.777
-- Translation: [-1.709, 1.923, 0.977]
-- Rotation: in Quaternion [-0.616, -0.318, 0.670, 0.267]
-        in RPY [-1.519, 0.713, 1.703]*/
-
 
 RobotDriver *RobotDriver::instance = 0;
 

@@ -1,0 +1,9 @@
+<launch>
+
+ <include file="$(find pr2_machine)/pr2.machine" />
+
+  <include file="$(find handle_detection)/launch/drawer_handles_detector.launch" />
+  <include file="$(find cloud_tools)/launch/point_cloud_assembler_with_filter.launch"/>
+
+  <include file="$(find pcl_cloud_tools)/launch/table_plate_detector_narrow_stereo.launch"/>
+</launch>

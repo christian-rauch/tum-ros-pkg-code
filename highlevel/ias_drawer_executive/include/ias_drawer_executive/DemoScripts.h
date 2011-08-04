@@ -1,10 +1,10 @@
-/* 
+/*
  * Copyright (c) 2010, Thomas Ruehr <ruehr@cs.tum.edu>
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
@@ -13,7 +13,7 @@
  *     * Neither the name of Willow Garage, Inc. nor the names of its
  *       contributors may be used to endorse or promote products derived from
  *       this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -32,22 +32,6 @@
 
 #include <ros/ros.h>
 
-#include <ias_drawer_executive/RobotDriver.h>
-#include <ias_drawer_executive/Gripper.h>
-#include <ias_drawer_executive/Pressure.h>
-#include <ias_drawer_executive/Poses.h>
-#include <ias_drawer_executive/RobotArm.h>
-#include <ias_drawer_executive/AverageTF.h>
-#include <ias_drawer_executive/Torso.h>
-#include <ias_drawer_executive/Head.h>
-#include <ias_drawer_executive/OperateHandleController.h>
-
-#include <boost/thread.hpp>
-
-#include <actionlib/client/simple_client_goal_state.h>
-#include <visualization_msgs/Marker.h>
-
-
 class DemoScripts
 {
 
@@ -58,6 +42,10 @@ public:
     static int takeBottle(int z = 0);
 
     static int closeFridge(int handle);
+
+    static int takeBottleFromFridge(int z = 0);
+
+    static int putObjectIntoFridge(int z = 0);
 
     static int serveBottle(int z = 0);
 
@@ -74,6 +62,14 @@ public:
     static int serveToTable(int z = 0);
 
     static int takePlateFromIsland(int z = 0);
+
+    // XXXXXXXXXXXxx
+
+    static int sliceTheBread(int z);
+
+    static int takeBreadPlate(int z);
+
+    static int takeBowl(int z);
 
 };
 

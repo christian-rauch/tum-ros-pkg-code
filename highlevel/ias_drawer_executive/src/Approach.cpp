@@ -1,10 +1,10 @@
-/* 
+/*
  * Copyright (c) 2010, Thomas Ruehr <ruehr@cs.tum.edu>
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
@@ -13,7 +13,7 @@
  *     * Neither the name of Willow Garage, Inc. nor the names of its
  *       contributors may be used to endorse or promote products derived from
  *       this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -46,7 +46,7 @@ void Approach::init(int side, tf::Stamped<tf::Pose> approachStart, tf::Stamped<t
 {
     sensors_ = sensors;
 
-    ros::service::call((side_==0) ? "/r_gripper_fingersensor_controller/update_zeros" : "/l_gripper_fingersensor_controller/update_zeros", serv);
+    ros::service::call((side_==0) ? "/r_gripper_sensor_controller/update_zeros" : "/l_gripper_sensor_controller/update_zeros", serv);
 
     side_ = side;
     arm = RobotArm::getInstance(side);
@@ -58,14 +58,8 @@ void Approach::init(int side, tf::Stamped<tf::Pose> approachStart, tf::Stamped<t
     approachStart.stamp_=ros::Time();
     plateCenter.stamp_=ros::Time();
 
-
     startPose = arm->getPoseIn("map",approachStart);
-    //const char fixed_frame[] = "base_link";
-    //arm->getToolPose(actPose,fixed_frame);
-    //arm->universal_move_toolframe_ik(actPose);
-    //pressure->reset();
 
-    //plateCenter= actPose;
     plateCenter=arm->getPoseIn("map",plateCenter);
     //plateCenter.setOrigin(plateCenter.getOrigin() + btVector3(0,side ? -.15 : .15,0.0f));
     diff = plateCenter.getOrigin() - startPose.getOrigin(); // we define a line (pMa, diff) in map frame here that is used for the approach
@@ -77,22 +71,17 @@ void Approach::init(int side, tf::Stamped<tf::Pose> approachStart, tf::Stamped<t
     pressureDiff = 1000;
 }
 
-float Approach::increment(float ap)
+float Approach::increment(float st, float ap)
 {
-    //ros::spinOnce();
-    //float pressureCurrR, pressureCurrL;
-    //pressure->getInside(pressureCurrR, pressureCurrL, false);
-    //ROS_INFO("CURRENT %f / %f", (pressureCurrR + pressureCurrL)  - (pressureZeroR + pressureZeroL), pressureDiff);
-    //if (pressureCurrR + pressureCurrL  > pressureDiff + pressureZeroR + pressureZeroL) {
-    //    ROS_INFO("TOUCH");
-    //    touched = true;
-    //    if (firstTouch == 0)
-    //       firstTouch = ap;
-    // }
+
     tf::Stamped<tf::Pose> p = startPose;
     p.setOrigin(startPose.getOrigin() + diff * ap);
 
-    //   arm->universal_move_toolframe_ik(p);
+    tf::Stamped<tf::Pose> curr = startPose;
+    curr.setOrigin(startPose.getOrigin() + diff * st);
+
+    //arm->moveElbowOutOfWay(curr);
+
     ROS_INFO("START SIDE %i , %f %f %f, %f %f %f %f",side_,startPose.getOrigin().x(),startPose.getOrigin().y(),startPose.getOrigin().z(),
              startPose.getRotation().x(),startPose.getRotation().y(),startPose.getRotation().z(),startPose.getRotation().w());
     ROS_INFO("GOAL SIDE %i , %f %f %f, %f %f %f %f",side_,p.getOrigin().x(),p.getOrigin().y(),p.getOrigin().z(),
@@ -100,12 +89,14 @@ float Approach::increment(float ap)
 
     p = arm->getPoseIn("base_link",p);
 
-    arm->time_to_target = 1;
+    //arm->time_to_target = 1;
 
     //arm->move_toolframe_ik(startPose.getOrigin().x(),startPose.getOrigin().y(),startPose.getOrigin().z(),
     //   startPose.getRotation().x(),startPose.getRotation().y(),startPose.getRotation().z(),startPose.getRotation().w());
 
     arm->time_to_target = 10;
+
+    arm->retries = 3;
 
     boost::thread t1(&RobotArm::move_toolframe_ik,arm,p.getOrigin().x(),p.getOrigin().y(),p.getOrigin().z(),
                      p.getRotation().x(),p.getRotation().y(),p.getRotation().z(),p.getRotation().w());
@@ -131,6 +122,21 @@ float Approach::increment(float ap)
         rate.sleep();
     }
 
+    float tl,tr;
+
+    switch (sensors_)
+    {
+    case Approach::inside :
+        pressure->getInsideTouched(tl,tr);
+        break;
+    case Approach::front :
+        pressure->getFrontTouched(tl,tr);
+        break;
+    default:
+        ROS_ERROR("Approach::init got an unknown value %i for sensors", sensors_);
+    }
+
+
     bool touched = false;
     while (ros::ok()  && (arm->getActionClient()->getState() ==  actionlib::SimpleClientGoalState::ACTIVE))
     {
@@ -139,19 +145,20 @@ float Approach::increment(float ap)
         switch (sensors_)
         {
         case Approach::inside :
-            pressure->getInside(cl,cr, false);
+            pressure->getInsideTouched(cl,cr);
             break;
         case Approach::front :
-            pressure->getFront(cl,cr, false);
+            pressure->getFrontTouched(cl,cr);
             break;
         default:
             ROS_ERROR("Approach::init got an unknown value %i for sensors", sensors_);
         }
-        //ROS_INFO("PRESSURE %i %f", side_,  (cl + cr) - (pl + pr));
         // ROS_INFO("STATUS %s", arm->getActionClient()->getState().toString().c_str());
-        if (cl + cr > pl + pr + 1000)
+        ROS_INFO("TOUCHES %i %f", side_,  (cl + cr) - (tl + tr));
+        if (cl + cr > tl + tr + 1)
         {
-            ROS_INFO("SIDE %i TOUCHED", side_);
+            ROS_INFO("SIDE %i TOUCHED press %i", side_, pressure->side_);
+            ROS_INFO("TOUCHES %i %f", side_,  (cl + cr) - (tl + tr));
             arm->getActionClient()->cancelGoal();
             touched = true;
             break;
@@ -163,13 +170,10 @@ float Approach::increment(float ap)
     tf::Stamped<tf::Pose> actPose;
     arm->getToolPose(actPose,"map");
 
-    //float totalDiff = btVector3(startPose.getOrigin() - p.getOrigin()).length();
     float actDiff = btVector3(startPose.getOrigin() - actPose.getOrigin()).length();
     ROS_INFO("DISTANCE FROM START %f" , actDiff);
-    //if (totalDiff == 0) {
-    //  totalDiff = 1;
-    //  ROS_ERROR("START AND ENDPOINT OF APPROACH SHOULD DIFFER");
-    // }
+
+    arm->retries = 0;
 
     if (touched)
         return actDiff;
@@ -191,12 +195,14 @@ void Approach::move_to(float ap)
 }
 
 
-
 bool Approach::finish()
 {
     arm->time_to_target = 1;
-    ros::service::call((side_==0) ? "/r_reactive_grasp/compliant_close" : "/l_reactive_grasp/compliant_close", serv);
+
+    //ros::service::call((side_==0) ? "/r_reactive_grasp/compliant_close" : "/l_reactive_grasp/compliant_close", serv);
+
     //ros::service::call("/r_reactive_grasp/compliant_close" , serv);
+    Gripper::getInstance(side_)->closeCompliant();
 
     Gripper::getInstance(side_)->close();
     return false;
@@ -210,8 +216,10 @@ void Lift::init(int side)
     tf::Stamped<tf::Pose> actPose;
     const char fixed_frame[] = "base_link";
     arm->getToolPose(actPose,fixed_frame);
+
+    // for the case that we change the elbow angle, reposition the tool at current pose with given elbow angle
     arm->universal_move_toolframe_ik_pose(actPose);
-    Pressure *pressure = Pressure::getInstance(side);
+    //Pressure *pressure = Pressure::getInstance(side);
     //pressure->reset();
 
     plateCenter= actPose;

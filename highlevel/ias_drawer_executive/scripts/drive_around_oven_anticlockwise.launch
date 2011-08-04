@@ -1,0 +1,5 @@
+<launch>
+  <include file="$(find cloud_tools)/launch/point_cloud_assembler_with_filter.launch" />
+  <include file="$(find look_at)/launch/pr2_point_head_oven.launch" />
+  <node name="driver" pkg="ias_drawer_executive" type="driver" args="-4 0.083, 2.558, 0.001, -0.212 0.169, 2.155, -0.016, 1.000 0.236, 1.696, 0.233, 0.973 11" />
+</launch>

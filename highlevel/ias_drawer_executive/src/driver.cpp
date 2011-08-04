@@ -27,58 +27,36 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __GRIPPER_H__
-#define __GRIPPER_H__
-
+// roslaunch arm_ik.launch
 #include <ros/ros.h>
 
-#include <actionlib/client/simple_action_client.h>
-#include <actionlib/client/terminal_state.h>
-#include <pr2_controllers_msgs/Pr2GripperCommandAction.h>
-#include <pr2_gripper_sensor_msgs/PR2GripperGrabAction.h>
-#include <pr2_gripper_sensor_msgs/PR2GripperFindContactAction.h>
-#include <std_srvs/Empty.h>
+#include <ias_drawer_executive/RobotDriver.h>
 
-// Our Action interface type, provided as a typedef for convenience
-typedef actionlib::SimpleActionClient<pr2_controllers_msgs::Pr2GripperCommandAction> GripperClient;
-typedef actionlib::SimpleActionClient<pr2_gripper_sensor_msgs::PR2GripperGrabAction> GrabAC;
-typedef actionlib::SimpleActionClient<pr2_gripper_sensor_msgs::PR2GripperFindContactAction> FindContactAC;
+int main(int argc, char** argv)
+{
+    // Init the ROS node
+    ros::init(argc, argv, "driver");
 
-class Gripper{
-private:
-  GripperClient* gripper_client_;
-  GrabAC* grab_;
-  FindContactAC* contact_;
+    printf("ias_drawer_executive %i\n", argc);
 
-  std_srvs::Empty serv;
-  //Action client initialization
-  Gripper(int side = 0);
+    ros::NodeHandle node_handle;
 
-  ~Gripper();
+    //! drive in map x y oz ow
+    if (atoi(argv[1]) == -4)
+    {
 
-  static Gripper *instance[];
+      //RobotArm::getInstance(0)->tucked = true;
+        for (int i = 0; i < (argc - 2 ) / 4; ++i)
+        {
+            float p[4];
+            p[0] = atof(argv[2 + i * 4]);
+            p[1] = atof(argv[3 + i * 4]);
+            p[2] = atof(argv[4 + i * 4]);
+            p[3] = atof(argv[5 + i * 4]);
+            ROS_INFO("going to %f %f %f %f", p[0], p[1], p[2], p[3]);
+            RobotDriver::getInstance()->moveBase(p);
+	    sleep(atof(argv[argc - 1]));
+        }
+    }
+}
 
-  int side_;
-
-public:
-
-  static Gripper *getInstance(int side=0);
-
-  //Open the gripper
-  void open(float amount = 0.09);
-
-  //Close the gripper
-  void close(float amount = 0.00);
-
-    //Close the gripper
-  void closeHard(float amount = 0.00);
-
-  void updatePressureZero();
-
-  void closeCompliant(float gain = 0.0001);
-
-  float getAmountOpen();
-
-};
-
-#endif

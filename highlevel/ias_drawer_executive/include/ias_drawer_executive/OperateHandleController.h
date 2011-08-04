@@ -1,10 +1,10 @@
-/* 
+/*
  * Copyright (c) 2010, Thomas Ruehr <ruehr@cs.tum.edu>
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  *     * Redistributions of source code must retain the above copyright
  *       notice, this list of conditions and the following disclaimer.
  *     * Redistributions in binary form must reproduce the above copyright
@@ -13,7 +13,7 @@
  *     * Neither the name of Willow Garage, Inc. nor the names of its
  *       contributors may be used to endorse or promote products derived from
  *       this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -31,61 +31,38 @@
 #define __OPERATEHANDLECONTROLLER_H__
 
 #include <std_srvs/Empty.h>
-#include <boost/thread.hpp>
 #include <tf/transform_listener.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <sensor_msgs/PointCloud2.h>
-
-#include <boost/thread/mutex.hpp>
-
-#include <ias_table_msgs/TableCluster.h>
-
-#include <pcl/point_types.h>
-#include <pcl/io/pcd_io.h>
-
 
 
 class RobotArm;
 class Pressure;
 
-typedef pcl::PointCloud<pcl::PointXYZ> PointCloudT;
-
 class OperateHandleController {
-
-
-  static boost::mutex handle_mutex;
 
   public:
 
+  static tf::Stamped<tf::Pose> getBowlPose();
   static btVector3 getPlatePose();
   static btVector3 getTabletPose();
 
   //returns a handle that can be used to close the thing again,
-  static int operateHandle(int arm, tf::Stamped<tf::Pose> aM);
+  static int operateHandle(int arm, tf::Stamped<tf::Pose> aM, int numretry = 0);
+
+  static int graspHandle(int arm_, tf::Stamped<tf::Pose> aM);
+
 
   static tf::Stamped<tf::Pose> getHandlePoseFromMarker(int arm_, int pos);
 
-  static void handleCallback(const geometry_msgs::PoseStamped::ConstPtr& msg);
-
-  static tf::Stamped<tf::Pose> getHandlePoseFromLaser(int pos);
-
-  static boost::mutex handle_cloud_mutex;
-  static PointCloudT lastCloud;
-
-  static void handleCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
-
-  static tf::Stamped<tf::Pose> getHandlePoseFromLaser(tf::Stamped<tf::Pose> hint);
-
-  static void bottleCallback(const ias_table_msgs::TableCluster::ConstPtr& msg);
-
-  static tf::Stamped<tf::Pose> getBottlePose();
-
   // starting from a nice initial pose
-  static void close(int handle);
+  static void close(int side_c, int handle_);
 
-  static void pickPlate(btVector3 plate);
+  static void pickPlate(btVector3 plate, float width = 0.34);
 
   static void getPlate(int object, float zHint = 0);
+
+  static void singleSidedPick(int side,tf::Stamped<tf::Pose> start, tf::Stamped<tf::Pose> end);
 
   static int maxHandle;
 
@@ -99,11 +76,12 @@ class OperateHandleController {
   static void plateCarryPose();
 
   static void plateTuckPose();
+  static void plateTuckPoseLeft();
+  static void plateTuckPoseRight();
 
   static void plateAttackPose();
-
-
-  static std::vector<tf::Stamped<tf::Pose> *> handlePoses;
+  static void plateAttackPoseLeft();
+  static void plateAttackPoseRight();
 
 };
 

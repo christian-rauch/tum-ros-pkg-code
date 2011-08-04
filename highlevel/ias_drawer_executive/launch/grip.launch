@@ -29,7 +29,7 @@
 
    <node name="gripper_controller_spawner" pkg="pr2_controller_manager" 
          type="spawner" 
-         args="base_controller base_odometry head_camera_trigger head_traj_controller l_arm_cartesian_trajectory_controller l_arm_cartesian_pose_controller l_arm_controller l_forearm_cam_trigger l_gripper_fingersensor_controller laser_tilt_controller projector_controller projector_trigger prosilica_inhibit_projector_controller r_arm_cartesian_trajectory_controller r_arm_cartesian_pose_controller r_arm_controller r_forearm_cam_trigger r_gripper_fingersensor_controller torso_controller" />
+         args="base_controller base_odometry head_camera_trigger head_traj_controller l_arm_cartesian_trajectory_controller l_arm_cartesian_pose_controller l_arm_controller l_forearm_cam_trigger l_gripper_sensor_controller laser_tilt_controller projector_controller projector_trigger prosilica_inhibit_projector_controller r_arm_cartesian_trajectory_controller r_arm_cartesian_pose_controller r_arm_controller r_forearm_cam_trigger r_gripper_sensor_controller torso_controller" />
 
    <!--node pkg="pr2_arm_kinematics" type="pr2_arm_kinematics_node" name="pr2_right_arm_kinematics" output="screen">    
     <param name="tip_name" value="r_wrist_roll_link" />     
