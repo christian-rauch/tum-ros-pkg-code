@@ -1,0 +1,19 @@
+<package>
+  <description brief="omni_ethercat">
+    Control node for the mecanum wheel robotic base used at
+    TUM IAS. It is controlled by four EtherCAT controllers
+    which in turn are controlled using the IgH EtherCAT master library.
+  </description>
+  <author>Ingo Kresse</author>
+  <license>GPL,BSD</license>
+  <review status="unreviewed" notes=""/>
+  <depend package="igh_eml"/>
+  <depend package="roscpp"/>
+  <depend package="std_msgs"/>
+  <depend package="geometry_msgs"/>
+  <depend package="tf"/>
+  <depend package="diagnostic_updater"/>
+  <depend package="rosie_msgs"/>
+</package>
+
+
