@@ -1,0 +1,13 @@
+<package>
+  <description brief="The IgH EtherCAT master library">
+This package compiles the user space library only, so no need to worry about
+kernel headers.
+  </description>
+  <author>Ingo Kresse</author>
+  <license>GPL,LGPL</license>
+  <review status="unreviewed" notes=""/>
+
+  <export>
+    <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib  -L${prefix}/lib -lethercat"/>
+  </export>
+</package>
