@@ -7,6 +7,9 @@ import java.io.*;
  * 
  * Utilities related to the ROS system
  * 
+ * 
+ * 
+ * @deprecated about to be moved into the knowrob_common package
  * @author Moritz Tenorth, tenorth@cs.tum.edu
  *
  */

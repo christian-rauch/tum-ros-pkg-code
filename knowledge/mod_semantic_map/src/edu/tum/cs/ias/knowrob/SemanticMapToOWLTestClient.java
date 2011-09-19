@@ -39,6 +39,7 @@ public class SemanticMapToOWLTestClient {
 		
 //		req.map.objects = new SemMapObject[4];
 		
+		
 		// create cupboard
     req.map.objects.add(new SemMapObject());
 		req.map.objects.get(0).id=1;
@@ -98,7 +99,7 @@ public class SemanticMapToOWLTestClient {
 											0.0f,0.0f,0.0f,1.0f};
 
 				ServiceClient<GenerateSemanticMapOWL.Request, GenerateSemanticMapOWL.Response, GenerateSemanticMapOWL> cl = 
-							n.serviceClient("/generate_owl_map", new GenerateSemanticMapOWL());
+							n.serviceClient("/knowrob_semantic_map_to_owl/generate_owl_map", new GenerateSemanticMapOWL());
 		
 		try {
 			GenerateSemanticMapOWL.Response res = cl.call(req);

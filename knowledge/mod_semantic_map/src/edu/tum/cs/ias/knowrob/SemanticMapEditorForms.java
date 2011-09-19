@@ -126,6 +126,7 @@ public class SemanticMapEditorForms extends PApplet {
 	    if (filename != null) {
 	    	this.objects = OWLImportExport.readMapObjectFromOWL(filename);			
 	    }
+	    updateVisualization();
 	}
 
 	

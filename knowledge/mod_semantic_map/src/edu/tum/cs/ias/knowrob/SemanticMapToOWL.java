@@ -96,7 +96,7 @@ public class SemanticMapToOWL {
 				}
 				System.out.println("Using map id: " + map_id);
 				
-				OWLOntology owlmap = export.createOWLMapDescription(map_id, semMapObj2MapObj(req.map.objects));
+				OWLOntology owlmap = export.createOWLMapDescription(map_id, semMapObj2MapObj(map_id, req.map.objects));
 				res.owlmap = OWLFileUtils.saveOntologytoString(owlmap, owlmap.getOWLOntologyManager().getOntologyFormat(owlmap));
 
 			}
@@ -106,7 +106,7 @@ public class SemanticMapToOWL {
 	}
 
 	
-	private ArrayList<MapObject> semMapObj2MapObj(ArrayList<SemMapObject> smos) {
+	private ArrayList<MapObject> semMapObj2MapObj(String map_id, ArrayList<SemMapObject> smos) {
 		
 		HashMap<Integer, MapObject> intIdToID = new HashMap<Integer, MapObject>();
 		ArrayList<MapObject> mos = new ArrayList<MapObject>();
@@ -130,7 +130,8 @@ public class SemanticMapToOWL {
 				}
 			}
 
-			intIdToID.get(smo.partOf).physicalParts.add(mo);
+			if(intIdToID.get(smo.partOf) != null)
+			    intIdToID.get(smo.partOf).physicalParts.add(mo);
 
 			mos.add(mo);
 		}
@@ -143,16 +144,16 @@ public class SemanticMapToOWL {
 	public static void main(String[] args) {
 
 
-		if (args.length == 0) {
+//		if (args.length == 0) {
 			// run service
 			new SemanticMapToOWL();
 			
-		} else {
-			System.out.println("usage: rosrun mod_semantic_map SemanticMapToOWL");
-			System.out.println("Commands:");
-			System.out.println("        rosrun mod_semantic_map SemanticMapToOWL       Runs the service");
-			System.out.println();
-		}
+//		} else {
+//			System.out.println("usage: rosrun mod_semantic_map SemanticMapToOWL");
+//			System.out.println("Commands:");
+//			System.out.println("        rosrun mod_semantic_map SemanticMapToOWL       Runs the service");
+//			System.out.println();
+//		}
 
 	}
 
