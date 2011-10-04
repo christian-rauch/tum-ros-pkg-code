@@ -1,0 +1,36 @@
+- svn: 
+    local-name: tum-ros-pkg
+    uri: https://tum-ros-pkg.svn.sourceforge.net/svnroot/tum-ros-pkg
+- git:
+    local-name: client_rosjava_jni
+    uri: http://code.in.tum.de/git/client-rosjava.git
+- svn:
+    local-name: knowrob
+    uri: http://code.in.tum.de/pubsvn/knowrob/tags/latest
+- git:
+    local-name: ias_perception
+    uri: http://code.in.tum.de/git/ias-perception.git
+- git:
+    local-name: mapping
+    uri: http://code.in.tum.de/git/mapping.git
+- git:
+    local-name: cram_physics
+    uri: git://code.in.tum.de/git/cram-physics.git
+- git: 
+    local-name: cram_pl 
+    uri: http://code.in.tum.de/git/cram-pl.git
+- git: 
+    local-name: cram_highlevel
+    uri: http://code.in.tum.de/git/cram-highlevel.git
+- git: 
+    local-name: cram_rosie
+    uri: http://code.in.tum.de/git/cram-rosie.git
+- git: 
+    local-name: cram_pr2
+    uri: http://code.in.tum.de/git/cram-pr2.git
+- git:
+    local-name: ias_common
+    uri: http://code.in.tum.de/git/ias-common.git
+- git:
+    local-name: roll
+    uri: http://code.in.tum.de/git/roll.git
