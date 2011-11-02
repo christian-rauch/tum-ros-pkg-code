@@ -1,0 +1,24 @@
+<package>
+  <description brief="Displays aggregated robot diagnostics" >
+    This is a patched version of robot_monitor which includes a usability
+    <a href="https://code.ros.org/trac/ros-pkg/ticket/5123">patch</a>
+    that is awaiting its integration into the Fuerte release.
+  </description>
+  <author>Ingo Kresse (kresse@in.tum.de), Kevin Watts (watts@willowgarage.com), Josh Faust (jfaust@willowgarage.com)</author>
+  <license>BSD</license>
+  <review status="Doc reviewed" notes="2010/01/09"/>
+  <url>http://www.ros.org/wiki/robot_monitor</url>
+  <depend package="rospy" />
+  <depend package="diagnostic_msgs" />
+  <depend package="rxbag" />
+  <rosdep name="wxwidgets"/>
+  <rosdep name="wxpython"/>
+  <platform os="ubuntu" version="9.04"/>
+  <platform os="ubuntu" version="9.10"/>
+  <platform os="ubuntu" version="10.04"/>
+  <export>
+    <rxbag plugin="robot_monitor.rxbag_plugins"/>
+  </export>
+</package>
+
+
