@@ -1,0 +1,6 @@
+#/bin/bash
+ssh pr2a "kill `ps faux|awk '/unspawner/{print $2}'`"
+rosrun pr2_controller_manager pr2_controller_manager stop l_gripper_sensor_controller
+rosrun pr2_controller_manager pr2_controller_manager stop r_gripper_sensor_controller
+rosrun pr2_controller_manager pr2_controller_manager start l_gripper_controller
+rosrun pr2_controller_manager pr2_controller_manager start r_gripper_controller

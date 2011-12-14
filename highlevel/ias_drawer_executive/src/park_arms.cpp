@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Thomas Ruehr <ruehr@cs.tum.edu>
+ * Copyright (c) 2010, Dejan Pangercic <pangercic@cs.tum.edu>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,54 +27,39 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __DEMOSCRIPTS_H__
-#define __DEMOSCRIPTS_H__
-
 #include <ros/ros.h>
+#include <actionlib/client/simple_action_client.h>
+#include <actionlib/client/terminal_state.h>
+//#include <ias_drawer_executive/OpenContainerAction.h>
+//#include <ias_drawer_executive/CloseContainerAction.h>
+#include <ias_drawer_executive/OperateHandleController.h>
+// #include <ias_drawer_executive/RobotDriver.h>
+// #include <ias_drawer_executive/RobotArm.h>
+// #include <ias_drawer_executive/Torso.h>
+// #include <ias_drawer_executive/Perception3d.h>
 
-class DemoScripts
+//for trajectory publishing
+//#include <visualization_msgs/MarkerArray.h>
+
+
+int main (int argc, char **argv)
 {
+  ros::init(argc, argv, "park_arms");
+  if (argc != 2)
+    {
+      ROS_ERROR("Usage %s <[l|h] (park arms l=low, h=high)>", argv[0]);
+      exit(0);
+    }    
 
-public:
-
-    static int openFridge(int z = 0);
-
-    static int takeBottle(int z = 0);
-
-    static int closeFridge(int handle);
-
-    static int takeBottleFromFridge(int z = 0);
-
-    static int putObjectIntoFridge(int z = 0);
-
-    static int serveBottle(int z = 0);
-
-    static int openDrawer(int z = 0);
-
-    static int takePlate(int z = 0);
-
-    //! in principle works the same also for silverware
-    static int servePlateToIsland(int z = 0);
-
-    static int takeSilverware(int z = 0);
-
-    //! works for plate and silverware
-    static int serveToTable(int z = 0);
-    static int serveToTable2(int z = 0);
+  if (std::string(argv[1]) == "h")
+    OperateHandleController::plateAttackPose();
+  else if (std::string(argv[1]) == "l")
+    OperateHandleController::plateTuckPose();
+  else
+    ROS_WARN("[park_arms:] Unknown option %s.", argv[1]);
+  return 0;
+}
 
 
-    static int takePlateFromIsland(int z = 0);
-
-    // XXXXXXXXXXXxx
-
-    static int sliceTheBread(int z);
-
-    static int takeBreadPlate(int z);
-
-    static int takeBowl(int z);
-
-};
-
-
-
-#endif
+/*
+*/

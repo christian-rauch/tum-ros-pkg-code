@@ -1,4 +1,5 @@
-#include <perception_for_manipulation/Accelerometer.h>
+#include <ias_drawer_executive/Accelerometer.h>
+
 
 Accelerometer::Accelerometer(int side)
 {
@@ -17,6 +18,11 @@ Accelerometer::~Accelerometer()
 
 Accelerometer *Accelerometer::instance_[] = {0,0};
 
+void
+Accelerometer::accelCallback(const pr2_msgs::AccelerometerState::ConstPtr& msg)
+{
+
+}
 
 Accelerometer *Accelerometer::getInstance(int side)
 {

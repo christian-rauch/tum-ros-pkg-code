@@ -46,20 +46,20 @@ private:
   long zero_cnt_;
 
 
-  float r_center[2];
-  float l_center[2];
-  float r_sum[22];
-  float l_sum[22];
-  float r_zero[22];
-  float l_zero[22];
+  double r_center[2];
+  double l_center[2];
+  double r_sum[22];
+  double l_sum[22];
+  double r_zero[22];
+  double l_zero[22];
 
-  float r_curr[22];
-  float l_curr[22];
+  double r_curr[22];
+  double l_curr[22];
 
   int val_prev_prev[2][22],val_prev[2][22],touched[2][22];
   double slope[2][22];
 
-  void calcCenter(float pressure[], double &xcenter, double &ycenter);
+  void calcCenter(double pressure[], double &xcenter, double &ycenter);
 
   boost::mutex pressure_mutex;
 
@@ -80,18 +80,18 @@ public:
 
  void reset();
 
- void getCenter(float *r, float *l);
+ void getCenter(double *r, double *l);
 
- void getCurrent(float r[], float l[], bool zero = true);
+ void getCurrent(double r[], double l[], bool zero = true);
 
  //get sum of pressure on the inside pads
- void getInside(float &r, float &l, bool zero = true);
+ void getInside(double &r, double &l, bool zero = true);
  //get sum of pressure on the front pads
- void getFront(float &r, float &l, bool zero = true);
+ void getFront(double &r, double &l, bool zero = true);
 
- void getInsideTouched(float &r, float &l);
+ void getInsideTouched(double &r, double &l);
 
- void getFrontTouched(float &r, float &l);
+ void getFrontTouched(double &r, double &l);
 
  int side_;
 

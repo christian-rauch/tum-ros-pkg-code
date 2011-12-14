@@ -48,7 +48,7 @@ int main(int argc, char** argv)
       //RobotArm::getInstance(0)->tucked = true;
         for (int i = 0; i < (argc - 2 ) / 4; ++i)
         {
-            float p[4];
+            double p[4];
             p[0] = atof(argv[2 + i * 4]);
             p[1] = atof(argv[3 + i * 4]);
             p[2] = atof(argv[4 + i * 4]);

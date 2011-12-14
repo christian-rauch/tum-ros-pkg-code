@@ -29,9 +29,11 @@
 
 
 #include <ias_drawer_executive/Gripper.h>
-#include <ias_drawer_executive/RobotArm.h>
+#include <ias_drawer_executive/Geometry.h>
+
 #include <tf/transform_listener.h>
 #include <string>
+#include <boost/thread.hpp>
 
 Gripper::Gripper(int side){
 
@@ -42,13 +44,13 @@ Gripper::Gripper(int side){
     //and tell the action client that we want to spin a thread by default
     //gripper_client_ = new GripperClient(side ? "l_gripper_controller/gripper_action" : "r_gripper_controller/gripper_action", true);
 
-    gripper_client_ = new GripperClient(side ? "l_gripper_sensor_controller/gripper_action" : "r_gripper_sensor_controller/gripper_action", true);
-    grab_ = new GrabAC("/"+ sideletter + "_gripper_sensor_controller/grab", true);
-    contact_ = new FindContactAC("/"+ sideletter + "_gripper_sensor_controller/find_contact", true);
+    gripper_client_ = new GripperClient(side ? "l_gripper_controller/gripper_action" : "r_gripper_controller/gripper_action", true);
+    //    grab_ = new GrabAC("/"+ sideletter + "_gripper_sensor_controller/grab", true);
+    //  contact_ = new FindContactAC("/"+ sideletter + "_gripper_sensor_controller/find_contact", true);
 
     //wait for the gripper action server to come up
     while(ros::ok() && !gripper_client_->waitForServer(ros::Duration(5.0))){
-      ROS_INFO((side_ == 0) ? "Waiting for the r_gripper_fingersensor_controller/gripper_action action server to come up":  "Waiting for the l_gripper_fingersensor_controller/gripper_action action server to come up");
+      ROS_INFO((side_ == 0) ? "Waiting for the r_gripper_controller/gripper_action action server to come up":  "Waiting for the l_gripper_controller/gripper_action action server to come up");
     }
   }
 
@@ -56,18 +58,23 @@ Gripper::~Gripper(){
     delete gripper_client_;
 }
 
-float Gripper::getAmountOpen(){
+double Gripper::getAmountOpen(){
     tf::Stamped<tf::Pose> trans;
     if (side_ == 0)
-       trans = RobotArm::getInstance(0)->getRelativeTransform("/r_gripper_l_finger_tip_link", "/r_gripper_r_finger_tip_link");
+       trans = Geometry::getRelativeTransform("/r_gripper_l_finger_tip_link", "/r_gripper_r_finger_tip_link");
     else
-       trans = RobotArm::getInstance(1)->getRelativeTransform("/l_gripper_l_finger_tip_link", "/l_gripper_r_finger_tip_link");
+       trans = Geometry::getRelativeTransform("/l_gripper_l_finger_tip_link", "/l_gripper_r_finger_tip_link");
 
     return trans.getOrigin().length() - .029245 ; // offset of links to surface' - 0.032162;
 }
 
 //Open the gripper
-void Gripper::open(float amount){
+void Gripper::openThreaded(double amount)
+{
+    boost::thread(&Gripper::open, this, amount);
+}
+
+void Gripper::open(double amount){
     pr2_controllers_msgs::Pr2GripperCommandGoal open;
     //open.command.position = 0.085 * amount;
     open.command.position = amount;
@@ -81,8 +88,14 @@ void Gripper::open(float amount){
       ROS_INFO("The gripper failed to open.");
   }
 
-  //Close the gripper
-void Gripper::close(float amount){
+//Close the gripper
+void Gripper::closeThreaded(double amount)
+{
+    boost::thread(&Gripper::close, this, amount);
+}
+
+
+void Gripper::close(double amount){
     pr2_controllers_msgs::Pr2GripperCommandGoal squeeze;
     //squeeze.command.position = 0.085 - (amount * 0.085);
     squeeze.command.position = amount;
@@ -97,7 +110,7 @@ void Gripper::close(float amount){
   }
 
     //Close the gripper
-void Gripper::closeHard(float amount){
+void Gripper::closeHard(double amount){
     pr2_controllers_msgs::Pr2GripperCommandGoal squeeze;
     //squeeze.command.position = 0.085 - (amount * 0.085);
     squeeze.command.position = amount;
@@ -125,7 +138,7 @@ void Gripper::updatePressureZero(){
   //ros::service::call((side_==0) ? "/r_gripper_sensor_controller/update_zeros" : "/l_gripper_sensor_controller/update_zeros", serv);
 }
 
-void Gripper::closeCompliant(float gain){
+void Gripper::closeCompliant(double gain){
   ros::service::call((side_==0) ? "/r_reactive_grasp/compliant_close" : "/l_reactive_grasp/compliant_close", serv);
   //typedef actionlib::SimpleActionClient<pr2_gripper_sensor_msgs::PR2GripperGrabAction>    GrabAC;
   //GrabAC grab("/"+ side + "_gripper_sensor_controller/grab", true);

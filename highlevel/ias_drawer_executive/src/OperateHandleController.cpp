@@ -29,6 +29,7 @@
 
 #include <ias_drawer_executive/OperateHandleController.h>
 #include <ias_drawer_executive/RobotArm.h>
+#include <ias_drawer_executive/Geometry.h>
 #include <ias_drawer_executive/Gripper.h>
 #include <ias_drawer_executive/Perception3d.h>
 #include <ias_drawer_executive/Pressure.h>
@@ -43,6 +44,67 @@
 
 #include <boost/thread.hpp>
 #include "boost/date_time/posix_time/posix_time.hpp"
+
+
+
+tf::Stamped<tf::Pose> OperateHandleController::getCopPose(const char name[], const char frame[])
+{
+    ros::NodeHandle nh;
+    CopClient cop(nh);
+    ros::Rate r(100);
+
+    ROS_INFO("GET %s POSE in %s", name, frame);
+
+    unsigned long id_searchspace = cop.LONameQuery(frame);
+    long vision_primitive =  cop.CallCop(name, id_searchspace);
+
+    size_t num_results_expected = 1;
+
+    std::vector<vision_msgs::cop_answer> results;
+    bool found = false;
+
+    ros::Time start = ros::Time::now();
+
+    while (nh.ok() && !found && (ros::Time::now() - start < ros::Duration(2)))
+    {
+        if (cop.HasResult(vision_primitive) >= num_results_expected)
+            found = true;
+        ros::spinOnce();
+        r.sleep();
+    }
+
+    tf::Stamped<tf::Pose> bowlPose;
+
+
+    if (!found) {
+        ROS_ERROR("Object not found");
+        return bowlPose;
+    }
+
+    results = cop.GetResult(vision_primitive);
+    //    if (results[0].error.length() > 0)
+    //       return btVector3(0,0,0);
+   //    double vec[] = {0,0,0};
+    if (results[0].error.length() == 0)
+    {
+        unsigned long frame = cop.LOFrameQuery(results[0].found_poses[0].position,1);
+
+        //cop.LOPointQuery(frame,vec);
+        bowlPose = cop.LOPoseQuery(frame);
+    }
+
+    btTransform adj;
+    //adj.setOrigin(btVector3(-0.022,-0.022,0));
+
+    btTransform bl_;
+    bl_.setRotation(bowlPose.getRotation());
+    bl_.setOrigin(bowlPose.getOrigin());
+
+    bl_ = bl_ * adj;
+    bowlPose.setOrigin(bl_.getOrigin());
+
+    return bowlPose;
+}
 
 
 
@@ -74,7 +136,7 @@ tf::Stamped<tf::Pose> OperateHandleController::getBowlPose()
     results = cop.GetResult(vision_primitive);
     //    if (results[0].error.length() > 0)
     //       return btVector3(0,0,0);
-    float vec[] = {0,0,0};
+    //double vec[] = {0,0,0};
     if (results[0].error.length() == 0)
     {
         unsigned long frame = cop.LOFrameQuery(results[0].found_poses[0].position,1);
@@ -204,7 +266,7 @@ btVector3  OperateHandleController::getTabletPose()
     tf::Stamped<tf::Pose> pMb;
     pMb.setOrigin(btVector3(vec[0],vec[1],vec[2]));
     pMb.frame_id_ = "map";
-    pMb = RobotArm::getInstance(0)->getPoseIn("base_link",pMb);
+    pMb = Geometry::getPoseIn("base_link",pMb);
     ROS_INFO("TABLET POSE IN BASE_LINK %f %f %f", pMb.getOrigin().x(), pMb.getOrigin().y(), pMb.getOrigin().z());
 
     return btVector3(pMb.getOrigin().x(), pMb.getOrigin().y(), pMb.getOrigin().z());
@@ -213,7 +275,7 @@ btVector3  OperateHandleController::getTabletPose()
 
 int OperateHandleController::maxHandle = -1;
 
-//static std::vector<std::vector<float> > openingTrajectories;
+//static std::vector<std::vector<double> > openingTrajectories;
 std::vector<std::vector< tf::Stamped<tf::Pose> * > > OperateHandleController::openingTraj;
 
 
@@ -232,21 +294,21 @@ tf::Stamped<tf::Pose> OperateHandleController::getHandlePoseFromMarker(int arm_,
 
     RobotArm *arm = RobotArm::getInstance(side_);
 
-    if (arm->isTucked()) arm->startTrajectory(arm->lookAtMarker(Poses::untuckPoseA, Poses::untuckPoseB));
+    if (arm->isTucked()) arm->startTrajectory(arm->twoPointTrajectory(Poses::untuckPoseA, Poses::untuckPoseB));
 
     Pressure::getInstance(side_)->reset();
 
     if (arm_ == 1)
     {
-        RobotArm::getInstance(0)->lookAtMarker(Poses::tuckPoseForLeft, Poses::tuckPoseForLeft);
+        RobotArm::getInstance(0)->twoPointTrajectory(Poses::tuckPoseForLeft, Poses::tuckPoseForLeft);
     }
 
     // Start the trajectory
-    if (pos == 0) arm->startTrajectory(arm->lookAtMarker(Poses::lowPoseA,Poses::lowPoseB));
-    if (pos == 1) arm->startTrajectory(arm->lookAtMarker(Poses::midPoseA,Poses::midPoseB));
-    if (pos == 2) arm->startTrajectory(arm->lookAtMarker(Poses::highPoseA,Poses::highPoseB));
-    if (pos == 3) arm->startTrajectory(arm->lookAtMarker(Poses::milehighPoseA,Poses::milehighPoseB));
-    if (pos == 4) arm->startTrajectory(arm->lookAtMarker(Poses::leftHighA,Poses::leftHighB));
+    if (pos == 0) arm->startTrajectory(arm->twoPointTrajectory(Poses::lowPoseA,Poses::lowPoseB));
+    if (pos == 1) arm->startTrajectory(arm->twoPointTrajectory(Poses::midPoseA,Poses::midPoseB));
+    if (pos == 2) arm->startTrajectory(arm->twoPointTrajectory(Poses::highPoseA,Poses::highPoseB));
+    if (pos == 3) arm->startTrajectory(arm->twoPointTrajectory(Poses::milehighPoseA,Poses::milehighPoseB));
+    if (pos == 4) arm->startTrajectory(arm->twoPointTrajectory(Poses::leftHighA,Poses::leftHighB));
 
 
     // Wait for trajectory completion
@@ -257,11 +319,11 @@ tf::Stamped<tf::Pose> OperateHandleController::getHandlePoseFromMarker(int arm_,
 
     tf::Stamped<tf::Pose> aM = AverageTF::getMarkerTransform("/4x4_1",20);
 
-    if (pos == 0) arm->startTrajectory(arm->lookAtMarker(Poses::lowPoseB,Poses::lowPoseA));
-    if (pos == 1) arm->startTrajectory(arm->lookAtMarker(Poses::midPoseB,Poses::midPoseA));
-    if (pos == 2) arm->startTrajectory(arm->lookAtMarker(Poses::highPoseB,Poses::highPoseA));
-    if (pos == 3) arm->startTrajectory(arm->lookAtMarker(Poses::milehighPoseB,Poses::milehighPoseA));
-    if (pos == 4) arm->startTrajectory(arm->lookAtMarker(Poses::leftHighB,Poses::leftHighA));
+    if (pos == 0) arm->startTrajectory(arm->twoPointTrajectory(Poses::lowPoseB,Poses::lowPoseA));
+    if (pos == 1) arm->startTrajectory(arm->twoPointTrajectory(Poses::midPoseB,Poses::midPoseA));
+    if (pos == 2) arm->startTrajectory(arm->twoPointTrajectory(Poses::highPoseB,Poses::highPoseA));
+    if (pos == 3) arm->startTrajectory(arm->twoPointTrajectory(Poses::milehighPoseB,Poses::milehighPoseA));
+    if (pos == 4) arm->startTrajectory(arm->twoPointTrajectory(Poses::leftHighB,Poses::leftHighA));
 
     // Wait for trajectory completion
     while (!arm->getState().isDone() && ros::ok())
@@ -293,7 +355,7 @@ btTransform scaleTransform(const btTransform &in, double scale)
 void printTransform(const char title[], btTransform a)
 {
     ROS_INFO("%s : %f %f %f  %f %f %f %f", title, a.getOrigin().x(), a.getOrigin().y(), a.getOrigin().z(),
-           a.getRotation().x(), a.getRotation().y(), a.getRotation().z(), a.getRotation().w());
+             a.getRotation().x(), a.getRotation().y(), a.getRotation().z(), a.getRotation().w());
 }
 
 
@@ -305,15 +367,13 @@ int OperateHandleController::graspHandle(int arm_, tf::Stamped<tf::Pose> aM)
 
     Gripper *gripper = Gripper::getInstance(side_);
 
-
-
-    tf::Stamped<tf::Pose> p =  arm->getPoseIn("base_link",aM);
+    tf::Stamped<tf::Pose> p =  Geometry::getPoseIn("base_link",aM);
     p.setOrigin(p.getOrigin() + btVector3(-0.05,0,0));
-    p =  arm->getPoseIn("map",p);
+    p =  Geometry::getPoseIn("map",p);
 
     gripper->close();
 
-    arm->excludeBaseProjectionFromWorkspace = true;
+    //arm->excludeBaseProjectionFromWorkspace = true;
 
     arm->universal_move_toolframe_ik_pose(p);
 
@@ -323,78 +383,78 @@ int OperateHandleController::graspHandle(int arm_, tf::Stamped<tf::Pose> aM)
     gripper->close();
 
     return 0;
-/*
+    /*
 
-    gripper->close();
+        gripper->close();
 
-    char fixed_frame[] = "map";
+        char fixed_frame[] = "map";
 
-    tf::Stamped<tf::Pose> p;
-    p.setOrigin(aM.getOrigin());
-    p.setRotation(aM.getRotation());
-    p.frame_id_ = "base_link";
+        tf::Stamped<tf::Pose> p;
+        p.setOrigin(aM.getOrigin());
+        p.setRotation(aM.getRotation());
+        p.frame_id_ = "base_link";
 
-    tf::Stamped<tf::Pose> pMa = p;
-    pMa.frame_id_ = "base_link";
-    pMa.setOrigin(pMa.getOrigin() + btVector3(-.03,0,0));
-    pMa = arm->getPoseIn(fixed_frame,pMa);
+        tf::Stamped<tf::Pose> pMa = p;
+        pMa.frame_id_ = "base_link";
+        pMa.setOrigin(pMa.getOrigin() + btVector3(-.03,0,0));
+        pMa = arm->getPoseIn(fixed_frame,pMa);
 
-    tf::Stamped<tf::Pose> pMb = p;
-    //pMb.setOrigin(pMb.getOrigin() + btVector3(1,0,0));
-    pMb.setOrigin(pMb.getOrigin() + btVector3(.08,0,0));
-    pMb.frame_id_ = "base_link";
-    pMb = arm->getPoseIn(fixed_frame,pMb);
-    btVector3 diff = pMb.getOrigin() - pMa.getOrigin(); // we define a line (pMa, diff) in map frame here that is used for the approach
+        tf::Stamped<tf::Pose> pMb = p;
+        //pMb.setOrigin(pMb.getOrigin() + btVector3(1,0,0));
+        pMb.setOrigin(pMb.getOrigin() + btVector3(.08,0,0));
+        pMb.frame_id_ = "base_link";
+        pMb = arm->getPoseIn(fixed_frame,pMb);
+        btVector3 diff = pMb.getOrigin() - pMa.getOrigin(); // we define a line (pMa, diff) in map frame here that is used for the approach
 
-    p.frame_id_ = "map";
-    p.setRotation(pMa.getRotation());
+        p.frame_id_ = "map";
+        p.setRotation(pMa.getRotation());
 
-    gripper->updatePressureZero();
+        gripper->updatePressureZero();
 
-    // approach xxx
-    ROS_INFO("APPROACH");
+        // approach xxx
+        ROS_INFO("APPROACH");
 
-    std::vector<int> armv;
-    std::vector<tf::Stamped<tf::Pose> > goal;
-    btVector3 result;
-    armv.push_back(side_);
-    goal.push_back(pMa);
-    armv.push_back(side_);
-    goal.push_back(pMb);
+        std::vector<int> armv;
+        std::vector<tf::Stamped<tf::Pose> > goal;
+        btVector3 result;
+        armv.push_back(side_);
+        goal.push_back(pMa);
+        armv.push_back(side_);
+        goal.push_back(pMb);
 
-    RobotArm::findBaseMovement(result, armv, goal, true, false);
+        RobotArm::findBaseMovement(result, armv, goal, true, false);
 
-    Approach *apr = new Approach();
-    apr->init(side_,pMa, pMb, Approach::front);
+        Approach *apr = new Approach();
+        apr->init(side_,pMa, pMb, Approach::front);
 
-    apr->move_to(-.3);
+        apr->move_to(-.3);
 
-    gripper->close();
+        gripper->close();
 
-    float distA = (apr->increment(0,0.5));
-    if (distA == 0)
-    {
-        ROS_ERROR("DIDNT TOUCH IN THE FIRST 5 CM OF APPROACH");
-        distA = (apr->increment(0.5,1));
-    }
+        double distA = (apr->increment(0,0.5));
+        if (distA == 0)
+        {
+            ROS_ERROR("DIDNT TOUCH IN THE FIRST 5 CM OF APPROACH");
+            distA = (apr->increment(0.5,1));
+        }
 
-    RobotArm::getInstance(arm_)->time_to_target = 0;
+        RobotArm::getInstance(arm_)->time_to_target = 0;
 
-    //back up 1 centimeter
-    apr->move_to(((distA - .02) / .1));
-    gripper->open();
-    //go 2.75 cm forward from touch position
-    apr->move_to(((distA + .0275) / .1));
+        //back up 1 centimeter
+        apr->move_to(((distA - .02) / .1));
+        gripper->open();
+        //go 2.75 cm forward from touch position
+        apr->move_to(((distA + .0275) / .1));
 
-    tf::Stamped<tf::Pose> actPose;
+        tf::Stamped<tf::Pose> actPose;
 
-    gripper->closeCompliant();
+        gripper->closeCompliant();
 
-    gripper->close();
+        gripper->close();
 
-    RobotArm::getInstance(arm_)->time_to_target = 0;
+        RobotArm::getInstance(arm_)->time_to_target = 0;
 
-    arm->excludeBaseProjectionFromWorkspace = false;*/
+        arm->excludeBaseProjectionFromWorkspace = false;*/
 }
 
 int OperateHandleController::operateHandle(int arm_, tf::Stamped<tf::Pose> aM, int numretry)
@@ -416,7 +476,7 @@ int OperateHandleController::operateHandle(int arm_, tf::Stamped<tf::Pose> aM, i
 
     RobotArm *arm = RobotArm::getInstance(side_);
 
-    arm->excludeBaseProjectionFromWorkspace = true;
+    //arm->excludeBaseProjectionFromWorkspace = true;
 
     char fixed_frame[] = "map";
 
@@ -428,13 +488,13 @@ int OperateHandleController::operateHandle(int arm_, tf::Stamped<tf::Pose> aM, i
     tf::Stamped<tf::Pose> pMa = p;
     pMa.frame_id_ = "base_link";
     pMa.setOrigin(pMa.getOrigin() + btVector3(-.05,0,0));
-    pMa = arm->getPoseIn(fixed_frame,pMa);
+    pMa = Geometry::getPoseIn(fixed_frame,pMa);
 
     tf::Stamped<tf::Pose> pMb = p;
     //pMb.setOrigin(pMb.getOrigin() + btVector3(1,0,0));
     pMb.setOrigin(pMb.getOrigin() + btVector3(.05,0,0));
     pMb.frame_id_ = "base_link";
-    pMb = arm->getPoseIn(fixed_frame,pMb);
+    pMb = Geometry::getPoseIn(fixed_frame,pMb);
     btVector3 diff = pMb.getOrigin() - pMa.getOrigin(); // we define a line (pMa, diff) in map frame here that is used for the approach
 
     p.frame_id_ = "map";
@@ -447,7 +507,8 @@ int OperateHandleController::operateHandle(int arm_, tf::Stamped<tf::Pose> aM, i
 
     std::vector<int> armv;
     std::vector<tf::Stamped<tf::Pose> > goal;
-    btVector3 result;
+    //btVector3 result;
+    tf::Stamped<tf::Pose> result;
     armv.push_back(side_);
     goal.push_back(pMa);
     armv.push_back(side_);
@@ -462,7 +523,7 @@ int OperateHandleController::operateHandle(int arm_, tf::Stamped<tf::Pose> aM, i
 
     gripper->close();
 
-    float distA = (apr->increment(0,0.5));
+    double distA = (apr->increment(0,0.5));
     if (distA == 0)
     {
         ROS_ERROR("DIDNT TOUCH IN THE FIRST 5 CM OF APPROACH");
@@ -488,11 +549,11 @@ int OperateHandleController::operateHandle(int arm_, tf::Stamped<tf::Pose> aM, i
 
     tf::Stamped<tf::Pose> desiredPose = aMp;
     desiredPose.setOrigin(btVector3(aMp.getOrigin().x(),aMp.getOrigin().y(),aMp.getOrigin().z()));
-    desiredPose = arm->getPoseIn(fixed_frame,desiredPose);
+    desiredPose = Geometry::getPoseIn(fixed_frame,desiredPose);
 
     tf::Stamped<tf::Pose> startPose = aMp;
     startPose.setOrigin(btVector3(aMp.getOrigin().x() + .05,aMp.getOrigin().y(),aMp.getOrigin().z()));
-    startPose = arm->getPoseIn(fixed_frame,startPose);
+    startPose = Geometry::getPoseIn(fixed_frame,startPose);
 
     tf::Stamped<tf::Pose> nextPose = desiredPose;
 
@@ -576,7 +637,8 @@ int OperateHandleController::operateHandle(int arm_, tf::Stamped<tf::Pose> aM, i
         nextPose.setRotation(actPose.getRotation());
 
         // move to next pose
-        if (openingTraj[handle].size() > 2) {
+        if (openingTraj[handle].size() > 2)
+        {
             size_t curr = openingTraj[handle].size() - 1;
             btTransform t_0, t_1, t_2;
             t_0.setOrigin(openingTraj[handle][curr -1]->getOrigin());
@@ -594,13 +656,14 @@ int OperateHandleController::operateHandle(int arm_, tf::Stamped<tf::Pose> aM, i
 
             double length = rel.getOrigin().length();
             ROS_INFO("CURRENT distance travelled : @@@@@@@@@@ %f", length);
-            if (length > 0.0001) {
-               rel = scaleTransform(rel, (length + 0.05) / length);
-               btTransform nxt = start * rel;
-               printTransform("relative transform normalized to a 5cm more: ", rel);
-               nextPose.setOrigin(nxt.getOrigin());
-               nextPose.setRotation(nxt.getRotation());
-               printTransform("next pose a 5cm more: ", nextPose);
+            if (length > 0.0001)
+            {
+                rel = scaleTransform(rel, (length + 0.05) / length);
+                btTransform nxt = start * rel;
+                printTransform("relative transform normalized to a 5cm more: ", rel);
+                nextPose.setOrigin(nxt.getOrigin());
+                nextPose.setRotation(nxt.getRotation());
+                printTransform("next pose a 5cm more: ", nextPose);
             }
         }
 
@@ -634,7 +697,7 @@ int OperateHandleController::operateHandle(int arm_, tf::Stamped<tf::Pose> aM, i
     if (slippedEarly)
     {
         if (numretry < 3)
-           return OperateHandleController::operateHandle(arm_, aM, ++numretry);
+            return OperateHandleController::operateHandle(arm_, aM, ++numretry);
         else return -1;
     }
     else
@@ -665,7 +728,8 @@ void OperateHandleController::close(int side_c, int handle_)
 
     ROS_INFO("OperateHandleController: traj size %zu", openingTraj[handle].size());
 
-    for (size_t k = 0; k < openingTraj[handle].size() ; ++k) {
+    for (size_t k = 0; k < openingTraj[handle].size() ; ++k)
+    {
         tf::Stamped<tf::Pose> *actPose = openingTraj[handle][k];
         ROS_INFO("K = %zu", k);
         ROS_INFO_STREAM("rosrun ias_drawer_executive ias_drawer_executive -3 0 " << actPose->getOrigin().x() << " " << actPose->getOrigin().y() << " " << actPose->getOrigin().z()
@@ -693,8 +757,8 @@ void OperateHandleController::close(int side_c, int handle_)
 
 void spinner(Approach *apr)
 {
-    float dist = 0;
-    //float pos = 0;
+    double dist = 0;
+    //double pos = 0;
     //RobotArm::getInstance(apr->side_)->time_to_target = 0.5;
     RobotArm::getInstance(apr->side_)->time_to_target = 1.0;
     //dist = apr->increment(0,0.15);
@@ -703,19 +767,20 @@ void spinner(Approach *apr)
     //RobotArm::getInstance(apr->side_)->time_to_target = 2.5;
     //ROS_INFO("DIST = %f ", dist);
     //if (dist == 0) {
-        //ROS_ERROR("side %i DIST == 0", apr->side_);
-        //dist = apr->increment(.6,1.0);
+    //ROS_ERROR("side %i DIST == 0", apr->side_);
+    //dist = apr->increment(.6,1.0);
     //}
 }
 
-void OperateHandleController::spinnerL(float x, float y, float z)
+void OperateHandleController::spinnerL(double x, double y, double z)
 {
     //lft->increment(l);
     Lift ll, lr;
     boost::thread a0(&Lift::init,&ll,0);
     boost::thread a1(&Lift::init,&lr,1);
     //lr.init(1);
-    a0.join(); a1.join();
+    a0.join();
+    a1.join();
 
     boost::thread a(&Lift::increment, &ll, x, y, z);
     boost::thread b(&Lift::increment, &lr, x, y, z);
@@ -724,7 +789,7 @@ void OperateHandleController::spinnerL(float x, float y, float z)
     b.join();
 }
 
-void OperateHandleController::openGrippers()
+void OperateHandleController::openGrippers(bool wait)
 {
     Gripper *l = Gripper::getInstance(0);
     Gripper *r = Gripper::getInstance(1);
@@ -732,11 +797,30 @@ void OperateHandleController::openGrippers()
     boost::thread a(&Gripper::open,l,1);
     boost::thread b(&Gripper::open,r,1);
 
-    a.join();
-    b.join();
+    if (wait)
+    {
+        a.join();
+        b.join();
+    }
 }
 
-void OperateHandleController::pickPlate(btVector3 plate, float width)
+void OperateHandleController::closeGrippers(bool wait)
+{
+    Gripper *l = Gripper::getInstance(0);
+    Gripper *r = Gripper::getInstance(1);
+
+    boost::thread a(&Gripper::close,l,0);
+    boost::thread b(&Gripper::close,r,0);
+
+    if (wait)
+    {
+        a.join();
+        b.join();
+    }
+}
+
+
+void OperateHandleController::pickPlate(btVector3 plate, double width)
 {
 
     if (plate.z() == 0)
@@ -756,25 +840,25 @@ void OperateHandleController::pickPlate(btVector3 plate, float width)
     plateCenter.stamp_ = ros::Time(0);
     plateCenter.setOrigin(plate + btVector3(0,0,0.035)); // magic numbers galore -> this is adjusted for the cop plate detector with the standard .27m plates
     plateCenter.setOrigin(btVector3(plateCenter.getOrigin().x(),plateCenter.getOrigin().y(),plateCenter.getOrigin().z()));
-    tf::Stamped<tf::Pose> plateCenterInBase = leftArm->getPoseIn("base_link", plateCenter);
+    tf::Stamped<tf::Pose> plateCenterInBase = Geometry::getPoseIn("base_link", plateCenter);
     plateCenterInBase.setOrigin(plateCenterInBase.getOrigin() + btVector3(0,0.03,0));
 
     // how far from the edge of the plate should the approach start ?
-    float startDistance = 0.05;
+    double startDistance = 0.05;
     // target point is somewhat inwards from the edge of the plate
-    float insideDistance = 0.1;
-    //float approachDistance = object ? 0.33 : 0.2; //distnace to center to start approach from
+    double insideDistance = 0.1;
+    //double approachDistance = object ? 0.33 : 0.2; //distnace to center to start approach from
 
     tf::Stamped<tf::Pose> leftApproach;
     leftApproach.frame_id_ = "base_link";
     leftApproach.setOrigin(plateCenterInBase.getOrigin() + btVector3(0,width/2.0f + startDistance,0));
     leftApproach.stamp_ = ros::Time(0);
     leftApproach.setRotation(btQuaternion(-0.302, 0.626, -0.303, 0.652));
-    tf::Stamped<tf::Pose> leftApproachMap = RobotArm::getInstance(0)->getPoseIn("map", leftApproach);
+    tf::Stamped<tf::Pose> leftApproachMap = Geometry::getPoseIn("map", leftApproach);
     leftApproach.setOrigin(plateCenterInBase.getOrigin() + btVector3(0.05,width/2.0f + startDistance,0));
-    tf::Stamped<tf::Pose> leftApproachMapPad = RobotArm::getInstance(0)->getPoseIn("map", leftApproach);
+    tf::Stamped<tf::Pose> leftApproachMapPad = Geometry::getPoseIn("map", leftApproach);
     leftApproach.setOrigin(plateCenterInBase.getOrigin() + btVector3(0,width/2.0f - insideDistance,0));
-    tf::Stamped<tf::Pose> leftApproachMapTarget = RobotArm::getInstance(0)->getPoseIn("map", leftApproach);
+    tf::Stamped<tf::Pose> leftApproachMapTarget = Geometry::getPoseIn("map", leftApproach);
 
     ROS_INFO("START AT %f END AT %f", width/2.0f + startDistance, width/2.0f - insideDistance);
 
@@ -783,11 +867,11 @@ void OperateHandleController::pickPlate(btVector3 plate, float width)
     rightApproach.stamp_ = ros::Time(0);
     rightApproach.setOrigin(plateCenterInBase.getOrigin() + btVector3(0,-width/2.0f - startDistance,0));
     rightApproach.setRotation(btQuaternion(0.651, 0.295, -0.621, -0.322));
-    tf::Stamped<tf::Pose> rightApproachMap = RobotArm::getInstance(0)->getPoseIn("map", rightApproach);
+    tf::Stamped<tf::Pose> rightApproachMap = Geometry::getPoseIn("map", rightApproach);
     rightApproach.setOrigin(plateCenterInBase.getOrigin() + btVector3(0.05,-width/2.0f - startDistance,0));
-    tf::Stamped<tf::Pose> rightApproachMapPad = RobotArm::getInstance(0)->getPoseIn("map", rightApproach);
+    tf::Stamped<tf::Pose> rightApproachMapPad = Geometry::getPoseIn("map", rightApproach);
     rightApproach.setOrigin(plateCenterInBase.getOrigin() + btVector3(0,-width/2.0f + insideDistance,0));
-    tf::Stamped<tf::Pose> rightApproachMapTarget = RobotArm::getInstance(0)->getPoseIn("map", rightApproach);
+    tf::Stamped<tf::Pose> rightApproachMapTarget = Geometry::getPoseIn("map", rightApproach);
 
     ROS_INFO("START AT %f END AT %f", -width/2.0f - startDistance, - width/2.0f + insideDistance);
 
@@ -804,7 +888,8 @@ void OperateHandleController::pickPlate(btVector3 plate, float width)
 
     std::vector<int> armv;
     std::vector<tf::Stamped<tf::Pose> > goal;
-    btVector3 result;
+    //btVector3 result;
+    tf::Stamped<tf::Pose> result;
     armv.push_back(0);
     goal.push_back(rightApproachMapPad);
     armv.push_back(0);
@@ -893,14 +978,14 @@ void OperateHandleController::singleSidedPick(int side,tf::Stamped<tf::Pose> sta
 }
 
 
-void OperateHandleController::getPlate(int object, float zHint)
+void OperateHandleController::getPlate(int object, double zHint)
 {
 
     OperateHandleController::openGrippers();
 
 
-    pr2_controllers_msgs::JointTrajectoryGoal goalA = RobotArm::getInstance(0)->lookAtMarker(Poses::prepDishR1,Poses::prepDishR1);
-    pr2_controllers_msgs::JointTrajectoryGoal goalB = RobotArm::getInstance(1)->lookAtMarker(Poses::prepDishL1,Poses::prepDishL1);
+    pr2_controllers_msgs::JointTrajectoryGoal goalA = RobotArm::getInstance(0)->twoPointTrajectory(Poses::prepDishR1,Poses::prepDishR1);
+    pr2_controllers_msgs::JointTrajectoryGoal goalB = RobotArm::getInstance(1)->twoPointTrajectory(Poses::prepDishL1,Poses::prepDishL1);
     boost::thread t7(&RobotArm::startTrajectory, RobotArm::getInstance(0), goalA,true);
     boost::thread t8(&RobotArm::startTrajectory, RobotArm::getInstance(1), goalB,true);
 
@@ -935,17 +1020,17 @@ void OperateHandleController::plateCarryPose()
     rightTip = RobotArm::getInstance(0)->getToolPose();
     leftTip = RobotArm::getInstance(1)->getToolPose();
 
-    float averageX = (rightTip.getOrigin().x() + leftTip.getOrigin().x()) * 0.5;
-    float averageY = (rightTip.getOrigin().y() + leftTip.getOrigin().y()) * 0.5;
-    float averageZ = (rightTip.getOrigin().z() + leftTip.getOrigin().z()) * 0.5;
+    double averageX = (rightTip.getOrigin().x() + leftTip.getOrigin().x()) * 0.5;
+    double averageY = (rightTip.getOrigin().y() + leftTip.getOrigin().y()) * 0.5;
+    double averageZ = (rightTip.getOrigin().z() + leftTip.getOrigin().z()) * 0.5;
 
     //ROS_INFO("AVERAGE Y pre: %f", averageY);
 
     RobotArm::getInstance(0)->raise_elbow= true;
     RobotArm::getInstance(1)->raise_elbow= true;
 
-    RobotArm::getInstance(0)->preset_angle = .8;
-    RobotArm::getInstance(1)->preset_angle = .8;
+    //RobotArm::getInstance(0)->preset_angle = .8;
+    //RobotArm::getInstance(1)->preset_angle = .8;
 
     OperateHandleController::spinnerL(.45 - averageX,0 - averageY,.935 - averageZ);
 
@@ -957,8 +1042,11 @@ void OperateHandleController::plateCarryPose()
 
 void OperateHandleController::plateTuckPose()
 {
-    pr2_controllers_msgs::JointTrajectoryGoal goalAT = RobotArm::getInstance(0)->lookAtMarker(Poses::prepDishRT,Poses::prepDishRT);
-    pr2_controllers_msgs::JointTrajectoryGoal goalBT = RobotArm::getInstance(1)->lookAtMarker(Poses::prepDishLT,Poses::prepDishLT);
+    //pr2_controllers_msgs::JointTrajectoryGoal goalAT = RobotArm::getInstance(0)->twoPointTrajectory(Poses::prepDishRT,Poses::prepDishRT);
+    //pr2_controllers_msgs::JointTrajectoryGoal goalBT = RobotArm::getInstance(1)->twoPointTrajectory(Poses::prepDishLT,Poses::prepDishLT);
+    pr2_controllers_msgs::JointTrajectoryGoal goalAT = RobotArm::getInstance(0)->goalTraj(Poses::prepDishRT,2);
+    pr2_controllers_msgs::JointTrajectoryGoal goalBT = RobotArm::getInstance(1)->goalTraj(Poses::prepDishLT,2);
+
     boost::thread t2T(&RobotArm::startTrajectory, RobotArm::getInstance(0), goalAT,true);
     boost::thread t3T(&RobotArm::startTrajectory, RobotArm::getInstance(1), goalBT,true);
     t2T.join();
@@ -967,7 +1055,8 @@ void OperateHandleController::plateTuckPose()
 
 void OperateHandleController::plateTuckPoseLeft()
 {
-    pr2_controllers_msgs::JointTrajectoryGoal goalBT = RobotArm::getInstance(1)->lookAtMarker(Poses::prepDishLT,Poses::prepDishLT);
+    //pr2_controllers_msgs::JointTrajectoryGoal goalBT = RobotArm::getInstance(1)->twoPointTrajectory(Poses::prepDishLT,Poses::prepDishLT);
+    pr2_controllers_msgs::JointTrajectoryGoal goalBT = RobotArm::getInstance(0)->goalTraj(Poses::prepDishLT,2);
     boost::thread t3T(&RobotArm::startTrajectory, RobotArm::getInstance(1), goalBT,true);
     t3T.join();
 }
@@ -975,7 +1064,8 @@ void OperateHandleController::plateTuckPoseLeft()
 
 void OperateHandleController::plateTuckPoseRight()
 {
-    pr2_controllers_msgs::JointTrajectoryGoal goalAT = RobotArm::getInstance(0)->lookAtMarker(Poses::prepDishRT,Poses::prepDishRT);
+    //pr2_controllers_msgs::JointTrajectoryGoal goalAT = RobotArm::getInstance(0)->twoPointTrajectory(Poses::prepDishRT,Poses::prepDishRT);
+    pr2_controllers_msgs::JointTrajectoryGoal goalAT = RobotArm::getInstance(0)->goalTraj(Poses::prepDishRT,2);
     boost::thread t2T(&RobotArm::startTrajectory, RobotArm::getInstance(0), goalAT,true);
     t2T.join();
 }
@@ -983,8 +1073,10 @@ void OperateHandleController::plateTuckPoseRight()
 
 void OperateHandleController::plateAttackPose()
 {
-    pr2_controllers_msgs::JointTrajectoryGoal goalA = RobotArm::getInstance(0)->lookAtMarker(Poses::prepDishR1,Poses::prepDishR1);
-    pr2_controllers_msgs::JointTrajectoryGoal goalB = RobotArm::getInstance(1)->lookAtMarker(Poses::prepDishL1,Poses::prepDishL1);
+    //pr2_controllers_msgs::JointTrajectoryGoal goalA = RobotArm::getInstance(0)->twoPointTrajectory(Poses::prepDishR1,Poses::prepDishR1);
+    //pr2_controllers_msgs::JointTrajectoryGoal goalB = RobotArm::getInstance(1)->twoPointTrajectory(Poses::prepDishL1,Poses::prepDishL1);
+    pr2_controllers_msgs::JointTrajectoryGoal goalA = RobotArm::getInstance(0)->goalTraj(Poses::prepDishR1,2);
+    pr2_controllers_msgs::JointTrajectoryGoal goalB = RobotArm::getInstance(1)->goalTraj(Poses::prepDishL1,2);
     boost::thread t2(&RobotArm::startTrajectory, RobotArm::getInstance(0), goalA,true);
     boost::thread t3(&RobotArm::startTrajectory, RobotArm::getInstance(1), goalB,true);
     t2.join();
@@ -993,14 +1085,16 @@ void OperateHandleController::plateAttackPose()
 
 void OperateHandleController::plateAttackPoseLeft()
 {
-    pr2_controllers_msgs::JointTrajectoryGoal goalB = RobotArm::getInstance(1)->lookAtMarker(Poses::prepDishL1,Poses::prepDishL1);
+    //pr2_controllers_msgs::JointTrajectoryGoal goalB = RobotArm::getInstance(1)->twoPointTrajectory(Poses::prepDishL1,Poses::prepDishL1);
+    pr2_controllers_msgs::JointTrajectoryGoal goalB = RobotArm::getInstance(1)->goalTraj(Poses::prepDishL1,2);
     boost::thread t3(&RobotArm::startTrajectory, RobotArm::getInstance(1), goalB,true);
     t3.join();
 }
 
 void OperateHandleController::plateAttackPoseRight()
 {
-    pr2_controllers_msgs::JointTrajectoryGoal goalA = RobotArm::getInstance(0)->lookAtMarker(Poses::prepDishR1,Poses::prepDishR1);
+    //pr2_controllers_msgs::JointTrajectoryGoal goalA = RobotArm::getInstance(0)->twoPointTrajectory(Poses::prepDishR1,Poses::prepDishR1);
+    pr2_controllers_msgs::JointTrajectoryGoal goalA = RobotArm::getInstance(0)->goalTraj(Poses::prepDishR1,2);
     boost::thread t2(&RobotArm::startTrajectory, RobotArm::getInstance(0), goalA,true);
     t2.join();
 }

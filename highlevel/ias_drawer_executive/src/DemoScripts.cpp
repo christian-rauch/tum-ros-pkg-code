@@ -34,6 +34,7 @@
 #include <ias_drawer_executive/Gripper.h>
 #include <ias_drawer_executive/Perception3d.h>
 #include <ias_drawer_executive/Pressure.h>
+#include <ias_drawer_executive/Geometry.h>
 #include <ias_drawer_executive/Poses.h>
 #include <ias_drawer_executive/RobotArm.h>
 #include <ias_drawer_executive/AverageTF.h>
@@ -87,7 +88,7 @@ int DemoScripts::openFridge(int z)
         handleMap.setOrigin(btVector3(0.920, -0.566, 1.174));
         handleMap.setRotation(btQuaternion(0.999, 0.014, -0.030, 0.008));
 
-        handleMap = RobotArm::getInstance()->getPoseIn("base_link", handleMap);
+        handleMap = Geometry::getPoseIn("base_link", handleMap);
 
         return OperateHandleController::operateHandle(0,handleMap);
     }
@@ -99,7 +100,7 @@ int DemoScripts::openFridge(int z)
 int DemoScripts::takeBottle(int z)
 {
 
-    pr2_controllers_msgs::JointTrajectoryGoal goalB = RobotArm::getInstance(1)->lookAtMarker(Poses::prepDishL1,Poses::prepDishL1);
+    pr2_controllers_msgs::JointTrajectoryGoal goalB = RobotArm::getInstance(1)->twoPointTrajectory(Poses::prepDishL1,Poses::prepDishL1);
     boost::thread t3(&RobotArm::startTrajectory, RobotArm::getInstance(1), goalB,true);
 
 
@@ -108,8 +109,8 @@ int DemoScripts::takeBottle(int z)
 
 
     RobotArm::getInstance(0)->tucked = true;
-    float p[] = { 0.255, -0.571, -0.025, 1.000};
-    //float p[] = { 0.255, -0.571, -0.108, 0.994 };
+    double p[] = { 0.255, -0.571, -0.025, 1.000};
+    //double p[] = { 0.255, -0.571, -0.108, 0.994 };
     RobotDriver::getInstance()->moveBase(p);
 
     //t2.join();t3.join();
@@ -117,11 +118,14 @@ int DemoScripts::takeBottle(int z)
     RobotHead::getInstance()->lookAtThreaded("/map", 1.243111, -0.728864, 0.9);
     tf::Stamped<tf::Pose> bottle = Perception3d::getBottlePose();
 
+    bottle = Geometry::getPoseIn("map",bottle);
 
+    if (0)
     {
         std::vector<int> arm;
         std::vector<tf::Stamped<tf::Pose> > goal;
-        btVector3 result;
+        //btVector3 result;
+        tf::Stamped<tf::Pose> result;
 
         tf::Stamped<tf::Pose> p0;
         p0.frame_id_="map";
@@ -157,7 +161,7 @@ int DemoScripts::takeBottle(int z)
         goal.push_back(p3);
         arm.push_back(1);
 
-        RobotArm::findBaseMovement(result, arm, goal,true, true);
+        RobotArm::findBaseMovement(result, arm, goal,true, false);
         //RobotArm::findBaseMovement(result, arm, goal,false);
     }
 
@@ -186,7 +190,7 @@ int DemoScripts::closeFridge(int handle)
 {
     OperateHandleController::close(0,handle);
     //go to right tuck
-    pr2_controllers_msgs::JointTrajectoryGoal goalAT = RobotArm::getInstance(0)->lookAtMarker(Poses::prepDishRT,Poses::prepDishRT);
+    pr2_controllers_msgs::JointTrajectoryGoal goalAT = RobotArm::getInstance(0)->twoPointTrajectory(Poses::prepDishRT,Poses::prepDishRT);
     boost::thread t2T(&RobotArm::startTrajectory, RobotArm::getInstance(0), goalAT,true);
     RobotArm::getInstance(0)->tucked = true;
     t2T.join();
@@ -228,7 +232,7 @@ int DemoScripts::takeBottleFromFridge(int z)
         //handlePos = OperateHandleController::getHandlePoseFromLaser(handleHint);
 
 
-        handlePos = arm->getPoseIn("map",handlePos);
+        handlePos = Geometry::getPoseIn("map",handlePos);
 
         ROS_INFO("Handle in Map");
         arm->printPose(handlePos);
@@ -247,12 +251,20 @@ int DemoScripts::takeBottleFromFridge(int z)
         arm->move_toolframe_ik_pose(handlePosAppM);
         arm->time_to_target = 1;
 
+        {
+            gripper->open();
+            arm->move_toolframe_ik_pose(handlePos);
+            gripper->close();
+        }
+
+        /*
+
         Approach *apr = new Approach();
         apr->init(0,handlePosApp, handlePosAppB, Approach::front);
 
         gripper->close();
 
-        float distA = (apr->increment(0,0.5));
+        double distA = (apr->increment(0,0.5));
         if (distA == 0)
         {
             ROS_ERROR("DIDNT TOUCH IN THE FIRST 5 CM OF APPROACH");
@@ -266,7 +278,8 @@ int DemoScripts::takeBottleFromFridge(int z)
 
         gripper->closeCompliant();
 
-        gripper->close();
+        gripper->close();*/
+
 
         arm->stabilize_grip();
     }
@@ -280,7 +293,7 @@ int DemoScripts::takeBottleFromFridge(int z)
         int side = 0;
         RobotArm::RobotArm *arm = RobotArm::getInstance(side);
 
-        float pts[][7] =
+        double pts[][7] =
         {
             {0.478704, -1.0355, 1.18101, 0.767433, 0.639987, 0.022135, 0.0311955},
             {0.489086, -0.984206, 1.17956, 0.797904, 0.601535, 0.01726, 0.0347398},
@@ -303,8 +316,8 @@ int DemoScripts::takeBottleFromFridge(int z)
         };
 
 
-        //for (float z= 1.3; z <= 1.4; z +=0.025)
-        float z = 1.35;
+        //for (double z= 1.3; z <= 1.4; z +=0.025)
+        double z = 1.35;
         {
             int numf = 0;
             bool found = true;
@@ -383,8 +396,8 @@ int DemoScripts::takeBottleFromFridge(int z)
                     rate.sleep();
                     if (ret)
                     {
-                        float pose[7];
-                        float sum = 0;
+                        double pose[7];
+                        double sum = 0;
                         for (int k = 0; k < 7; ++k)
                         {
                             pose[k] = stAs[k];
@@ -402,8 +415,8 @@ int DemoScripts::takeBottleFromFridge(int z)
 
                         Gripper::getInstance(1)->close();
 
-                        float ptA[] = {0.41491862845470812, 1.3468554401788568, 1.501748997727044, -2.0247783614692936, -16.507431415382143, -1.3292235155277217, 15.027356561279952};
-                        float ptB[] = {0.040263624618489424, 0.96465557759293075, 0.27150676981727662, -1.6130504582945409, -14.582800985450046, -1.1869058378819473, 14.819427432123987};
+                        double ptA[] = {0.41491862845470812, 1.3468554401788568, 1.501748997727044, -2.0247783614692936, -16.507431415382143, -1.3292235155277217, 15.027356561279952};
+                        double ptB[] = {0.040263624618489424, 0.96465557759293075, 0.27150676981727662, -1.6130504582945409, -14.582800985450046, -1.1869058378819473, 14.819427432123987};
                         RobotArm *arml = RobotArm::getInstance(1);
                         arml->startTrajectory(arml->goalTraj(ptA,1.5));
                         arml->startTrajectory(arml->goalTraj(ptB,1.5));
@@ -423,7 +436,7 @@ int DemoScripts::takeBottleFromFridge(int z)
 
         Gripper::getInstance(0)->open();
 
-        float target[4];
+        double target[4];
         target[0] = -0.3;
         target[1] = -0.15;
         target[2] = 0;
@@ -431,7 +444,7 @@ int DemoScripts::takeBottleFromFridge(int z)
         ROS_INFO("POSE IN BASE %f %f %f", target[0],target[1], target[2]);
         RobotDriver::getInstance()->driveInOdom(target, 1);
 
-        pr2_controllers_msgs::JointTrajectoryGoal goalAT = RobotArm::getInstance(0)->lookAtMarker(Poses::prepDishRT,Poses::prepDishRT);
+        pr2_controllers_msgs::JointTrajectoryGoal goalAT = RobotArm::getInstance(0)->twoPointTrajectory(Poses::prepDishRT,Poses::prepDishRT);
         boost::thread t2T(&RobotArm::startTrajectory, RobotArm::getInstance(0), goalAT,true);
         t2T.join();
 
@@ -448,19 +461,19 @@ int DemoScripts::takeBottleFromFridge(int z)
 int DemoScripts::serveBottle(int z)
 {
     RobotArm::getInstance(0)->tucked =true;
-    //float b1[] = {-0.016, -0.440, 0.013, 1.000};
+    //double b1[] = {-0.016, -0.440, 0.013, 1.000};
 
     //RobotDriver::getInstance()->moveBase(b1, false);
 
-    //RobotArm::getInstance(0)->startTrajectory(RobotArm::getInstance(0)->lookAtMarker(Poses::untuckPoseB, Poses::untuckPoseB));
+    //RobotArm::getInstance(0)->startTrajectory(RobotArm::getInstance(0)->twoPointTrajectory(Poses::untuckPoseB, Poses::untuckPoseB));
 
     RobotHead::getInstance()->lookAtThreaded("/map",  -1.7, 2.2, 1);
 
-    float b3[] = {-0.496, 2.203, 0.963, 0.270};
+    double b3[] = {-0.496, 2.203, 0.963, 0.270};
     RobotDriver::getInstance()->moveBase(b3, false);
 
 
-    float b2[] = {-1.115, 2.683, 0.977, 0.214};
+    double b2[] = {-1.115, 2.683, 0.977, 0.214};
     boost::thread t1 (&RobotDriver::moveBase,RobotDriver::getInstance(), b2, false);
 
     RobotHead::getInstance()->lookAtThreaded("/l_gripper_tool_frame", 0 , 0, 0);
@@ -472,9 +485,13 @@ int DemoScripts::serveBottle(int z)
 
     t1.join();
 
+    ROS_ERROR("A");
+
     RobotArm::getInstance(1)->universal_move_toolframe_ik(0.5, 0.608, 0.94, -0.059, 0.008, 0.131, 0.990, "base_link");
 
     Gripper::getInstance(1)->open();
+
+    ROS_ERROR("B");
 
     RobotArm::getInstance(1)->universal_move_toolframe_ik(0.3, 0.608, 1.0, -0.059, 0.008, 0.131, 0.990, "base_link");
     return 0;
@@ -492,15 +509,25 @@ int DemoScripts::openDrawer(int z)
     p0.stamp_=ros::Time();
     p0.setOrigin(btVector3(0.64, 1.321, 0.762 + 0.03));
     p0.setRotation(btQuaternion(-0.714, -0.010, 0.051, 0.698));
-    p0 = RobotArm::getInstance(0)->getPoseIn("base_link",p0);
+    p0 = Geometry::getPoseIn("base_link",p0);
 
     //tf::Stamped<tf::Pose> p0 = RobotArm::getInstance(0)->getToolPose("base_link");
 
     int handle = OperateHandleController::operateHandle(0,p0);
 
+    //RobotArm::getInstance(0)->universal_move_toolframe_ik(0.169, 1.302, 0.796, -0.709, -0.050, 0.070, 0.700, "map");
+
+    //Gripper::getInstance(0)->open();
+
+
+    //- Translation: [0.169, 1.302, 0.796]
+//- Rotation: in Quaternion [-0.709, -0.050, 0.070, 0.700]
+  //          in RPY [-1.580, 0.028, 0.170]
+
+
     RobotDriver::getInstance()->moveBaseP(-0.220, 1.818,0.051, 0.999,false);
 
-    return handle;
+    return 0;
 }
 
 
@@ -510,7 +537,7 @@ int DemoScripts::takePlate(int z)
 
     Torso *torso = Torso::getInstance();
     boost::thread t2u(&Torso::up, torso);
-    float target[] = {-0.329, 1.017, 0.018, 1.000};
+    double target[] = {-0.329, 1.017, 0.018, 1.000};
     ROS_INFO("POSE IN BASE %f %f %f", target[0],target[1], target[2]);
 
     OperateHandleController::plateTuckPose();
@@ -523,13 +550,13 @@ int DemoScripts::takePlate(int z)
     t2u.join();
 
     //in drawer
-    RobotHead::getInstance()->lookAtThreaded("/map", .44 ,1.1, .7, true);
+    RobotHead::getInstance()->lookAtThreaded("/map", .44 ,1.1, .7);
 
     OperateHandleController::getPlate(0,0.79 - 0.035 + 0.03);
 
     RobotDriver::getInstance()->moveBaseP(-0.437, 1.053, 0.315, .949,false);
 
-    float cl[] = {0.12, 1.053, 0.315, 0.949};
+    double cl[] = {0.12, 1.053, 0.315, 0.949};
 
     RobotDriver::getInstance()->moveBase(cl,false);
 
@@ -544,9 +571,9 @@ int DemoScripts::servePlateToIsland(int z)
 
     RobotArm::getInstance(0)->tucked = true;
 
-    //float b4[] = {-1.066, 1.564, 0.970, 0.244};
+    //double b4[] = {-1.066, 1.564, 0.970, 0.244};
 
-    float b4[] = {-0.960, 2.161,  0.999, -0.037};
+    double b4[] = {-0.960, 2.161,  0.999, -0.037};
 
     //OperateHandleController::plateCarryPose();
 
@@ -566,8 +593,8 @@ int DemoScripts::takeSilverware(int z)
 {
     // get silverware
 //        [0.157, 1.154, 0.051] - Rotation: in Quaternion [0.001, -0.001, 0.044, 0.999]
-    pr2_controllers_msgs::JointTrajectoryGoal goalA = RobotArm::getInstance(0)->lookAtMarker(Poses::prepDishR1,Poses::prepDishR1);
-    pr2_controllers_msgs::JointTrajectoryGoal goalB = RobotArm::getInstance(1)->lookAtMarker(Poses::prepDishL1,Poses::prepDishL1);
+    pr2_controllers_msgs::JointTrajectoryGoal goalA = RobotArm::getInstance(0)->twoPointTrajectory(Poses::prepDishR1,Poses::prepDishR1);
+    pr2_controllers_msgs::JointTrajectoryGoal goalB = RobotArm::getInstance(1)->twoPointTrajectory(Poses::prepDishL1,Poses::prepDishL1);
     boost::thread t2(&RobotArm::startTrajectory, RobotArm::getInstance(0), goalA,true);
     boost::thread t3(&RobotArm::startTrajectory, RobotArm::getInstance(1), goalB,true);
 
@@ -577,7 +604,7 @@ int DemoScripts::takeSilverware(int z)
     t2.join();
     t3.join();
 
-    float zAdj = -.015;
+    double zAdj = -.015;
     /* R
      Translation: [0.940, 1.032, 0.861]
     - Rotation: in Quaternion [-0.026, 0.733, 0.025, 0.679]
@@ -588,13 +615,15 @@ int DemoScripts::takeSilverware(int z)
                 in RPY [2.856, 1.522, 2.860]
                 */
 
-    float xR =  .940;
-    float xL =  .922;
-    float yR =  1.032;
-    float yL =  1.354;
-    float adj = 0.025;
+    double xR =  .940;
+    double xL =  .922;
+    double yR =  1.032;
+    double yL =  1.354;
+    double adj = 0.025;
 
     OperateHandleController::openGrippers();
+
+    RobotHead::getInstance()->lookAtThreaded("/map", 0.812, 1.240, 1.0);
 
     RobotArm::getInstance(1)->universal_move_toolframe_ik(0.812, 1.240, 1.0, 0.009, 0.679, 0.002, 0.734, "map");
     RobotArm::getInstance(1)->universal_move_toolframe_ik(xL, yL, 1.0, 0.009, 0.679, 0.002, 0.734, "map");
@@ -634,6 +663,8 @@ int DemoScripts::takeSilverware(int z)
             }
         }
     }
+
+    RobotHead::getInstance()->lookAtThreaded("/map", xR, yR, 1.0);
 
     RobotArm::getInstance(0)->universal_move_toolframe_ik(xR, yR, 1.0, 0.044, 0.691, -0.040, 0.720, "map");
     RobotArm::getInstance(0)->universal_move_toolframe_ik(xR, yR, 0.851 + zAdj, 0.044, 0.691, -0.040, 0.720, "map");
@@ -685,27 +716,95 @@ int DemoScripts::serveToTable(int z)
     RobotArm::getInstance(0)->tucked = true;
 
 
-    float p[] = {-0.461, -0.836, 0.878, -0.479};
-    //float p[] = {-0.428, -0.786, 0.870, -0.493};
+    double p[] = {-0.461, -0.836, 0.878, -0.479};
+    //double p[] = {-0.428, -0.786, 0.870, -0.493};
     RobotDriver::getInstance()->moveBase(p, false);
     OperateHandleController::spinnerL(0.26, -0.08, -.16);
 
     OperateHandleController::openGrippers();
 
 
-    pr2_controllers_msgs::JointTrajectoryGoal goalA = RobotArm::getInstance(0)->lookAtMarker(Poses::prepDishR1,Poses::prepDishR1);
-    pr2_controllers_msgs::JointTrajectoryGoal goalB = RobotArm::getInstance(1)->lookAtMarker(Poses::prepDishL1,Poses::prepDishL1);
+    pr2_controllers_msgs::JointTrajectoryGoal goalA = RobotArm::getInstance(0)->twoPointTrajectory(Poses::prepDishR1,Poses::prepDishR1);
+    pr2_controllers_msgs::JointTrajectoryGoal goalB = RobotArm::getInstance(1)->twoPointTrajectory(Poses::prepDishL1,Poses::prepDishL1);
     boost::thread t2(&RobotArm::startTrajectory, RobotArm::getInstance(0), goalA,true);
     boost::thread t3(&RobotArm::startTrajectory, RobotArm::getInstance(1), goalB,true);
 
     t2.join();
     t3.join();
 
-    float p2[] = {-0.261, -0.636, 0.878, -0.479};
+    double p2[] = {-0.261, -0.636, 0.878, -0.479};
     RobotDriver::getInstance()->moveBase(p2, false);
 
     return 0;
 }
+
+int DemoScripts::serveToTable2(int z)
+{
+
+    //OperateHandleController::plateCarryPose();
+
+    RobotArm::getInstance(0)->tucked = true;
+
+    double p[] = {0.275, -1.160, -0.685, 0.729};
+    //double p[] = {-0.428, -0.786, 0.870, -0.493};
+    RobotDriver::getInstance()->moveBase(p, false);
+    OperateHandleController::spinnerL(0.26, -0.08, -.16);
+
+    OperateHandleController::openGrippers();
+
+
+    //pr2_controllers_msgs::JointTrajectoryGoal goalA = RobotArm::getInstance(0)->twoPointTrajectory(Poses::prepDishR1,Poses::prepDishR1);
+    //pr2_controllers_msgs::JointTrajectoryGoal goalB = RobotArm::getInstance(1)->twoPointTrajectory(Poses::prepDishL1,Poses::prepDishL1);
+    //boost::thread t2(&RobotArm::startTrajectory, RobotArm::getInstance(0), goalA,true);
+    //boost::thread t3(&RobotArm::startTrajectory, RobotArm::getInstance(1), goalB,true);
+
+    //t2.join();
+    //t3.join();
+
+    double p2[] = {0.232, -0.555, -0.685, 0.729};
+    //RobotDriver::getInstance()->moveBase(p2, false);
+
+    tf::Stamped<tf::Pose> rP = RobotArm::getInstance(0)->getToolPose("base_link");
+    rP.setOrigin(rP.getOrigin() + btVector3(0,0,0.03));
+    rP = Geometry::getPoseIn("map", rP);
+
+    tf::Stamped<tf::Pose> lP = RobotArm::getInstance(1)->getToolPose("base_link");
+    lP.setOrigin(lP.getOrigin() + btVector3(0,0.0,0.03));
+    lP = Geometry::getPoseIn("map", lP);
+
+    RobotArm::getInstance(0)->universal_move_toolframe_ik_pose(rP);
+    RobotArm::getInstance(1)->universal_move_toolframe_ik_pose(lP);
+
+    OperateHandleController::plateAttackPose();
+    OperateHandleController::plateTuckPose();
+
+
+    return 0;
+}
+
+
+/*
+
+ruehr@pr2a:~$ rosrun tf tf_echo base_link r_gripper_tool_frame
+At time 1312975090.444
+- Translation: [0.448, -0.122, 0.935]
+- Rotation: in Quaternion [0.652, 0.287, -0.626, -0.317]
+            in RPY [-1.590, 0.689, 1.504]
+^CAt time 1312975091.083
+- Translation: [0.448, -0.122, 0.935]
+- Rotation: in Quaternion [0.652, 0.286, -0.626, -0.317]
+            in RPY [-1.590, 0.689, 1.504]
+^[[Aruehr@pr2a:~$ rosrun tf tf_echo base_link l_gripper_tool_frame
+At time 1312975094.413
+- Translation: [0.452, 0.122, 0.935]
+- Rotation: in Quaternion [-0.295, 0.628, -0.287, 0.660]
+            in RPY [-1.523, 0.722, -1.510]
+^CAt time 1312975094.933
+- Translation: [0.452, 0.122, 0.935]
+- Rotation: in Quaternion [-0.295, 0.628, -0.287, 0.660]
+            in RPY [-1.523, 0.722, -1.510]
+
+            */
 
 
 int DemoScripts::takePlateFromIsland(int z)
@@ -713,9 +812,11 @@ int DemoScripts::takePlateFromIsland(int z)
     Torso *torso = Torso::getInstance();
     boost::thread t2u(&Torso::up, torso);
 
+    RobotHead::getInstance()->lookAtThreaded("/map", -1.712, 2.088, 0.865);
+
 
     OperateHandleController::plateTuckPose();
-    //RobotArm::getInstance(1)->startTrajectory(RobotArm::getInstance(1)->lookAtMarker(Poses::prepDishL0,Poses::prepDishL1));
+    //RobotArm::getInstance(1)->startTrajectory(RobotArm::getInstance(1)->twoPointTrajectory(Poses::prepDishL0,Poses::prepDishL1));
 
     //RobotArm::getInstance(0)->tucked = true;
     //RobotDriver::getInstance()->moveBaseP(-0.866, 1.564, 0.970, 0.244,false);
@@ -731,13 +832,11 @@ int DemoScripts::takePlateFromIsland(int z)
 
     t2u.join();
 
-    RobotHead::getInstance()->lookAtThreaded("/map", -1.712, 2.088, 0.865);
-
 
     btVector3 pl(-1.679, 1.904, 0.865);
 
     pl = btVector3(-1.712, 2.088, 0.865);
-    pl = btVector3(-1.686, 2.1, 0.865);
+    pl = btVector3(-1.686, 2.1, 0.865 + 0.03);
 
     //OperateHandleController::getPlate(0);
     OperateHandleController::pickPlate(pl,0.27);
@@ -780,7 +879,7 @@ int DemoScripts::putObjectIntoFridge(int z)
         //handlePos = OperateHandleController::getHandlePoseFromLaser(handleHint);
 
 
-        handlePos = arm->getPoseIn("map",handlePos);
+        handlePos = Geometry::getPoseIn("map",handlePos);
 
         ROS_INFO("Handle in Map");
         arm->printPose(handlePos);
@@ -804,7 +903,7 @@ int DemoScripts::putObjectIntoFridge(int z)
 
         gripper->close();
 
-        float distA = (apr->increment(0,0.5));
+        double distA = (apr->increment(0,0.5));
         if (distA == 0)
         {
             ROS_ERROR("DIDNT TOUCH IN THE FIRST 5 CM OF APPROACH");
@@ -832,7 +931,7 @@ int DemoScripts::putObjectIntoFridge(int z)
         int side = 0;
         RobotArm::RobotArm *arm = RobotArm::getInstance(side);
 
-        float pts[][7] =
+        double pts[][7] =
         {
             {0.478704, -1.0355, 1.18101, 0.767433, 0.639987, 0.022135, 0.0311955},
             {0.489086, -0.984206, 1.17956, 0.797904, 0.601535, 0.01726, 0.0347398},
@@ -855,8 +954,8 @@ int DemoScripts::putObjectIntoFridge(int z)
         };
 
 
-        //for (float z= 1.3; z <= 1.4; z +=0.025)
-        float z = 1.35;
+        //for (double z= 1.3; z <= 1.4; z +=0.025)
+        double z = 1.35;
         {
             int numf = 0;
             bool found = true;
@@ -935,8 +1034,8 @@ int DemoScripts::putObjectIntoFridge(int z)
                     rate.sleep();
                     if (ret)
                     {
-                        float pose[7];
-                        float sum = 0;
+                        double pose[7];
+                        double sum = 0;
                         for (int k = 0; k < 7; ++k)
                         {
                             pose[k] = stAs[k];
@@ -956,10 +1055,10 @@ int DemoScripts::putObjectIntoFridge(int z)
                         //bottle.pose.position.z = bottle.getOrigin().z() + 0.1;
                         Gripper::getInstance(1)->close();
 
-                        //                        float ptA[] = {0.41491862845470812, 1.3468554401788568, 1.501748997727044, -2.0247783614692936, -16.507431415382143, -1.3292235155277217, 15.027356561279952};
-                        //                        float ptB[] = {0.040263624618489424, 0.96465557759293075, 0.27150676981727662, -1.6130504582945409, -14.582800985450046, -1.1869058378819473, 14.819427432123987};
-                        float ptA[] = {0.68376502811441964, 1.2012096482630152, 1.8365364116753793, -2.2751645879302225, -46.069969252840536, -1.5540038123036684, 33.476251846428482};
-                        float ptB[] = {-0.076488653049139876, 0.79236238489918576, -0.066073603203320896, -1.5513110310125839, -46.176928516612122, -1.1200023343102063, 33.886323418367155};
+                        //                        double ptA[] = {0.41491862845470812, 1.3468554401788568, 1.501748997727044, -2.0247783614692936, -16.507431415382143, -1.3292235155277217, 15.027356561279952};
+                        //                        double ptB[] = {0.040263624618489424, 0.96465557759293075, 0.27150676981727662, -1.6130504582945409, -14.582800985450046, -1.1869058378819473, 14.819427432123987};
+                        double ptA[] = {0.68376502811441964, 1.2012096482630152, 1.8365364116753793, -2.2751645879302225, -46.069969252840536, -1.5540038123036684, 33.476251846428482};
+                        double ptB[] = {-0.076488653049139876, 0.79236238489918576, -0.066073603203320896, -1.5513110310125839, -46.176928516612122, -1.1200023343102063, 33.886323418367155};
 
                         RobotArm *arml = RobotArm::getInstance(1);
                         arml->startTrajectory(arml->goalTraj(ptA,1.5));
@@ -984,7 +1083,7 @@ int DemoScripts::putObjectIntoFridge(int z)
         Gripper::getInstance(0)->open();
 
 
-        float target[4];
+        double target[4];
         target[0] = -0.3;
         target[1] = -0.15;
         target[2] = 0;
@@ -992,7 +1091,7 @@ int DemoScripts::putObjectIntoFridge(int z)
         ROS_INFO("POSE IN BASE %f %f %f", target[0],target[1], target[2]);
         RobotDriver::getInstance()->driveInOdom(target, 1);
 
-        pr2_controllers_msgs::JointTrajectoryGoal goalAT = RobotArm::getInstance(0)->lookAtMarker(Poses::prepDishRT,Poses::prepDishRT);
+        pr2_controllers_msgs::JointTrajectoryGoal goalAT = RobotArm::getInstance(0)->twoPointTrajectory(Poses::prepDishRT,Poses::prepDishRT);
         boost::thread t2T(&RobotArm::startTrajectory, RobotArm::getInstance(0), goalAT,true);
         t2T.join();
 
@@ -1009,12 +1108,12 @@ int DemoScripts::putObjectIntoFridge(int z)
 
 int DemoScripts::sliceTheBread(int numslices_)
 {
-    float numslices = numslices_;
+    double numslices = numslices_;
 
     Torso::getInstance()->up();
 
-    //float numslices = atoi(argv[2]); // 0 = one slice for computer scientists! -1 = none
-    float slicethickness = 0.02;
+    //double numslices = atoi(argv[2]); // 0 = one slice for computer scientists! -1 = none
+    double slicethickness = 0.02;
 
     boost::thread t0(&OperateHandleController::plateTuckPose);
 
@@ -1060,9 +1159,9 @@ int DemoScripts::sliceTheBread(int numslices_)
 
     btVector3 rel = leftEdge.getOrigin() - rightEdge.getOrigin();
 
-    float at2 = atan2(rel.y(), rel.x());
+    double at2 = atan2(rel.y(), rel.x());
 
-    float analog_synthesizer_tb = .303; // just to make it straight
+    double analog_synthesizer_tb = .303; // just to make it straight
 
     btQuaternion ori(btVector3(0,0,1), at2 + analog_synthesizer_tb);
 
@@ -1161,13 +1260,13 @@ int DemoScripts::sliceTheBread(int numslices_)
 
     boost::thread button(&RobotArm::move_toolframe_ik_pose, larm, butdown);
 
-    RobotHead::getInstance()->lookAtThreaded("/r_gripper_tool_frame",0,0,0,false);
+    RobotHead::getInstance()->lookAtThreaded("/r_gripper_tool_frame",0,0,0);
 
     nextPoseR = pre;
     nextPoseR.setOrigin(pre.getOrigin() + btVector3(-numslices * slicethickness, 0,0.1));
     rarm->universal_move_toolframe_ik_pose(nextPoseR);
 
-    for (float nums = numslices; nums >= -1.0; nums-=1.0)
+    for (double nums = numslices; nums >= -1.0; nums-=1.0)
     {
 
         nextPoseR = pre;
@@ -1221,7 +1320,7 @@ int DemoScripts::takeBreadPlate(int zee)
 
     double zoffs = 0.03;
 
-    RobotHead::getInstance()->lookAtThreaded("/map",-2.15,1.6,0.5,false);
+    RobotHead::getInstance()->lookAtThreaded("/map",-2.15,1.6,0.5);
 
     //OperateHandleController::plateTuckPose();
 
@@ -1246,7 +1345,7 @@ int DemoScripts::takeBreadPlate(int zee)
 
     OperateHandleController::singleSidedPick(1,start,end);
 
-    float offset = -.05;
+    double offset = -.05;
 
     tf::Stamped<tf::Pose> larm = RobotArm::getInstance(1)->getToolPose("/map");
     btVector3 pos = larm.getOrigin();
@@ -1256,7 +1355,7 @@ int DemoScripts::takeBreadPlate(int zee)
     larm.setOrigin(pos);
 
     //RobotHead::getInstance()->lookAtThreaded("/map",-2.3,1.9,.5,false);
-    RobotHead::getInstance()->lookAtThreaded("/l_gripper_tool_frame",0,0,0,false);
+    RobotHead::getInstance()->lookAtThreaded("/l_gripper_tool_frame",0,0,0);
 
 
     RobotArm::getInstance(1)->time_to_target = 3;
@@ -1304,7 +1403,7 @@ int DemoScripts::takeBreadPlate(int zee)
 
     //exit(0);
 
-    RobotHead::getInstance()->lookAtThreaded("/map",-2.26, 1.92,.5,false);
+    RobotHead::getInstance()->lookAtThreaded("/map",-2.26, 1.92,.5);
 
     OperateHandleController::plateAttackPose();
 
@@ -1316,7 +1415,7 @@ int DemoScripts::takeBreadPlate(int zee)
     //OperateHandleController::pickPlate(btVector3(-2.18 + offset - 0.025, 1.95, 0.865),.26);
     OperateHandleController::pickPlate(btVector3(-2.18 + offset - 0.025, 1.9, 0.865 + zoffs),.26);
 
-    RobotHead::getInstance()->lookAtThreaded("/map",-3.260, -1.76,.5,false);
+    RobotHead::getInstance()->lookAtThreaded("/map",-3.260, -1.76,.5);
 
     tf::Stamped<tf::Pose> basePos;
     RobotDriver::getInstance()->getRobotPose(basePos);

@@ -12,8 +12,8 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>http://ros.org/wiki/ias_drawer_executive</url>
-  <depend package="move_arm_msgs"/>
   <depend package="articulation_pr2"/>
+  <!--depend package="articulation_pr2_msgs"/-->
   <depend package="actionlib"/>
   <depend package="actionlib_msgs"/>
   <!--depend package="ar_pose"/-->
@@ -55,6 +55,10 @@
 
   <!-- needed for localization (make will produce pgm's from png's) -->
   <depend package="ias_maps"/>
+
+  <depend package="find_base_pose"/>
+
+  <depend package="pcl_ros"/>
 
   <export>
     <cpp cflags="-I${prefix}/include/" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lias_drawer_executive_library"/>

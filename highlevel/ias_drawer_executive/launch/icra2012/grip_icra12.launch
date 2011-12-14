@@ -1,0 +1,33 @@
+<launch>
+  <!--reactive approach-->
+
+  <include file="$(find ias_drawer_executive)/launch/icra2012/arm_ik_icra12.launch"/>
+  <include file="$(find ias_drawer_executive)/launch/icra2012/arm_ik_l_icra12.launch"/>
+
+
+  <node name="reactive_grasp_node_right" pkg="pr2_gripper_reactive_approach" 
+    type="reactive_grasp_server.py" args="r" respawn="false" output="screen">
+    <param name="use_slip_controller" value="true"/>
+  </node>
+  <node name="reactive_grasp_node_left" pkg="pr2_gripper_reactive_approach" 
+    type="reactive_grasp_server.py" args="l" respawn="false" output="screen">
+    <param name="use_slip_controller" value="true"/>
+  </node>
+
+<include file="$(find pr2_gripper_grasp_controller)/launch/both_grippers_finger_sensor_grasp_posture_action.launch"/>
+
+
+  <!-- load ik -->
+  <include file="$(find pr2_arm_navigation_kinematics)/launch/right_arm_collision_free_ik.launch"/>
+  <include file="$(find pr2_arm_navigation_kinematics)/launch/left_arm_collision_free_ik.launch"/>
+
+<!-- interpolated IK -->
+  <node name="interpolated_ik_node_right" pkg="interpolated_ik_motion_planner" 
+    type="interpolated_ik_motion_planner.py" args="r" respawn="false" machine="c2"/>
+  <node name="interpolated_ik_node_left" pkg="interpolated_ik_motion_planner" 
+    type="interpolated_ik_motion_planner.py" args="l" respawn="false" machine="c2"/>
+
+   <node name="gripper_controller_spawner" pkg="pr2_controller_manager" 
+         type="spawner" 
+         args="base_controller base_odometry head_camera_trigger head_traj_controller l_arm_cartesian_trajectory_controller l_arm_cartesian_pose_controller l_arm_controller l_forearm_cam_trigger l_gripper_sensor_controller laser_tilt_controller projector_controller projector_trigger prosilica_inhibit_projector_controller r_arm_cartesian_trajectory_controller r_arm_cartesian_pose_controller r_arm_controller r_forearm_cam_trigger r_gripper_sensor_controller torso_controller" />
+</launch>

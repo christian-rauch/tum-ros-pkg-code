@@ -65,19 +65,21 @@ public:
   static Gripper *getInstance(int side=0);
 
   //Open the gripper
-  void open(float amount = 0.09);
+  void openThreaded(double amount = 0.09);
+  void open(double amount = 0.09);
 
   //Close the gripper
-  void close(float amount = 0.00);
+  void closeThreaded(double amount = 0.00);
+  void close(double amount = 0.00);
 
     //Close the gripper
-  void closeHard(float amount = 0.00);
+  void closeHard(double amount = 0.00);
 
   void updatePressureZero();
 
-  void closeCompliant(float gain = 0.0001);
+  void closeCompliant(double gain = 0.0001);
 
-  float getAmountOpen();
+  double getAmountOpen();
 
 };
 

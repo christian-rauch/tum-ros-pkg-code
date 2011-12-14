@@ -30,6 +30,7 @@
 #include <ias_drawer_executive/OperateHandleController.h>
 #include <ias_drawer_executive/Torso.h>
 #include <ias_drawer_executive/RobotDriver.h>
+#include <ias_drawer_executive/Geometry.h>
 #include <ias_drawer_executive/Poses.h>
 #include <ias_drawer_executive/Perception3d.h>
 #include <ias_drawer_executive/RobotArm.h>
@@ -37,6 +38,7 @@
 #include <ias_drawer_executive/Gripper.h>
 #include <ias_drawer_executive/Head.h>
 #include <ias_drawer_executive/DemoScripts.h>
+#include <ias_drawer_executive/Current.h>
 #include <actionlib/server/simple_action_server.h>
 
 #include <ias_drawer_executive/OperateHandleAction.h>
@@ -89,7 +91,7 @@ public:
         aM.setOrigin(btVector3(position.pose.position.x, position.pose.position.y, position.pose.position.z));
         aM.setRotation(btQuaternion(position.pose.orientation.x,position.pose.orientation.y,position.pose.orientation.z,position.pose.orientation.w));
         tf::Stamped<tf::Pose> aMb;
-        aMb = RobotArm::getInstance(0)->getPoseIn("base_link",aM);
+        aMb = Geometry::getPoseIn("base_link",aM);
 
         int handle = OperateHandleController::maxHandle + 1;
         boost::thread t = boost::thread(&OperateHandleController::operateHandle,arm,aMb,0);
@@ -393,7 +395,7 @@ public:
 
         {
 
-            pr2_controllers_msgs::JointTrajectoryGoal goalB = RobotArm::getInstance(1)->lookAtMarker(Poses::prepDishL1,Poses::prepDishL1);
+            pr2_controllers_msgs::JointTrajectoryGoal goalB = RobotArm::getInstance(1)->twoPointTrajectory(Poses::prepDishL1,Poses::prepDishL1);
             boost::thread t3(&RobotArm::startTrajectory, RobotArm::getInstance(1), goalB,true);
 
             Torso *torso = Torso::getInstance();
@@ -402,8 +404,8 @@ public:
             //RobotDriver::getInstance()->moveBase();
 
             RobotArm::getInstance(0)->tucked = true;
-            float p[] = { 0.255, -0.571, -0.025, 1.000};
-            //float p[] = { 0.255, -0.571, -0.108, 0.994 };
+            double p[] = { 0.255, -0.571, -0.025, 1.000};
+            //double p[] = { 0.255, -0.571, -0.108, 0.994 };
             RobotDriver::getInstance()->moveBase(p);
 
             //t2.join();t3.join();
@@ -413,13 +415,13 @@ public:
 
 
             {
-                //float fridgeLink = atof(argv[2]);
-                //float fridgeLink = .1;
+                //double fridgeLink = atof(argv[2]);
+                //double fridgeLink = .1;
 
 
                 std::vector<int> arm;
                 std::vector<tf::Stamped<tf::Pose> > goal;
-                btVector3 result;
+                tf::Stamped<tf::Pose> result;
 
                 tf::Stamped<tf::Pose> p0;
                 p0.frame_id_="map";
@@ -534,8 +536,8 @@ public:
         //RobotHead::getInstance()->lookAt("/map",0.913379, 0.824588, 0.7);
 
         // at sink
-        //float target[4];       target[0] =-0.048;       target[1] = 1.029;       target[2] = 0;       target[3] = 1;
-        float target[] = {-0.129, 1.017, 0.018, 1.000};
+        //double target[4];       target[0] =-0.048;       target[1] = 1.029;       target[2] = 0;       target[3] = 1;
+        double target[] = {-0.129, 1.017, 0.018, 1.000};
         ROS_INFO("POSE IN BASE %f %f %f", target[0],target[1], target[2]);
 
 
@@ -544,11 +546,11 @@ public:
 
         //RobotArm::getInstance(0)->tucked = true;
 
-        pr2_controllers_msgs::JointTrajectoryGoal goalA = RobotArm::getInstance(0)->lookAtMarker(Poses::prepDishR1,Poses::prepDishR1);
-        pr2_controllers_msgs::JointTrajectoryGoal goalB = RobotArm::getInstance(1)->lookAtMarker(Poses::prepDishL1,Poses::prepDishL1);
+        pr2_controllers_msgs::JointTrajectoryGoal goalA = RobotArm::getInstance(0)->twoPointTrajectory(Poses::prepDishR1,Poses::prepDishR1);
+        pr2_controllers_msgs::JointTrajectoryGoal goalB = RobotArm::getInstance(1)->twoPointTrajectory(Poses::prepDishL1,Poses::prepDishL1);
         boost::thread t2(&RobotArm::startTrajectory, RobotArm::getInstance(0), goalA,true);
         boost::thread t3(&RobotArm::startTrajectory, RobotArm::getInstance(1), goalB,true);
-        //RobotArm::getInstance(1)->startTrajectory(RobotArm::getInstance(1)->lookAtMarker(Poses::prepDishL0,Poses::prepDishL1));
+        //RobotArm::getInstance(1)->startTrajectory(RobotArm::getInstance(1)->twoPointTrajectory(Poses::prepDishL0,Poses::prepDishL1));
         t2.join();
         t3.join();
 
@@ -569,9 +571,9 @@ public:
 
 
         //bin/ias_drawer_executi2 0 0.65, -0.4, 1.15 0.651, 0.295, -0.621, -0.322 ; bin/ias_drawer_executive -2 1 0.65, 0.4, 1.15 -0.295, 0.621, -0.322, 0.651
-        //RobotArm::getInstance(0)->startTrajectory(RobotArm::getInstance(0)->lookAtMarker(Poses::prepDishR0,Poses::prepDishR1));
-        //boost::thread t2(&RobotArm::startTrajectory, RobotArm::getInstance(0), RobotArm::getInstance(0)->lookAtMarker(Poses::prepDishR0,Poses::prepDishR1));
-        //boost::thread t3(&RobotArm::startTrajectory, RobotArm::getInstance(1), RobotArm::getInstance(1)->lookAtMarker(Poses::prepDishL0,Poses::prepDishL1));
+        //RobotArm::getInstance(0)->startTrajectory(RobotArm::getInstance(0)->twoPointTrajectory(Poses::prepDishR0,Poses::prepDishR1));
+        //boost::thread t2(&RobotArm::startTrajectory, RobotArm::getInstance(0), RobotArm::getInstance(0)->twoPointTrajectory(Poses::prepDishR0,Poses::prepDishR1));
+        //boost::thread t3(&RobotArm::startTrajectory, RobotArm::getInstance(1), RobotArm::getInstance(1)->twoPointTrajectory(Poses::prepDishL0,Poses::prepDishL1));
 
         //RobotArm::getInstance(0)->universal_move_toolframe_ik(0.65, -0.4, 1.15, 0.651, 0.295, -0.621, -0.322);
         //RobotArm::getInstance(1)->universal_move_toolframe_ik(0.65, 0.4, 1.15, -0.295, 0.621, -0.322, 0.651);
@@ -659,6 +661,34 @@ int main(int argc, char** argv)
     GenericAction serveToTable("serve_to_table", &DemoScripts::serveToTable);
 
     GenericAction takePlateFromIsland("take_plate_from_island", &DemoScripts::takePlateFromIsland);
+
+
+
+    //!make popcorn
+    GenericAction  getPotOut_openDrawer("get_pot_out_open_drawer",&Current::getPotOut_openDrawer);
+
+    GenericAction  getPotOut_pickPlacePot("get_pot_out_pick_place_pot",&Current::getPotOut_pickPlacePot);
+
+    GenericAction  manipulateKnob("manipulate_knob",&Current::manipulateKnob);
+
+    GenericAction  openDrawerUnderOven("open_drawer_under_oven",&Current::openDrawerUnderOven);
+
+    GenericAction  getLidOut("get_lid_out",&Current::getLidOut);
+
+    GenericAction  getBowlOut("get_bowl_out",&Current::getBowlOut);
+
+    GenericAction  closeDrawerUnderOven("close_drawer_under_oven",&Current::closeDrawerUnderOven);
+
+    GenericAction  pourPopCorn("pour_popcorn",&Current::pourPopCorn);
+
+    GenericAction  putLidOn("put_lid_on",&Current::putLidOn);
+
+    GenericAction  removeLid("remove_lid",&Current::removeLid);
+
+    GenericAction  takePotFromIsland("take_pot_from_island",&Current::takePotFromIsland);
+
+    GenericAction  pourReadyPopcorn("pour_ready_popcorn",&Current::pourReadyPopcorn);
+
 
     OpenContainerAction openContainer("open_container_action");
     CloseContainerAction closeContainer("close_container_action");

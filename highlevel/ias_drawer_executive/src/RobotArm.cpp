@@ -29,12 +29,17 @@
 
 #include <ias_drawer_executive/RobotArm.h>
 #include <ias_drawer_executive/Pressure.h>
+#include <ias_drawer_executive/Geometry.h>
+
 //#include <ias_drawer_executive/Poses.h>
 #include <ias_drawer_executive/RobotDriver.h>
 #include <boost/thread.hpp>
 #include <visualization_msgs/Marker.h>
 #include <kinematics_msgs/GetKinematicSolverInfo.h>
 #include <kinematics_msgs/GetPositionFK.h>
+
+
+actionlib::SimpleActionClient<find_base_pose::FindBasePoseAction> *RobotArm::ac_fbp_ = NULL;
 
 
 void RobotArm::jointStateCallback(const  pr2_controllers_msgs::JointTrajectoryControllerState::ConstPtr& msg)
@@ -54,34 +59,51 @@ void RobotArm::jointStateCallback(const  pr2_controllers_msgs::JointTrajectoryCo
     mutex_.unlock();
 }
 
-//! Initialize the action client and wait for action server to come up
-RobotArm::RobotArm(int side)
+void RobotArm::init()
 {
     if (!listener_)
         listener_ = new tf::TransformListener();
 
+    if (!ac_fbp_)
+    {
+        ac_fbp_ = new actionlib::SimpleActionClient<find_base_pose::FindBasePoseAction>("find_base_pose_action",true);
+        ROS_INFO("waiting for fbp server");
+        ac_fbp_->waitForServer(); //will wait for infinite time
+        ROS_INFO("done");
+    }
+
+}
+
+//! Initialize the action client and wait for action server to come up
+RobotArm::RobotArm(int side)
+{
+
+    init();
 
     retries = 0;
 
     raise_elbow = false;
-    preset_angle = 1.4;
+    preset_angle = 1.9;
 
     tucked = false;
     side_ = side;
     // tell the action client that we want to spin a thread by default
     traj_client_ = new TrajClient((side == 0) ? "r_arm_controller/joint_trajectory_action" : "l_arm_controller/joint_trajectory_action", true);
     // wait for action server to come up
-    while (ros::ok() & !traj_client_->waitForServer(ros::Duration(5.0)))
-    {
-        ROS_INFO("Waiting for the joint_trajectory_action server");
-    }
+    traj_client_->waitForServer(ros::Duration(1));
+    //{
+    //  ROS_INFO("Waiting for the joint_trajectory_action server");
+    //}
 
     ac_ = new actionlib::SimpleActionClient<pr2_common_action_msgs::ArmMoveIKAction>((side == 0) ? "r_arm_ik" : "l_arm_ik", true);
 
-    while (ros::ok() && !ac_->waitForServer(ros::Duration(5.0)))
-    {
-        ROS_INFO("Waiting for the move ik server %s", (side == 0) ? "r_arm_ik" : "l_arm_ik");
-    }
+
+    //while (ros::ok() && !
+    ac_->waitForServer(ros::Duration(1));
+    //)
+    //{
+    //ROS_INFO("Waiting for the move ik server %s", (side == 0) ? "r_arm_ik" : "l_arm_ik");
+    //}
 
     for (int i = 0; i < 7; ++i)
         jointState[i] = 0.0f;
@@ -96,13 +118,23 @@ RobotArm::RobotArm(int side)
 
     evil_switch =false;
 
-    ros::service::waitForService((side_==0) ? "pr2_right_arm_kinematics/get_fk_solver_info" : "pr2_left_arm_kinematics/get_fk_solver_info");
-    ros::service::waitForService((side_==0) ? "pr2_right_arm_kinematics/get_fk" : "pr2_left_arm_kinematics/get_fk");
+    ros::service::waitForService((side_==0) ? "pr2_right_arm_kinematics/get_fk_solver_info" : "pr2_left_arm_kinematics/get_fk_solver_info",1);
+    ros::service::waitForService((side_==0) ? "pr2_right_arm_kinematics/get_fk" : "pr2_left_arm_kinematics/get_fk",1);
+
+    ROS_INFO("WAITING FOR FBP AS");
+    ac_fbp_->waitForServer(ros::Duration(1)); //will wait for infinite time
 
     query_client = n_.serviceClient<kinematics_msgs::GetKinematicSolverInfo>((side_==0) ? "pr2_right_arm_kinematics/get_fk_solver_info" : "pr2_left_arm_kinematics/get_fk_solver_info");
     fk_client = n_.serviceClient<kinematics_msgs::GetPositionFK>((side_==0)? "pr2_right_arm_kinematics/get_fk" : "pr2_left_arm_kinematics/get_fk");
 
     excludeBaseProjectionFromWorkspace = false;
+
+    wrist_frame = (side == 0) ? "r_wrist_roll_link" : "l_wrist_roll_link";
+    tool_frame = (side == 0) ? "r_gripper_tool_frame" : "l_gripper_tool_frame";
+
+    tool2wrist_ = Geometry::getRelativeTransform(tool_frame.c_str(),wrist_frame.c_str());
+    wrist2tool_ = Geometry::getRelativeTransform(wrist_frame.c_str(),tool_frame.c_str());
+
 }
 
 //! Clean up the action client
@@ -164,105 +196,7 @@ void RobotArm::getJointStateErr(double state[])
 }
 
 
-
-tf::Stamped<tf::Pose> RobotArm::getRelativeTransform(const char source_frameid[], const char target_frameid[])
-{
-    tf::StampedTransform transform;
-
-    listener_->waitForTransform(source_frameid, target_frameid,
-                                ros::Time(), ros::Duration(10.0));
-
-    try
-    {
-        listener_->lookupTransform(std::string(source_frameid), std::string(target_frameid), ros::Time(), transform);
-    }
-    catch (tf::TransformException ex)
-    {
-        ROS_ERROR("getTransformIn %s",ex.what());
-    }
-
-    tf::Stamped<tf::Pose> ret;
-    ret.frame_id_ = transform.frame_id_;
-    ret.stamp_ = transform.stamp_;
-    ret.setOrigin(transform.getOrigin());
-    ret.setRotation(transform.getRotation());
-
-    return ret;
-}
-
-tf::Stamped<tf::Pose> RobotArm::getTransformIn(const char target_frame[], tf::Stamped<tf::Pose>src)
-{
-    tf::Stamped<tf::Pose> transform;
-
-    listener_->waitForTransform(src.frame_id_, target_frame,
-                                ros::Time(0), ros::Duration(10.0));
-    try
-    {
-        listener_->transformPose("base_link", src, transform);
-    }
-    catch (tf::TransformException ex)
-    {
-        ROS_ERROR("getTransformIn %s",ex.what());
-    }
-    tf::Stamped<tf::Pose> ret;
-    ret.frame_id_ = transform.frame_id_;
-    ret.stamp_ = transform.stamp_;
-    ret.setOrigin(transform.getOrigin());
-    ret.setRotation(transform.getRotation());
-
-    return ret;
-}
-
 tf::TransformListener *RobotArm::listener_=0;
-
-tf::Stamped<tf::Pose> RobotArm::scaleStampedPose(const tf::Stamped<tf::Pose> &in, double scale)
-{
-    tf::Stamped<tf::Pose>  ret;
-    ret.setRotation(btQuaternion::getIdentity().slerp(in.getRotation(), scale));
-    ret.setOrigin(in.getOrigin() * scale);
-    return ret;
-}
-
-tf::Stamped<tf::Pose> RobotArm::scaleStampedTransform(const tf::Stamped<tf::Pose> &in, double scale)
-{
-    tf::Stamped<tf::Pose>  ret;
-    ret.setRotation(btQuaternion::getIdentity().slerp(in.getRotation(), scale));
-    ret.setOrigin(in.getOrigin() * scale);
-    return ret;
-}
-
-tf::Stamped<tf::Pose> RobotArm::getPoseIn(const char target_frame[], tf::Stamped<tf::Pose>src)
-{
-
-    if (!listener_)
-        listener_ = new tf::TransformListener();
-
-    // tf::Stamped<tf::Pose>
-    tf::Stamped<tf::Pose> transform;
-    //this shouldnt be here TODO
-    src.stamp_ = ros::Time(0);
-
-    listener_->waitForTransform(src.frame_id_, target_frame,
-                                ros::Time(0), ros::Duration(30.0));
-    bool transformOk = false;
-    while (!transformOk)
-    {
-        try
-        {
-            transformOk = true;
-            listener_->transformPose(target_frame, src, transform);
-        }
-        catch (tf::TransformException ex)
-        {
-            ROS_ERROR("getPoseIn %s",ex.what());
-            // dirty:
-            src.stamp_ = ros::Time(0);
-            transformOk = false;
-        }
-        ros::spinOnce();
-    }
-    return transform;
-}
 
 //run inverse kinematics on a PoseStamped (7-dof pose
 //(position + quaternion orientation) + header specifying the
@@ -273,20 +207,22 @@ bool RobotArm::run_ik(geometry_msgs::PoseStamped pose, double start_angles[7],
                       double solution[7], std::string link_name)
 {
 
-    if (excludeBaseProjectionFromWorkspace)
-    {
-
-        //bool poseInsideFootprint = false;
-        float padding = 0.05;
-        float x = pose.pose.position.x;
-        float y = pose.pose.position.y;
-        // does target pose lie inside projection of base footprint?
-        if ((x < .325 + padding) && (x > -.325 - padding) && (y < .325 + padding) && (y > -.325 - padding))
+    if (0)
+        if (excludeBaseProjectionFromWorkspace)
         {
-            //poseInsideFootprint = true;
-            return false;
+
+            //bool poseInsideFootprint = false;
+            double padding = 0.05;
+            double x = pose.pose.position.x;
+            double y = pose.pose.position.y;
+            // does target pose lie inside projection of base footprint?
+            if ((x < .325 + padding) && (x > -.325 - padding) && (y < .325 + padding) && (y > -.325 - padding))
+            {
+                //poseInsideFootprint = true;
+                ROS_ERROR("REJECTED BECAUSE OF COLLISION WITH BASE PROJECTION");
+                return false;
+            }
         }
-    }
 
 
     kinematics_msgs::GetPositionIK::Request  ik_request;
@@ -330,7 +266,7 @@ bool RobotArm::run_ik(geometry_msgs::PoseStamped pose, double start_angles[7],
         ik_request.ik_request.robot_state.joint_state.name.push_back("l_wrist_roll_joint");
     }
 
-    ik_request.ik_request.ik_link_name = link_name;
+    ik_request.ik_request.ik_link_name = wrist_frame;
 
     ik_request.ik_request.pose_stamped = pose;
     ik_request.ik_request.ik_seed_state.joint_state.position.resize(7);
@@ -344,10 +280,12 @@ bool RobotArm::run_ik(geometry_msgs::PoseStamped pose, double start_angles[7],
 
     //ROS_INFO("request pose: %0.3f %0.3f %0.3f %0.3f %0.3f %0.3f %0.3f", pose.pose.position.x, pose.pose.position.y, pose.pose.position.z, pose.pose.orientation.x, pose.pose.orientation.y, pose.pose.orientation.z, pose.pose.orientation.w);
 
+    ros::service::waitForService((side_==0) ? "pr2_right_arm_kinematics/get_ik" : "pr2_left_arm_kinematics/get_ik",1);
+
     bool ik_service_call = ik_client.call(ik_request,ik_response);
     if (!ik_service_call)
     {
-        ROS_ERROR("IK service call failed! is ik service running? /pr2_right_arm_kinematics/get_ik");
+        ROS_ERROR("IK service call failed! is ik service running? %s",side_ ? "/pr2_left_arm_kinematics/get_ik" : "/pr2_right_arm_kinematics/get_ik");
         return 0;
     }
     if (ik_response.error_code.val == ik_response.error_code.SUCCESS)
@@ -358,10 +296,23 @@ bool RobotArm::run_ik(geometry_msgs::PoseStamped pose, double start_angles[7],
         }
         //ROS_INFO("solution angles: %0.3f %0.3f %0.3f %0.3f %0.3f %0.3f %0.3f",solution[0],solution[1], solution[2],solution[3],solution[4],solution[5],solution[6]);
         //ROS_INFO("IK service call succeeded");
-        return 1;
+        return true;
     }
     //ROS_INFO("IK service call error code: %d", ik_response.error_code.val);
-    return 0;
+    return false;
+}
+
+bool RobotArm::run_ik(tf::Stamped<tf::Pose> pose, double start_angles[7],double solution[7], std::string link_name)
+{
+    if (link_name == tool_frame) {
+        //ROS_INFO("Converting to wrist");
+        pose = tool2wrist(pose);
+    }
+    pose = Geometry::getPoseIn("base_link", pose);
+    printPose(pose);
+    geometry_msgs::PoseStamped ps;
+    tf::poseStampedTFToMsg(pose, ps);
+    return run_ik(ps,start_angles,solution,wrist_frame);
 }
 
 
@@ -395,7 +346,20 @@ void RobotArm::startTrajectory(pr2_controllers_msgs::JointTrajectoryGoal goal, b
 //      ROS_INFO("traj action failed");
 }
 
-pr2_controllers_msgs::JointTrajectoryGoal RobotArm::goalTraj(float *poseA, float dur)
+pr2_controllers_msgs::JointTrajectoryGoal RobotArm::goalTraj(double a0, double a1, double a2, double a3, double a4, double a5, double a6, double dur)
+{
+    double a[7];
+    a[0] = a0;
+    a[1] = a1;
+    a[2] = a2;
+    a[3] = a3;
+    a[4] = a4;
+    a[5] = a5;
+    a[6] = a6;
+    return goalTraj(a, dur);
+}
+
+pr2_controllers_msgs::JointTrajectoryGoal RobotArm::goalTraj(double *poseA, double dur)
 {
 
     //ROS_INFO("JOINT TRAJECTORY CONTROL %s ARM", side_ == 0 ? "right" : "left");
@@ -444,7 +408,7 @@ pr2_controllers_msgs::JointTrajectoryGoal RobotArm::goalTraj(float *poseA, float
     return goal;
 }
 
-pr2_controllers_msgs::JointTrajectoryGoal RobotArm::goalTraj(float *poseA, float *vel)
+pr2_controllers_msgs::JointTrajectoryGoal RobotArm::goalTraj(double *poseA, double *vel)
 {
 
     //ROS_INFO("JOINT TRAJECTORY CONTROL %s ARM", side_ == 0 ? "right" : "left");
@@ -494,14 +458,126 @@ pr2_controllers_msgs::JointTrajectoryGoal RobotArm::goalTraj(float *poseA, float
     return goal;
 }
 
+pr2_controllers_msgs::JointTrajectoryGoal RobotArm::multiPointTrajectory(const std::vector<std::vector<double> > &poses, const double &duration)
+{
 
-//! Generates a simple trajectory with two waypoints, used as an example
-/*! Note that this trajectory contains two waypoints, joined together
-    as a single trajectory. Alternatively, each of these waypoints could
-    be in its own trajectory - a trajectory can have one or more waypoints
-    depending on the desired application.
-*/
-pr2_controllers_msgs::JointTrajectoryGoal RobotArm::lookAtMarker(float *poseA, float *poseB)
+    ROS_INFO("JOINT TRAJECTORY CONTROL %s ARM", side_ == 0 ? "right" : "left");
+
+    pr2_controllers_msgs::JointTrajectoryGoal goal;
+
+    // First, the joint names, which apply to all waypoints
+    if (side_==0)
+    {
+        goal.trajectory.joint_names.push_back("r_shoulder_pan_joint");
+        goal.trajectory.joint_names.push_back("r_shoulder_lift_joint");
+        goal.trajectory.joint_names.push_back("r_upper_arm_roll_joint");
+        goal.trajectory.joint_names.push_back("r_elbow_flex_joint");
+        goal.trajectory.joint_names.push_back("r_forearm_roll_joint");
+        goal.trajectory.joint_names.push_back("r_wrist_flex_joint");
+        goal.trajectory.joint_names.push_back("r_wrist_roll_joint");
+    }
+    else
+    {
+        goal.trajectory.joint_names.push_back("l_shoulder_pan_joint");
+        goal.trajectory.joint_names.push_back("l_shoulder_lift_joint");
+        goal.trajectory.joint_names.push_back("l_upper_arm_roll_joint");
+        goal.trajectory.joint_names.push_back("l_elbow_flex_joint");
+        goal.trajectory.joint_names.push_back("l_forearm_roll_joint");
+        goal.trajectory.joint_names.push_back("l_wrist_flex_joint");
+        goal.trajectory.joint_names.push_back("l_wrist_roll_joint");
+    }
+
+    // We will have two waypoints in this goal trajectory
+    goal.trajectory.points.resize(poses.size());
+
+    for (size_t ind = 0; ind < poses.size(); ind++)
+    {
+
+        goal.trajectory.points[ind].positions.resize(7);
+        goal.trajectory.points[ind].velocities.resize(7);
+
+        ros::Duration timetonext = ros::Duration(duration / ((double) poses.size()));
+
+        for (size_t j = 0; j < 7; ++j)
+        {
+            goal.trajectory.points[ind].positions[j] = poses[ind][j];
+            if (ind == poses.size() -1)
+                goal.trajectory.points[ind].velocities[j] = 0.0;
+            else
+                goal.trajectory.points[ind].velocities[j] = (poses[ind + 1][j] - poses[ind][j]) / timetonext.toSec();
+        }
+        // To be reached 1 second after starting along the trajectory
+        goal.trajectory.points[ind].time_from_start = ros::Duration((ind * duration) / ((double) poses.size()));
+    }
+
+    //we are done; return the goal
+    return goal;
+}
+
+pr2_controllers_msgs::JointTrajectoryGoal RobotArm::multiPointTrajectory(const std::vector<std::vector<double> > &poses, const std::vector<double> &duration)
+{
+
+    ROS_INFO("JOINT TRAJECTORY CONTROL %s ARM", side_ == 0 ? "right" : "left");
+
+    pr2_controllers_msgs::JointTrajectoryGoal goal;
+
+    // First, the joint names, which apply to all waypoints
+    if (side_==0)
+    {
+        goal.trajectory.joint_names.push_back("r_shoulder_pan_joint");
+        goal.trajectory.joint_names.push_back("r_shoulder_lift_joint");
+        goal.trajectory.joint_names.push_back("r_upper_arm_roll_joint");
+        goal.trajectory.joint_names.push_back("r_elbow_flex_joint");
+        goal.trajectory.joint_names.push_back("r_forearm_roll_joint");
+        goal.trajectory.joint_names.push_back("r_wrist_flex_joint");
+        goal.trajectory.joint_names.push_back("r_wrist_roll_joint");
+    }
+    else
+    {
+        goal.trajectory.joint_names.push_back("l_shoulder_pan_joint");
+        goal.trajectory.joint_names.push_back("l_shoulder_lift_joint");
+        goal.trajectory.joint_names.push_back("l_upper_arm_roll_joint");
+        goal.trajectory.joint_names.push_back("l_elbow_flex_joint");
+        goal.trajectory.joint_names.push_back("l_forearm_roll_joint");
+        goal.trajectory.joint_names.push_back("l_wrist_flex_joint");
+        goal.trajectory.joint_names.push_back("l_wrist_roll_joint");
+    }
+
+    // We will have two waypoints in this goal trajectory
+    goal.trajectory.points.resize(poses.size());
+
+    for (size_t ind = 0; ind < poses.size(); ind++)
+    {
+
+        ros::Duration timetonext = ros::Duration(duration[ind + 1] - duration[ind]);
+
+        goal.trajectory.points[ind].positions.resize(7);
+        goal.trajectory.points[ind].velocities.resize(7);
+        for (size_t j = 0; j < 7; ++j)
+        {
+            goal.trajectory.points[ind].positions[j] = poses[ind][j];
+            if (ind == poses.size() -1)
+                goal.trajectory.points[ind].velocities[j] = 0;
+            else
+                goal.trajectory.points[ind].velocities[j] = (poses[ind + 1][j] - poses[ind][j]) / timetonext.toSec();
+        }
+        // To be reached 1 second after starting along the trajectory
+        goal.trajectory.points[ind].time_from_start = ros::Duration(duration[ind]);
+    }
+
+    //we are done; return the goal
+    return goal;
+}
+
+pr2_controllers_msgs::JointTrajectoryGoal RobotArm::multiPointTrajectory(const std::vector<tf::Stamped<tf::Pose> > &poses,  const std::vector<double> &duration)
+{
+    std::vector<std::vector<double> > jointstates;
+    pose2Joint(poses, jointstates);
+    return multiPointTrajectory(jointstates,duration);
+}
+
+
+pr2_controllers_msgs::JointTrajectoryGoal RobotArm::twoPointTrajectory(double *poseA, double *poseB)
 {
 
     ROS_INFO("JOINT TRAJECTORY CONTROL %s ARM", side_ == 0 ? "right" : "left");
@@ -571,74 +647,12 @@ actionlib::SimpleClientGoalState RobotArm::getState()
     return traj_client_->getState();
 }
 
-void RobotArm::printPose(tf::Stamped<tf::Pose> &toolTargetPose)
+void RobotArm::printPose(const tf::Stamped<tf::Pose> &toolTargetPose)
 {
-    ROS_INFO("%f %f %f %f %f %f %f\n",
+    ROS_INFO("%f %f %f %f %f %f %f %s\n",
              toolTargetPose.getOrigin().x(),  toolTargetPose.getOrigin().y(),  toolTargetPose.getOrigin().z(),toolTargetPose.getRotation().x(),
-             toolTargetPose.getRotation().y(),toolTargetPose.getRotation().z(),toolTargetPose.getRotation().w());
-    ROS_INFO("Frame: %s", toolTargetPose.frame_id_.c_str());
-}
+             toolTargetPose.getRotation().y(),toolTargetPose.getRotation().z(),toolTargetPose.getRotation().w(),toolTargetPose.frame_id_.c_str());
 
-/*
-void RobotArm::getToolPose(tf::Stamped<tf::Pose> &marker)
-{
-    //tf::TransformListener listener;
-    ros::Rate rate(100.0);
-
-    tf::StampedTransform transform;
-    transform.setOrigin(btVector3(0,0,0));
-    bool transformOk = false;
-    while (ros::ok() && ((!transformOk) || (transform.getOrigin().z() < 0.01)))
-    {
-        transformOk = true;
-        try
-        {
-            listener_->lookupTransform("base_link", (side_==0) ? "r_gripper_tool_frame" : "l_gripper_tool_frame",ros::Time(0), transform);
-        }
-        catch (tf::TransformException ex)
-        {
-            ROS_ERROR("getToolPose %s",ex.what());
-            transformOk = false;
-        }
-        rate.sleep();
-    }
-    marker.frame_id_ = transform.frame_id_;
-    marker.setOrigin(transform.getOrigin());
-    marker.setRotation(transform.getRotation());
-    marker.stamp_ = transform.stamp_;
-}
-*/
-
-
-
-tf::Stamped<tf::Pose> RobotArm::getTransform(const char baseframe[],  const char toolframe[])
-{
-    //tf::TransformListener listener;
-    ros::Rate rate(100.0);
-
-    tf::StampedTransform transform;
-    bool transformOk = false;
-    while (ros::ok() && (!transformOk))
-    {
-        transformOk = true;
-        try
-        {
-            listener_->lookupTransform(baseframe, toolframe,ros::Time(0), transform);
-        }
-        catch (tf::TransformException ex)
-        {
-            ROS_ERROR("getTransform %s",ex.what());
-            transformOk = false;
-        }
-        rate.sleep();
-    }
-    tf::Stamped<tf::Pose> ret;
-    ret.frame_id_ = transform.frame_id_;
-    ret.stamp_ = transform.stamp_;
-    ret.setOrigin(transform.getOrigin());
-    ret.setRotation(transform.getRotation());
-
-    return ret;
 }
 
 
@@ -730,99 +744,18 @@ void RobotArm::getWristPose(tf::Stamped<tf::Pose> &marker, const char frame[])
 }
 
 
-
-tf::Stamped<tf::Pose> RobotArm::rotateAroundBaseAxis(tf::Stamped<tf::Pose> toolPose, float r_x,float r_y,float r_z)
-{
-    tf::Stamped<tf::Pose> toolRotPlus;
-    toolRotPlus.setOrigin(btVector3(0,0,0));
-    toolRotPlus.setRotation(btQuaternion(r_x,r_y,r_z));
-    btVector3 orig = toolPose.getOrigin();
-    toolPose.setOrigin(btVector3(0,0,0));
-    toolRotPlus *= toolPose;
-    toolPose.setOrigin(orig);
-    toolPose.setRotation(toolRotPlus.getRotation());
-    return toolPose;
-}
-
-tf::Stamped<tf::Pose> RobotArm::rotateAroundToolframeAxis(tf::Stamped<tf::Pose> toolPose, float r_x,float r_y,float r_z)
-{
-    tf::Stamped<tf::Pose> toolRotPlus;
-    toolRotPlus.setOrigin(btVector3(0,0,0));
-    toolRotPlus.setRotation(btQuaternion(r_x,r_y,r_z));
-    btVector3 orig = toolPose.getOrigin();
-    toolPose *= toolRotPlus;
-    return toolPose;
-}
-
-
-tf::Stamped<tf::Pose> RobotArm::rotateAroundPose(tf::Stamped<tf::Pose> toolPose, tf::Stamped<tf::Pose> pivot, float r_x, float r_y, float r_z)
-{
-    btTransform curr = toolPose;
-    btTransform pivo = pivot;
-
-    curr = pivo.inverseTimes(curr);
-
-    btQuaternion qa;
-    qa.setEulerZYX(r_z,r_y,r_x);
-
-    btTransform rot;
-    rot.setOrigin(btVector3(0,0,0));
-    rot.setRotation(qa);
-    curr = rot * curr;
-    curr = pivo * curr;
-
-    tf::Stamped<tf::Pose> act;
-    act.frame_id_ = toolPose.frame_id_;
-    act.setOrigin(curr.getOrigin());
-    act.setRotation(curr.getRotation());
-
-    return act;
-}
-
-
-tf::Stamped<tf::Pose> RobotArm::rotateAroundPose(tf::Stamped<tf::Pose> toolPose, tf::Stamped<tf::Pose> pivot, btQuaternion qa)
-{
-    btTransform curr = toolPose;
-    btTransform pivo = pivot;
-
-    curr = pivo.inverseTimes(curr);
-
-    btTransform rot;
-    rot.setOrigin(btVector3(0,0,0));
-    rot.setRotation(qa);
-    curr = rot * curr;
-    curr = pivo * curr;
-
-    tf::Stamped<tf::Pose> act;
-    act.frame_id_ = toolPose.frame_id_;
-    act.setOrigin(curr.getOrigin());
-    act.setRotation(curr.getRotation());
-
-    return act;
-}
-
-
-bool RobotArm::rotate_toolframe_ik(float r_x, float r_y, float r_z)
+tf::Stamped<tf::Pose> RobotArm::rotate_toolframe_ik_p(double r_x, double r_y, double r_z)
 {
     //ROS_INFO("ROTATING TOOLFRAME %f %f %f", r_x, r_y, r_z);
     tf::Stamped<tf::Pose> toolTargetPose;
     tf::Stamped<tf::Pose> trans;
     getToolPose(trans);
+    toolTargetPose = trans;
     toolTargetPose.setOrigin(trans.getOrigin());
     toolTargetPose.setRotation(trans.getRotation());
 
-    tf::Stamped<tf::Pose> wrist2tool;
-
-    if (side_==0)
-        wrist2tool.frame_id_ = "r_wrist_roll_link";
-    else
-        wrist2tool.frame_id_ = "l_wrist_roll_link";
-    wrist2tool.stamp_ = ros::Time();
-    wrist2tool.setOrigin(btVector3(-.18,0,0));
-    wrist2tool.setRotation(btQuaternion(0,0,0,1));
-
     tf::Stamped<tf::Pose> toolTargetPoseRotPlus = toolTargetPose;
-    toolTargetPose *= wrist2tool;
+    toolTargetPose *= wrist2tool_;
 
     // printPose(toolTargetPose);
 
@@ -832,7 +765,14 @@ bool RobotArm::rotate_toolframe_ik(float r_x, float r_y, float r_z)
     toolRotPlus.setRotation(btQuaternion(r_x,r_y,r_z));
 
     toolTargetPoseRotPlus*=toolRotPlus;
-    toolTargetPoseRotPlus*=wrist2tool;
+    toolTargetPoseRotPlus*=wrist2tool_;
+
+    return toolTargetPoseRotPlus;
+}
+
+bool RobotArm::rotate_toolframe_ik(double r_x, double r_y, double r_z)
+{
+    tf::Stamped<tf::Pose> toolTargetPoseRotPlus = rotate_toolframe_ik_p(r_x, r_y, r_z);
 
     return move_ik(toolTargetPoseRotPlus.getOrigin().x(),toolTargetPoseRotPlus.getOrigin().y(),toolTargetPoseRotPlus.getOrigin().z(),
                    toolTargetPoseRotPlus.getRotation().x(),toolTargetPoseRotPlus.getRotation().y(),toolTargetPoseRotPlus.getRotation().z(),toolTargetPoseRotPlus.getRotation().w(),0.1);
@@ -845,7 +785,7 @@ bool RobotArm::move_toolframe_ik_pose(tf::Stamped<tf::Pose> toolTargetPose)
 {
     tf::Stamped<tf::Pose> toolTargetPoseWristBase;
 
-    toolTargetPoseWristBase = getPoseIn("base_link", toolTargetPose);
+    toolTargetPoseWristBase = Geometry::getPoseIn("base_link", toolTargetPose);
     toolTargetPoseWristBase = tool2wrist(toolTargetPoseWristBase);
 
     //printPose(toolTargetPoseWristBase);
@@ -858,7 +798,7 @@ bool RobotArm::move_toolframe_ik_pose(tf::Stamped<tf::Pose> toolTargetPose)
 }
 
 //moves the toolframe to the given position
-bool RobotArm::move_toolframe_ik(float x, float y, float z, float ox, float oy, float oz, float ow)
+bool RobotArm::move_toolframe_ik(double x, double y, double z, double ox, double oy, double oz, double ow)
 {
     tf::Stamped<tf::Pose> toolTargetPose;
 
@@ -895,7 +835,7 @@ void RobotArm::stabilize_grip()
 {
     RobotArm *arm = this;
 
-    float oldtime = time_to_target;
+    double oldtime = time_to_target;
     time_to_target = 1.2;
 
     Pressure *p = Pressure::getInstance(side_);
@@ -913,10 +853,10 @@ void RobotArm::stabilize_grip()
     {
         rate.sleep();
         ros::spinOnce();
-        float r[2],l[2];
+        double r[2],l[2];
         p->getCenter(r,l);
 
-        float d[2];
+        double d[2];
         d[0] = r[0] - l[0];
         d[1] = r[1] - l[1];
 
@@ -934,7 +874,7 @@ void RobotArm::stabilize_grip()
             pGain = optpGain;
         }
 
-        float k = d[1];
+        double k = d[1];
         double current = 0;
         if (k > 1)
             k = 1;
@@ -980,8 +920,16 @@ void RobotArm::stabilize_grip()
 }
 
 
+bool RobotArm::move_ik(tf::Stamped<tf::Pose> targetPose, double time)
+{
+
+    ROS_INFO("MOVE TIME %f", time);
+    tf::Stamped<tf::Pose> inbase = Geometry::getPoseIn("base_link", targetPose);
+    return move_ik(inbase.getOrigin().x(), inbase.getOrigin().y(), inbase.getOrigin().z(), inbase.getRotation().x(), inbase.getRotation().y(), inbase.getRotation().z(), inbase.getRotation().w(), time);
+}
+
 // rosrun tf tf_echo /base_link /r_wrist_roll_link -> position
-bool RobotArm::move_ik(float x, float y, float z, float ox, float oy, float oz, float ow, float time)
+bool RobotArm::move_ik(double x, double y, double z, double ox, double oy, double oz, double ow, double time)
 {
 
     ROS_INFO("%s arm move ik action started %f %f %f %f %f %f %f (time %f)",((side_==0) ? "right" : "left"), x, y, z, ox, oy, oz, ow, time);
@@ -1107,37 +1055,30 @@ RobotArm *RobotArm::instance[] = {0,0};
 
 tf::Stamped<tf::Pose> RobotArm::tool2wrist(tf::Stamped<tf::Pose> toolPose)
 {
-    tf::Stamped<tf::Pose> wrist2tool;
-    wrist2tool.frame_id_ = (side_==0) ? "r_wrist_roll_link" : "l_wrist_roll_link";
-    wrist2tool.stamp_ = ros::Time();
-    wrist2tool.setOrigin(btVector3(-.18,0,0));
-    wrist2tool.setRotation(btQuaternion(0,0,0,1));
     tf::Stamped<tf::Pose> ret;
     ret = toolPose;
-    ret *= wrist2tool;
+    ret *= tool2wrist_;
     return ret;
 }
 
 tf::Stamped<tf::Pose> RobotArm::wrist2tool(tf::Stamped<tf::Pose> toolPose)
 {
-    tf::Stamped<tf::Pose> wrist2tool;
-    wrist2tool.frame_id_ = (side_==0) ? "r_wrist_roll_link" : "l_wrist_roll_link";
-    wrist2tool.stamp_ = ros::Time();
-    wrist2tool.setOrigin(btVector3(.18,0,0));
-    wrist2tool.setRotation(btQuaternion(0,0,0,1));
     tf::Stamped<tf::Pose> ret;
     ret = toolPose;
-    ret *= wrist2tool;
+    ret *= wrist2tool_;
     return ret;
 }
+
 
 //bool RobotArm::checkHypothesis()
 
 #include <stdio.h>
 #include <stdlib.h>
 
-bool RobotArm::findBaseMovement(btVector3 &result, std::vector<int> arm, std::vector<tf::Stamped<tf::Pose> > goal, bool drive, bool reach)
+bool RobotArm::findBaseMovement(tf::Stamped<tf::Pose> &result, std::vector<int> arm, std::vector<tf::Stamped<tf::Pose> > goal, bool drive, bool reach)
 {
+
+    init();
 
     //system("rosrun dynamic_reconfigure dynparam set  /camera_synchronizer_node projector_mode 1");
 
@@ -1147,294 +1088,157 @@ bool RobotArm::findBaseMovement(btVector3 &result, std::vector<int> arm, std::ve
 
     ROS_INFO("looking for base movement to satisfy ik constraints : ");
 
-    if (goal.size() == 0)
-        return btVector3(0,0,0);
-    std::vector<tf::Stamped<tf::Pose > > goalInBase;
-    goalInBase.resize(goal.size());
-
-    for (size_t k = 0; k < goal.size(); ++k)
+    if (arm.size() != goal.size())
     {
-        //tf::Stamped<tf::Pose> wrist2tool;
-        //wrist2tool.frame_id_ = arm[k] ? "r_wrist_roll_link" : "l_wrist_roll_link";
-        //wrist2tool.stamp_ = ros::Time();
-        //wrist2tool.setOrigin(btVector3(-.18,0,0));
-        //wrist2tool.setRotation(btQuaternion(0,0,0,1));
-        //ROS_INFO("TOOL");
-        //RobotArm::getInstance(0)->printPose(goalInBase[k]);
-        //goalInBase [k] *= wrist2tool;
-        //goalInBase[k] = getPoseIn("base_link",goal[k]);
-        //ROS_INFO("WRIST");
-        //RobotArm::getInstance(0)->printPose(goalInBase[k]);
+        ROS_ERROR("NUMBER OF GOAL TRAJECTORY POINTS DIFFERENT FROM ARM SELECTION");
+        return false;
+    }
 
-        ROS_INFO("TOOL IN MAP");
-        RobotArm::getInstance(0)->printPose(goal[k]);
+    find_base_pose::FindBasePoseGoal goal_msg;
 
-        //put it in base
-        goalInBase[k] = getPoseIn("base_link",goal[k]);;
-        //get the wrist pose from it
-        goalInBase[k] = RobotArm::getInstance(arm[k])->tool2wrist(goalInBase[k]);
+    bool some_outside_workspace = false; // TODO: move this test also to find_base_pose package
 
+    for (size_t k=0; k < arm.size(); ++k)
+    {
+
+        geometry_msgs::PoseStamped ps;
+        tf::poseStampedTFToMsg(goal[k],ps);
+
+        std_msgs::Int32 int32;
+        int32.data = arm[k];
+        goal_msg.target_poses.push_back(ps);
+        goal_msg.arm.push_back(int32);
+
+        if (!some_outside_workspace)
         {
-            visualization_msgs::Marker marker;
-            marker.header.frame_id = "base_link";
-            marker.header.stamp = ros::Time::now();
-            marker.ns = "goalpoints";
-            marker.id = k + 10000;
-            marker.type = visualization_msgs::Marker::ARROW;
-            marker.action = visualization_msgs::Marker::ADD;
-            marker.pose.orientation.x = goalInBase[k].getRotation().x();
-            marker.pose.orientation.y = goalInBase[k].getRotation().y();
-            marker.pose.orientation.z = goalInBase[k].getRotation().z();
-            marker.pose.orientation.w = goalInBase[k].getRotation().w();
-            marker.pose.position.x = goalInBase[k].getOrigin().x();
-            marker.pose.position.y = goalInBase[k].getOrigin().y();
-            marker.pose.position.z = goalInBase[k].getOrigin().z();
-            marker.scale.x = 0.1;
-            marker.scale.y = 0.1;
-            marker.scale.z = 0.1;
-            marker.color.r = 1.0;
-            marker.color.g = 0.0;
-            marker.color.b = 0.0;
-            marker.color.a = 1.0;
-            marker.lifetime = ros::Duration();
-
-            ROS_INFO("PUBLISH MARKER %i", marker.id);
-
-            vis_pub.publish( marker );
-
-            ros::spinOnce();
+            double start_angles[7];
+            RobotArm::getInstance(arm[k])->getJointState(start_angles);
+            double sol_angles[7];
+            tf::Stamped<tf::Pose> inWrist = RobotArm::getInstance(arm[k])->tool2wrist(goal[k]);
+            geometry_msgs::PoseStamped pstamped;
+            tf::poseStampedTFToMsg(inWrist, pstamped);
+            bool found = RobotArm::getInstance(arm[k])->run_ik(ps, start_angles, sol_angles, (arm[k] == 0) ? "r_wrist_roll_link" : "l_wrist_roll_link");
+            if (!found)
+                some_outside_workspace = true;
         }
     }
 
-    // from now on we work in wrist coordinates
-
-    tf::Stamped<tf::Pose> wristPose[2];
-    RobotArm::getInstance(0)->getWristPose(wristPose[0], "base_link");
-    RobotArm::getInstance(1)->getWristPose(wristPose[1], "base_link");
-
-    tf::Stamped<tf::Pose> a = RobotArm::getInstance(0)->getPoseIn("map", wristPose[0]);
-    tf::Stamped<tf::Pose> b = RobotArm::getInstance(0)->getPoseIn("map", wristPose[1]);
-    ROS_INFO("CURRENT WRIST R");
-    RobotArm::getInstance(0)->printPose(a);
-    ROS_INFO("CURRENT WRIST L");
-    RobotArm::getInstance(1)->printPose(b);
-
-    float s[] = {0,0};
-    for (size_t k = 0; k < goal.size(); ++k)
+    if (!some_outside_workspace)
     {
-        s[0] += wristPose[arm[k]].getOrigin().x() - goalInBase[k].getOrigin().x();
-        s[1] += wristPose[arm[k]].getOrigin().y() - goalInBase[k].getOrigin().y();
+        result.setOrigin(btVector3(0,0,0));
+        result.setRotation(btQuaternion(0,0,0,1));
+        ROS_INFO("find_base_pose: should exit now because all points are within workspace");
+        //return  true; // TODO: why does this not work ?
+    }
+    //ROS_ERROR("we shouldnt be here");
+
+
+    ROS_INFO("Waiting for action server to start.");
+    // wait for the action server to start
+    //ac_fbp_->waitForServer(); //will wait for infinite time
+
+    ac_fbp_->sendGoal(goal_msg);
+
+    bool finished_before_timeout = ac_fbp_->waitForResult(ros::Duration(15.0));
+
+    if (!finished_before_timeout)
+    {
+        ROS_INFO("findBaseMovement Action did not finish before the time out.");
+        return false;
     }
 
-    s[0] /= (float) goal.size();
-    s[1] /= (float) goal.size();
+    actionlib::SimpleClientGoalState state = ac_fbp_->getState();
+    ROS_INFO("Action finished: %s",state.toString().c_str());
+    find_base_pose::FindBasePoseResultConstPtr res = ac_fbp_->getResult();
 
-    // minimum movement 5 cm
-    s[0] = ceil(s[0] * 20) / 20.0f;
-    s[1] = ceil(s[1] * 20) / 20.0f;
-
-    ROS_INFO("SPEEDUP X %f Y %f" , s[0], s[1]);
-
-    // daft punk
-    //if (sqrtf(s[0]*s[0] + s[1]*s[1]) <= 0.75)
+    if (res->base_poses.size() < 1)
     {
-        s[0] = 0;
-        s[1] = 0;
+        ROS_INFO(" findBaseMovement Action finished before the time out but without success.");
+        return false;
     }
 
-    //if (sqrt(s[0] * s[0] + s[1] * s[1]) < 0.1) {
-    //s[0] = 0;
-    //s[1] = 0;
-    //}
+    for (size_t k = 0; k < res->base_poses.size(); ++k)
+    {
+        tf::Stamped<tf::Pose> respose;
+        tf::poseStampedMsgToTF(res->base_poses[k], respose);
+        ROS_INFO("Result: %f %f  %f", res->base_poses[k].pose.position.x, res->base_poses[k].pose.position.y,respose.getRotation().getAngle());
+    }
 
-    ROS_INFO("SPEEDUP X %f Y %f" , s[0], s[1]);
+    //if (minDist < 10000)
+    tf::Stamped<tf::Pose> respose;
+    tf::poseStampedMsgToTF(res->base_poses[0], respose);
 
-    double start_angles[2][7];
-    RobotArm::getInstance(0)->getJointState(start_angles[0]);
-    RobotArm::getInstance(1)->getJointState(start_angles[1]);
+    double ps[4];
+    ps[0] = respose.getOrigin().x();
+    ps[1] = respose.getOrigin().y();
+    ps[2] = respose.getRotation().z();
+    ps[3] = respose.getRotation().w();
 
-    double minDist = 10000;
-    double best_x = 0;
-    double best_y = 0;
-    double range = 0.75;
-    double maxrange = 1.5;
-    double step = 0.05;
-    int cnt = 0;
+    ROS_ERROR("FOUND BASE MOVEMENT %f %f %f %f", ps[0], ps[1], ps[2], ps[3]);
 
-    int markerCnt = 0;
+    tf::Stamped<tf::Pose> inMap = Geometry::getPoseIn("map", respose);
 
-    double rangeIncrement = 0.75;
+    ROS_INFO("In Map: ");
+    printPose(inMap);
 
-    if (sqrtf(s[0]*s[0] + s[1]*s[1]) < 0.5)
-        rangeIncrement = 0.25;
-
-    ROS_INFO("before loop");
-    for (range = rangeIncrement; (range <= maxrange) && (minDist == 10000); range += rangeIncrement)
-        for (double dx = -range + s[0]; (dx <= range + s[0]) && (ros::ok()); dx += step)
+    RobotDriver *driver = RobotDriver::getInstance();
+    // todo: chck for localization, since move base is not exact! pose -> mappose -> pose
+    //move_ik(x + best_x,y + best_y,z,ox,oy,oz,ow);
+    if (drive && ((fabs(ps[0]) > 0.001) || (fabs(ps[1]) > 0.001) || (fabs(ps[2]) > 0.001))) // && ((fabs(best_x) > 0.01) || (fabs(best_y) > 0.01)))
+    {
+        //driver->driveInOdom(ps,true);
+        boost::thread t2(&RobotDriver::driveInOdom,driver,ps,true);
+        //boost::thread t2(&RobotDriver::driveInOdom,driver,ps,false);
+        ros::Rate rate(25.0);
+        while (!t2.timed_join(boost::posix_time::seconds(0.01)))
         {
-            for (double dy = -range + s[1]; dy <= range + s[1]; dy += step)
-            {
-                btVector3 distVec(dx,dy,0);
-                double dist = distVec.length();
-                btVector3 rangeDistVec(dx - s[0],dy - s[1],0);
-                double rangeDist = rangeDistVec.length();
-                size_t found = 0;
-                float dr[2];
-                dr[0] = dx;
-                dr[1] = dy;
-                if ((dist < minDist) && (rangeDist < range) && (rangeDist >= range - rangeIncrement) && RobotDriver::getInstance()->checkCollision(dr))
-                {
-                    bool good = true;
-                    for (size_t k = 0; (k < goal.size()) && good; ++k)
-                    {
-                        btVector3 curGoalPos = goalInBase[k].getOrigin() + btVector3(dx,dy,0);
-
-                        geometry_msgs::PoseStamped stamped_pose;
-                        stamped_pose.header.frame_id = "base_link";
-                        stamped_pose.header.stamp = ros::Time::now();
-                        stamped_pose.pose.position.x=curGoalPos.x();
-                        stamped_pose.pose.position.y=curGoalPos.y();
-                        stamped_pose.pose.position.z=curGoalPos.z();
-                        stamped_pose.pose.orientation.x=goalInBase[k].getRotation().x();
-                        stamped_pose.pose.orientation.y=goalInBase[k].getRotation().y();
-                        stamped_pose.pose.orientation.z=goalInBase[k].getRotation().z();
-                        stamped_pose.pose.orientation.w=goalInBase[k].getRotation().w();
-                        double new_state[7];
-                        bool f = RobotArm::getInstance(arm[k])->run_ik(stamped_pose,start_angles[arm[k]],new_state,(arm[k] == 0) ? "r_wrist_roll_link" : "l_wrist_roll_link");
-                        //ROS_INFO("DXDY %f %f", dx, dy);
-                        cnt++;
-                        if (cnt && !(cnt % 25))
-                            ROS_INFO("Cnt %i", cnt);
-                        if (f)
-                            found++;
-                        else
-                            good = false; // for now,get out when one fails.
-                    }
-                }
-                bool col = true;
-                bool isGood = (found==goal.size());
-                if (found==goal.size())
-                {
-                    //if (RobotDriver::getInstance()->checkCollision(dr))
-                    //{
-                    printf("DIST %f found %f %f %s \n", dist, dx, dy, "FOUND");
-                    best_x = dx;
-                    best_y = dy;
-                    minDist = dist;
-                    col = false;
-                    //}
-                }
-                if (isGood)
-                {
-                    visualization_msgs::Marker marker;
-                    marker.header.frame_id = "base_link";
-                    marker.header.stamp = ros::Time::now();
-                    marker.ns = "target base footprints";
-                    marker.id = ++markerCnt;
-                    marker.type = visualization_msgs::Marker::LINE_STRIP;
-                    marker.action = visualization_msgs::Marker::ADD;
-                    marker.pose.position.x = 0;
-                    marker.pose.position.y = 0;
-                    marker.pose.position.z = 0;
-                    marker.pose.orientation.x = 0.0;
-                    marker.pose.orientation.y = 0.0;
-                    marker.pose.orientation.z = 0.0;
-                    marker.pose.orientation.w = 1.0;
-                    marker.scale.x = 0.01;
-                    marker.scale.y = 0.01;
-                    marker.scale.z = 0.01;
-                    marker.color.a = 1.0;
-                    marker.color.r = (col ? 1.0 : 0.0);
-                    marker.color.g = (col ? 0.0 : 1.0);
-                    marker.color.b = 0.0;
-                    float si = .325;
-                    if (!isGood)
-                        si = .3;
-                    if (!isGood)
-                        marker.color.b = markerCnt / 1000.0f;
-                    {
-                        geometry_msgs::Point p;
-                        p.x =  -si -  dx;
-                        p.y =  -si -  dy;
-                        p.z = 0.1;
-                        marker.points.push_back(p);
-                    }
-                    {
-                        geometry_msgs::Point p;
-                        p.x =  si -  dx;
-                        p.y =  -si -  dy;
-                        p.z = 0.1;
-                        marker.points.push_back(p);
-                    }
-                    {
-                        geometry_msgs::Point p;
-                        p.x =  si -  dx;
-                        p.y =  si -  dy;
-                        p.z = 0.1;
-                        marker.points.push_back(p);
-                    }
-                    {
-                        geometry_msgs::Point p;
-                        p.x =  -si -  dx;
-                        p.y =  si -  dy;
-                        p.z = 0.1;
-                        marker.points.push_back(p);
-                    }
-                    {
-                        geometry_msgs::Point p;
-                        p.x =  -si -  dx;
-                        p.y =  -si -  dy;
-                        p.z = 0.1;
-                        marker.points.push_back(p);
-                    }
-
-                    vis_pub.publish( marker );
-                }
-            }
+            //ROS_ERROR("not yet joinable");
+            tf::Stamped<tf::Pose> firstGoalBase = Geometry::getPoseIn("base_link",goal[0]);
+            if (reach)
+                RobotArm::getInstance(arm[0])->move_toolframe_ik(firstGoalBase.getOrigin().x(), firstGoalBase.getOrigin().y(), firstGoalBase.getOrigin().z(),
+                        firstGoalBase.getRotation().x(),firstGoalBase.getRotation().y(),firstGoalBase.getRotation().z(),firstGoalBase.getRotation().w());
+            //RobotArm::getInstance(arm[0])->move_toolframe_ik(x + best_x,y + best_y,z,ox,oy,oz,ow);
+            rate.sleep();
         }
-    if (minDist < 10000)
-    {
+        t2.join();
 
-        float ps[4];
-        ps[0] = -best_x;
-        ps[1] = -best_y;
-        ps[2] = 0;
-        ps[3] = 1;
-
-        ROS_ERROR("FOUND BASE MOVEMENT %f %f Query Count %i", -best_x, -best_y, cnt);
-
-        RobotDriver *driver = RobotDriver::getInstance();
-        // todo: chck for localization, since move base is not exact! pose -> mappose -> pose
-        //move_ik(x + best_x,y + best_y,z,ox,oy,oz,ow);
-        if (drive && ((fabs(best_x) > 0.01) || (fabs(best_y) > 0.01)))
-        {
-            //driver->driveInOdom(ps,true);
-            //boost::thread t2(&RobotDriver::driveInOdom,driver,ps,true);
-            boost::thread t2(&RobotDriver::driveInOdom,driver,ps,false);
-            ros::Rate rate(5.0);
-            while (!t2.timed_join(boost::posix_time::seconds(0.01)))
-            {
-                //ROS_ERROR("not yet joinable");
-                tf::Stamped<tf::Pose> firstGoalBase = RobotArm::getInstance(arm[0])->getPoseIn("base_link",goal[0]);
-                if (reach)
-                    RobotArm::getInstance(arm[0])->move_toolframe_ik(firstGoalBase.getOrigin().x(), firstGoalBase.getOrigin().y(), firstGoalBase.getOrigin().z(),
-                            firstGoalBase.getRotation().x(),firstGoalBase.getRotation().y(),firstGoalBase.getRotation().z(),firstGoalBase.getRotation().w());
-                //RobotArm::getInstance(arm[0])->move_toolframe_ik(x + best_x,y + best_y,z,ox,oy,oz,ow);
-                rate.sleep();
-            }
-            t2.join();
-
-        }
-
-        result = btVector3(best_x, best_y, 0);
-        return true;
     }
-    return false;
+
+    //result = btVector3(best_x, best_y, 0);
+    result = respose;
+    return true;
+
 
 }
 
+/*
+tf::Stamped<tf::Pose> RobotArm::make_pose(double x, double y, double z, double ox, double oy, double oz, double ow, const char target_frame[])
+{
+    tf::Stamped<tf::Pose> toolTargetPose;
+
+    toolTargetPose.frame_id_ = target_frame;
+    toolTargetPose.stamp_ = ros::Time(0);
+    toolTargetPose.setOrigin(btVector3( x,y,z));
+    toolTargetPose.setRotation(btQuaternion(ox,oy,oz,ow));
+
+    return toolTargetPose;
+}
+
+tf::Stamped<tf::Pose> RobotArm::make_pose(const btTransform &trans, const char target_frame[])
+{
+    tf::Stamped<tf::Pose> toolTargetPose;
+    toolTargetPose.frame_id_ = target_frame;
+    toolTargetPose.stamp_ = ros::Time(0);
+    toolTargetPose.setOrigin(trans.getOrigin());
+    toolTargetPose.setRotation(trans.getRotation());
+
+    return toolTargetPose;
+}
+*/
+
+
 //  move the toolframe including base motions when necessary
-btVector3 RobotArm::universal_move_toolframe_ik(float x, float y, float z, float ox, float oy, float oz, float ow, const char target_frame[])
+btVector3 RobotArm::universal_move_toolframe_ik(double x, double y, double z, double ox, double oy, double oz, double ow, const char target_frame[])
 {
     tf::Stamped<tf::Pose> toolTargetPose;
 
@@ -1446,53 +1250,34 @@ btVector3 RobotArm::universal_move_toolframe_ik(float x, float y, float z, float
     return universal_move_toolframe_ik_pose(toolTargetPose);
 }
 
-
-btVector3 RobotArm::universal_move_toolframe_ik_pose(tf::Stamped<tf::Pose> toolTargetPose)
+void RobotArm::bring_into_reach(tf::Stamped<tf::Pose> toolTargetPose)
 {
-    //return universal_move_toolframe_ik(toolTargetPose.getOrigin().x(),toolTargetPose.getOrigin().y(),toolTargetPose.getOrigin().z(),
-    //toolTargetPose.getRotation().x(),toolTargetPose.getRotation().y(),toolTargetPose.getRotation().z(),toolTargetPose.getRotation().w(),toolTargetPose.frame_id_.c_str());
+    std::vector<int> arm;
+    std::vector<tf::Stamped<tf::Pose> > goal;
+    tf::Stamped<tf::Pose> result;
+    arm.push_back(side_);
+    //toolTargetPose *= wrist2tool;
+    tf::Stamped<tf::Pose> toolTargetPoseInMap = Geometry::getPoseIn("map",toolTargetPose);
+    goal.push_back(toolTargetPoseInMap);
+    //goal.push_back(toolTargetPose);
+    ROS_INFO("BRING INTO  REACH ");
+    RobotArm::findBaseMovement(result, arm, goal, true, false);
+}
 
+bool RobotArm::reachable(tf::Stamped<tf::Pose> target)
+{
 
-
-    //ROS_INFO("in map");
-    //printPose(toolTargetPoseInMap);
-
-    tf::Stamped<tf::Pose> toolTargetPoseInBase = getPoseIn("base_link",toolTargetPose);
-    //ROS_INFO("in base_link");
+    tf::Stamped<tf::Pose> toolTargetPoseInBase = Geometry::getPoseIn("base_link",target);
+    //ROS_INFO("tool in base_link");
     //printPose(toolTargetPoseInBase);
-
-    tf::Stamped<tf::Pose> toolPose;
-    getToolPose(toolPose, "base_link");
-    //ROS_INFO("tool pose in base link");
-    //printPose(toolPose);
-
-    //double sx = toolPose.getOrigin().x() - toolTargetPoseInBase.getOrigin().x();
-    //double sy = toolPose.getOrigin().y() - toolTargetPoseInBase.getOrigin().y();
-    //sx = 0;
-    //sy = 0;
-    //toolTargetPoseInMap = getPoseIn("map", toolTargetPoseInBase);
-
-
-    //x = toolTargetPoseInBase.getOrigin().x();
-    //y = toolTargetPoseInBase.getOrigin().y();
-    //z = toolTargetPoseInBase.getOrigin().z();
-    //ox = toolTargetPoseInBase.getRotation().x();
-    //oy = toolTargetPoseInBase.getRotation().y();
-    //oz = toolTargetPoseInBase.getRotation().z();
-    //ow = toolTargetPoseInBase.getRotation().w();
 
     tf::Stamped<tf::Pose> wristTargetBase = tool2wrist(toolTargetPoseInBase);
 
+    //ROS_INFO("wrist in base_link");
+    //printPose(wristTargetBase);
+
     geometry_msgs::PoseStamped stamped_pose;
-    stamped_pose.header.frame_id = "base_link";
-    stamped_pose.header.stamp = ros::Time::now();
-    stamped_pose.pose.position.x=wristTargetBase.getOrigin().x();
-    stamped_pose.pose.position.y=wristTargetBase.getOrigin().y();
-    stamped_pose.pose.position.z=wristTargetBase.getOrigin().z();
-    stamped_pose.pose.orientation.x=wristTargetBase.getRotation().x();
-    stamped_pose.pose.orientation.y=wristTargetBase.getRotation().y();
-    stamped_pose.pose.orientation.z=wristTargetBase.getRotation().z();
-    stamped_pose.pose.orientation.w=wristTargetBase.getRotation().w();
+    tf::poseStampedTFToMsg(wristTargetBase,stamped_pose);
 
     double new_state[7];
 
@@ -1502,27 +1287,60 @@ btVector3 RobotArm::universal_move_toolframe_ik_pose(tf::Stamped<tf::Pose> toolT
     if (raise_elbow)
         start_angles[2] = ((side_==0) ? -preset_angle : preset_angle);
 
-    bool foundInitially = run_ik(stamped_pose,start_angles,new_state,(side_ == 0) ? "r_wrist_roll_link" : "l_wrist_roll_link");
+    return run_ik(stamped_pose,start_angles,new_state,wrist_frame);
+
+}
+
+
+btVector3 RobotArm::universal_move_toolframe_ik_pose(tf::Stamped<tf::Pose> toolTargetPose)
+{
+    tf::Stamped<tf::Pose> toolTargetPoseInBase = Geometry::getPoseIn("base_link",toolTargetPose);
+    ROS_INFO("tool in base_link");
+    printPose(toolTargetPoseInBase);
+
+    tf::Stamped<tf::Pose> toolPose;
+    getToolPose(toolPose, "base_link");
+    //ROS_INFO("tool pose in base link");
+    //printPose(toolPose);
+
+    tf::Stamped<tf::Pose> wristTargetBase = tool2wrist(toolTargetPoseInBase);
+
+    ROS_INFO("wrist in base_link");
+    printPose(wristTargetBase);
+
+    geometry_msgs::PoseStamped stamped_pose;
+    tf::poseStampedTFToMsg(wristTargetBase,stamped_pose);
+
+    double new_state[7];
+
+    double start_angles[7];
+    getJointState(start_angles);
+
+    if (raise_elbow)
+        start_angles[2] = ((side_==0) ? -preset_angle : preset_angle);
+
+    bool foundInitially = run_ik(stamped_pose,start_angles,new_state,wrist_frame);
 
     //if (poseInsideFootprint && excludeBaseProjectionFromWorkspace)
     // foundInitially = false;
     bool poseInsideFootprint = false;
-    if (excludeBaseProjectionFromWorkspace)
-    {
-        ROS_WARN("excludeBaseProjectionFromWorkspace == true");
+    if (0)
+        if (excludeBaseProjectionFromWorkspace)
+        {
+            ROS_WARN("excludeBaseProjectionFromWorkspace == true");
 
-        float padding = 0.05;
-        float x = stamped_pose.pose.position.x;
-        float y = stamped_pose.pose.position.y;
-        // does target pose lie inside projection of base footprint?
-        if ((x < .325 + padding) && (x > -.325 - padding) && (y < .325 + padding) && (y > -.325 - padding))
-            poseInsideFootprint = true;
-    }
+            double padding = 0.05;
+            double x = stamped_pose.pose.position.x;
+            double y = stamped_pose.pose.position.y;
+            // does target pose lie inside projection of base footprint?
+            if ((x < .325 + padding) && (x > -.325 - padding) && (y < .325 + padding) && (y > -.325 - padding))
+                poseInsideFootprint = true;
+        }
 
 
 //if (!move_ik(x,y,z,ox,oy,oz,ow,time_to_target))
-    if (!poseInsideFootprint && move_ik(wristTargetBase.getOrigin().x(),wristTargetBase.getOrigin().y(),wristTargetBase.getOrigin().z(),
-                                        wristTargetBase.getRotation().x(),wristTargetBase.getRotation().y(),wristTargetBase.getRotation().z(),wristTargetBase.getRotation().w(),time_to_target))
+    if (foundInitially && !poseInsideFootprint && move_ik(wristTargetBase.getOrigin().x(),wristTargetBase.getOrigin().y(),wristTargetBase.getOrigin().z(),
+            wristTargetBase.getRotation().x(),wristTargetBase.getRotation().y(),wristTargetBase.getRotation().z(),wristTargetBase.getRotation().w(),time_to_target))
     {
         if (!foundInitially)
             ROS_ERROR("RUN IK SAYS NOT FOUND INITIALLY BUT WE REACHED IT WITH MOVE_IK");
@@ -1535,22 +1353,51 @@ btVector3 RobotArm::universal_move_toolframe_ik_pose(tf::Stamped<tf::Pose> toolT
         {
             ROS_ERROR("RobotArm::universal_move_toolframe_ik run_ik says reachable move_ik says not!");
         }
-
-        ROS_ERROR("NOT FOUND INITIALLY");
-        ROS_INFO("looking for base movement to reach tf %f %f %f %f %f %f %f", toolTargetPose.getOrigin().x(),toolTargetPose.getOrigin().y(),toolTargetPose.getOrigin().z(),
-                 toolTargetPose.getRotation().x(),toolTargetPose.getRotation().y(),toolTargetPose.getRotation().z(),toolTargetPose.getRotation().w());
+        else
+        {
+            ROS_ERROR("NOT FOUND INITIALLY");
+        }
+        ROS_INFO("looking for base movement to reach tf %f %f %f %f %f %f %f in %s", toolTargetPose.getOrigin().x(),toolTargetPose.getOrigin().y(),toolTargetPose.getOrigin().z(),
+                 toolTargetPose.getRotation().x(),toolTargetPose.getRotation().y(),toolTargetPose.getRotation().z(),toolTargetPose.getRotation().w(), toolTargetPose.frame_id_.c_str());
 
         std::vector<int> arm;
         std::vector<tf::Stamped<tf::Pose> > goal;
-        btVector3 result;
+        tf::Stamped<tf::Pose> result;
         arm.push_back(side_);
         //toolTargetPose *= wrist2tool;
-        tf::Stamped<tf::Pose> toolTargetPoseInMap = getPoseIn("map",toolTargetPose);
+        tf::Stamped<tf::Pose> toolTargetPoseInMap = Geometry::getPoseIn("map",toolTargetPose);
         goal.push_back(toolTargetPoseInMap);
+        //goal.push_back(toolTargetPose);
         RobotArm::findBaseMovement(result, arm, goal, true, true);
         return universal_move_toolframe_ik_pose(toolTargetPoseInMap);
     }
 
+
+    return btVector3(0,0,0);
+}
+
+
+btVector3 RobotArm::universal_move_toolframe_ik_pose_tolerance(tf::Stamped<tf::Pose> toolTargetPose, double tolerance, double timeout)
+{
+
+    evil_switch = true;
+
+    ros::Time start = ros::Time::now();
+
+    universal_move_toolframe_ik_pose(toolTargetPose);
+
+    bool reached = false;
+    while (!reached)
+    {
+        reached = (getToolPose(toolTargetPose.frame_id_.c_str()).getOrigin() - toolTargetPose.getOrigin()).length() < tolerance;
+        if ((ros::Time::now() - start) > ros::Duration(timeout))
+            reached = true;
+        ros::Duration(0.001).sleep();
+    }
+
+    ROS_INFO("universal_move_toolframe_ik_pose_tolerance DIST : %f ", (getToolPose(toolTargetPose.frame_id_.c_str()).getOrigin() - toolTargetPose.getOrigin()).length());
+
+    evil_switch = false;
 
     return btVector3(0,0,0);
 }
@@ -1594,7 +1441,7 @@ tf::Stamped<tf::Pose> RobotArm::runFK(double jointAngles[], tf::Stamped<tf::Pose
     //fk_request.fk_link_names[i] = joint_names[i];
     //}
     fk_request.fk_link_names[0] = (side_==0) ? "r_wrist_roll_link" : "l_wrist_roll_link";
-    fk_request.fk_link_names[1] = (side_==0)? "r_elbow_flex_link" : "l_elbow_flex_link" ;
+    fk_request.fk_link_names[1] = (side_==0) ? "r_elbow_flex_link" : "l_elbow_flex_link" ;
     //fk_request.fk_link_names[0] = "r_wrist_roll_link";
     //fk_request.fk_link_names[1] = "r_elbow_flex_link";
     //fk_request.robot_state.joint_state.position.resize(response.kinematic_solver_info.joint_names.size());
@@ -1681,7 +1528,7 @@ void RobotArm::moveElbowOutOfWay(tf::Stamped<tf::Pose> toolTargetPose)
     arm->getJointState(state);
 
     tf::Stamped<tf::Pose> actPose;
-    actPose = tool2wrist(getPoseIn("base_link", toolTargetPose));
+    actPose = tool2wrist(Geometry::getPoseIn("base_link", toolTargetPose));
 
 
     //arm->getWristPose(actPose,"base_link");
@@ -1711,7 +1558,7 @@ void RobotArm::moveElbowOutOfWay(tf::Stamped<tf::Pose> toolTargetPose)
         arm->getJointStateErr(jErr);
         arm->getJointStateDes(jDes);
 
-        float increment = .1;
+        double increment = .1;
 
         ROS_INFO("jERR[1]=%f", jErr[1]);
 
@@ -1743,19 +1590,19 @@ void RobotArm::moveElbowOutOfWay(tf::Stamped<tf::Pose> toolTargetPose)
             double stBs[7];
             double stCs[7];
 
-            arm->run_ik(stamped_pose,stA,stAs,(side_ == 0) ? "r_wrist_roll_link" : "l_wrist_roll_link");
-            arm->run_ik(stamped_pose,stB,stBs,(side_ == 0) ? "r_wrist_roll_link" : "l_wrist_roll_link");
+            arm->run_ik(stamped_pose,stA,stAs,wrist_frame);
+            arm->run_ik(stamped_pose,stB,stBs,wrist_frame);
 
             double newinc = (jErr[1] / (stBs[1] - stAs[1])) * increment;
 
             stC[2] += newinc;
 
-            arm->run_ik(stamped_pose,stC,stCs,(side_ == 0) ? "r_wrist_roll_link" : "l_wrist_roll_link");
+            arm->run_ik(stamped_pose,stC,stCs,wrist_frame);
 
             ROS_INFO("curr (sta[1]) %f  stCs %f", stA[1], stCs[1]);
 
-            float pose[7];
-            float sum = 0;
+            double pose[7];
+            double sum = 0;
             for (int k = 0; k < 7; ++k)
             {
                 pose[k] = stCs[k];
@@ -1778,5 +1625,101 @@ void RobotArm::moveElbowOutOfWay(tf::Stamped<tf::Pose> toolTargetPose)
     }
 }
 
+void RobotArm::moveBothArms(tf::Stamped<tf::Pose> leftArm, tf::Stamped<tf::Pose> rightArm, double tolerance, bool wait)
+{
+    std::vector<int> arm;
+    std::vector<tf::Stamped<tf::Pose> > goal;
+    tf::Stamped<tf::Pose> result;
+
+    arm.push_back(1);
+    goal.push_back(leftArm);
+    arm.push_back(0);
+    goal.push_back(rightArm);
+
+    RobotArm::findBaseMovement(result, arm, goal,true, false);
+
+    if (!wait)
+    {
+        RobotArm::getInstance(0)->evil_switch = true;
+        RobotArm::getInstance(1)->evil_switch = true;
+    }
+
+    if (tolerance == 0)
+    {
+        boost::thread t1(&RobotArm::universal_move_toolframe_ik_pose,RobotArm::getInstance(0),rightArm);
+        boost::thread t2(&RobotArm::universal_move_toolframe_ik_pose,RobotArm::getInstance(1),leftArm);
+        t2.join();
+        t1.join();
+    }
+    else
+    {
+        boost::thread t1(&RobotArm::universal_move_toolframe_ik_pose_tolerance,RobotArm::getInstance(0),rightArm,tolerance,5);
+        boost::thread t2(&RobotArm::universal_move_toolframe_ik_pose_tolerance,RobotArm::getInstance(1),leftArm,tolerance,5);
+        t2.join();
+        t1.join();
+    }
+
+    if (!wait)
+    {
+        RobotArm::getInstance(0)->evil_switch = false;
+        RobotArm::getInstance(1)->evil_switch = false;
+    }
+
+}
 
 
+bool RobotArm::pose2Joint(const std::vector<tf::Stamped<tf::Pose> > &poses, std::vector<std::vector<double> > &joints)
+{
+
+    joints.resize(poses.size());
+
+    double current_state[7];
+    getJointState(current_state);
+
+    for (size_t k = 0; k < poses.size(); ++k)
+    {
+
+        printPose(poses[k]);
+        double solution[7];
+        bool found = run_ik(poses[k], current_state,solution, tool_frame);
+        if (!found) {
+            ROS_ERROR("Not all poses of trajectory found %zu of %i", k, poses.size());
+            return false;
+        }
+        joints[k] = std::vector<double>();
+        joints[k].resize(7);
+        for (size_t j = 0; j < 7; j++) {
+            joints[k][j] = solution[j];
+            //printf("%f\n", joints[k][j] );
+        }
+    }
+    return true;
+}
+
+bool RobotArm::executeViaJointControl(const std::vector<tf::Stamped<tf::Pose> > &poses, int start, int end)
+{
+    std::vector<std::vector<double> > joint_angles;
+    if (start < 0)
+        start = 0;
+    if (end < 0)
+        end = poses.size() - 1;
+    joint_angles.resize(end - start);
+    int direction = (end > start) ? +1 : -1;
+    joint_angles.resize(std::max(start,end));
+
+    double current_state[7];
+    getJointState(current_state);
+
+    for (int k = start; k != end + direction; k += direction)
+    {
+        double solution[7];
+        bool found = run_ik(poses[k], current_state,solution, tool_frame);
+        if (!found)
+            return false;
+        joint_angles[k].resize(7);
+        for (size_t j = 0; j < 7; j++)
+            joint_angles[k][j] = solution[j];
+    }
+
+    return true;
+}

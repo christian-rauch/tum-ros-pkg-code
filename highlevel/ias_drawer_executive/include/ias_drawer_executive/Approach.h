@@ -51,17 +51,17 @@ class Approach {
     tf::Stamped<tf::Pose> plateCenter,startPose;
     btVector3 diff;
     Pressure *pressure;
-    float pressureZeroR, pressureZeroL;
-    float pressureDiff;
+    double pressureZeroR, pressureZeroL;
+    double pressureDiff;
     bool touched;
-    float firstTouch;
+    double firstTouch;
     int side_;
     int sensors_;
 
     // sensors 0 = inside, 1 = front
     void init(int side, tf::Stamped<tf::Pose> approachP, tf::Stamped<tf::Pose> plateCenter, SensorArea sensor = Approach::inside);
-    void move_to(float ap);
-    float increment(float st, float ap);
+    void move_to(double ap);
+    double increment(double st, double ap);
     bool finish();
 
 };
@@ -81,8 +81,8 @@ class Lift {
 
     void init(int side);
 
-    //void increment(float up, float back);
-    void increment(float x, float y, float z);
+    //void increment(double up, double back);
+    void increment(double x, double y, double z);
 
 };
 

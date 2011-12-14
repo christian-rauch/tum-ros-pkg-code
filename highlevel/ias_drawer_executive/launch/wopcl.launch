@@ -11,5 +11,6 @@
 
   <node name="SnapMapICP" pkg="SnapMapICP" type="SnapMapICP" respawn="true" />
 
+  <node name="find_base_pose" pkg="find_base_pose" type="find_base_pose" respawn="true" />
 
 </launch>

@@ -28,7 +28,7 @@
  */
 
 #include <ias_drawer_executive/Perception3d.h>
-#include <ias_drawer_executive/RobotArm.h>
+#include <ias_drawer_executive/Geometry.h>
 #include <pcl/ros/conversions.h>
 
 boost::mutex Perception3d::handle_mutex;
@@ -43,7 +43,7 @@ int op_handle_cloud_cnt = 0;
 
 btVector3 Perception3d::handleHint;
 btVector3 Perception3d::handleResult;
-float Perception3d::handleMinDist;
+double Perception3d::handleMinDist;
 ros::Time Perception3d::cloud_time;
 ros::Time Perception3d::query_time;
 
@@ -138,7 +138,7 @@ void Perception3d::handleCloudCallback(const sensor_msgs::PointCloud2::ConstPtr&
     for (size_t k = 0; k < lastCloud.points.size(); k++)
     {
         btVector3 act(lastCloud.points[k].x,lastCloud.points[k].y,lastCloud.points[k].z);
-        float dist = btVector3(act - handleHint).length();
+        double dist = btVector3(act - handleHint).length();
         if (dist < handleMinDist)
         {
             handleMinDist = dist;
@@ -152,7 +152,7 @@ void Perception3d::handleCloudCallback(const sensor_msgs::PointCloud2::ConstPtr&
        btVector3 l(lastCloud.points[0].x,lastCloud.points[0].y,lastCloud.points[0].z);
        btVector3 r(lastCloud.points[lastCloud.points.size() / 2].x,lastCloud.points[lastCloud.points.size() / 2].y,lastCloud.points[lastCloud.points.size() / 2].z);
        btVector3 rel = r - l;
-       float at2 = atan2(rel.y(), rel.z());
+       double at2 = atan2(rel.y(), rel.z());
        btQuaternion ori(btVector3(1,0,0), at2);
        resOri = ori;
     }
@@ -161,14 +161,14 @@ void Perception3d::handleCloudCallback(const sensor_msgs::PointCloud2::ConstPtr&
     //   btVector3 l(lastCloud.points[0].x,lastCloud.points[0].y,lastCloud.points[0].z);
     //   btVector3 r(lastCloud.points[lastCloud.points.size() / 2].x,lastCloud.points[lastCloud.points.size() / 2].y,lastCloud.points[lastCloud.points.size() / 2].z);
     //   btVector3 rel = r - l;
-    //   float at2 = atan2(rel.y(), rel.x());
+    //   double at2 = atan2(rel.y(), rel.x());
     //   btQuaternion ori(btVector3(0,0,1), at2);
     //   resOri = ori;
     //}
 
 
     //btVector3 rel = leftEdge.getOrigin() - rightEdge.getOrigin();
-    //float at2 = atan2(rel.y(), rel.x());
+    //double at2 = atan2(rel.y(), rel.x());
     //btQuaternion ori(btVector3(0,0,1), at2);
 
 
@@ -179,7 +179,7 @@ void Perception3d::handleCloudCallback(const sensor_msgs::PointCloud2::ConstPtr&
     handle_cloud_mutex.unlock();
 }
 
-tf::Stamped<tf::Pose> Perception3d::getHandlePoseFromLaser(tf::Stamped<tf::Pose> hint)
+tf::Stamped<tf::Pose> Perception3d::getHandlePoseFromLaser(tf::Stamped<tf::Pose> hint, double timeout)
 {
 
     system("rosservice call laser_tilt_controller/set_periodic_cmd '{ command: { header: { stamp: 0 }, profile: \"linear\" , period: 10 , amplitude: 0.8 , offset: 0.3 }}'");
@@ -187,12 +187,12 @@ tf::Stamped<tf::Pose> Perception3d::getHandlePoseFromLaser(tf::Stamped<tf::Pose>
     query_time = ros::Time::now();
     cloud_time = ros::Time(0);
 
-    tf::Stamped<tf::Pose> inBase = RobotArm::getInstance(0)->getPoseIn("base_link", hint);
+    tf::Stamped<tf::Pose> inBase = Geometry::getPoseIn("base_link", hint);
 
     ROS_INFO("HINT in map");
-    RobotArm::getInstance(0)->printPose(hint);
+    Geometry::printPose(hint);
     ROS_INFO("HINT in base");
-    RobotArm::getInstance(0)->printPose(inBase);
+    Geometry::printPose(inBase);
 
     ros::NodeHandle n_;
     ros::Subscriber subHandleInliers = n_.subscribe("/handle_detector/handle_projected_inliers/output", 10, Perception3d::handleCloudCallback);
@@ -207,7 +207,7 @@ tf::Stamped<tf::Pose> Perception3d::getHandlePoseFromLaser(tf::Stamped<tf::Pose>
 
     handleHint = inBase.getOrigin();
     handleMinDist = 100;
-    float curBestDist = 100;
+    double curBestDist = 100;
     int goodcloud = op_handle_cloud_cnt + 100000;
 
     ROS_INFO("Waiting for handles published after query");
@@ -215,6 +215,9 @@ tf::Stamped<tf::Pose> Perception3d::getHandlePoseFromLaser(tf::Stamped<tf::Pose>
     while (cloud_time < query_time) {
         rate.sleep();
         ros::spinOnce();
+
+        if ((timeout > 0) && (ros::Time::now() > query_time + ros::Duration(timeout)))
+           return hint;
     }
 
     ros::Time current_timeslice = cloud_time;
@@ -238,6 +241,9 @@ tf::Stamped<tf::Pose> Perception3d::getHandlePoseFromLaser(tf::Stamped<tf::Pose>
             curBestDist = handleMinDist;
         }
         ROS_INFO("Dist : %f", handleMinDist);
+
+        if ((timeout > 0) && (ros::Time::now() > query_time + ros::Duration(timeout)))
+           return hint;
     }
 
     tf::Stamped<tf::Pose> ret;
@@ -250,9 +256,9 @@ tf::Stamped<tf::Pose> Perception3d::getHandlePoseFromLaser(tf::Stamped<tf::Pose>
         ret.setOrigin(btVector3(0,0,-1));
 
     ROS_INFO("RET");
-    RobotArm::getInstance(0)->printPose(ret);
+    Geometry::printPose(ret);
 
-    ret = RobotArm::getInstance(0)->getPoseIn(hint.frame_id_.c_str(), ret);
+    ret = Geometry::getPoseIn(hint.frame_id_.c_str(), ret);
 
     return ret;
 }
@@ -292,7 +298,7 @@ tf::Stamped<tf::Pose> Perception3d::getBottlePose()
     ros::Rate rate(20);
 
     btVector3 average(0,0,0);
-    float numav = 0;
+    double numav = 0;
 
     tf::Stamped<tf::Pose> ret;
 
@@ -317,7 +323,7 @@ tf::Stamped<tf::Pose> Perception3d::getBottlePose()
     average *= 1.0f / numav;
     ret.setOrigin(average);
 
-    ret = RobotArm::getPoseIn("map", ret);
+    ret = Geometry::getPoseIn("map", ret);
 
     system("rosrun dynamic_reconfigure dynparam set  /camera_synchronizer_node projector_mode 1");
 
@@ -359,7 +365,7 @@ tf::Stamped<tf::Pose> Perception3d::getFridgePlaneCenterPose()
     ros::Rate rate(20);
 
     btVector3 average(0,0,0);
-    float numav = 0;
+    double numav = 0;
 
     tf::Stamped<tf::Pose> ret;
 
@@ -384,7 +390,7 @@ tf::Stamped<tf::Pose> Perception3d::getFridgePlaneCenterPose()
     average *= 1.0f / numav;
     ret.setOrigin(average);
 
-    ret = RobotArm::getPoseIn("map", ret);
+    ret = Geometry::getPoseIn("map", ret);
 
     system("rosrun dynamic_reconfigure dynparam set  /camera_synchronizer_node projector_mode 1");
 

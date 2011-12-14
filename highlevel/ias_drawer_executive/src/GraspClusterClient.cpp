@@ -40,10 +40,10 @@
 
 int side_ = 0;
 
-tf::Stamped<tf::Pose> tool2wrist(tf::Stamped<tf::Pose> toolPose, float dist = -.18)
+tf::Stamped<tf::Pose> tool2wrist(tf::Stamped<tf::Pose> toolPose, double dist = -.18)
 {
     tf::Stamped<tf::Pose> wrist2tool;
-    wrist2tool.frame_id_ = (side_==0) ? "r_wrist_roll_link" : "l_wrist_roll_link";
+    //wrist2tool.frame_id_ = (side_==0) ? "r_wrist_roll_link" : "l_wrist_roll_link";
     wrist2tool.stamp_ = ros::Time();
     wrist2tool.setOrigin(btVector3(dist,0,0));
     wrist2tool.setRotation(btQuaternion(0,0,0,1));
@@ -54,10 +54,10 @@ tf::Stamped<tf::Pose> tool2wrist(tf::Stamped<tf::Pose> toolPose, float dist = -.
 }
 
 
-tf::Stamped<tf::Pose> wrist2tool(tf::Stamped<tf::Pose> toolPose, float dist = .18)
+tf::Stamped<tf::Pose> wrist2tool(tf::Stamped<tf::Pose> toolPose, double dist = .18)
 {
     tf::Stamped<tf::Pose> wrist2tool;
-    wrist2tool.frame_id_ = (side_==0) ? "r_wrist_roll_link" : "l_wrist_roll_link";
+    //wrist2tool.frame_id_ = (side_==0) ? "r_wrist_roll_link" : "l_wrist_roll_link";
     wrist2tool.stamp_ = ros::Time();
     wrist2tool.setOrigin(btVector3(dist,0,0));
     wrist2tool.setRotation(btQuaternion(0,0,0,1));
@@ -73,6 +73,12 @@ tf::TransformListener *listener_=0;
 
 tf::Stamped<tf::Pose> getPoseIn(const char target_frame[], tf::Stamped<tf::Pose>src)
 {
+
+    if (src.frame_id_ == "NO_ID_STAMPED_DEFAULT_CONSTRUCTION") {
+        ROS_ERROR("Frame not in TF: %s", "NO_ID_STAMPED_DEFAULT_CONSTRUCTION");
+        tf::Stamped<tf::Pose> pose;
+        return pose;
+    }
 
     if (!listener_)
         listener_ = new tf::TransformListener();

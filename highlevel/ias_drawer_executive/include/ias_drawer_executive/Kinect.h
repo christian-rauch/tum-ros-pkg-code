@@ -1,5 +1,6 @@
+
 /*
- * Copyright (c) 2010, Thomas Ruehr <ruehr@cs.tum.edu>
+ * Copyright (c) 2011, Thomas Ruehr <ruehr@cs.tum.edu>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,54 +28,40 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __DEMOSCRIPTS_H__
-#define __DEMOSCRIPTS_H__
+
+#ifndef __KINECT_H__
+#define __KINECT_H__
 
 #include <ros/ros.h>
+#include <string>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
 
-class DemoScripts
+
+class Kinect
 {
+private:
+
+  Kinect(){};
+
+  ~Kinect(){};
+
+  static Kinect *instance_;
 
 public:
 
-    static int openFridge(int z = 0);
+  void getCloud(pcl::PointCloud<pcl::PointXYZRGB>::Ptr cloud, std::string frame_id="/map", ros::Time after = ros::Time(0,0));
+  void getCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, std::string frame_id="/map", ros::Time after = ros::Time(0,0));
 
-    static int takeBottle(int z = 0);
+  static Kinect* getInstance()
+  {
+      if (!instance_)
+        instance_ = new Kinect();
+     return instance_;
+  }
 
-    static int closeFridge(int handle);
-
-    static int takeBottleFromFridge(int z = 0);
-
-    static int putObjectIntoFridge(int z = 0);
-
-    static int serveBottle(int z = 0);
-
-    static int openDrawer(int z = 0);
-
-    static int takePlate(int z = 0);
-
-    //! in principle works the same also for silverware
-    static int servePlateToIsland(int z = 0);
-
-    static int takeSilverware(int z = 0);
-
-    //! works for plate and silverware
-    static int serveToTable(int z = 0);
-    static int serveToTable2(int z = 0);
-
-
-    static int takePlateFromIsland(int z = 0);
-
-    // XXXXXXXXXXXxx
-
-    static int sliceTheBread(int z);
-
-    static int takeBreadPlate(int z);
-
-    static int takeBowl(int z);
+  volatile bool stop;
 
 };
-
-
 
 #endif

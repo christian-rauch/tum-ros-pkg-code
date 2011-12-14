@@ -43,6 +43,7 @@ class OperateHandleController {
 
   public:
 
+  static tf::Stamped<tf::Pose> getCopPose(const char name[], const char frame[]);
   static tf::Stamped<tf::Pose> getBowlPose();
   static btVector3 getPlatePose();
   static btVector3 getTabletPose();
@@ -58,9 +59,9 @@ class OperateHandleController {
   // starting from a nice initial pose
   static void close(int side_c, int handle_);
 
-  static void pickPlate(btVector3 plate, float width = 0.34);
+  static void pickPlate(btVector3 plate, double width = 0.34);
 
-  static void getPlate(int object, float zHint = 0);
+  static void getPlate(int object, double zHint = 0);
 
   static void singleSidedPick(int side,tf::Stamped<tf::Pose> start, tf::Stamped<tf::Pose> end);
 
@@ -68,10 +69,11 @@ class OperateHandleController {
 
   static std::vector<std::vector<tf::Stamped<tf::Pose> *> > openingTraj;
 
-  //static void spinnerL(float l, float back);
-  static void spinnerL(float x, float y, float z);
+  //static void spinnerL(double l, double back);
+  static void spinnerL(double x, double y, double z);
 
-  static void openGrippers();
+  static void openGrippers(bool wait = true);
+  static void closeGrippers(bool wait = true);
 
   static void plateCarryPose();
 

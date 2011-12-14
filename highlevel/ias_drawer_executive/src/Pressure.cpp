@@ -31,7 +31,7 @@
 #include <ias_drawer_executive/Pressure.h>
 
 
-void Pressure::calcCenter(float pressure[], double &xcenter, double &ycenter)
+void Pressure::calcCenter(double pressure[], double &xcenter, double &ycenter)
 {
     double xsum = 0;
     double ysum = 0;
@@ -83,8 +83,8 @@ void Pressure::pressureCallback(const pr2_msgs::PressureState::ConstPtr& msg)
 
     double r[2];
     double l[2];
-    float r_act[22];
-    float l_act[22];
+    double r_act[22];
+    double l_act[22];
     for (int i = 0; i < 22; i++)
     {
         r_act[i] = msg->r_finger_tip[i] - r_zero[i];
@@ -188,7 +188,7 @@ void Pressure::reset()
 
 }
 
-void Pressure::getCenter(float *r, float *l)
+void Pressure::getCenter(double *r, double *l)
 {
     pressure_mutex.lock();
     r[0] = r_center[0];
@@ -198,7 +198,7 @@ void Pressure::getCenter(float *r, float *l)
     pressure_mutex.unlock();
 }
 
-void Pressure::getCurrent(float r[], float l[], bool zero)
+void Pressure::getCurrent(double r[], double l[], bool zero)
 {
     ros::spinOnce();
     pressure_mutex.lock();
@@ -219,7 +219,7 @@ void Pressure::getCurrent(float r[], float l[], bool zero)
 }
 
 
-void Pressure::getInside(float &r, float &l, bool zero)
+void Pressure::getInside(double &r, double &l, bool zero)
 {
     r = 0;
     l = 0;
@@ -247,7 +247,7 @@ void Pressure::getInside(float &r, float &l, bool zero)
 
 
 
-void Pressure::getFront(float &r, float &l, bool zero)
+void Pressure::getFront(double &r, double &l, bool zero)
 {
     r = 0;
     l = 0;
@@ -274,7 +274,7 @@ void Pressure::getFront(float &r, float &l, bool zero)
 
 
 
-void Pressure::getInsideTouched(float &r, float &l)
+void Pressure::getInsideTouched(double &r, double &l)
 {
     r = 0;
     l = 0;
@@ -291,7 +291,7 @@ void Pressure::getInsideTouched(float &r, float &l)
     }
 }
 
-void Pressure::getFrontTouched(float &r, float &l)
+void Pressure::getFrontTouched(double &r, double &l)
 {
     r = 0;
     l = 0;

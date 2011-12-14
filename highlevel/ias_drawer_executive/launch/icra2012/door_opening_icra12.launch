@@ -1,0 +1,25 @@
+<launch>
+  <!-- localization -->
+  <include file="$(find ias_drawer_executive)/launch/icra2012/pr2_2dnav_icra12.launch"/>
+
+  <!-- IK services -->
+  <include file="$(find ias_drawer_executive)/launch/icra2012/grip_icra12.launch"/>
+
+  <param name="/reactive_grasp_node_left/min_contact_row" value="3" />
+  <param name="/reactive_grasp_node_right/min_contact_row" value="3" />
+  <param name="/l_arm_ik/free_angle" value="2" />
+  <param name="/r_arm_ik/free_angle" value="2" />
+
+  <!-- improves localization -->
+  <node name="SnapMapICP" pkg="SnapMapICP" type="SnapMapICP" respawn="true" />
+
+  <!-- finds optimal base pose -->
+  <node name="find_base_pose" pkg="find_base_pose" type="find_base_pose" respawn="true" />
+
+  <!-- articulation service -->
+  <!-- make sure that force_gain param is set to 1 -->
+  <include file="$(find articulation_pr2)/launch/articulation_service.launch"/>
+
+  <!-- arm action server -->
+  <node name="operate_handle_server" pkg="ias_drawer_executive" type="operate_handle_server" respawn="true" />
+</launch>

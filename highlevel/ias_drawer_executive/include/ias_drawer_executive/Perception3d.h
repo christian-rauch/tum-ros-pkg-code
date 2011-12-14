@@ -61,7 +61,7 @@ class Perception3d{
   static btVector3 handleResult;
   static ros::Time cloud_time;
   static ros::Time query_time;
-  static float handleMinDist;
+  static double handleMinDist;
   static std::vector<tf::Stamped<tf::Pose> *> handlePoses;
   static std::vector<tf::Stamped<tf::Pose> *> planePoses;
 
@@ -73,7 +73,7 @@ class Perception3d{
   //get inslied cloud of handles
   static void handleCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);
 
-  static tf::Stamped<tf::Pose> getHandlePoseFromLaser(tf::Stamped<tf::Pose> hint);
+  static tf::Stamped<tf::Pose> getHandlePoseFromLaser(tf::Stamped<tf::Pose> hint, double wait = -1);
 
   //get plane center inside fridge
   static void fridgePlaneCloudCallback(const sensor_msgs::PointCloud2::ConstPtr& msg);

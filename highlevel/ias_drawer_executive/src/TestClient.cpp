@@ -74,7 +74,7 @@ actionlib::SimpleActionClient<ias_drawer_executive::OpenContainerAction> *ac_ = 
 
 actionlib::SimpleActionClient<ias_drawer_executive::CloseContainerAction> *ac_close_ = 0;
 
-void test_open(int arm_, float x, float y, float z, float ox, float oy, float oz, float ow)
+void test_open(int arm_, double x, double y, double z, double ox, double oy, double oz, double ow)
 {
     if (!ac_)
       ac_ = new actionlib::SimpleActionClient<ias_drawer_executive::OpenContainerAction>("open_container_action", true);
@@ -117,7 +117,7 @@ void test_open(int arm_, float x, float y, float z, float ox, float oy, float oz
         }
 
         /*int32 success
-        float32 distance
+        double32 distance
         geometry_msgs/PoseArray trajectory
         Header header
         uint32 seq
@@ -125,14 +125,14 @@ void test_open(int arm_, float x, float y, float z, float ox, float oy, float oz
         string frame_id
         geometry_msgs/Pose[] poses
         geometry_msgs/Point position
-          float64 x
-          float64 y
-          float64 z
+          double64 x
+          double64 y
+          double64 z
         geometry_msgs/Quaternion orientation
-          float64 x
-          float64 y
-          float64 z
-          float64 w*/
+          double64 x
+          double64 y
+          double64 z
+          double64 w*/
         ROS_INFO("TRYING NOW TO CLOSE");
 
         if (!ac_close_)
@@ -162,7 +162,7 @@ void test_open(int arm_, float x, float y, float z, float ox, float oy, float oz
         ROS_INFO("Action did not finish before the time out.");
 }
 
-geometry_msgs::Pose *getPose(float x, float y, float z, float ox, float oy, float oz, float ow)
+geometry_msgs::Pose *getPose(double x, double y, double z, double ox, double oy, double oz, double ow)
 {
         geometry_msgs::Pose *act = new geometry_msgs::Pose();
         act->position.x = x;

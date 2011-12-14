@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Thomas Ruehr <ruehr@cs.tum.edu>
+ * Copyright (c) 2011, Thomas Ruehr <ruehr@cs.tum.edu>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,54 +27,40 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __DEMOSCRIPTS_H__
-#define __DEMOSCRIPTS_H__
+#ifndef __CURRENT_H__
+#define __CURRENT_H__
 
-#include <ros/ros.h>
-
-class DemoScripts
+class Current
 {
-
 public:
 
-    static int openFridge(int z = 0);
+    static int getPotOut_openDrawer(int jump = 0);
 
-    static int takeBottle(int z = 0);
+    static int getPotOut_pickPlacePot(int jump = 0);
 
-    static int closeFridge(int handle);
+    static int manipulateKnob(int jump = 0);
 
-    static int takeBottleFromFridge(int z = 0);
+    static int openDrawerUnderOven(int jump = 0);
 
-    static int putObjectIntoFridge(int z = 0);
+    static int getLidOut(int jump = 0);
 
-    static int serveBottle(int z = 0);
+    static int getBowlOut(int jump = 0);
 
-    static int openDrawer(int z = 0);
+    static int closeDrawerUnderOven(int jump = 0);
 
-    static int takePlate(int z = 0);
+    static int pourPopCorn(int jump = 0);
 
-    //! in principle works the same also for silverware
-    static int servePlateToIsland(int z = 0);
+    static int putLidOn(int jump = 0);
 
-    static int takeSilverware(int z = 0);
+    static int pushPot(int jump = 0);
 
-    //! works for plate and silverware
-    static int serveToTable(int z = 0);
-    static int serveToTable2(int z = 0);
+    static int removeLid(int jump = 0);
 
+    static int takePotFromIsland(int jump = 0);
 
-    static int takePlateFromIsland(int z = 0);
+    static int pourReadyPopcorn(int jump = 0);
 
-    // XXXXXXXXXXXxx
-
-    static int sliceTheBread(int z);
-
-    static int takeBreadPlate(int z);
-
-    static int takeBowl(int z);
-
+    static int salt(int jump = 0);
 };
-
-
 
 #endif

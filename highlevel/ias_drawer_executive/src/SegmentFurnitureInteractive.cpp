@@ -56,7 +56,7 @@ void setParam(std::string param_name, bool segment)
 }
 
 
-void test_open(int arm_, float x, float y, float z, float ox, float oy, float oz, float ow)
+void test_open(int arm_, double x, double y, double z, double ox, double oy, double oz, double ow)
 {
   //publish trajectory as arrow marker array
   ros::Publisher trajectory_marker_array_publisher, trajectory_marker_publisher;
@@ -124,7 +124,7 @@ void test_open(int arm_, float x, float y, float z, float ox, float oy, float oz
 
     //move base backward
     ROS_INFO("moving base backward");
-    float target[4];
+    double target[4];
     target[0] = -0.1;
     target[1] = -0.1;
     target[2] = 0;
@@ -234,7 +234,7 @@ void test_open(int arm_, float x, float y, float z, float ox, float oy, float oz
         ROS_INFO("Action did not finish before the time out.");
 }
 
-geometry_msgs::Pose *getPose(float x, float y, float z, float ox, float oy, float oz, float ow)
+geometry_msgs::Pose *getPose(double x, double y, double z, double ox, double oy, double oz, double ow)
 {
         geometry_msgs::Pose *act = new geometry_msgs::Pose();
         act->position.x = x;

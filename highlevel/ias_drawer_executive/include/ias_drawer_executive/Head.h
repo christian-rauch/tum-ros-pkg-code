@@ -36,6 +36,10 @@
 #include <actionlib/client/simple_action_client.h>
 #include <pr2_controllers_msgs/PointHeadAction.h>
 
+#include "LinearMath/btVector3.h"
+
+
+
 // Our Action interface type, provided as a typedef for convenience
 typedef actionlib::SimpleActionClient<pr2_controllers_msgs::PointHeadAction> PointHeadClient;
 
@@ -59,7 +63,9 @@ public:
   //! Points the high-def camera frame at a point in a given frame
   void lookAt(std::string frame_id, double x, double y, double z,bool waitfor = false);
 
-  void lookAtThreaded(std::string frame_id, double x, double y, double z,bool waitfor = false);
+  void lookAtThreaded(std::string frame_id, double x, double y, double z);
+
+  void lookAtThreaded(std::string frame_id,btVector3 target);
 
   void stopThread();
 

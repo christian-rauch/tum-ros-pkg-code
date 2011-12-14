@@ -171,7 +171,7 @@ void TeleopPR2Keyboard::keyboardLoop()
     arm_->evil_switch = true;
 
     tf::Stamped<tf::Pose> toolPose = arm_->getToolPose();//const char frame[] = "base_link");
-    float grip_open = gripper_->getAmountOpen();
+    double grip_open = gripper_->getAmountOpen();
 
     for (;;)
     {
@@ -335,7 +335,7 @@ void TeleopPR2Keyboard::keyboardLoop()
             gripper_->closeHard(grip_open);
             for (int m = 0 ; m < 5; ++m)
             {
-                float am_open = gripper_->getAmountOpen();
+                double am_open = gripper_->getAmountOpen();
                 ROS_INFO("GRIPPER OPENING :%f (getAmountOpen reports %f)", grip_open, am_open);
             }
             grip_dirty = false;

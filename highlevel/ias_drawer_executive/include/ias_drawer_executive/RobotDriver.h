@@ -59,7 +59,7 @@ private:
   laser_geometry::LaserProjection *projector_;
   boost::mutex scan_mutex;
   bool weHaveScan;
-  float scanPoints[5000][2];
+  double scanPoints[5000][2];
   size_t numScanPoints;
 
   //! ROS node initialization
@@ -76,7 +76,9 @@ public:
   void scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan_in);
 
   //!checks wheter an envisioned movement of the base would collide the robot considering base_scan, currently supports only movements in x and y without rotation
-  bool checkCollision(float relativePose[]);
+  bool checkCollision(double relativePose[]);
+
+  bool checkCollision(tf::Stamped<tf::Pose> target);
 
   void getRobotPose(tf::Stamped<tf::Pose> &marker);
 
@@ -84,12 +86,15 @@ public:
   bool driveInMap(tf::Stamped<tf::Pose> targetPose,bool exitWhenStuck = false);
 
   //! Drive forward a specified distance based on odometry information
-  bool driveInMap(const float targetPose[],bool exitWhenStuck = false);
+  bool driveInMap(const double targetPose[],bool exitWhenStuck = false);
 
-  bool driveInOdom(const float targetPose[], bool exitWhenStuck = false);
+  bool driveInOdom(const double targetPose[], bool exitWhenStuck = false);
 
-  void moveBase(const float pose[], bool useNavigation = false);
-  void moveBaseP(float x, float y, float oz, float ow, bool useNavigation = false);
+  void moveBase(const double pose[], bool useNavigation = false);
+
+  static void moveBase4(double x, double y, double oz, double ow, bool useNavigation = false);
+
+  void moveBaseP(double x, double y, double oz, double ow, bool useNavigation = false);
 
   void driveToMatch(std::vector<tf::Stamped<tf::Pose> > targetPose, std::vector<std::string> frame_ids);
 

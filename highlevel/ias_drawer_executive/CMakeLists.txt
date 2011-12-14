@@ -7,12 +7,12 @@ include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 #  Release        : w/o debug symbols, w/ optimization
 #  RelWithDebInfo : w/ debug symbols, w/ optimization
 #  MinSizeRel     : w/o debug symbols, w/ optimization, stripped binaries
-#set(ROS_BUILD_TYPE RelWithDebInfo)
-rosbuild_find_ros_package(actionlib_msgs)
-include(${actionlib_msgs_PACKAGE_PATH}/cmake/actionbuild.cmake)
-genaction()
-
+set(ROS_BUILD_TYPE Debug)
 rosbuild_init()
+
+#rosbuild_find_ros_package(actionlib_msgs)
+#include(${actionlib_msgs_PACKAGE_PATH}/cmake/actionbuild.cmake)
+#genaction()
 
 #set the default path for built executables to the "bin" directory
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
@@ -31,8 +31,7 @@ rosbuild_genmsg()
 #rosbuild_link_boost(${PROJECT_NAME} thread)
 #rosbuild_add_executable(example examples/example.cpp)
 
-
-rosbuild_add_library(ias_drawer_executive_library src/RobotDriver.cpp src/Gripper.cpp src/Pressure.cpp src/RobotArm.cpp src/Poses.cpp src/AverageTF.cpp src/Torso.cpp src/OperateHandleController.cpp src/Head.cpp src/Approach.cpp src/OperateHandleServer.cpp src/DemoScripts.cpp src/Perception3d.cpp)
+rosbuild_add_library(ias_drawer_executive_library src/Geometry.cpp src/Kinect.cpp src/ObjectLocalizer.cpp src/Keywords.cpp src/Measures.cpp src/Current.cpp src/Accelerometer.cpp src/RobotDriver.cpp src/Gripper.cpp src/Pressure.cpp src/RobotArm.cpp src/Poses.cpp src/AverageTF.cpp src/Torso.cpp src/OperateHandleController.cpp src/Head.cpp src/Approach.cpp src/OperateHandleServer.cpp src/DemoScripts.cpp src/Perception3d.cpp)
 
 rosbuild_add_executable(ias_drawer_executive src/ias_drawer_executive.cpp)
 target_link_libraries(ias_drawer_executive ias_drawer_executive_library)
@@ -43,15 +42,19 @@ target_link_libraries(ias_drawer_executive ias_drawer_executive_library)
 rosbuild_add_executable(operate_handle_server src/OperateHandleServer.cpp)
 target_link_libraries(operate_handle_server ias_drawer_executive_library)
 
+#rosbuild_add_executable(cartesian_via_joint src/CartesianViaJoint.cpp)
+#target_link_libraries(cartesian_via_joint ias_drawer_executive_library)
 
-rosbuild_add_executable(test_client src/TestClient.cpp)
+#rosbuild_add_executable(test_client  src/TestClient.cpp)
 
-rosbuild_add_executable(segment_furniture_interactive src/SegmentFurnitureInteractive.cpp)
-target_link_libraries(segment_furniture_interactive ias_drawer_executive_library)
+#rosbuild_add_executable(segment_furniture_interactive src/SegmentFurnitureInteractive.cpp)
+#target_link_libraries(segment_furniture_interactive ias_drawer_executive_library)
 # src/Perception3d.cpp src/RobotDriver.cpp src/Gripper.cpp src/Pressure.cpp src/RobotArm.cpp src/Poses.cpp src/AverageTF.cpp src/Torso.cpp src/OperateHandleController.cpp src/Head.cpp src/Approach.cpp)
 
-rosbuild_add_executable(teleop_pr2_keyboard src/teleop_pr2_keyboard.cpp) 
-target_link_libraries(teleop_pr2_keyboard ias_drawer_executive_library)
+#rosbuild_add_executable(teleop_pr2_keyboard src/teleop_pr2_keyboard.cpp) 
+#target_link_libraries(teleop_pr2_keyboard ias_drawer_executive_library)
 # src/RobotDriver.cpp src/Gripper.cpp src/Pressure.cpp src/RobotArm.cpp src/Poses.cpp src/AverageTF.cpp src/Torso.cpp src/OperateHandleController.cpp src/Head.cpp src/Approach.cpp)
 
 #rosbuild_add_executable(grasp_cluster_client src/GraspClusterClient.cpp)
+#rosbuild_add_executable(workspace_filter src/WorkspaceFilter.cpp)
+#target_link_libraries(workspace_filter ias_drawer_executive_library)

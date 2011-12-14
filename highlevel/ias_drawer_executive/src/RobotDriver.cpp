@@ -29,6 +29,8 @@
 
 #include <ias_drawer_executive/RobotDriver.h>
 #include <ias_drawer_executive/RobotArm.h>
+#include <ias_drawer_executive/Geometry.h>
+
 #include <ias_drawer_executive/Poses.h>
 
 #include <sensor_msgs/point_cloud_conversion.h>
@@ -69,7 +71,7 @@ void RobotDriver::scanCallback(const sensor_msgs::LaserScan::ConstPtr& scan_in)
     weHaveScan = true;
 }
 
-bool RobotDriver::checkCollision(float relativePose[])
+bool RobotDriver::checkCollision(double relativePose[])
 {
     ros::Rate rate(10);
     while (!weHaveScan)
@@ -78,13 +80,13 @@ bool RobotDriver::checkCollision(float relativePose[])
         ros::spinOnce();
     }
     scan_mutex.lock();
-    //ROS_INFO("SCAN POINTS : %i",numScanPoints);
+    ROS_INFO("SCAN POINTS : %zu POSE : %f %f",numScanPoints, relativePose[0], relativePose[1] );
     bool good = true;
-    float padding = 0.05;
+    double padding = 0.05;
     for (size_t k = 0; good && (k < numScanPoints); k += 1)
     {
-        float x = scanPoints[k][0] + relativePose[0] + 0.275;
-        float y = scanPoints[k][1] + relativePose[1];
+        double x = scanPoints[k][0] + relativePose[0] + 0.275;
+        double y = scanPoints[k][1] + relativePose[1];
         if ((x < .325 + padding) && (x > -.325 - padding) && (y < .325 + padding) && (y > -.325 - padding))
         {
             //ROS_INFO("POINT %f %f",  scanPoints[k][0] , scanPoints[k][1]);
@@ -93,6 +95,15 @@ bool RobotDriver::checkCollision(float relativePose[])
     }
     scan_mutex.unlock();
     return good;
+}
+
+bool RobotDriver::checkCollision(tf::Stamped<tf::Pose> target)
+{
+    tf::Stamped<tf::Pose> inBase = Geometry::getPoseIn("base_link",target);
+    double relativePose[2];
+    relativePose[0] = -inBase.getOrigin().x();
+    relativePose[1] = -inBase.getOrigin().y();
+    return checkCollision(relativePose);
 }
 
 void RobotDriver::getRobotPose(tf::Stamped<tf::Pose> &marker)
@@ -124,10 +135,10 @@ void RobotDriver::QuaternionToEuler(const btQuaternion &TQuat, btVector3 &TEuler
     btScalar X = TQuat.getX();
     btScalar Y = TQuat.getY();
     btScalar Z = TQuat.getZ();
-    float WSquared = W * W;
-    float XSquared = X * X;
-    float YSquared = Y * Y;
-    float ZSquared = Z * Z;
+    double WSquared = W * W;
+    double XSquared = X * X;
+    double YSquared = Y * Y;
+    double ZSquared = Z * Z;
     TEuler.setX(atan2f(2.0f * (Y * Z + X * W), -XSquared - YSquared + ZSquared + WSquared));
     TEuler.setY(asinf(-2.0f * (X * Z - Y * W)));
     TEuler.setZ(atan2f(2.0f * (X * Y + Z * W), XSquared - YSquared - ZSquared + WSquared));
@@ -145,14 +156,15 @@ bool RobotDriver::driveInMap(tf::Stamped<tf::Pose> targetPoseMap,bool exitWhenSt
     btVector3 diff = targetPoseMap.getOrigin() - startPose.getOrigin();
     //we dont move in z
     diff = btVector3(diff.x(), diff.y(), 0);
-    float dist = diff.length();
+    double dist = diff.length();
     ROS_INFO("DISTANCE TO TRAVEL %f", dist);
 
-    if (dist < 0.01)
-        return true;
+    //if (dist < 0.01)
+    //return true;
 
     ROS_INFO("diff unnorm %f %f %f ", diff.x(),diff.y(),diff.z());
-    diff = (diff * ( 1.0 / dist)) ;
+    if (dist != 0)
+        diff = (diff * ( 1.0 / dist)) ;
     ROS_INFO("diff norm %f %f %f ", diff.x(),diff.y(),diff.z());
     btVector3 rel = (dist + 0.05) * diff;
     ROS_INFO("new target in base %f %f", rel.x(), rel.y());
@@ -165,7 +177,7 @@ bool RobotDriver::driveInMap(tf::Stamped<tf::Pose> targetPoseMap,bool exitWhenSt
     bool doneBad = false;
     int cnt = 0;
     int cntbad = 0;
-    float lastDistMoved = 0;
+    double lastDistMoved = 0;
 
     ROS_INFO("TARGET POSE IN MAP %f %f", targetPoseMap.getOrigin().x(), targetPoseMap.getOrigin().y());
 
@@ -204,15 +216,15 @@ bool RobotDriver::driveInMap(tf::Stamped<tf::Pose> targetPoseMap,bool exitWhenSt
         geometry_msgs::Twist base_cmd;
 
         //calulate speeds for reaching goal in 1 second and then scale them down to reasonable speeds
-        float theoretic_x = targetPoseBase.getOrigin().x();
-        float theoretic_y = targetPoseBase.getOrigin().y();
-        float theoretic_w = euler.z();
+        double theoretic_x = targetPoseBase.getOrigin().x();
+        double theoretic_y = targetPoseBase.getOrigin().y();
+        double theoretic_w = euler.z();
 
 
 
-        float scale_x = 1;
-        float scale_y = 1;
-        float scale_w = 1;
+        double scale_x = 1;
+        double scale_y = 1;
+        double scale_w = 1;
         if (fabs(theoretic_x) > 0.05)
             scale_x = 0.05 / fabs(theoretic_x);
         if (fabs(theoretic_y) > 0.05)
@@ -220,7 +232,7 @@ bool RobotDriver::driveInMap(tf::Stamped<tf::Pose> targetPoseMap,bool exitWhenSt
         if (fabs(theoretic_w) > 0.25)
             scale_w = 0.25 / fabs(theoretic_w);
 
-        float scale = scale_x;
+        double scale = scale_x;
         if (scale_y < scale)
             scale = scale_y;
         if (scale_w < scale)
@@ -244,11 +256,11 @@ bool RobotDriver::driveInMap(tf::Stamped<tf::Pose> targetPoseMap,bool exitWhenSt
         ros::Rate rate(10.0);
 
         // if ((base_cmd.angular.z == 0) && (base_cmd.linear.y == 0) && (base_cmd.linear.x == 0))
-        float distToTarg = sqrt(targetPoseBase.getOrigin().x() * targetPoseBase.getOrigin().x() + targetPoseBase.getOrigin().y() * targetPoseBase.getOrigin().y());
+        double distToTarg = sqrt(targetPoseBase.getOrigin().x() * targetPoseBase.getOrigin().x() + targetPoseBase.getOrigin().y() * targetPoseBase.getOrigin().y());
         //ROS_INFO("dist %f target pose in base coords: %f %f %f %f ANGLE %f ", distToTarg, targetPoseBase.getOrigin().x(), targetPoseBase.getOrigin().y(), targetPoseBase.getRotation().z(), targetPoseBase.getRotation().w(),euler.z());
 
         //if ((fabs(targetPoseBase.getOrigin().x()) < 0.02) && (fabs(targetPoseBase.getOrigin().y()) < 0.05) &&  (fabs(euler.z()) < 0.01))
-        if (distToTarg < 0.02)
+        if ((distToTarg < 0.02) && (targetPoseBase.getRotation().getAngle() < 0.05))
             done = true;
         //  while (!done && nh_.ok())
 
@@ -256,17 +268,18 @@ bool RobotDriver::driveInMap(tf::Stamped<tf::Pose> targetPoseMap,bool exitWhenSt
 
         tf::Stamped<tf::Pose> actPose;
         getRobotPose(actPose);
-        float trav = 3 * (actPose.getOrigin() - startPose.getOrigin()).length();
-        float used = (distToTarg < trav) ? distToTarg : trav;
-        //float used = distToTarg;
+        double trav = (3 * (actPose.getOrigin() - startPose.getOrigin()).length()) + 0.2;
+        double used = (distToTarg < trav) ? distToTarg : trav;
+        //double used = distToTarg;
         //! limit speed depening on already travelled distance (start slowly) and distance to goal (final approach slow)
-        float approach_dist = 0.125; // 0.25;
+        double approach_dist = 0.125; // 0.25;
         //if (used > 0.25f) {
+        // speed up when further away
         if (used > approach_dist)
         {
-            //float used = (distToTarg < lastDistMoved) ? distToTarg : lastDistMoved;
-            //float dscale = (distToTarg + .7) * (distToTarg + .7);
-            float dscale = (used + (1-approach_dist)) * (used + (1-approach_dist)) * (used + (1-approach_dist));
+            //double used = (distToTarg < lastDistMoved) ? distToTarg : lastDistMoved;
+            //double dscale = (distToTarg + .7) * (distToTarg + .7);
+            double dscale = (used + (1-approach_dist)) * (used + (1-approach_dist)) * (used + (1-approach_dist));
             if (dscale > 5.0)
                 dscale = 5.0;
             //ROS_INFO("USED %f TRAV %f TOTARG %f SCALE %f", used, trav, distToTarg, dscale);
@@ -283,6 +296,12 @@ bool RobotDriver::driveInMap(tf::Stamped<tf::Pose> targetPoseMap,bool exitWhenSt
         //send the drive command after safety check
         //if ((fabs(base_cmd.linear.x) <= 0.051) && (fabs(base_cmd.linear.y) <= 0.051) && (fabs(base_cmd.angular.z) <= 0.26))
         //if ((fabs(base_cmd.linear.x) <= 0.153) && (fabs(base_cmd.linear.y) <= 0.153) && (fabs(base_cmd.angular.z) <= 0.78))
+
+        if (isnan(base_cmd.linear.x))
+            base_cmd.linear.x = 0;
+        if (isnan(base_cmd.linear.y))
+            base_cmd.linear.y = 0;
+
         if ((fabs(base_cmd.linear.x) <= 0.255) && (fabs(base_cmd.linear.y) <= 0.255) && (fabs(base_cmd.angular.z) <= 1.3))
             cmd_vel_pub_.publish(base_cmd);
         else
@@ -302,7 +321,7 @@ bool RobotDriver::driveInMap(tf::Stamped<tf::Pose> targetPoseMap,bool exitWhenSt
         //see how far we've traveled
         tf::Transform relative_transform = start_transform.inverse() * current_transform;
 
-        double dist_moved = relative_transform.getOrigin().length();
+        double dist_moved = relative_transform.getOrigin().length() + relative_transform.getRotation().getAngle() * 100.0f;
         lastDistMoved = dist_moved;
         //ROS_INFO("dist_moved %f", dist_moved);
         // if we didnt move much and tried sometimes already, get out, we're stuck
@@ -327,7 +346,7 @@ bool RobotDriver::driveInMap(tf::Stamped<tf::Pose> targetPoseMap,bool exitWhenSt
 
     tf::Stamped<tf::Pose> actPose;
     getRobotPose(actPose);
-    float travelled = (actPose.getOrigin() - startPose.getOrigin()).length();
+    double travelled = (actPose.getOrigin() - startPose.getOrigin()).length();
     //ROS_ERROR("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
     btVector3 euler;
     ROS_INFO("TRAVELLED %f", travelled);
@@ -340,7 +359,7 @@ bool RobotDriver::driveInMap(tf::Stamped<tf::Pose> targetPoseMap,bool exitWhenSt
 }
 
 
-bool RobotDriver::driveInMap(const float targetPose[], bool exitWhenStuck)
+bool RobotDriver::driveInMap(const double targetPose[], bool exitWhenStuck)
 {
     tf::Stamped<tf::Pose> targetPoseMap;
     targetPoseMap.frame_id_ = "map";
@@ -348,10 +367,10 @@ bool RobotDriver::driveInMap(const float targetPose[], bool exitWhenStuck)
     targetPoseMap.setOrigin(btVector3( targetPose[0], targetPose[1], 0));
     targetPoseMap.setRotation(btQuaternion(0,0, targetPose[2],  targetPose[3]));
 
-    driveInMap(targetPoseMap,exitWhenStuck);
+    return driveInMap(targetPoseMap,exitWhenStuck);
 }
 
-bool RobotDriver::driveInOdom(const float targetPose[], bool exitWhenStuck)
+bool RobotDriver::driveInOdom(const double targetPose[], bool exitWhenStuck)
 {
 
     listener_.waitForTransform("base_link", "map",
@@ -369,7 +388,7 @@ bool RobotDriver::driveInOdom(const float targetPose[], bool exitWhenStuck)
 
     listener_.transformPose("map", targetPoseMap, targetPoseBase);
 
-    float pose[4];
+    double pose[4];
     pose[0] = targetPoseBase.getOrigin().x();
     pose[1] = targetPoseBase.getOrigin().y();
     pose[2] = targetPoseBase.getRotation().z();
@@ -382,20 +401,31 @@ bool RobotDriver::driveInOdom(const float targetPose[], bool exitWhenStuck)
 
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 
-void RobotDriver::moveBase(const float pose[], bool useNavigation)
+void RobotDriver::moveBase4(double x, double y, double oz, double ow, bool useNavigation)
 {
-    float x = pose[0];
-    float y = pose[1];
-    float oz = pose[2];
-    float ow = pose[3];
+    double p[4];
+    p[0] = x;
+    p[1] = y;
+    p[2] = oz;
+    p[3] = ow;
+    ROS_INFO("going to %f %f %f %f", p[0], p[1], p[2], p[3]);
+    RobotDriver::getInstance()->moveBase(p);
+}
+
+void RobotDriver::moveBase(const double pose[], bool useNavigation)
+{
+    double x = pose[0];
+    double y = pose[1];
+    double oz = pose[2];
+    double ow = pose[3];
 
     //RobotArm *arm = RobotArm::getInstance();
     // Start the trajectory
 
     //if (!arm->isTucked())
     //{
-    //arm->startTrajectory(arm->lookAtMarker(Poses::untuckPoseB, Poses::untuckPoseB));
-    ///  //arm->startTrajectory(arm->lookAtMarker(Poses::untuckPoseA, Poses::tuckPose));
+    //arm->startTrajectory(arm->twoPointTrajectory(Poses::untuckPoseB, Poses::untuckPoseB));
+    ///  //arm->startTrajectory(arm->twoPointTrajectory(Poses::untuckPoseA, Poses::tuckPose));
     //}
 
     //tell the action client that we want to spin a thread by default
@@ -438,9 +468,9 @@ void RobotDriver::moveBase(const float pose[], bool useNavigation)
     driver->driveInMap(pose);
 }
 
-void RobotDriver::moveBaseP(float x, float y, float oz, float ow, bool useNavigation)
+void RobotDriver::moveBaseP(double x, double y, double oz, double ow, bool useNavigation)
 {
-    float p[4];
+    double p[4];
     p[0] = x;
     p[1] = y;
     p[2] = oz;
@@ -470,14 +500,14 @@ void RobotDriver::driveToMatch(std::vector<tf::Stamped<tf::Pose> > targetPose, s
         goalPoseRight.frame_id_= "map";
         goalPoseRight.setOrigin(btVector3(-1.657, 1.727, 0.982));
         goalPoseRight.setRotation(btQuaternion(-0.618, -0.312, 0.674, 0.256));
-        goalPoseRight = RobotArm::getPoseIn("base_link",goalPoseRight);
+        goalPoseRight = Geometry::getPoseIn("base_link",goalPoseRight);
 
         tf::Stamped<tf::Pose> goalPoseLeft;
         goalPoseLeft.stamp_ = ros::Time::now();
         goalPoseLeft.frame_id_= "map";
         goalPoseLeft.setOrigin(btVector3(-1.679, 1.987, 0.971));
         goalPoseLeft.setRotation(btQuaternion(-0.285, 0.654, -0.282, 0.641));
-        goalPoseLeft = RobotArm::getPoseIn("base_link",goalPoseLeft);
+        goalPoseLeft = Geometry::getPoseIn("base_link",goalPoseLeft);
 
 
         /*- Translation: [-1.657, 1.727, 0.982]

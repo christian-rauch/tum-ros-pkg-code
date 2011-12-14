@@ -134,12 +134,20 @@ void RobotHead::spinner(std::string frame_id, double x, double y, double z, doub
 }
 
 //! Points the high-def camera frame at a point in a given frame
-void RobotHead::lookAtThreaded(std::string frame_id, double x, double y, double z, bool waitfor)
+void RobotHead::lookAtThreaded(std::string frame_id, double x, double y, double z)
 {
     if (t1)
        stopThread();
     stop = false;
     t1 = new boost::thread(&RobotHead::spinner, this, frame_id, x, y, z, 15);
+}
+
+void RobotHead::lookAtThreaded(std::string frame_id, btVector3 target)
+{
+    if (t1)
+       stopThread();
+    stop = false;
+    t1 = new boost::thread(&RobotHead::spinner, this, frame_id, target.x(), target.y(), target.z(), 15);
 }
 
 void RobotHead::stopThread()

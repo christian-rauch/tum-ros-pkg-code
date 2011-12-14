@@ -7,6 +7,7 @@
 #include <ros/ros.h>
 #include <actionlib/client/simple_action_client.h>
 #include <pr2_gripper_sensor_msgs/PR2GripperEventDetectorAction.h>
+#include <pr2_msgs/AccelerometerState.h>
 
 typedef actionlib::SimpleActionClient<pr2_gripper_sensor_msgs::PR2GripperEventDetectorAction> DetectContactAC;
 
@@ -19,9 +20,14 @@ private:
     Accelerometer(int side=0);//side 0 means right hand
     ~Accelerometer();
 
+    void accelCallback(const pr2_msgs::AccelerometerState::ConstPtr& msg);
+
+
+
 public:
     static Accelerometer *getInstance(int side=0);
     void detectContact(double magnitude=1.6);
+
 };
 
 #endif
