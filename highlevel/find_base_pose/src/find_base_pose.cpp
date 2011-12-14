@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2011, Thomas Ruehr <ruehr@cs.tum.edu>
  * All rights reserved.
@@ -55,6 +54,192 @@ pr2_arm_kinematics::PR2ArmKinematics *kinemar,*kinemal;
 pr2_arm_kinematics::PR2ArmIK *ik_r;
 pr2_arm_kinematics::PR2ArmIKSolver *solver;
 
+
+//! exlude unknown and occupied space from map
+#include <nav_msgs/OccupancyGrid.h>
+
+bool we_have_a_map = false;
+bool map_processed = false;
+
+nav_msgs::OccupancyGrid map, map_inscribed, map_circumscribed;
+nav_msgs::OccupancyGrid coarsemap;
+
+float resolution_ = 0;
+int size_x_ = 0;
+int size_y_ = 0;
+
+float origin_x_ = 0;
+float origin_y_ = 0;
+
+void mapToWorld(unsigned int mx, unsigned int my, double& wx, double& wy)
+{
+    wx = origin_x_ + (mx + 0.5) * resolution_;
+    wy = origin_y_ + (my + 0.5) * resolution_;
+}
+
+bool worldToMap(double wx, double wy, unsigned int& mx, unsigned int& my)
+{
+    if (wx < origin_x_ || wy < origin_y_)
+        return false;
+
+    mx = (int) ((wx - origin_x_) / resolution_);
+    my = (int) ((wy - origin_y_) / resolution_);
+
+    if (mx < size_x_ && my < size_y_)
+        return true;
+
+    return false;
+}
+
+void worldToMapNoBounds(double wx, double wy, int& mx, int& my)
+{
+    mx = (int) ((wx - origin_x_) / resolution_);
+    my = (int) ((wy - origin_y_) / resolution_);
+}
+
+ros::Publisher occ_pub;
+
+void mapCallback(const nav_msgs::OccupancyGrid& msg)
+{
+    if (we_have_a_map)
+        return;
+
+    we_have_a_map = true;
+
+    map = msg;
+    map_inscribed = msg;
+
+    resolution_ = map.info.resolution;
+    size_x_ = map.info.width;
+    size_y_ = map.info.height;
+
+    origin_x_ = map.info.origin.position.x;
+    origin_y_ = map.info.origin.position.y;
+
+    ROS_INFO("got map, processing ");
+
+    double inscribing_radius = .35;
+    int inscr_rad = inscribing_radius / map.info.resolution;
+
+    for (int my = 0; my < size_y_; my++)
+    {
+        if ((my + 1) % (int)(size_x_ / 20) == 0)
+        {
+            ROS_INFO("processing %i/%i", my, size_y_);
+        }
+        for (int mx = 0; mx < size_x_; mx++)
+        {
+            bool found = false;
+            if (map_inscribed.data[mx + my * size_x_] ==0)
+                for (int ax = -inscr_rad; !found && (ax < inscr_rad); ax++)
+                    for (int ay = -inscr_rad; !found && (ay < inscr_rad); ay++)
+                    {
+                        if ((ax * ax + ay * ay < inscr_rad * inscr_rad)  &&
+                                (mx + ax > 0) && (mx + ax < size_x_) &&
+                                (my + ay > 0) && (my + ay < size_y_) &&
+                                (map.data[mx + ax + (my + ay) * size_x_] != 0))
+                        {
+                            found = true;
+                            map_inscribed.data[mx + my * size_x_] = 100;
+                        }
+                    }
+        }
+    }
+
+    inscribing_radius = tf::Vector3(.35,.35,0).length();
+    ROS_INFO("circumscribed circle radius %f", inscribing_radius);
+    inscr_rad = inscribing_radius / map.info.resolution;
+
+    map_circumscribed = map_inscribed;
+
+    for (int my = 0; my < size_y_; my++)
+    {
+        if ((my + 1) % (int)(size_x_ / 20) == 0)
+        {
+            ROS_INFO("processing %i/%i", my, size_y_);
+        }
+        for (int mx = 0; mx < size_x_; mx++)
+        {
+            bool found = false;
+            if (map_circumscribed.data[mx + my * size_x_] ==0)
+                for (int ax = -inscr_rad; !found && (ax < inscr_rad); ax++)
+                    for (int ay = -inscr_rad; !found && (ay < inscr_rad); ay++)
+                    {
+                        if ((ax * ax + ay * ay < inscr_rad * inscr_rad)  &&
+                                (mx + ax > 0) && (mx + ax < size_x_) &&
+                                (my + ay > 0) && (my + ay < size_y_) &&
+                                (map.data[mx + ax + (my + ay) * size_x_] != 0))
+                        {
+                            found = true;
+                            map_circumscribed.data[mx + my * size_x_] = 100;
+                        }
+                    }
+        }
+    }
+
+    map_processed = true;
+
+    ROS_INFO("Processing done");
+
+    ros::NodeHandle node_handle;
+    occ_pub = node_handle.advertise<nav_msgs::OccupancyGrid>( "occ_map", 1000, true );
+    occ_pub.publish(map_inscribed);
+
+    ROS_INFO("Publishing done");
+}
+
+//will take a pose in map coordinates and say if its free given the pr2s footprint
+bool mapFreeCoarse(tf::Stamped<tf::Pose> absPose)
+{
+    ros::Rate rt(2);
+    while (!map_processed)
+    {
+        rt.sleep();
+        ROS_INFO("Waiting for map to be published on /map");
+    }
+    //bool worldToMap(double wx, double wy, unsigned int& mx, unsigned int& my)
+    unsigned int mx, my;
+    worldToMap(absPose.getOrigin().x(), absPose.getOrigin().y(), mx,my);
+    if (map_inscribed.data[mx + my * map.info.width] == 0)
+        return true;
+    return false;
+}
+
+bool mapFreeCoarseCircumscribed(tf::Stamped<tf::Pose> absPose)
+{
+    ros::Rate rt(2);
+    while (!map_processed)
+    {
+        rt.sleep();
+        ROS_INFO("Waiting for map to be published on /map");
+    }
+    //bool worldToMap(double wx, double wy, unsigned int& mx, unsigned int& my)
+    unsigned int mx, my;
+    worldToMap(absPose.getOrigin().x(), absPose.getOrigin().y(), mx,my);
+    if (map_circumscribed.data[mx + my * map.info.width] == 0)
+        return true;
+    return false;
+}
+
+bool mapFreeFine(tf::Stamped<tf::Pose> absPose)
+{
+    ros::Rate rt(2);
+    while (!map_processed)
+    {
+        rt.sleep();
+        ROS_INFO("Waiting for map to be published on /map");
+    }
+    //bool worldToMap(double wx, double wy, unsigned int& mx, unsigned int& my)
+
+    unsigned int mx, my;
+    worldToMap(absPose.getOrigin().x(), absPose.getOrigin().y(), mx,my);
+    if (map.data[mx + my * map.info.width] == 0)
+        return true;
+    return false;
+}
+
+
+//! end: exlude unknown and occupied space from map
 
 
 class FindBasePoseAction
@@ -220,9 +405,9 @@ public:
         marker.type = visualization_msgs::Marker::ARROW;
         marker.action = visualization_msgs::Marker::ADD;
         marker.pose = pose.pose;
-        marker.scale.x = 0.2;
-        marker.scale.y = 0.7;
-        marker.scale.z = 0.7;
+        marker.scale.x = 0.02;
+        marker.scale.y = 0.07;
+        marker.scale.z = 0.07;
         marker.color.a = 1;
         marker.color.r = colr;
         marker.color.g = colg;
@@ -409,7 +594,6 @@ public:
         marker.color.r = colr;
         marker.color.g = colg;
         marker.color.b = colb;
-        float si = si_;
 
         std::vector<btVector3>::iterator it;
         for (it = pts.begin(); it != pts.end(); ++it)
@@ -453,35 +637,55 @@ public:
         weHaveScan = true;
     }
 
-    bool collisionFree(float relativePose[])
-    {
-        ros::Rate rate(10);
-        while (!weHaveScan)
-        {
-            rate.sleep();
-            ros::spinOnce();
-        }
-        scan_mutex.lock();
-        //ROS_INFO("SCAN POINTS : %i",numScanPoints);
-        bool good = true;
-        float padding = 0.05;
-        for (size_t k = 0; good && (k < numScanPoints); k += 1)
-        {
-            //float x = scanPoints[k][0] - relativePose[0] + 0.275;
-            //float y = scanPoints[k][1] - relativePose[1];
-            float x = scanPoints[k].x() - relativePose[0] + 0.275;
-            float y = scanPoints[k].y() - relativePose[1];
-            if ((x < .325 + padding) && (x > -.325 - padding) && (y < .325 + padding) && (y > -.325 - padding))
-            {
-                //ROS_INFO("POINT %f %f",  scanPoints[k][0] , scanPoints[k][1]);
-                good = false;
-            }
-        }
-        scan_mutex.unlock();
-        return good;
-    }
 
     //bool collisionFree(tf::Stamped<tf::Pose> relativePose)
+
+    //check against map collision
+    bool collisionFreeCoarse(btTransform relativePose)
+    {
+
+        tf::Stamped<tf::Pose> relPose;
+        relPose.setOrigin(relativePose.getOrigin());
+        relPose.setRotation(relativePose.getRotation());
+        relPose.frame_id_ = "/base_link";
+        tf::Stamped<tf::Pose> absPose = getPoseIn("/map", relPose);
+
+        if (!mapFreeCoarse(absPose))
+            return false;
+
+        return true;
+    }
+
+    //check against map collision
+    bool collisionFreeFine(btTransform relativePose)
+    {
+
+        tf::Stamped<tf::Pose> relPose;
+        relPose.setOrigin(relativePose.getOrigin());
+        relPose.setRotation(relativePose.getRotation());
+        relPose.frame_id_ = "/base_link";
+
+        tf::Stamped<tf::Pose> absPose = getPoseIn("/map", relPose);
+        if (mapFreeCoarseCircumscribed(absPose))
+          return true;
+
+        for (double ax = -.35; ax <= .35; ax += .1)
+            for (double ay = -.35; ay <= .35; ay += .1) {
+                tf::Stamped<tf::Pose> act = relPose;
+                act.getOrigin() += tf::Vector3(ax,ay,0);
+
+                tf::Stamped<tf::Pose> absPose = getPoseIn("/map", act);
+                if (!mapFreeCoarse(absPose))
+                    return false;
+        }
+
+        return true;
+    }
+
+    //todo: speed this up ! 10x should be no problem, with a real algorithm ;)
+    // other idea: first check circumscribed circle against points, then incircle,
+    // only check polygon for points inside circumscribed and outside of inscribed circle
+
     bool collisionFree(btTransform relativePose)
     {
         ros::Rate rate(10);
@@ -491,15 +695,31 @@ public:
             ros::spinOnce();
         }
         scan_mutex.lock();
+
+        tf::Stamped<tf::Pose> relPose;
+        relPose.setOrigin(relativePose.getOrigin());
+        relPose.setRotation(relativePose.getRotation());
+        relPose.frame_id_ = "/base_link";
+        tf::Stamped<tf::Pose> absPose = getPoseIn("/map", relPose);
+
+        if (!mapFreeCoarse(absPose))
+            return false;
+
         //ROS_INFO("SCAN POINTS : %i",numScanPoints);
         bool good = true;
+        bool happy = true;
+        bool indifferent = true;
         float padding = 0.05;
+        float inscribed = .325;
+        float circumscribed = sqrt(inscribed * inscribed + inscribed * inscribed);
         for (size_t k = 0; good && (k < numScanPoints); k += 1)
         {
-
-            //float x = scanPoints[k].x() - relativePose.getOrigin().x() + 0.275;
-            //float y = scanPoints[k].y()  - relativePose.getOrigin().y();
             btVector3 in = scanPoints[k];
+            float dist = (in  - relativePose.getOrigin()).length();
+            if (dist < inscribed)
+                happy = false;
+            if (dist < circumscribed)
+                indifferent = false;
             btVector3 transformed = relativePose.invXform(in);
             //btVector3 transformed = in * relativePose;
             if ((transformed.x() < .325 + padding) && (transformed.x() > -.325 - padding) && (transformed.y() < .325 + padding) && (transformed.y() > -.325 - padding))
@@ -507,6 +727,10 @@ public:
                 //ROS_INFO("POINT %f %f",  scanPoints[k][0] , scanPoints[k][1]);
                 good = false;
             }
+            if (good && !happy)
+                ROS_ERROR("Good but not happy? Point lies in in incircle but not in box, how can that be ?");
+            if (!good && indifferent)
+                ROS_ERROR("Not good but indifferent? Point lies in footprint box but not inside circumscribed circle, how can that be?");
         }
         scan_mutex.unlock();
         return good;
@@ -523,14 +747,6 @@ public:
         ret *= wrist2tool;
         return ret;
     }
-
-    /*tf::Stamped<tf::Pose> getPoseIn(const char target_frame[], tf::Stamped<tf::Pose>src)
-    {
-        tf::Stamped<tf::Pose> transform;
-        listener_->waitForTransform(src.frame_id_, target_frame,ros::Time(0), ros::Duration(30.0));
-        listener_->transformPose(target_frame, src, transform);
-        return transform;
-    }*/
 
     tf::Stamped<tf::Pose> getPoseIn(const char target_frame[], tf::Stamped<tf::Pose>src)
     {
@@ -677,6 +893,9 @@ public:
             else
                 ik_service_call  = kinemal->getPositionIK(ik_request,ik_response);
         }
+
+        //! TODO: generally we should be able to interface ik on a lower level
+
         //bool ik_service_call = true;
         //Eigen::eigen2_Transform3d pose_eigen;
         //KDL::Frame pose_kdl;
@@ -761,7 +980,7 @@ public:
         //}(-1.008435,-1.813615)-(1.591565,0.786385)
 
         // max of mins and vice versa gives the overlap of approx inverse capability maps
-        ROS_INFO("GOAL TARGETS SIZE: %zu", target_poses_transformed.size());
+        //ROS_INFO("GOAL TARGETS SIZE: %zu", target_poses_transformed.size());
         for (size_t i=0; i < target_poses_transformed.size(); ++i)
         {
             // take 1.5m for approx upper bound of arms reach
@@ -769,11 +988,11 @@ public:
             maxx = std::min(target_poses_transformed[i].getOrigin().x()-bbox[arm[i].data][0].x(),maxx);
             miny = std::max(target_poses_transformed[i].getOrigin().y()-bbox[arm[i].data][1].y(),miny);
             maxy = std::min(target_poses_transformed[i].getOrigin().y()-bbox[arm[i].data][0].y(),maxy);
-            ROS_INFO("%zu BOUNDING BOX : (%f,%f)-(%f,%f) size : %f %f ",i, minx,miny, maxx, maxy, maxx - minx, maxy - miny);
+            //ROS_INFO("%zu BOUNDING BOX : (%f,%f)-(%f,%f) size : %f %f ",i, minx,miny, maxx, maxy, maxx - minx, maxy - miny);
             //pubBaseMarker(goalInBaseMsg[i].pose.position.x,goalInBaseMsg[i].pose.position.y,goalInBaseMsg[i].pose.position.z,1,0,0);
         }
 
-        ROS_INFO("BOUNDING BOX : (%f,%f)-(%f,%f) size : %f %f ", minx,miny, maxx, maxy, maxx - minx, maxy - miny);
+        //ROS_INFO("BOUNDING BOX : (%f,%f)-(%f,%f) size : %f %f ", minx,miny, maxx, maxy, maxx - minx, maxy - miny);
 
         //discretize on a grid around 0,0
         double discretisation = 0.075;
@@ -866,7 +1085,7 @@ public:
         std::vector<geometry_msgs::PoseStamped> goalInBaseMsg;
         goalInBaseMsg.resize(goal->target_poses.size());
 
-        double reach = 1.3;
+        //double reach = 1.3;
 
         for (size_t i=0; i < goal->target_poses.size(); ++i)
         {
@@ -876,6 +1095,10 @@ public:
             //goalInBase[i] = tool2wrist(getPoseIn("base_link", act));
             goalInBase[i] = tool2wrist(getPoseIn("base_link", act));
             poseStampedTFToMsg(goalInBase[i], goalInBaseMsg[i]);
+
+            tf::Stamped<tf::Pose> inBase = getPoseIn("base_link", act);
+            ROS_INFO("TOOL in base: %f %f %f  %f %f %f %f", inBase.getOrigin().x(), inBase.getOrigin().y(), inBase.getOrigin().z(),
+                     inBase.getRotation().x(), inBase.getRotation().y(), inBase.getRotation().z(), inBase.getRotation().w());
 
             for (int k = 0 ; k < 5 ; k++)
             {
@@ -888,8 +1111,8 @@ public:
             }
 
             ROS_INFO("FRAME: %s", goalInBaseMsg[i].header.frame_id.c_str());
-            ROS_INFO("POSE: %f %f %f", goalInBaseMsg[i].pose.position.x, goalInBaseMsg[i].pose.position.y, goalInBaseMsg[i].pose.position.z);
-            ROS_INFO("ROT: %f %f %f %f", goalInBaseMsg[i].pose.orientation.x, goalInBaseMsg[i].pose.orientation.y, goalInBaseMsg[i].pose.orientation.z, goalInBaseMsg[i].pose.orientation.w);
+            ROS_INFO("WRIST POSE: %f %f %f", goalInBaseMsg[i].pose.position.x, goalInBaseMsg[i].pose.position.y, goalInBaseMsg[i].pose.position.z);
+            ROS_INFO("WRIST ROT: %f %f %f %f", goalInBaseMsg[i].pose.orientation.x, goalInBaseMsg[i].pose.orientation.y, goalInBaseMsg[i].pose.orientation.z, goalInBaseMsg[i].pose.orientation.w);
         }
 
         std::vector<tf::Pose> search_poses;
@@ -916,7 +1139,7 @@ public:
 
 
 
-        ROS_INFO("SIZE Of searchspace : %i .. sorting", (int)search_poses.size());
+        //ROS_INFO("SIZE Of searchspace : %i .. sorting", (int)search_poses.size());
 
         std::sort(search_poses.begin(), search_poses.end(), pose_compare);
 
@@ -1005,12 +1228,20 @@ public:
 
         bool found = false;
         //while (!found)
-        int counter = 0;
 
         float mindist = 10000;
+
+        int cnt = 1;
+
         for (it = search_poses.begin(); (it!=search_poses.end()) && (!found); ++it)
             //for (it = search_poses.begin(); it!=search_poses.end(); ++it)
         {
+            if (cnt % 50 == 0)
+                ROS_INFO("Cnt %i", cnt);
+
+
+            if (!collisionFreeCoarse(*it))
+                continue;
 
             //double x_add = it->getOrigin().x();
             //double y_add = it->getOrigin().y();
@@ -1043,8 +1274,10 @@ public:
 
             //ROS_INFO("x %f y %f d %f good %i", x_add, y_add, a.length(), good);
 
-            if (good)
-                if (collisionFree(*it))
+            if (good) // collision checking seems to take longer than checking ik, this may differ for long trajectories! todo: check this first, then decide order
+                // apart from that: todo: speed up collision checking,
+                if (collisionFree(*it) && collisionFreeFine(*it))
+                //if (collisionFree(*it) && collisionFreeFine(*it))
                 {
                     if (!found)
                     {
@@ -1131,6 +1364,9 @@ int main(int argc, char** argv)
     ros::param::set("/find_base_pose/root_name", "torso_lift_link");
     ros::param::set("/find_base_pose/tip_name", "r_wrist_roll_link");
 
+    ros::NodeHandle nh_;
+    ros::Subscriber subMap = nh_.subscribe("map", 10, mapCallback);
+
     ros::Rate rt(10);
 
     while (!(ros::param::has("/find_base_pose/root_name") && ros::param::has("/find_base_pose/tip_name") ))
@@ -1170,3 +1406,6 @@ int main(int argc, char** argv)
 
     return 0;
 }
+
+
+// failed goal (in base): 0.125900 0.564599 1.007231 -0.057600 0.007678 0.132418 0.989489 (time 1.000000)

@@ -133,11 +133,12 @@ int main(int argc, char **argv)
     }
 
 
-    test_fridge(ac);
-
     ROS_INFO("Waiting for action server to start.");
     // wait for the action server to start
     ac.waitForServer(); //will wait for infinite time
+
+    test_fridge(ac);
+
 
     ac.sendGoal(goal);
 
