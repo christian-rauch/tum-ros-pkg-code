@@ -1,0 +1,8 @@
+name = TestMacroEdgeDetection
+type = executable
+includeDirectories =
+libraries =
+libraryDirectories =
+classes = AdaptiveRasterizer Image MemoryImage OwnedImage MomentMask EdgeImage MicroEdgeMap MicroEdgeCorrectionTable MicroEdgeDetector MacroEdgeDetector
+
+include makefiles/Makefile.build

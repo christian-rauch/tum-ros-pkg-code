@@ -1,0 +1,32 @@
+ifeq ($(type), library)
+	binary = lib$(name).so
+endif
+ifeq ($(type), executable)
+	binary = $(name)
+endif
+
+includeDirectories += include
+
+CPPFLAGS += $(addprefix -I,$(includeDirectories))
+CXXFLAGS += -O3
+LDFLAGS += $(addprefix -l,$(libraries)) $(addprefix -L,$(libraryDirectories))
+
+objectFiles = $(addprefix build/,$(addsuffix .o,$(classes)))
+dependencyFiles = $(addsuffix .d,$(classes)) $(name).d
+
+bin/$(binary): $(objectFiles)
+
+-include $(addprefix build/,$(dependencyFiles))
+
+build/%.o: src/%.cpp
+	@$(CXX) -c  $(CPPFLAGS) $(CXXFLAGS) src/$*.cpp -o  build/$*.o
+	@$(CXX) -MM $(CPPFLAGS) $(CXXFLAGS) src/$*.cpp -MT build/$*.o > build/$*.d
+	@echo "\tCompiling $*"
+bin/%: src/%.cpp
+	@$(CXX)     $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) $(objectFiles) src/$*.cpp -o  bin/$*
+	@$(CXX) -MM $(CPPFLAGS) $(CXXFLAGS)                           src/$*.cpp -MT bin/$* > build/$*.d
+	@echo "\tLinking executable $*"
+bin/lib%.so: src/%.cpp
+	@$(CXX) -fPIC -shared $(CPPFLAGS) $(CXXFLAGS) $(LDFLAGS) $(objectFiles) src/$*.cpp -o  bin/lib$*.so
+	@$(CXX) -MM           $(CPPFLAGS) $(CXXFLAGS)                           src/$*.cpp -MT bin/lib$*.so > build/$*.d
+	@echo "\tLinking library $*"

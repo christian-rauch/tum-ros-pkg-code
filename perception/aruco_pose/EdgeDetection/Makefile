@@ -1,0 +1,3 @@
+targets = CreateMicroEdgeCorrectionTable TestMicroEdgeCorrectionTable TestMacroEdgeDetection
+
+include makefiles/Makefile.global

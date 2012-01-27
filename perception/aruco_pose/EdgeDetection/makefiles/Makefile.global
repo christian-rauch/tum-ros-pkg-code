@@ -1,0 +1,19 @@
+all: bin build
+	@for target in $(targets); \
+	do \
+		echo "Building $$target"; \
+		make --no-print-directory -f makefiles/Makefile.$$target; \
+	done
+
+bin:
+	@mkdir bin
+	@echo "Creating directory bin"
+
+build:
+	@mkdir build
+	@echo "Creating directory build"
+
+clean:
+	@rm -r build bin
+
+.PHONY: clean
