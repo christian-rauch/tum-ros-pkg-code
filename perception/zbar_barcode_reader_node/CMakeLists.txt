@@ -32,7 +32,13 @@ rosbuild_add_executable(zbar_barcode_reader src/zbar_barcode_reader.c)
 target_link_libraries(zbar_barcode_reader  MagickWand MagickCore)
 
 rosbuild_add_executable(zbar_barcode_reader_cpp src/scan_image.cpp)
-target_link_libraries(zbar_barcode_reader_cpp  MagickWand MagickCore Magick++)
+target_link_libraries(zbar_barcode_reader_cpp  MagickWand MagickCore Magick++ curl)
 
 rosbuild_add_executable(zbar_barcode_reader_node src/zbar_barcode_reader_node.cpp)
-target_link_libraries(zbar_barcode_reader_node Magick++)
+target_link_libraries(zbar_barcode_reader_node Magick++ curl)
+
+# rosbuild_add_executable(test_tinyxml src/tinyxml.cpp)
+# target_link_libraries(test_tinyxml tinyxml)
+
+# rosbuild_add_executable(curl_opencv src/curl_opencv.cpp)
+# target_link_libraries(curl_opencv curl)
