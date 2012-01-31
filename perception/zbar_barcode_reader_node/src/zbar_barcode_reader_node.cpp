@@ -182,7 +182,6 @@ public:
     //    std::cerr << "buffer: " << buffer << std::endl;
     TiXmlDocument doc;
     doc.Parse((const char*)buffer.c_str(), 0, TIXML_ENCODING_UTF8);
-    doc.SaveFile ("text.xml");
     std::string picture;
     findElement (&doc, picture);
     ROS_INFO_STREAM ("Picture link: " << picture);
