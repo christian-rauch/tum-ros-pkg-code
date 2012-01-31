@@ -1,0 +1,7 @@
+libcurl:
+  ubuntu: 
+    11.04: libcurl3
+
+libtinyxml:
+  ubuntu: 
+    11.04: libtinyxml-dev

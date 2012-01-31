@@ -31,9 +31,6 @@ include_directories(/usr/include/ImageMagick/)
 rosbuild_add_executable(zbar_barcode_reader src/zbar_barcode_reader.c)
 target_link_libraries(zbar_barcode_reader  MagickWand MagickCore)
 
-rosbuild_add_executable(zbar_barcode_reader_cpp src/scan_image.cpp)
-target_link_libraries(zbar_barcode_reader_cpp  MagickWand MagickCore Magick++ curl)
-
 rosbuild_add_executable(zbar_barcode_reader_node src/zbar_barcode_reader_node.cpp)
 target_link_libraries(zbar_barcode_reader_node Magick++ curl)
 
