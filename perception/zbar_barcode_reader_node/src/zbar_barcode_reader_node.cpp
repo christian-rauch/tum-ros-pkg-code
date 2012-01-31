@@ -21,45 +21,54 @@
 using namespace std;
 using namespace zbar;
 
- static int writer(char *data, size_t size, size_t nmemb,  
-		      std::string *buffer)  
-    {  
-      // What we will return  
-      int result = 0;  
-  
-      // Is there anything in the buffer?  
-      if (buffer != NULL)  
-	{  
-	  // Append the data to the buffer  
-	  buffer->append(data, size * nmemb);  
-  
-	  // How much did we write?  
-	  result = size * nmemb;  
-	}  
-  
-      return result;  
-    }  
+class BarcodeReaderNode {
 
-static void* CURL_realloc(void *ptr, size_t size)
-{
-  /* There might be a realloc() out there that doesn't like reallocing
-     NULL pointers, so we take care of it here */
-  if(ptr)
-    return realloc(ptr, size);
-  else
-    return malloc(size);
-}
+public:
+  struct memoryStruct {
+    char *memory;
+    size_t size;
+  };
 
-struct memoryStruct {
-  char *memory;
-  size_t size;
-};
+  struct UserData {
+    memoryStruct *memory;
+    BarcodeReaderNode *self;
+    UserData(memoryStruct *memory, BarcodeReaderNode *self)
+      : memory(memory), self(self) {}
+  };
 
-  size_t WriteMemoryCallback
+  BarcodeReaderNode(ros::NodeHandle &n) :
+    n_(n), it_(n_)
+  {
+    n_.param ("input_image_topic", input_image_topic_, std::string("/stereo/left/image_rect"));
+    n_.param ("outout_barcode_topic", output_barcode_topic_, std::string("barcode"));
+    image_sub_ = it_.subscribe(
+                               input_image_topic_, 1, &BarcodeReaderNode::imageCallback, this);
+    barcode_pub_ =
+    n_.advertise<std_msgs::String>(output_barcode_topic_, 1);
+    cv::namedWindow ("Barcoo img");
+  }
+
+  ~BarcodeReaderNode()
+  {
+    cv::destroyAllWindows();
+  }
+  static void* CURL_realloc(void *ptr, size_t size)
+  {
+    /* There might be a realloc() out there that doesn't like reallocing
+       NULL pointers, so we take care of it here */
+    if(ptr)
+      return realloc(ptr, size);
+    else
+      return malloc(size);
+  }
+
+  static size_t WriteMemoryCallback
   (void *ptr, size_t size, size_t nmemb, void *data)
   {
+    UserData *userdata = reinterpret_cast<UserData *>(data);
+    struct memoryStruct *mem = userdata->memory;
+    BarcodeReaderNode *self = userdata->self;
     size_t realsize = size * nmemb;
-    struct memoryStruct *mem = (struct memoryStruct *)data;
     
     mem->memory = (char *)
       CURL_realloc(mem->memory, mem->size + realsize + 1);
@@ -71,78 +80,33 @@ struct memoryStruct {
     return realsize;
   }
 
-
-class BarcodeReaderNode {
-
-  // struct memoryStruct {
-  //   char *memory;
-  //   size_t size;
-  // };
-public:
-  BarcodeReaderNode(ros::NodeHandle &n) :
-    n_(n), it_(n_)
-  {
-    n_.param ("input_image_topic", input_image_topic_, std::string("/stereo/left/image_rect"));
-    n_.param ("outout_barcode_topic", output_barcode_topic_, std::string("barcode"));
-    image_sub_ = it_.subscribe(
-                               input_image_topic_, 1, &BarcodeReaderNode::imageCallback, this);
-    barcode_pub_ = n_.advertise<std_msgs::String>(output_barcode_topic_, 1);
-  }
-
-  ~BarcodeReaderNode()
-  {
-
-  }
-  // void* CURL_realloc(void *ptr, size_t size)
-  // {
-  //   /* There might be a realloc() out there that doesn't like reallocing
-  //      NULL pointers, so we take care of it here */
-  //   if(ptr)
-  //     return realloc(ptr, size);
-  //   else
-  //     return malloc(size);
-  // }
-
-  // size_t WriteMemoryCallback
-  // (void *ptr, size_t size, size_t nmemb, void *data)
-  // {
-  //   size_t realsize = size * nmemb;
-  //   struct memoryStruct *mem = (struct memoryStruct *)data;
-    
-  //   mem->memory = (char *)
-  //     CURL_realloc(mem->memory, mem->size + realsize + 1);
-  //   if (mem->memory) {
-  //     memcpy(&(mem->memory[mem->size]), ptr, realsize);
-  //     mem->size += realsize;
-  //     mem->memory[mem->size] = 0;
-  //   }
-  //   return realsize;
-  // }
     // This is the writer call back function used by curl  
-  // int writer(char *data, size_t size, size_t nmemb,  
-  // 		    std::string *buffer)  
-  // {  
-  //   // What we will return  
-  //   int result = 0;  
-  
-  //   // Is there anything in the buffer?  
-  //   if (buffer != NULL)  
-  //     {  
-  // 	// Append the data to the buffer  
-  // 	buffer->append(data, size * nmemb);  
-  
-  // 	// How much did we write?  
-  // 	result = size * nmemb;  
-  //     }  
-  
-  //   return result;  
-  // }  
+  static int writer(char *data, size_t size, size_t nmemb,  
+                    std::string *buffer)  
+  {  
+    // What we will return  
+    int result = 0;  
+    
+    // Is there anything in the buffer?  
+    if (buffer != NULL)  
+      {  
+        // Append the data to the buffer  
+        buffer->append(data, size * nmemb);  
+        
+        // How much did we write?  
+        result = size * nmemb;  
+      }  
+    
+    return result;  
+  } 
+ 
   int getImage(std::string & image)
   {
     CURL *curl;       // CURL objects
     CURLcode res;
     cv::Mat imgTmp; // image object
     memoryStruct buffer; // memory buffer
+    UserData userdata(&buffer, this);
     
     curl = curl_easy_init(); // init CURL library object/structure
     
@@ -159,8 +123,8 @@ public:
       
       // tell libcurl where to write the image (to a dynamic memory buffer)
 
-      curl_easy_setopt(curl,CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
-      curl_easy_setopt(curl,CURLOPT_WRITEDATA, (void *) &buffer);
+      curl_easy_setopt(curl,CURLOPT_WRITEFUNCTION, &BarcodeReaderNode::WriteMemoryCallback);
+      curl_easy_setopt(curl,CURLOPT_WRITEDATA, (void *) &userdata);
       
       // get the image from the specified URL
       res = curl_easy_perform(curl);
@@ -171,7 +135,7 @@ public:
     
       if (!(imgTmp.empty()))
 	{
-	  imshow("Image from URL", imgTmp);
+	  imshow("Barcoo img", imgTmp);
 	}
       cv::waitKey(3);
       
@@ -247,8 +211,8 @@ public:
 	curl_easy_setopt(curl, CURLOPT_URL, full_url.c_str());  
 	curl_easy_setopt(curl, CURLOPT_HEADER, 0);  
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);  
-	//curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &BarcodeReaderNode::writer);  
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writer);  
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &BarcodeReaderNode::writer);  
+    //	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writer);  
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);  
 
 	// Attempt to retrieve the remote page  
