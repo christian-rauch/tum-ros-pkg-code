@@ -22,6 +22,13 @@ using namespace std;
 using namespace zbar;
 
 class BarcodeReaderNode {
+	std:: string link1_;// = "http://www.barcoo.com/api/get_product_complete?pi=";
+	std:: string link2_;// = "&pins=ean&format=xml&source=ias-tum";
+	std:: string tag1_;// = "answer";
+	std:: string tag2_;// = "picture_high";
+	std:: string tag3_;// = "picture_low";
+	std:: string pattern_;// = "<meta property=\"og:image\" content=\"";
+	TiXmlDocument doc;
 
 public:
   struct memoryStruct {
@@ -39,8 +46,19 @@ public:
   BarcodeReaderNode(ros::NodeHandle &n) :
     n_(n), it_(n_)
   {
-    n_.param ("input_image_topic", input_image_topic_, std::string("/stereo/left/image_rect"));
+	  //link1 = "http://www.barcoo.com/api/get_product_complete?pi=";
+	  //link2 = "&pins=ean&format=xml&source=ias-tum";
+	  //tag1 = "answer";
+	  //tag2 = "picture_high";
+	  //tag3 = "picture_low";
+
+    n_.param ("input_image_topic", input_image_topic_, std::string("/image_raw"));
     n_.param ("outout_barcode_topic", output_barcode_topic_, std::string("barcode"));
+    n_.param ("link1", link1_, std::string("http://www.barcoo.com/api/get_product_complete?pi="));
+    n_.param ("link2", link2_, std::string("&pins=ean&format=xml&source=ias-tum"));
+    n_.param ("tag2", tag2_, std::string("picture_high"));
+    n_.param ("tag3", tag3_, std::string("picture_low"));
+    n_.param ("image_pattern", pattern_, std::string("<meta property=\"og:image\" content=\""));
     image_sub_ = it_.subscribe(
                                input_image_topic_, 1, &BarcodeReaderNode::imageCallback, this);
     barcode_pub_ =
@@ -67,7 +85,7 @@ public:
   {
     UserData *userdata = reinterpret_cast<UserData *>(data);
     struct memoryStruct *mem = userdata->memory;
-    BarcodeReaderNode *self = userdata->self;
+    //BarcodeReaderNode *self = userdata->self;
     size_t realsize = size * nmemb;
     
     mem->memory = (char *)
@@ -100,11 +118,10 @@ public:
     return result;  
   } 
  
-  int getImage(std::string & image)
+  int getImage(std::string image, cv::Mat * imgTmp)
   {
     CURL *curl;       // CURL objects
     CURLcode res;
-    cv::Mat imgTmp; // image object
     memoryStruct buffer; // memory buffer
     UserData userdata(&buffer, this);
     
@@ -129,16 +146,7 @@ public:
       // get the image from the specified URL
       res = curl_easy_perform(curl);
       // decode memory buffer using OpenCV
-      imgTmp = cv::imdecode(cv::Mat(1, buffer.size, CV_8UC1, buffer.memory), CV_LOAD_IMAGE_UNCHANGED);
-      // display image (if we got / decoded it correctly)
-      
-    
-      if (!(imgTmp.empty()))
-	{
-	  imshow("Barcoo img", imgTmp);
-	}
-      cv::waitKey(3);
-      
+      *imgTmp = cv::imdecode(cv::Mat(1, buffer.size, CV_8UC1, buffer.memory), CV_LOAD_IMAGE_UNCHANGED);
       // always cleanup
 
       curl_easy_cleanup(curl);
@@ -147,52 +155,60 @@ public:
   return 1;
   }
 
-  void findElement( TiXmlNode* pParent, std::string & picture)
+  void findElement( TiXmlNode* pParent, std::string & picture, std:: string tag)
   {
-    if ( !pParent ) return;
+    //if ( !pParent ) return;
     
     TiXmlNode* pChild;
-    //std::string picture ("Picture Not Found");
     std::string pstring = pParent->Value();
-    //    std::cerr << "pstring: " << pstring << std::endl;
-    size_t found=pstring.find("picture_high");
+    
+    //Search for tag
+    size_t found=pstring.find(tag);
     if (found!=std::string::npos)
-      {
-	ROS_INFO_STREAM("First child: " << pParent->FirstChild()->Value());
-	picture =  pParent->FirstChild()->Value();
-	return;
-      }
-    size_t found2=pstring.find("picture_low");
-    if (found2!=std::string::npos && picture == "")
-      {
-	ROS_INFO_STREAM("First child: " << pParent->FirstChild()->Value());
-	picture =  pParent->FirstChild()->Value();
-	return;
-      }
-    for ( pChild = pParent->FirstChild(); pChild != 0; pChild = pChild->NextSibling()) 
-      {	
-	findElement(pChild, picture);
-	//	std::cerr << "in for " << std::endl;
-      }
+    {
+    	ROS_INFO_STREAM("First child: " << pParent->FirstChild()->Value());
+    	picture =  pParent->FirstChild()->Value();
+    	return;
+    }
+    
+    for( pChild = pParent->FirstChild(); pChild != 0; pChild = pChild->NextSibling()) 
+    {	
+    	findElement(pChild, picture,tag);
+    }
   }
 
 
-  int visBarcooPicture(std::string buffer)
+  int getPictureLink(std::string buffer,std::string & picture)
   {
-    //    std::cerr << "buffer: " << buffer << std::endl;
-    TiXmlDocument doc;
     doc.Parse((const char*)buffer.c_str(), 0, TIXML_ENCODING_UTF8);
-    std::string picture;
-    findElement (&doc, picture);
+    
+    //Check if there is a result
+    std:: string result;
+    cout << "ohhh my goooooood\n\n";
+    findElement(&doc,result,tag1_);
+    if(result.compare("0") == 0) //This condition checks if there is a result in the XML file if not returns 0
+    {
+    	cout << "heloooooo barcode does not correspond to any object in the barcoo database";
+    	return 0;
+    }
+    else
+    	cout << "ELSE ELSE ELSE\n";
+    
+    //Search for first tag
+    findElement (&doc, picture,tag2_);
+
+    if(picture == "")
+       	findElement (&doc, picture,tag3_); 	//Search for second tag
+
     ROS_INFO_STREAM ("Picture link: " << picture);
     if (picture == "")
       return -1;
-    getImage (picture);
+    
     return 1;
   }
 
 
-  int callBarcoo(std::string bar_code, std::string & buffer)
+  int getBarcooXML(std::string bar_code, std::string & buffer)
   {
     char errorBuffer[CURL_ERROR_SIZE];
     // Our curl objects  
@@ -200,7 +216,7 @@ public:
     CURLcode result;  
     // Create our curl handle  
     curl = curl_easy_init();  
-    std::string full_url = "http://www.barcoo.com/api/get_product_complete?pi=" + bar_code + "&pins=ean&format=xml&source=ias-tum";
+    std::string full_url = link1_ + bar_code + link2_;
     ROS_INFO_STREAM("full_url: " << full_url);
    
     if (curl)  
@@ -236,6 +252,45 @@ public:
     return -1;
   }
   
+  int getHTMLpage(std::string url, std::string & buffer)
+  {
+	  char errorBuffer[CURL_ERROR_SIZE];
+	  // Our curl objects
+	  CURL *curl;
+	  CURLcode result;
+	  // Create our curl handle
+	  curl = curl_easy_init();
+      if (curl)
+      {
+    	  // Now set up all of the curl options
+    	  curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, errorBuffer);
+    	  curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+    	  curl_easy_setopt(curl, CURLOPT_HEADER, 0);
+    	  curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
+    	  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &BarcodeReaderNode::writer);
+	      //	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writer);
+    	  curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buffer);
+
+    	  // Attempt to retrieve the remote page
+    	  result = curl_easy_perform(curl);
+
+    	  // Always cleanup
+    	  curl_easy_cleanup(curl);
+
+    	  // Did we succeed?
+    	  if (result == CURLE_OK)
+	  	  {
+
+	  	    return 1;
+	  	  }
+    	  else
+	  	  {
+	  	    return -1;
+	  	  }
+	   }
+	   return -1;
+  }
+
   void imageCallback(const sensor_msgs::ImageConstPtr& msg_ptr)
   {
 
@@ -288,26 +343,70 @@ public:
       barcode_pub_.publish(msg);
     }
     if (n == 0)
-      {
-	ROS_WARN("Barcode not found");
-	return;
-      }
+    {
+    	ROS_WARN("Barcode not found");
+    	return;
+    }
 
     if (n < 0)
-      {
-	ROS_ERROR("Error occured while finding barcode");
-	return;
-      }
+    {
+    	ROS_ERROR("Error occured while finding barcode");
+    	return;
+    }
 
     std::string buffer;
-    if (callBarcoo(ss.str(), buffer) == 1)
-      {
-	//	std::cerr << "buffer after callBarcoo " << buffer << std::endl;
-	visBarcooPicture (buffer);
-      }
+    //Get xml file from barcoo database
+    int res = getBarcooXML(ss.str(), buffer);
+    if(res != 1)
+    	return;
+    																						//	std::cerr << "buffer after callBarcoo " << buffer << std::endl;
+    //Search for info in the xml file
+    std::string pictureLink;
+    res = getPictureLink (buffer,pictureLink);
+
+
+    if(res == 0) //If barcode does not exist in the database return
+    {
+    	cout << "Barcode does not exist in the barcoo datbase\n";
+    	return;
+    }
+    if(res == -1) //This condition is true when the image link is not given
+    {
+    	//Look for an image in the HTML file
+
+    	//First find the link to the barcoo website of the file
+    	std::string htmlPage;
+    	std::string htmlLink;
+    	findElement(&doc,htmlLink,"back_link");
+    	cout << "html link:  "+htmlLink+"\n";
+    	//Download HTML page
+    	getHTMLpage(htmlLink,htmlPage);
+    	std::string ss  = pattern_;
+    	long position = htmlPage.find(ss, ss.length()) + ss.length();
+
+    	std::string link;
+    	while(htmlPage.at(position) !='"')
+    	{
+    		link += htmlPage.at(position);
+    		position++;
+    	}
+    	pictureLink = link;
+
+    }
+    //Get Image
+    if(!pictureLink.empty())
+    {
+    	cv::Mat  imgTmp; // image object
+    	getImage (pictureLink ,& imgTmp);
+    	// display image
+    	if (!(imgTmp.empty()))
+    	{
+    		imshow("Barcoo img", imgTmp);
+    	}
+    }
+    cv::waitKey(3);
     // clean up
     image.set_data(NULL, 0);
-
   }
 
 protected:
