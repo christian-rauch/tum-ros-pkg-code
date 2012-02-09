@@ -15,7 +15,7 @@
     uri: http://code.in.tum.de/git/mapping.git
 - git:
     local-name: cram_physics
-    uri: git://code.in.tum.de/git/cram-physics.git
+    uri: https://github.com/moesenle/cram_physics.git
 - git: 
     local-name: cram_pl 
     uri: http://code.in.tum.de/git/cram-pl.git
@@ -27,7 +27,7 @@
     uri: http://code.in.tum.de/git/cram-rosie.git
 - git: 
     local-name: cram_pr2
-    uri: http://code.in.tum.de/git/cram-pr2.git
+    uri: https://github.com/moesenle/cram_pr2.git
 - git:
     local-name: ias_common
     uri: http://code.in.tum.de/git/ias-common.git
