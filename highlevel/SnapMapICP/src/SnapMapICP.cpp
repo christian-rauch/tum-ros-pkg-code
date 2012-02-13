@@ -215,7 +215,7 @@ bool getTransform(tf::StampedTransform &trans , const std::string parent_frame, 
 
     if (!listener_->waitForTransform(parent_frame, child_frame, stamp, ros::Duration(0.05)))
     {
-        ROS_ERROR("DIDNT GET TRANSFORM %s %s IN c at %f", parent_frame.c_str(), child_frame.c_str(), stamp.toSec());
+        ROS_WARN("DIDNT GET TRANSFORM %s %s IN c at %f", parent_frame.c_str(), child_frame.c_str(), stamp.toSec());
         return false;
     }
 
@@ -227,7 +227,7 @@ bool getTransform(tf::StampedTransform &trans , const std::string parent_frame, 
     catch (tf::TransformException ex)
     {
         gotTransform = false;
-        ROS_ERROR("DIDNT GET TRANSFORM %s %s IN B", parent_frame.c_str(), child_frame.c_str());
+        ROS_WARN("DIDNT GET TRANSFORM %s %s IN B", parent_frame.c_str(), child_frame.c_str());
     }
 
 
@@ -240,7 +240,7 @@ void scanCallback (const sensor_msgs::LaserScan::ConstPtr& scan_in)
 
     if (!we_have_a_map)
     {
-        ROS_INFO("Waiting for map");
+        ROS_INFO("SnapMapICP waiting for map to be published");
         return;
     }
     //projector_.transformLaserScanToPointCloud("base_link",*scan_in,cloud,listener_);
@@ -248,7 +248,7 @@ void scanCallback (const sensor_msgs::LaserScan::ConstPtr& scan_in)
         return;
 
     count_sc_++;
-    //ROS_INFO("count_sc %i MUTEX LOCKED", count_sc_);
+    //ROS_DEBUG("count_sc %i MUTEX LOCKED", count_sc_);
 
     //if (count_sc_ > 10)
     //if (count_sc_ > 10)
@@ -260,7 +260,7 @@ void scanCallback (const sensor_msgs::LaserScan::ConstPtr& scan_in)
         tf::StampedTransform base_at_laser;
         if (!getTransform(base_at_laser, ODOM_FRAME, "base_link", scan_in_time))
         {
-            ROS_ERROR("Did not get base pose at laser scan time");
+            ROS_WARN("Did not get base pose at laser scan time");
             scan_callback_mutex.unlock();
 
             return;
@@ -312,7 +312,7 @@ void scanCallback (const sensor_msgs::LaserScan::ConstPtr& scan_in)
             catch (...)
             {
                 gotTransform = false;
-                ROS_ERROR("DIDNT GET TRANSFORM IN A");
+                ROS_WARN("DIDNT GET TRANSFORM IN A");
             }
         }
 
@@ -335,7 +335,7 @@ void scanCallback (const sensor_msgs::LaserScan::ConstPtr& scan_in)
             catch (tf::TransformException ex)
             {
                 gotTransform = false;
-                ROS_ERROR("DIDNT GET TRANSFORM IN B");
+                ROS_WARN("DIDNT GET TRANSFORM IN B");
             }
         }
         if (we_have_a_map && gotTransform)
@@ -393,7 +393,7 @@ void scanCallback (const sensor_msgs::LaserScan::ConstPtr& scan_in)
                 }
                 if (transformedCloud.points.size() > 0)
                 {
-                    ROS_WARN("Inliers in dist %f: %zu of %zu percentage %f (%f)", ICP_INLIER_DIST, numinliers, transformedCloud.points.size(), (double) numinliers / (double) transformedCloud.points.size(), ICP_INLIER_THRESHOLD);
+                    ROS_DEBUG("Inliers in dist %f: %zu of %zu percentage %f (%f)", ICP_INLIER_DIST, numinliers, transformedCloud.points.size(), (double) numinliers / (double) transformedCloud.points.size(), ICP_INLIER_THRESHOLD);
                     inlier_perc = (double) numinliers / (double) transformedCloud.points.size();
                 }
             }
@@ -409,7 +409,7 @@ void scanCallback (const sensor_msgs::LaserScan::ConstPtr& scan_in)
             tf::StampedTransform base_after_icp;
             if (!getTransform(base_after_icp, ODOM_FRAME, "base_link", ros::Time(0)))
             {
-                ROS_ERROR("Did not get base pose at now");
+                ROS_WARN("Did not get base pose at now");
                 scan_callback_mutex.unlock();
 
                 return;
@@ -417,28 +417,28 @@ void scanCallback (const sensor_msgs::LaserScan::ConstPtr& scan_in)
             else
             {
                 tf::Transform rel = base_at_laser.inverseTimes(base_after_icp);
-                ROS_INFO("relative motion of robot while doing icp: %fcm %fdeg", rel.getOrigin().length(), rel.getRotation().getAngle() * 180 / M_PI);
+                ROS_DEBUG("relative motion of robot while doing icp: %fcm %fdeg", rel.getOrigin().length(), rel.getRotation().getAngle() * 180 / M_PI);
                 t= t * rel;
             }
 
-            //ROS_INFO("dist %f angleDist %f",dist, angleDist);
+            //ROS_DEBUG("dist %f angleDist %f",dist, angleDist);
 
             ros::Time scan_time = scan_in->header.stamp;
             ros::Duration scan_age = ros::Time::now() - scan_time;
-            //ROS_INFO("SCAN_AGE seems to be %f", scan_age.toSec());
+            //ROS_DEBUG("SCAN_AGE seems to be %f", scan_age.toSec());
             char msg_c_str[2048];
             sprintf(msg_c_str,"INLIERS %f (%f) scan_age %f (%f age_threshold) dist %f angleDist %f axis(%f %f %f) fitting %f (icp_fitness_threshold %f)",inlier_perc, ICP_INLIER_THRESHOLD, scan_age.toSec(), AGE_THRESHOLD ,dist, angleDist, rotAxis.x(), rotAxis.y(), rotAxis.z(),reg.getFitnessScore(), ICP_FITNESS_THRESHOLD );
             std_msgs::String strmsg;
             strmsg.data = msg_c_str;
 
-            //ROS_INFO("%s", msg_c_str);
+            //ROS_DEBUG("%s", msg_c_str);
 
 
             //check if we want to accept this scan, if its older than 1 sec, drop it
             if (!use_sim_time)
                 if (scan_age.toSec() > AGE_THRESHOLD)
                 {
-                    ROS_ERROR("SCAN SEEMS TOO OLD (%f seconds, %f threshold)", scan_age.toSec(), AGE_THRESHOLD);
+                    ROS_WARN("SCAN SEEMS TOO OLD (%f seconds, %f threshold)", scan_age.toSec(), AGE_THRESHOLD);
                     scan_callback_mutex.unlock();
 
                     return;
@@ -465,8 +465,8 @@ void scanCallback (const sensor_msgs::LaserScan::ConstPtr& scan_in)
                 pose.pose.covariance[6*0+0] = (cov * cov) * factorPos;
                 pose.pose.covariance[6*1+1] = (cov * cov) * factorPos;
                 pose.pose.covariance[6*3+3] = (M_PI/12.0 * M_PI/12.0) * factorRot;
-                ROS_INFO("i %i converged %i SCORE: %f", i,  reg.hasConverged (),  reg.getFitnessScore()  );
-                ROS_INFO("PUBLISHING A NEW INITIAL POSE dist %f angleDist %f Setting pose: %.3f %.3f  [frame=%s]",dist, angleDist , pose.pose.pose.position.x  , pose.pose.pose.position.y , pose.header.frame_id.c_str());
+                ROS_DEBUG("i %i converged %i SCORE: %f", i,  reg.hasConverged (),  reg.getFitnessScore()  );
+                ROS_DEBUG("PUBLISHING A NEW INITIAL POSE dist %f angleDist %f Setting pose: %.3f %.3f  [frame=%s]",dist, angleDist , pose.pose.pose.position.x  , pose.pose.pose.position.y , pose.header.frame_id.c_str());
                 pub_pose.publish(pose);
                 strmsg.data += " << SENT";
             }
