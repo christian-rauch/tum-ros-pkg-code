@@ -12,6 +12,7 @@
 #include "curl/curl.h" 
 #include "tinyxml.h"
 #include <highgui.h>
+#include <zbar_barcode_reader_node/enable_barcode_reader.h>
 
 //Magick++ lib
 #include <Magick++.h>
@@ -29,6 +30,7 @@ class BarcodeReaderNode {
 	std:: string tag3_;// = "picture_low";
 	std:: string pattern_;// = "<meta property=\"og:image\" content=\"";
 	TiXmlDocument doc;
+	int enable_barcode_reader_;
 
 public:
   struct memoryStruct {
@@ -64,12 +66,22 @@ public:
     barcode_pub_ =
     n_.advertise<std_msgs::String>(output_barcode_topic_, 1);
     cv::namedWindow ("Barcoo img");
+    enable_barcode_reader_ = 0;
+    service_ = n.advertiseService("enable_barcode_reader_service", &BarcodeReaderNode::enable_barcode_reader,this);
   }
 
   ~BarcodeReaderNode()
   {
     cv::destroyAllWindows();
   }
+  
+  bool enable_barcode_reader(zbar_barcode_reader_node::enable_barcode_reader::Request  &req,
+		  zbar_barcode_reader_node::enable_barcode_reader::Response &res )
+  {
+	  enable_barcode_reader_ = req.enable;	  
+	  return true;
+  }
+  
   static void* CURL_realloc(void *ptr, size_t size)
   {
     /* There might be a realloc() out there that doesn't like reallocing
@@ -79,7 +91,7 @@ public:
     else
       return malloc(size);
   }
-
+  
   static size_t WriteMemoryCallback
   (void *ptr, size_t size, size_t nmemb, void *data)
   {
@@ -290,10 +302,12 @@ public:
 	   }
 	   return -1;
   }
-
+  
   void imageCallback(const sensor_msgs::ImageConstPtr& msg_ptr)
   {
-
+	  
+	  if(!enable_barcode_reader_)
+		  return;
     IplImage *cv_image = NULL;
     ROS_INFO("[BarcodeReaderNode: ] Image received");
     try
@@ -417,6 +431,7 @@ protected:
   ros::Publisher barcode_pub_;
   sensor_msgs::CvBridge bridge_;
   std::string input_image_topic_, output_barcode_topic_;
+  ros::ServiceServer service_;
 };
 
 int main(int argc, char** argv)
