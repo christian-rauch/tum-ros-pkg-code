@@ -31,7 +31,8 @@ class BarcodeReaderNode {
 	std:: string pattern_;// = "<meta property=\"og:image\" content=\"";
 	TiXmlDocument doc;
 	int enable_barcode_reader_;
-
+	int image_received_;
+	int image_found_;
 public:
   struct memoryStruct {
     char *memory;
@@ -65,9 +66,10 @@ public:
                                input_image_topic_, 1, &BarcodeReaderNode::imageCallback, this);
     barcode_pub_ =
     n_.advertise<std_msgs::String>(output_barcode_topic_, 1);
-    cv::namedWindow ("Barcoo img");
+    //cv::namedWindow ("Barcoo img");
     enable_barcode_reader_ = 0;
     service_ = n.advertiseService("enable_barcode_reader_service", &BarcodeReaderNode::enable_barcode_reader,this);
+    image_received_ = 0;
   }
 
   ~BarcodeReaderNode()
@@ -78,8 +80,31 @@ public:
   bool enable_barcode_reader(zbar_barcode_reader_node::enable_barcode_reader::Request  &req,
 		  zbar_barcode_reader_node::enable_barcode_reader::Response &res )
   {
-	  enable_barcode_reader_ = req.enable;	  
-	  return true;
+	  enable_barcode_reader_ = req.enable;
+	  while(!image_received_)
+	  {
+		  	sleep(1);
+	  }
+
+	  if(image_found_)
+	  {
+	  	  	res.title.data = product_title;
+	  	  	res.subtitle.data = product_producer;
+	  	  	res.category_key.data = product_category;
+	  	  	res.image_msg = *ros_image;
+	  	  	enable_barcode_reader_ = 0;
+	  	    image_received_ = 0;
+	  	    image_found_ = 0;
+	  	    enable_barcode_reader_ = 0;
+
+	  	    return true;
+	  }
+	  else
+	  {
+		  image_received_ = 0;
+		  enable_barcode_reader_ = 0;
+		  return false;
+	  }
   }
   
   static void* CURL_realloc(void *ptr, size_t size)
@@ -359,12 +384,14 @@ public:
     if (n == 0)
     {
     	ROS_WARN("Barcode not found");
+    	image_received_ = 1;
     	return;
     }
 
     if (n < 0)
     {
     	ROS_ERROR("Error occured while finding barcode");
+    	image_received_ = 1;
     	return;
     }
 
@@ -372,7 +399,10 @@ public:
     //Get xml file from barcoo database
     int res = getBarcooXML(ss.str(), buffer);
     if(res != 1)
+    {
+    	image_received_ = 1;
     	return;
+    }
     																						//	std::cerr << "buffer after callBarcoo " << buffer << std::endl;
     //Search for info in the xml file
     std::string pictureLink;
@@ -382,6 +412,7 @@ public:
     if(res == 0) //If barcode does not exist in the database return
     {
     	cout << "Barcode does not exist in the barcoo datbase\n";
+    	image_received_ = 1;
     	return;
     }
     if(res == -1) //This condition is true when the image link is not given
@@ -413,14 +444,35 @@ public:
     	cv::Mat  imgTmp; // image object
     	getImage (pictureLink ,& imgTmp);
     	// display image
+    	//publish image
     	if (!(imgTmp.empty()))
     	{
-    		imshow("Barcoo img", imgTmp);
+    		//imshow("Barcoo img", imgTmp);
+    		cv_bridge::CvImagePtr cv_ptr (new cv_bridge::CvImage);
+
+    		std::cerr<< "\n\n\n\n\nTESTESTESTESTESTn\n\n\n\n";
+
+    		cv_ptr->header.stamp = ros::Time::now();
+    		cv_ptr->header.frame_id = "frame";
+    		cv_ptr->encoding = "bgr8";
+    		std::cerr<< "\n\n\n\n\nHELO00000n\n\n\n\n";
+    		cv_ptr->image = imgTmp;
+    		std::cerr<< "\n\n\n\n\nHELOn\n\n\n\n";
+
+    		ros_image = cv_ptr->toImageMsg();
+    		findElement(&doc,product_title,"title");
+    		findElement(&doc,product_producer,"producer");
+    		findElement(&doc,product_category,"category_key");
+
+
+
+    		image_found_ = 1;
     	}
+    	image_received_ = 1;
     }
     cv::waitKey(3);
     // clean up
-    image.set_data(NULL, 0);
+    //image.set_data(NULL, 0);
   }
 
 protected:
@@ -431,14 +483,21 @@ protected:
   ros::Publisher barcode_pub_;
   sensor_msgs::CvBridge bridge_;
   std::string input_image_topic_, output_barcode_topic_;
+  sensor_msgs::ImagePtr ros_image;
+  std::string product_title;
+  std::string product_producer;
+  std::string product_category;
   ros::ServiceServer service_;
 };
 
 int main(int argc, char** argv)
 {
   ros::init(argc, argv, "barcode_reader_node");
+  ros::AsyncSpinner spinner(1); // Use 4 threads
+  spinner.start();
   ros::NodeHandle n("~");
   BarcodeReaderNode br(n);
   ros::spin();
+
   return 0;
 }
