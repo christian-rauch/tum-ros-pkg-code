@@ -13,7 +13,7 @@
 #include "tinyxml.h"
 #include <highgui.h>
 #include <zbar_barcode_reader_node/enable_barcode_reader.h>
-
+#include <cv_bridge/cv_bridge.h>
 //Magick++ lib
 #include <Magick++.h>
 //zbar
