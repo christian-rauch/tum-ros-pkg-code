@@ -49,12 +49,6 @@ public:
   BarcodeReaderNode(ros::NodeHandle &n) :
     n_(n), it_(n_)
   {
-	  //link1 = "http://www.barcoo.com/api/get_product_complete?pi=";
-	  //link2 = "&pins=ean&format=xml&source=ias-tum";
-	  //tag1 = "answer";
-	  //tag2 = "picture_high";
-	  //tag3 = "picture_low";
-
     n_.param ("input_image_topic", input_image_topic_, std::string("/image_raw"));
     n_.param ("outout_barcode_topic", output_barcode_topic_, std::string("barcode"));
     n_.param ("link1", link1_, std::string("http://www.barcoo.com/api/get_product_complete?pi="));
@@ -66,7 +60,6 @@ public:
                                input_image_topic_, 1, &BarcodeReaderNode::imageCallback, this);
     barcode_pub_ =
     n_.advertise<std_msgs::String>(output_barcode_topic_, 1);
-    //cv::namedWindow ("Barcoo img");
     enable_barcode_reader_ = 0;
     service_ = n.advertiseService("enable_barcode_reader_service", &BarcodeReaderNode::enable_barcode_reader,this);
     image_received_ = 0;
@@ -221,15 +214,12 @@ public:
     
     //Check if there is a result
     std:: string result;
-    cout << "ohhh my goooooood\n\n";
     findElement(&doc,result,tag1_);
     if(result.compare("0") == 0) //This condition checks if there is a result in the XML file if not returns 0
     {
-    	cout << "heloooooo barcode does not correspond to any object in the barcoo database";
+      ROS_INFO_STREAM("Barcode does not correspond to any object in the barcoo database");
     	return 0;
     }
-    else
-    	cout << "ELSE ELSE ELSE\n";
     
     //Search for first tag
     findElement (&doc, picture,tag2_);
@@ -333,15 +323,14 @@ public:
 	  
 	  if(!enable_barcode_reader_)
 		  return;
-    IplImage *cv_image = NULL;
     ROS_INFO("[BarcodeReaderNode: ] Image received");
     try
       {
-        cv_image = bridge_.imgMsgToCv(msg_ptr, "mono8");
+	cv_bridge_ptr_ = cv_bridge::toCvCopy(msg_ptr, "mono8");
       }
-    catch (sensor_msgs::CvBridgeException error)
+    catch (cv_bridge::Exception& e)
       {
-        ROS_ERROR("error");
+        ROS_ERROR("Error converting ROS Image");
       }
     
     // create a reader
@@ -350,12 +339,12 @@ public:
     // configure the reader
     scanner.set_config(ZBAR_NONE, ZBAR_CFG_ENABLE, 1);
 
-    // obtain image data
-    //    IplImage * cv_image = cvLoadImage(argv[1], CV_LOAD_IMAGE_GRAYSCALE);
-    Magick::Blob blob(cv_image->imageData, cv_image->imageSize);
+    int width = cv_bridge_ptr_->image.cols;   // extract dimensions
+    int height = cv_bridge_ptr_->image.rows;
 
-    int width = cv_image->width;   // extract dimensions
-    int height = cv_image->height;
+    // obtain image data
+    Magick::Blob blob(cv_bridge_ptr_->image.ptr(0), width * height);
+
     const void *raw = blob.data();
 
     // wrap image data
@@ -403,7 +392,7 @@ public:
     	image_received_ = 1;
     	return;
     }
-    																						//	std::cerr << "buffer after callBarcoo " << buffer << std::endl;
+
     //Search for info in the xml file
     std::string pictureLink;
     res = getPictureLink (buffer,pictureLink);
@@ -411,7 +400,7 @@ public:
 
     if(res == 0) //If barcode does not exist in the database return
     {
-    	cout << "Barcode does not exist in the barcoo datbase\n";
+      ROS_INFO_STREAM("Barcode does not exist in the barcoo datbase");
     	image_received_ = 1;
     	return;
     }
@@ -423,7 +412,7 @@ public:
     	std::string htmlPage;
     	std::string htmlLink;
     	findElement(&doc,htmlLink,"back_link");
-    	cout << "html link:  "+htmlLink+"\n";
+    	ROS_INFO_STREAM ("html link:  " << htmlLink);
     	//Download HTML page
     	getHTMLpage(htmlLink,htmlPage);
     	std::string ss  = pattern_;
@@ -447,32 +436,19 @@ public:
     	//publish image
     	if (!(imgTmp.empty()))
     	{
-    		//imshow("Barcoo img", imgTmp);
-    		cv_bridge::CvImagePtr cv_ptr (new cv_bridge::CvImage);
-
-    		std::cerr<< "\n\n\n\n\nTESTESTESTESTESTn\n\n\n\n";
-
-    		cv_ptr->header.stamp = ros::Time::now();
-    		cv_ptr->header.frame_id = "frame";
-    		cv_ptr->encoding = "bgr8";
-    		std::cerr<< "\n\n\n\n\nHELO00000n\n\n\n\n";
-    		cv_ptr->image = imgTmp;
-    		std::cerr<< "\n\n\n\n\nHELOn\n\n\n\n";
-
-    		ros_image = cv_ptr->toImageMsg();
+    		cv_bridge_ptr_->header.stamp = ros::Time::now();
+    		cv_bridge_ptr_->header.frame_id = "frame";
+    		cv_bridge_ptr_->encoding = "bgr8";
+    		cv_bridge_ptr_->image = imgTmp;
+    		ros_image = cv_bridge_ptr_->toImageMsg();
     		findElement(&doc,product_title,"title");
     		findElement(&doc,product_producer,"producer");
     		findElement(&doc,product_category,"category_key");
-
-
-
     		image_found_ = 1;
     	}
     	image_received_ = 1;
     }
     cv::waitKey(3);
-    // clean up
-    //image.set_data(NULL, 0);
   }
 
 protected:
@@ -488,6 +464,7 @@ protected:
   std::string product_producer;
   std::string product_category;
   ros::ServiceServer service_;
+  cv_bridge::CvImagePtr cv_bridge_ptr_;
 };
 
 int main(int argc, char** argv)
