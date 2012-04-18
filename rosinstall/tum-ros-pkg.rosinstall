@@ -21,7 +21,7 @@
     uri: http://code.in.tum.de/git/cram-pl.git
 - git: 
     local-name: cram_highlevel
-    uri: http://code.in.tum.de/git/cram-highlevel.git
+    uri: https://github.com/moesenle/cram_highlevel.git
 - git: 
     local-name: cram_rosie
     uri: http://code.in.tum.de/git/cram-rosie.git
