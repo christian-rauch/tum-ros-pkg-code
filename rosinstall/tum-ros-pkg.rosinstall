@@ -34,3 +34,6 @@
 - git:
     local-name: roll
     uri: http://code.in.tum.de/git/roll.git
+- git: 
+    local-name: uncertain_tf
+    uri: https://github.com/ruehr/uncertain_tf.git
