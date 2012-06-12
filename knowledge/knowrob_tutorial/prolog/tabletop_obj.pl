@@ -55,7 +55,10 @@
 % Queries the tabletop_object_detector service and creates the
 % internal object representations in the knowledge base.
 %
-tabletop_object(Obj, Type) :-
+
+% TODO: implement! (remove underscores:)
+tabletop_object(_Obj, _Type) :-
+fail.
 
     % create ROS client object
 
@@ -67,8 +70,8 @@ tabletop_object(Obj, Type) :-
 
 
     % create the object representations in the knowledge base
-    member(Match, ObjList),
-    create_tabletop_object(Match, Obj, Type).
+    %member(Match, ObjList),
+    %create_tabletop_object(Match, Obj, Type).
 
 
 
@@ -83,7 +86,7 @@ tabletop_object(Obj, Type) :-
 % - link the object and the perception instance
 %
 
-create_tabletop_object(Match, Obj, Type) :-
+% create_tabletop_object(Match, Obj, Type) :-
 
     % retrieve the model ID
 
@@ -97,7 +100,7 @@ create_tabletop_object(Match, Obj, Type) :-
     % set pose
 
     % link object and perception
-    fail.
+    %fail.
 
 
 

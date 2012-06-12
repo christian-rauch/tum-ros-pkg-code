@@ -30,3 +30,6 @@
 
 :- owl_parser:owl_parse('@LOCAL_PACKAGE_PATH@/owl/tabletop_obj.owl', false, false, true).
 :- rdf_db:rdf_register_ns(tabletop_obj, 'http://ias.cs.tum.edu/kb/tabletop_obj.owl#', [keep(true)]).
+
+:- rdf_db:rdf_register_ns(pancake, 'http://ias.cs.tum.edu/kb/pancake-making.owl#', [keep(true)]).
+:- rdf_db:rdf_register_ns(map_obj, 'http://ias.cs.tum.edu/kb/ccrl2_map_objects.owl#', [keep(true)]).

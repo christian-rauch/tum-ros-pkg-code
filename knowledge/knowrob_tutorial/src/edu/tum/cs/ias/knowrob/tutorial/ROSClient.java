@@ -34,7 +34,7 @@ public class ROSClient {
 
 	/**
 	 * Constructor: initializes the ROS environment
-	 * 
+	 *
 	 * @param node_name A unique node name
 	 */
 	public ROSClient(String node_name) {
@@ -44,7 +44,7 @@ public class ROSClient {
 
 	/**
 	 * Initialize the ROS environment if it has not yet been initialized
-	 * 
+	 *
 	 * @param node_name A unique node name
 	 */
 	protected static void initRos(String node_name) {
@@ -65,7 +65,7 @@ public class ROSClient {
 	 */
 	public TabletopDetectionResult callTabletopObjDetection() {
 
-		TabletopDetectionResult r=null;		
+		TabletopDetectionResult r=null;
     //try {
 
             // TODO: call the tabletop_object_detector service
@@ -92,15 +92,15 @@ public class ROSClient {
 
 	/**
 	 * Convert point/quaternion into a 4x4 pose matrix
-	 * 
+	 *
 	 * @param p Point (position)
 	 * @param q Quaternion (orientation)
 	 * @return 4x4 pose matrix, row-based
 	 */
 	protected static double[] quaternionToMatrix(Point p, Quaternion q) {
 
-		double[] m = new double[16];
-		
+            double[] m = new double[16];
+
 	    double xx = q.x * q.x;
 	    double xy = q.x * q.y;
 	    double xz = q.x * q.z;
@@ -117,17 +117,17 @@ public class ROSClient {
 	    m[1]  =     2 * ( xy - zw );
 	    m[2]  =     2 * ( xz + yw );
 	    m[3]  = p.x;
-	    
+
 	    m[4]  =     2 * ( xy + zw );
 	    m[5]  = 1 - 2 * ( xx + zz );
 	    m[6]  =     2 * ( yz - xw );
 	    m[7]  = p.y;
-	    
+
 	    m[8]  =     2 * ( xz - yw );
 	    m[9]  =     2 * ( yz + xw );
 	    m[10] = 1 - 2 * ( xx + yy );
 	    m[11]=p.z;
-	    
+
 	    m[12]=0;
 	    m[13]=0;
 	    m[14]=0;
@@ -135,21 +135,21 @@ public class ROSClient {
 	    return m;
 	}
 
-	
+
 
 	/*
 	 * Test method: call the tabletop_object_detector and print results
 	 */
 	public static void main(String[] args) {
-		
+
 		ROSClient r = new ROSClient("knowrob_tabletop_test_123");
-		
+
 		TabletopDetectionResult res = r.callTabletopObjDetection();
 
 		for(int i=0;i<res.models.size();i++) {
-			for(int j=0;j<res.models.size();j++) {
-				System.out.println(res.models.get(i).model_id);
-				System.out.println("Pos: "+res.models.get(i).pose.pose.position.x+","+res.models.get(i).pose.pose.position.y+","+res.models.get(i).pose.pose.position.z);
+			for(int j=0;j<res.models.get(i).model_list.size();j++) {
+				System.out.println(res.models.get(i).model_list.get(j).model_id);
+				System.out.println("Pos: "+res.models.get(i).model_list.get(j).pose.pose.position.x+","+res.models.get(i).model_list.get(j).pose.pose.position.y+","+res.models.get(i).model_list.get(j).pose.pose.position.z);
 			}
 		}
 	}

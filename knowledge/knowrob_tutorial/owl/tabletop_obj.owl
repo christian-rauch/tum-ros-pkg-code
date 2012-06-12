@@ -20,9 +20,10 @@
      xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
      xmlns:knowrob="http://ias.cs.tum.edu/kb/knowrob.owl#"
      xmlns:tabletop_obj="http://ias.cs.tum.edu/kb/tabletop_obj.owl#">
-    <owl:Ontology rdf:about="">
-        <owl:imports rdf:resource="http://ias.cs.tum.edu/kb/knowrob.owl"/>
+    <owl:Ontology rdf:about="http://ias.cs.tum.edu/kb/tabletop_obj.owl">
+        <owl:imports rdf:resource="file:///work/ros/electric/stacks/knowrob/ias_knowledge_base/owl/knowrob.owl"/>
     </owl:Ontology>
+
 
     <owl:Class rdf:about="#TabletopPerception">
         <rdfs:subClassOf rdf:resource="&knowrob;VisualPerception"/>
