@@ -37,3 +37,6 @@
 - git: 
     local-name: uncertain_tf
     uri: https://github.com/ruehr/uncertain_tf.git
+- git: 
+    local-name: realtime_urdf_filter
+    uri: https://github.com/blodow/realtime_urdf_filter.git
