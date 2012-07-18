@@ -17,8 +17,8 @@
     local-name: cram_physics
     uri: https://github.com/moesenle/cram_physics.git
 - git: 
-    local-name: cram_pl 
-    uri: http://code.in.tum.de/git/cram-pl.git
+    local-name: cram_core
+    uri: https://github.com/moesenle/cram_core.git
 - git: 
     local-name: cram_highlevel
     uri: https://github.com/moesenle/cram_highlevel.git
