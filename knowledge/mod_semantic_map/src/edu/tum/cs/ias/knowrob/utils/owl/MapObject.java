@@ -42,7 +42,6 @@ public class MapObject implements Comparable<MapObject>{
 	 */
 	public TreeSet<MapObject> physicalParts;	
 	
-	
 
 	public MapObject () {
 		
@@ -50,6 +49,7 @@ public class MapObject implements Comparable<MapObject>{
 		
 		this.dimensions = new Vector3d(); 
 		this.pose_matrix = new Matrix4d();
+		this.pose_matrix.setIdentity();
 		
 		this.physicalParts = new TreeSet<MapObject>();
 	}
@@ -109,7 +109,7 @@ public class MapObject implements Comparable<MapObject>{
 	 * Interface for setting/getting only translation. Pose matrix will be reset to identity!
 	 */
 	public void setPosition(Vector3d position) {
-		pose_matrix.setIdentity();
+//		pose_matrix.setIdentity();
 		pose_matrix.setM03(position.x);
 		pose_matrix.setM13(position.y);
 		pose_matrix.setM23(position.z);

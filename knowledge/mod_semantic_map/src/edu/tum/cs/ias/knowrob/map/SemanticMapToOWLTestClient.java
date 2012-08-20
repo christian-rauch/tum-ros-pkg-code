@@ -1,4 +1,4 @@
-package edu.tum.cs.ias.knowrob;
+package edu.tum.cs.ias.knowrob.map;
 
 import ros.*;
 import ros.pkg.mod_semantic_map.srv.*;

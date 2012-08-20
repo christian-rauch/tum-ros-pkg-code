@@ -1,4 +1,4 @@
-package edu.tum.cs.ias.knowrob;
+package edu.tum.cs.ias.knowrob.map;
 
 import java.io.*;
 import java.util.Date;

@@ -115,12 +115,11 @@ public class OWLFileUtils {
 	 * @return <tt>true</tt> - if saving was successfully completed<br>
 	 * <tt>false</tt> - otherwise
 	 */
-	public static boolean saveOntologyToFile(OWLOntology ontology, String file) {
+	public static boolean saveOntologyToFile(OWLOntology ontology, OWLOntologyFormat format, String file) {
 
 		boolean ok = false;
 
 		try {
-			OWLOntologyFormat format = ontology.getOWLOntologyManager().getOntologyFormat(ontology);
 			ok = saveOntologyToFile(ontology, file, format);			
 		} catch (NullPointerException e) {
 			System.out.println("Could not save ontology: null pointer argument found\n" + e.getMessage());
@@ -145,35 +144,9 @@ public class OWLFileUtils {
 
 		try {
 
-			// Build File object
 			File f = new File(file);
-
-			// Get hold of the ontology manager
 			OWLOntologyManager manager = ontology.getOWLOntologyManager();
-
-			// By default ontologies are saved in the format from which they were loaded.
-			// We can get information about the format of an ontology from its manager
-			OWLOntologyFormat currFormat = manager.getOntologyFormat(ontology);
-
-			// The Document IRI, where the file should be saved
-			IRI documentIRI = IRI.create(f.toURI());
-
-			if (currFormat.equals(format)) {
-
-				// Save a local copy of the ontology.
-				manager.saveOntology(ontology, documentIRI);
-
-			} else {
-
-				// Some ontology formats support prefix names and prefix IRIs. When we save the ontology in
-				// the new format we will copy the prefixes over so that we have nicely abbreviated IRIs in
-				// the new ontology document
-				if (format.isPrefixOWLOntologyFormat() && currFormat.isPrefixOWLOntologyFormat()) {
-					((PrefixOWLOntologyFormat)format).copyPrefixesFrom(currFormat.asPrefixOWLOntologyFormat());
-				}
-				manager.saveOntology(ontology, format, documentIRI);
-
-			}
+			manager.saveOntology(ontology, format, IRI.create(f.toURI()));
 
 			ok = true;
 
