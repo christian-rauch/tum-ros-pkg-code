@@ -38,17 +38,22 @@ public:
 class ODUFinder
 {
 public:
+	enum VisualizationMode { FRAMES, SEQUENCES };
+
 	// LOGGING
 	std::ofstream logger;
+  bool enable_logging_;
 	int frame_number;
 	std::map<std::string, int> stat_summary_map;
-  bool extract_roi_;
+    bool extract_roi_;
 
 	// VISUALIZATION
 	IplImage *camera_image, *template_image, *image ,*image_roi;
 	CvScalar color_table[COLORS];
 	std::vector<unsigned int> cluster_sizes;
 	std::string output_image_topic_;
+	VisualizationMode visualization_mode_;
+	std::vector<std::string> sequence_buffer;
 
 	// DATABASE
 	std::vector<vt::Document> docs;
@@ -60,7 +65,7 @@ public:
 
 	// RECOGNITION
 	size_t camera_keypoints_count;
-  //map of DocumentIDs and their scores in the database
+    //map of DocumentIDs and their scores in the database
 	std::map<uint32_t, float> matches_map;
 	std::list<int> sliding_window;
 	std::map<int, int> last_templates;
@@ -69,9 +74,9 @@ public:
 	std::string command, database_location, images_directory, images_for_visualization_directory;
 	int votes_count, tree_k, tree_levels, min_cluster_size, object_id;
 	double unknown_object_threshold;
-	int enable_clustering, enable_incremental_learning, enable_visualization, sliding_window_size;
+	int enable_clustering, enable_incremental_learning, enable_visualization, sliding_window_size, templates_to_show;
 	double radius_adaptation_r_min, radius_adaptation_r_max, radius_adaptation_K, radius_adaptation_A;
-
+	int count_templates;
 public:
 	ODUFinder();
 
@@ -125,13 +130,12 @@ public:
    */
 	void write_stat_summary();
 
-
+  /** publish when object was detected
+	* publish rect with ROI region of interest
+	* extract an image from another one
+	*/
 	void extract_roi (IplImage *image , std::vector<KeypointExt*> camera_keypoints);
 
-	/** publish when object was detected
-	 * publish rect with ROI region of interest
-	 * extract an image from another one
-	 */
 
 protected:
   /** \brief recursively traces the directory with images
@@ -145,9 +149,25 @@ protected:
   /** \brief visualization function
    * \param camera_image_in input camera image
    * \param template_document_info which documents to visualize
+   * \param camera_keypoints a pointer to the vector containing the keypoints extracted in the input image or NULL if no keypoints are provided
+   */
+	void visualize(IplImage *camera_image_in, DocumentInfo** template_document_info, std::vector<KeypointExt*> *camera_keypoints);
+
+  /** \brief Adds the current result to the sequence buffer in order to be visualized later by visualize_sequence
+   * \param camera_image_in input camera image
+   * \param template_document_info which documents to visualize
    * \param camera_keypoints keypoints extracted in the input image
    */
-	void visualize(IplImage *camera_image_in, DocumentInfo** template_document_info, std::vector<KeypointExt*>& camera_keypoints);
+	void save_result_for_sequence(std::string &best_template_filename);
+
+  /** \brief Visualizes the stored sequence
+   */
+	void visualize_sequence();
+
+  /** \brief Clears the sequence buffer
+   */
+	void clear_sequence_buffer();
+
  
  /** \brief Accumulates the scores from the clusters and updates the map of matches 
   * (matches_map) which is a map of Document IDs  and their scores in the database. 

@@ -14,12 +14,10 @@ private:
 	ros::Subscriber image_subscriber;
 	ros::Publisher template_publisher;
 	ros::Publisher image_pub_;
-
 	// VISUALIZATION
 	sensor_msgs::CvBridge bridge;
     std::string image_topic, template_topic;
     std::string output_image_topic_;
-
 public:
 	ODUFinderNode(ros::NodeHandle &anode)
 		: node_handle(anode)
@@ -61,9 +59,8 @@ public:
       node_handle.param ("radius_adaptation_r_max", radius_adaptation_r_max, 600.9);
       node_handle.param ("radius_adaptation_A", radius_adaptation_A, 800.0);
       node_handle.param ("radius_adaptation_K", radius_adaptation_K, 0.02);
-      image_subscriber = node_handle.subscribe(image_topic, 1, &ODUFinderNode::image_callback, this);
+      image_subscriber = node_handle.subscribe(image_topic, 100, &ODUFinderNode::image_callback, this);
 
-      //template_publisher = node_handle.advertise<std_msgs::String>(template_topic, 1);
       //publish data for http://www.ros.org/wiki/cop
       template_publisher = node_handle.advertise<vision_msgs::cop_answer>(template_topic, 1);
       node_handle.param ("output_image_topic" , output_image_topic_ , std::string("object_found"));
@@ -72,16 +69,17 @@ public:
       //shall we extract roi around the keypoints??
       node_handle.param ("extract_roi" , extract_roi_, false);
 
+      // number of templates to show in the visualisation
+      node_handle.param ("templates_to_show", templates_to_show, 4);
+
+      // if logging of statistics shall be enabled
+      node_handle.param ("enable_logging", enable_logging_, true);
+
       if (enable_visualization)
       {
         cvNamedWindow("visualization", CV_WINDOW_AUTOSIZE);
         cvStartWindowThread();
       }
-
-//		SiftParameters params = GetSiftParameters();
-//		params.DoubleImSize = 0;
-//		SetSiftParameters(params);
-
       //for visualization of feature points
       color_table[0] = cvScalar(255,		0,		0);
       color_table[1] = cvScalar(0,		255,	0);
@@ -96,6 +94,7 @@ public:
       color_table[10] = cvScalar(125,		125,	255);
       color_table[11] = cvScalar(255,		125,	125);
       color_table[12] = cvScalar(125,		255,	125);
+
     }
 
 private:
@@ -110,8 +109,7 @@ private:
         if (raw_encoding == sensor_msgs::image_encodings::BGR8 || raw_encoding == sensor_msgs::image_encodings::RGB8)
           raw_type = CV_8UC3;
         const cv::Mat raw(received_image->height, received_image->width, raw_type,
-                          const_cast<uint8_t*>(&received_image->data[0]), received_image->step);
-
+                  const_cast<uint8_t*>(&received_image->data[0]), received_image->step);
         // Convert to color BGR
         int code = 0;
         if (received_image->encoding == sensor_msgs::image_encodings::BAYER_RGGB8)
@@ -144,14 +142,30 @@ private:
       printf("\n\n");
       ROS_INFO("Image received!");
       //call main processing function
+
+      if (camera_image->width == 2)
+      {
+    	  //if (visualization_mode_ == SEQUENCES && sequence_buffer.size() == 0)
+    		  //return;
+
+    	  ROS_INFO("Special image for end of sequence detected! Switching to SEQUENCE mode!\n");
+    	  visualization_mode_ = SEQUENCES;
+
+    	  //std::sort(sequence_buffer.begin(), sequence_buffer.end());
+
+    	  visualize(camera_image, NULL, NULL);
+
+    	  clear_sequence_buffer();
+    	  return;
+      }
+
       std::string result = process_image(camera_image);
 
       //image_pub_.publish(bridge.cvToImgMsg(image_roi));
       image_pub_.publish(bridge.cvToImgMsg(camera_image));
       ROS_INFO("[ODUFinder:] image published to %s", output_image_topic_.c_str());
-      cvReleaseImage(&image_roi);
-
-
+      if (image_roi != NULL)
+    	  cvReleaseImage(&image_roi);
 
       //msg.data = name.substr(0, name.find_last_of('.')).c_str();
       //publish the result to http://www.ros.org/wiki/cop
@@ -171,7 +185,6 @@ private:
       }
     }
 };
-
 int main(int argc, char** argv) 
 {
 	ros::init(argc, argv, "odu_finder");
@@ -180,5 +193,4 @@ int main(int argc, char** argv)
 	int result = odu_finder.start();
 	if(result != -1)
 	  ros::spin();
-	//odu_finder.write_stat_summary();
 }
