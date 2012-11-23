@@ -11,5 +11,7 @@
   <depend package="sensor_msgs"/>
   <depend package="diagnostic_updater"/>
   <depend package="kuka_fri_header"/>
+  <depend package="soft_runstop"/>
+  <depend package="kdl"/>
 </package>
 

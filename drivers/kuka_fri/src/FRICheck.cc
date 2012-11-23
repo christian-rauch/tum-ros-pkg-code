@@ -192,7 +192,6 @@ void FRICheck::safety_check(float vel[7], float vel_old[7], float pos[7], float 
   // final check on all the joints, avoiding to exceed their mechanical limits
   for(int i=0; i < 7; i++) {
     double vel_max = lim_vel_[i] * rate;
-    double acc_max_soft = (600 DEG) * rate * rate; 
     double acc_max = lim_acc_[i]*rate*rate*safety_factor;
 
     // handle velocity limits
@@ -200,8 +199,8 @@ void FRICheck::safety_check(float vel[7], float vel_old[7], float pos[7], float 
     vel[i] = (vel[i] < -vel_max) ? -vel_max : vel[i];
 
     // handle acceleration limits
-    vel[i] =  (vel[i]  > vel_old[i] + acc_max_soft) ? vel_old[i] + acc_max_soft : vel[i];
-    vel[i] =  (vel[i]  < vel_old[i] - acc_max_soft) ? vel_old[i] - acc_max_soft : vel[i];
+    vel[i] =  (vel[i]  > vel_old[i] + acc_max) ? vel_old[i] + acc_max : vel[i];
+    vel[i] =  (vel[i]  < vel_old[i] - acc_max) ? vel_old[i] - acc_max : vel[i];
 
     //Limit handling in two stages:
     //Stage 1:
@@ -215,20 +214,21 @@ void FRICheck::safety_check(float vel[7], float vel_old[7], float pos[7], float 
 
     // BUT: We need to know the velocity that we mustn't exceed
     //      at the end of the NEXT timestep:
-    // | [ x_next = x - v
+    // | [ x_next = x - .5*v
     // | [ v = sqrt(2*a_max*x_next)
-    // | ==> v(x) = -a + sqrt(a_max^2 + 2*a_max*x)
+    // | ==> v(x) = -0.5*a + sqrt(0.5*a_max^2 + 2*a_max*x)
+
     if (vel[i] > 0.0) { // positive speed, worry about upper limit
       double dist_to_limit = (lim_high_[i] - margin_) - pos[i];
       if (dist_to_limit > 0.0) { //only change vel[i] if we are before the limit
-        double vel_max = -acc_max + sqrt(acc_max*(2*dist_to_limit + acc_max)) - EPS;
+        double vel_max = -0.5*acc_max + sqrt(acc_max*(2*dist_to_limit + 0.5*acc_max)) - EPS;
         
         vel[i] = ( vel[i] > vel_max ) ? vel_max : vel[i];
       }
     } else { //negative speed, worry about lower limit
       double dist_to_limit = pos[i] - (lim_low_[i] + margin_);
       if (dist_to_limit > 0.0) {
-        double vel_max = -acc_max + sqrt(acc_max*(2*dist_to_limit + acc_max)) - EPS;
+        double vel_max = -0.5*acc_max + sqrt(acc_max*(2*dist_to_limit + 0.5*acc_max)) - EPS;
         
         vel[i] = ( vel[i] < -vel_max ) ? -vel_max : vel[i];
       }

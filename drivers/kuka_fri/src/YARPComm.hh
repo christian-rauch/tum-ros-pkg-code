@@ -32,6 +32,7 @@ private:
   yarp::os::BufferedPort<yarp::os::Bottle> port_commanded;
   yarp::os::BufferedPort<yarp::os::Bottle> port_position;
   yarp::os::BufferedPort<yarp::os::Bottle> port_torque;
+  yarp::os::BufferedPort<yarp::os::Bottle> port_torque_raw;
   yarp::os::BufferedPort<yarp::os::Bottle> port_torque_tcp;
   yarp::os::BufferedPort<yarp::os::Bottle> port_kukacommand;
 
@@ -40,6 +41,15 @@ private:
   yarp::os::BufferedPort<yarp::os::Bottle> port_add_torque;
 
   yarp::os::BufferedPort<yarp::os::Bottle> port_krlcommand;
+
+  yarp::os::BufferedPort<yarp::os::Bottle> port_cart_stiffness;
+  yarp::os::BufferedPort<yarp::os::Bottle> port_cart_damping;
+  yarp::os::BufferedPort<yarp::os::Bottle> port_cart_force_torque;
+  yarp::os::BufferedPort<yarp::os::Bottle> port_cart_activate;
+
+  yarp::os::BufferedPort<yarp::os::Bottle> port_current_cart_stiffness;
+  yarp::os::BufferedPort<yarp::os::Bottle> port_current_cart_damping;
+  yarp::os::BufferedPort<yarp::os::Bottle> port_current_cart_force_torque;
 
   // threading support
   FRIThread* fri_;

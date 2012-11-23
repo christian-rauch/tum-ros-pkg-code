@@ -8,6 +8,8 @@ public:
 
   //TODO: add uptime information
 
+  bool connected;    //!< is the UDP connection up?
+
   // connection statistics
   float time;        //!< robot internal time
   float answerRate;  //!< average answer rate
@@ -22,6 +24,9 @@ public:
   float msrSampleTime; //!< sample time for measurement packets
   float cmdSampleTime; //!< sample time for command packets
   float safety; //!< scaling factor for safety limits [0..1]
+
+  int calcTimeMean; //!< mean calculation time during last second (in us)
+  int calcTimeMax;  //!< max  calculation time during last second (in us)
 
   // general robot info
   int power; //!< power state of the motors (bitfield)
@@ -43,7 +48,23 @@ public:
   float commanded[7];
   float position[7];
   float torque[7];
+  float torque_raw[7];
   float torqueTCP[6];
+};
+
+
+//! cartesian impedance parameters
+class CartesianImpedance
+{
+public:
+  static const float DEFAULT_TRANS_STIFFNESS=50;
+  static const float DEFAULT_ROT_STIFFNESS=50;
+  static const float DEFAULT_DAMPING=0.7;
+  CartesianImpedance();
+  float K[6*6]; //!< Stiffness matrix (ref-frame: base, ref-point: flanche)
+  float D[6*6]; //!< Damping matrix (ref-frame: base, ref-point: flanche)
+  float ft[6];  //!< Desired force/torque (ref-frame: base, ref-point: flanche)
+  float K_null; //!< Joint nullspace stiffness (Nm/rad)
 };
 
 
@@ -59,6 +80,10 @@ public:
   float stiffness[7]; //!< stiffness [Nm/rad]
   float damping[7];   //!< damping [normaized 0..1]
   float addTorque[7]; //!< additional torque [Nm]
+
+  bool useCartesianImpedance;
+  CartesianImpedance cartImpedance;
 };
 
 #endif // FRIDATA_HH
+

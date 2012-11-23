@@ -5,6 +5,8 @@
 #include <netinet/in.h>
 #include <pthread.h>
 
+#include <sys/time.h>
+
 #include <friComm.h>  // KUKA proprietary header
 
 #include <string>
@@ -49,9 +51,11 @@ position increment using fri_cmd_. The semantics of "remembering" is
 unclear and potentially dangerous. The user of the class FRIComm must
 set the desired speed / position increment in every cycle.
 
-It is your resonsibility to decelerate the arm before closing!
+It is your responsibility to decelerate the arm before closing!
 
  */
+
+class CartesianImpedanceControl;
 
 class FRIComm
 {
@@ -96,6 +100,7 @@ private:
   void stateHandler();   //!< watches the current robot state and posts commands if necessary
 
   FRICheck *safety_;
+  FRICheck *safety2_;
 
   unsigned int seq_;
   bool closing_;
@@ -105,6 +110,21 @@ private:
   std::string remote_address_;
   int socket_;
   struct sockaddr_in remote_addr_;
+
+  bool useCartesianImpedance_;
+  CartesianImpedance cartesianImpedanceCmd_;
+
+  CartesianImpedanceControl* cartesianImpedance_;
+
+  // time measurement helpers
+  struct timeval last_tick;
+  long long duration_sum;
+  int duration_num;
+  int duration_max;
+  int duration_mean_published;
+  int duration_max_published;
+  void tick();
+  void tock();
 };
 
 

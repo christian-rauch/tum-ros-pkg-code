@@ -9,7 +9,7 @@
 using namespace std;
 
 ROSComm::ROSComm() :
-  runstop_(true), n_(0), diagnostic_(0),
+  soft_runstop_handler_(0), n_(0), diagnostic_(0),
   running_(false), exitRequested_(false)
 {
   memset(&status_, 0, sizeof(status_));
@@ -17,10 +17,9 @@ ROSComm::ROSComm() :
 
 ROSComm::~ROSComm()
 {
-  if(n_)
-    delete n_;
-  if(diagnostic_)
-    delete diagnostic_;
+  delete n_;
+  delete diagnostic_;
+  delete soft_runstop_handler_;
 }
 
 bool ROSComm::configure(FRIThread *fri)
@@ -97,6 +96,7 @@ void ROSComm::status_update(diagnostic_updater::DiagnosticStatusWrapper &s)
   s.addf("Runstop", "%s", (status_.runstop) ? "ON" : "off");
   s.addf("Interface Mode", "%s", state_strings[state]);
   s.addf("Control Mode", "%s", control_modes[control_mode]);
+  s.addf("Comm. Status", "%s", (status_.connected) ? "Connected": "Offline");
   s.addf("Comm. frequency", "%3.1f Hz", freq);
   s.addf("Comm. answer rate", "%3.3f", status_.answerRate);
   s.addf("Comm. latency", "%5.5f", status_.latency);
@@ -105,6 +105,8 @@ void ROSComm::status_update(diagnostic_updater::DiagnosticStatusWrapper &s)
   s.addf("Comm. miss counter", "%d", status_.missCounter);
   s.addf("Comm. quality", "%s", quality_strings[quality]);
   s.addf("Safety Factor", "%f", status_.safety);
+  s.addf("Mean computation time", "%d us", status_.calcTimeMean);
+  s.addf("Max computation time", "%d us", status_.calcTimeMax);
   s.addf("Motor State", "%s", (status_.power == 0x7f) ? "ON" : "OFF");
 
   float *t=status_.temperature;
@@ -121,12 +123,16 @@ bool ROSComm::open()
   if(!n_)
     n_ = new ros::NodeHandle("~");
 
-  pub_ =  n_->advertise<sensor_msgs::JointState>("/joint_states", 1);
-  runstop_sub_ = n_->subscribe("/soft_runstop", 1, &ROSComm::runstop_receiver, this);
+  soft_runstop_handler_ = new soft_runstop::Handler(Duration(0.5));
+  pub_ = n_->advertise<sensor_msgs::JointState>("/joint_states", 1);
+  sub_ = n_->subscribe("command", 1, &ROSComm::impedanceCommand, this);
+
+  string Side = side_;
+  Side[0] = side_[0] + ('A'-'a');
 
   diagnostic_ = new diagnostic_updater::Updater();
   diagnostic_->setHardwareID(string("kuka_lwr_")+string(side_));
-  diagnostic_->add("status", this, &ROSComm::status_update);
+  diagnostic_->add("Arm "+Side, this, &ROSComm::status_update);
 
   return true;
 }
@@ -156,21 +162,33 @@ void ROSComm::publishStatus(const RobotStatus &status)
 }
 
 
-bool  ROSComm::receiveCommand(RobotCommand* cmd)
+void ROSComm::impedanceCommand(const kuka_fri::ImpedanceCommand::ConstPtr& msg)
 {
-  return false;
-}
+  RobotCommand cmd = fri_->cmd();
 
+  if (msg->velocity.size() == 7)
+    for (int i=0; i<7; i++)
+      cmd.command[i] = msg->velocity[i];
 
-void  ROSComm::runstop_receiver(const std_msgs::BoolConstPtr &msg)
-{
-  runstop_ = msg->data;
+  if (msg->stiffness.size() == 7)
+    for (int i=0; i<7; i++)
+      cmd.stiffness[i] = msg->stiffness[i];
+
+  if (msg->damping.size() == 7)
+    for (int i=0; i<7; i++)
+      cmd.damping[i] = msg->damping[i];
+
+  if (msg->add_torque.size() == 7)
+    for (int i=0; i<7; i++)
+      cmd.addTorque[i] = msg->add_torque[i];
+
+  fri_->setCmd(cmd);
 }
 
 
 bool ROSComm::runstop()
 {
-  return runstop_;
+  return soft_runstop_handler_->getState();
 }
 
 
@@ -203,11 +221,7 @@ void* ROSComm::run()
 
     fri_->setRunstop(runstop());
 
-    if(receiveCommand(&cmd))
-      fri_->setCmd(cmd);
-    else
-      cmd = fri_->cmd();
-
+    cmd = fri_->cmd();
     data = fri_->data();
     status = fri_->status();
 

@@ -1,5 +1,6 @@
 <launch>
-  <node name="lwr_right" pkg="kuka_fri" type="fri"
+  <node launch-prefix="with_realtime"
+        name="lwr_right" pkg="kuka_fri" type="fri"
         args="right" respawn="false" output="screen">
     <param name="side" value="right"/>
     <param name="rate" value="125"/>
@@ -8,8 +9,8 @@
     <param name="remote_port" value="7010"/>
   </node>
 
-  <node name="lwr_left"
-        pkg="kuka_fri" type="fri"
+  <node launch-prefix="with_realtime"
+        name="lwr_left" pkg="kuka_fri" type="fri"
         args="left" respawn="false">
     <param name="side" value="left"/>
     <param name="rate" value="125"/>

@@ -15,8 +15,11 @@
 
 #include "FRIComm.hh"
 #include "FRICheck.hh"
+#include "CartesianImpedance.hh"
 
+// DEBUGGING
 FILE *LOG=0;
+
 
 #define DEG *M_PI/180.0
 #define RAD /M_PI*180.0
@@ -40,6 +43,7 @@ RobotData::RobotData() :
     commanded[i] = 0.0;
     position[i] = 0.0;
     torque[i] = 0.0;
+    torque_raw[i] = 0.0;
   }
   for(int i=0; i < 6; i++) {
     torqueTCP[i] = 0.0;
@@ -47,7 +51,8 @@ RobotData::RobotData() :
 }
 
 
-RobotCommand::RobotCommand()
+RobotCommand::RobotCommand() :
+  useCartesianImpedance(false)
 {
   for(int i=0; i < 7; i++) {
     command[i] = 0.0;
@@ -71,14 +76,32 @@ RobotStatus::RobotStatus()
 }
 
 
+CartesianImpedance::CartesianImpedance()
+{
+  // set everything to zero
+  memset(this, 0, sizeof(*this));
+
+  // well, almost...
+  for(int i=0; i < 6; i++)
+  {
+    K[i*6 + i] = (i < 3) ? DEFAULT_TRANS_STIFFNESS : DEFAULT_ROT_STIFFNESS;
+    D[i*6 + i] = DEFAULT_DAMPING;
+  }
+}
+
+
 FRIComm::FRIComm() :
-  krl_time_(-1), seq_(0), closing_(false), runstop_(false), socket_(0)
+  krl_time_(-1), seq_(0), closing_(false), runstop_(false), socket_(0),
+  duration_sum(0), duration_num(0), duration_max(0)
 {
   local_port_ = 0;
   remote_address_ = "";
   remote_port_ = 0;
 
-  safety_ = new FRICheck();
+  safety_  = new FRICheck();
+  safety2_ = new FRICheck();
+  cartesianImpedance_ = new CartesianImpedanceControl();
+
 
   // clear data buffers
   memset(&fri_msr_, 0, sizeof(fri_msr_));
@@ -89,6 +112,9 @@ FRIComm::FRIComm() :
 
   // full control for joint impedance controller
   fri_cmd_.cmd.cmdFlags = FRI_CMD_JNTPOS | FRI_CMD_JNTSTIFF | FRI_CMD_JNTDAMP | FRI_CMD_JNTTRQ;
+
+  last_tick.tv_sec = 0;
+  last_tick.tv_usec = 0;
 }
 
 void FRIComm::configureNetwork(int local_port, std::string remote_address, int remote_port)
@@ -100,8 +126,9 @@ void FRIComm::configureNetwork(int local_port, std::string remote_address, int r
 
 FRIComm::~FRIComm()
 {
-  if(safety_)
-    delete safety_;
+  delete safety_;
+  delete safety2_;
+  delete cartesianImpedance_;
 }
 
 
@@ -214,6 +241,8 @@ bool FRIComm::receive()
 
   int n = recvfrom(socket_, (void*) &fri_msr_, sizeof(fri_msr_), 0, &addr, &addr_len);
 
+  tick();
+
   if(n != sizeof(tFriMsrData)) {
     if(errno == EAGAIN)
       return false; // no packet received. return silently
@@ -223,8 +252,10 @@ bool FRIComm::receive()
     return false;
   }
 
-  if(seq_ == 0)
+  if(seq_ == 0) {
     safety_->setPos(fri_msr_.data.cmdJntPos);
+    safety2_->setPos(fri_msr_.data.cmdJntPos);
+  }
 
   // prepare response packet
   fri_cmd_.head.sendSeqCount = ++seq_;
@@ -257,49 +288,80 @@ void FRIComm::respond()
   // TODO: filter stiffness, damping and torque
   safety_->adjust(fri_cmd_.cmd.jntPos, fri_msr_.intf.desiredCmdSampleTime, fri_msr_.intf.safetyLimits);
 
+
+  tFriCmdData* command=0;
+  tFriCmdData commands;
+
+  // commanded position limiting to keep the KUKA controllers happy
+  if(useCartesianImpedance_)
+  {
+    float cmdpos[7];
+    for(int i=0; i < 7; i++)
+      cmdpos[i] = fri_msr_.data.msrJntPos[i];
+
+    safety2_->adjust(cmdpos, fri_msr_.intf.desiredCmdSampleTime, fri_msr_.intf.safetyLimits);
+
+    commands = cartesianImpedance_->computeRobotCommand(fri_msr_, fri_cmd_,
+                                                        cartesianImpedanceCmd_, cmdpos);
+    command = &commands;
+  }
+  else
+  {
+    command = &fri_cmd_;
+    safety2_->adjust(fri_cmd_.cmd.jntPos, fri_msr_.intf.desiredCmdSampleTime, fri_msr_.intf.safetyLimits);
+  }
+
   stateHandler();
   processCommand();
 
-  // monitor mode settings
-  if(fri_msr_.intf.state != FRI_STATE_CMD || closing_) {
-    for(int i=0; i < 7; i++) {
-      fri_cmd_.cmd.jntPos[i] = fri_msr_.data.cmdJntPos[i]+fri_msr_.data.cmdJntPosFriOffset[i];
-      fri_cmd_.cmd.addJntTrq[i] = 0.0;
-    }
-  }
-
-
   // DEBUGGING
-  float max_offs=0.0;
-  for(int i=0; i < 7; i++) {
-    if(fabs(fri_msr_.data.cmdJntPosFriOffset[i]) > max_offs)
-      max_offs = fabs(fri_msr_.data.cmdJntPosFriOffset[i]);
-  }
-
   if(LOG) {
-    fprintf(LOG, "%d (%f): kt=%f f=l%xr%x cmd=%d pwr=%d q=%d a=",
-      fri_msr_.head.sendSeqCount, fri_msr_.intf.timestamp,
-      krl_time_, fri_cmd_.krl.boolData, fri_msr_.krl.boolData,
-      fri_cmd_.krl.intData[0], fri_msr_.robot.power, fri_msr_.intf.quality);
+    fprintf(LOG, "%f   ", fri_msr_.intf.timestamp);
+
     for(int i=0; i < 7; i++)
-      fprintf(LOG,"[%d]%5.5f+%5.5f!%5.5f ", i, fri_msr_.data.cmdJntPos[i],
-                                               fri_msr_.data.cmdJntPosFriOffset[i],
-                                               fri_cmd_.cmd.jntPos[i]);
+      fprintf(LOG,"%5.5f ", command->cmd.addJntTrq[i]);
+
+    fprintf(LOG, "        ");
+
+    for(int i=0; i < 7; i++)
+      fprintf(LOG,"%5.5f ", command->cmd.jntStiffness[i]);
+
+    fprintf(LOG, "        ");
+
+//    for(int i=0; i < 7; i++)
+//      fprintf(LOG,"%5.5f ", command->cmd.jntPos[i]);
+    for(int i=0; i < 7*7; i++)
+      fprintf(LOG,"%5.5f ", fri_msr_.data.massMatrix[i]);
+
+    fprintf(LOG, "        ");
+
+    for(int i=0; i < 7*6; i++)
+      fprintf(LOG,"%5.5f ", fri_msr_.data.jacobian[i]);
+
+
     fprintf(LOG, "\n");
   }
   // DEBUGGING END
 
+
+  // monitor mode settings
+  if(fri_msr_.intf.state != FRI_STATE_CMD || closing_ || fri_msr_.robot.power != 0x7f) {
+    for(int i=0; i < 7; i++) {
+      command->cmd.jntPos[i] = fri_msr_.data.cmdJntPos[i]+fri_msr_.data.cmdJntPosFriOffset[i];
+      command->cmd.addJntTrq[i] = 0.0;
+    }
+  }
+
+
   // send packet
-  sendto(socket_, (void*) &fri_cmd_, sizeof(fri_cmd_), 0, (sockaddr*) &remote_addr_, sizeof(remote_addr_));
+  sendto(socket_, (void*) command, sizeof(fri_cmd_), 0, (sockaddr*) &remote_addr_, sizeof(remote_addr_));
+
+  tock();
 }
 
 
 bool FRIComm::postCommand(int iData[16], float rData[16])
 {
-  if(LOG)
-    fprintf(LOG, "%d (%f): posted command %d\n",
-      fri_msr_.head.sendSeqCount, fri_msr_.intf.timestamp, iData[0]);
-
   if(krl_time_ > fri_msr_.intf.timestamp)
     return false;  // command is being processed
 
@@ -409,6 +471,7 @@ RobotData FRIComm::data()
     //data.commanded[i] = fri_msr_.data.cmdJntPos[i] + fri_msr_.data.cmdJntPosFriOffset[i];
     data.commanded[i] = fri_cmd_.cmd.jntPos[i];
     data.torque[i] = fri_msr_.data.estExtJntTrq[i];
+    data.torque_raw[i] = fri_msr_.data.msrJntTrq[i];
   }
 
   for(int i=0; i < 6; i++) {
@@ -430,6 +493,10 @@ RobotCommand FRIComm::cmd()
     c.damping[i]   = fri_cmd_.cmd.jntDamping[i];
     c.addTorque[i] = fri_cmd_.cmd.addJntTrq[i];
   }
+
+  c.useCartesianImpedance = useCartesianImpedance_;
+  c.cartImpedance = cartesianImpedanceCmd_;
+
   return c;
 }
 
@@ -443,6 +510,9 @@ void FRIComm::setCmd(RobotCommand cmd)
       fri_cmd_.cmd.jntDamping[i] = cmd.damping[i];
       fri_cmd_.cmd.addJntTrq[i] = cmd.addTorque[i];
   }
+
+  useCartesianImpedance_ = cmd.useCartesianImpedance;
+  cartesianImpedanceCmd_ = cmd.cartImpedance;
 }
 
 
@@ -471,7 +541,43 @@ RobotStatus FRIComm::status()
 
   s.runstop = runstop_;
 
+  // internal timing stats
+  if(fri_msr_.intf.desiredCmdSampleTime != 0 && duration_num != 0)
+  {
+    int interval = 1.0 / fri_msr_.intf.desiredCmdSampleTime;
+    if(duration_num >= interval)
+    {
+      duration_mean_published = duration_sum / duration_num;
+      duration_max_published = duration_max;
+      duration_num = 0;
+      duration_sum = 0;
+      duration_max = 0;
+    }
+  }
+
+  s.calcTimeMax  = duration_max_published;
+  s.calcTimeMean = duration_mean_published;
+
   return s;
+}
+
+
+void FRIComm::tick()
+{
+  gettimeofday(&last_tick, 0);
+}
+
+void FRIComm::tock()
+{
+  struct timeval now;
+  gettimeofday(&now, 0);
+
+  int duration = 1e6*(now.tv_sec  - last_tick.tv_sec)
+		           + (now.tv_usec - last_tick.tv_usec);
+
+  duration_sum += duration;
+  duration_max  = (duration > duration_max) ? duration : duration_max;
+  duration_num++;
 }
 
 
@@ -603,6 +709,7 @@ void* FRIThread::run()
     pthread_mutex_lock(&mutex_);
     data_buffer_ = data;
     status_buffer_ = status;
+    status_buffer_.connected = communicating;
     pthread_mutex_unlock(&mutex_);
   }
 

@@ -50,6 +50,7 @@ bool YARPComm::open()
   port_commanded.open((tprefix+"/cmded").c_str());
   port_position.open((tprefix+"/pos").c_str());
   port_torque.open((tprefix+"/torque").c_str());
+  port_torque_raw.open((tprefix+"/torque_raw").c_str());
   port_torque_tcp.open((tprefix+"/torque_tcp").c_str());
   port_kukacommand.open((tprefix+"/sent_to_rsi").c_str());
 
@@ -58,6 +59,15 @@ bool YARPComm::open()
   port_add_torque.open((tprefix+"/add_torque").c_str());
 
   port_krlcommand.open((tprefix+"/krl_command").c_str());
+
+  port_cart_stiffness.open((tprefix+"/cart_stiffness").c_str());
+  port_cart_damping.open((tprefix+"/cart_damping").c_str());
+  port_cart_force_torque.open((tprefix+"/cart_force_torque").c_str());
+  port_cart_activate.open((tprefix+"/cart_activate").c_str());
+
+  port_current_cart_stiffness.open((tprefix+"/current_cart_stiffness").c_str());
+  port_current_cart_damping.open((tprefix+"/current_cart_damping").c_str());
+  port_current_cart_force_torque.open((tprefix+"/current_cart_force_torque").c_str());
 
   return true;
 }
@@ -115,7 +125,18 @@ bool YARPComm::receiveCommand(RobotCommand* cmd)
   got_data |= receiveBottle(port_stiffness, cmd->stiffness, 7);
   got_data |= receiveBottle(port_damping, cmd->damping, 7);
   got_data |= receiveBottle(port_add_torque, cmd->addTorque, 7);
-  
+
+  got_data |= receiveBottle(port_cart_stiffness, cmd->cartImpedance.K, 6*6);
+  got_data |= receiveBottle(port_cart_damping, cmd->cartImpedance.D, 6*6);
+  got_data |= receiveBottle(port_cart_force_torque, cmd->cartImpedance.ft, 6);
+
+  float cart_activate;
+  if(receiveBottle(port_cart_activate, &cart_activate, 1))
+  {
+    cmd->useCartesianImpedance = (cart_activate > 0.5);
+    got_data = true;
+  }
+ 
   return got_data;
 }
 
@@ -125,8 +146,13 @@ void YARPComm::publishData(const RobotData &data, const RobotCommand &cmd_old)
   sendData(port_position, data.position, 7);
   sendData(port_commanded, data.commanded, 7);
   sendData(port_torque, data.torque, 7);
+  sendData(port_torque_raw, data.torque_raw, 7);
   sendData(port_torque_tcp, data.torqueTCP, 12);
   sendData(port_kukacommand, cmd_old.command, 7);
+
+  sendData(port_current_cart_stiffness, cmd_old.cartImpedance.K, 6*6);
+  sendData(port_current_cart_damping,   cmd_old.cartImpedance.D, 6*6);
+  sendData(port_current_cart_force_torque,   cmd_old.cartImpedance.ft, 6);
 }
 
 
@@ -167,8 +193,9 @@ void* YARPComm::run()
   int seq = 0;
 
   while(!exitRequested_) {
-    receiveCommand(&cmd);
-    fri_->setCmd(cmd);
+    cmd = fri_->cmd();
+    if(receiveCommand(&cmd))
+      fri_->setCmd(cmd);
 
     if(receiveKRLCmd(port_krlcommand, iData, rData))
       fri_->postCommand(iData, rData);

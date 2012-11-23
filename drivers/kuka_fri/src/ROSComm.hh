@@ -7,7 +7,8 @@
 #include <ros/ros.h>
 #include <diagnostic_updater/diagnostic_updater.h>
 #include <sensor_msgs/JointState.h>
-#include <std_msgs/Bool.h>
+#include <kuka_fri/ImpedanceCommand.h>
+#include <soft_runstop/Handler.h>
 
 class FRIThread;
 
@@ -19,7 +20,6 @@ public:
   bool open();
   void publishData(const RobotData &data, const RobotCommand &cmd);
   void publishStatus(const RobotStatus &status);
-  bool receiveCommand(RobotCommand* cmd);
   bool runstop();
 
   // threading support
@@ -27,13 +27,15 @@ public:
   void finish();
 private:
   std::string side_;
-  bool runstop_;
+  soft_runstop::Handler* soft_runstop_handler_;
   RobotStatus status_;
   void status_update(diagnostic_updater::DiagnosticStatusWrapper &s);
   void runstop_receiver(const std_msgs::BoolConstPtr &msg);
+  void impedanceCommand(const kuka_fri::ImpedanceCommand::ConstPtr& msg);
   ros::NodeHandle *n_;
   ros::Publisher pub_;
-  ros::Subscriber runstop_sub_;
+  ros::Subscriber sub_;
+
   diagnostic_updater::Updater *diagnostic_;
   sensor_msgs::JointState joint_state_;
 
