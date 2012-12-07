@@ -37,7 +37,7 @@
 #include "pr2_hardware_interface/hardware_interface.h"
 #include "pr2_controller_manager/controller_manager.h"
 #include "pr2_mechanism_model/robot.h"
-#include "tinyxml/tinyxml.h"
+#include "tinyxml.h"
 
 #include <XmlRpcValue.h>
 #include <XmlRpcException.h>
@@ -112,6 +112,8 @@ void LoopbackControllerManager::jointCallback(const sensor_msgs::JointState::Con
 
   for(unsigned int i=0; i < joints->name.size(); ++i)
   {
+    // NOTE: JointState.position_ is declared read-only,
+    //       but in a simulation this is supposedly safe to be written...
     state_->getJointState(joints->name[i])->position_ = joints->position[i];
   }
 
