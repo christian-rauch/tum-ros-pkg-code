@@ -1,6 +1,6 @@
 - svn: 
     local-name: tum-ros-pkg
-    uri: https://tum-ros-pkg.svn.sourceforge.net/svnroot/tum-ros-pkg
+    uri: https://svn.code.sf.net/p/tum-ros-pkg/code
 - git:
     local-name: client_rosjava_jni
     uri: http://code.in.tum.de/git/client-rosjava.git
