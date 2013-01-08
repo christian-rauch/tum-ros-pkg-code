@@ -1,12 +1,15 @@
 package edu.tum.cs.ias.knowrob.map;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import org.semanticweb.owlapi.model.*;
 
-import edu.tum.cs.ias.knowrob.utils.owl.MapObject;
-import edu.tum.cs.ias.knowrob.utils.owl.OWLImportExport;
-import edu.tum.cs.ias.knowrob.utils.owl.OWLFileUtils;
+import edu.tum.cs.ias.knowrob.owl.OWLClass;
+import edu.tum.cs.ias.knowrob.owl.ObjectInstance;
+import edu.tum.cs.ias.knowrob.owl.utils.OWLFileUtils;
+import edu.tum.cs.ias.knowrob.owl.utils.OWLImportExport;
 
 import ros.*;
 import ros.pkg.mod_semantic_map.srv.*;
@@ -86,17 +89,19 @@ public class SemanticMapToOWL {
 				OWLImportExport export = new OWLImportExport();
 
 				// Get IRI of target map from the frame_id of header msg
-				String map_id = req.map.header.frame_id.toString();
-				if (map_id.length() != 0) {
+				String namespace = req.map.header.frame_id.toString();
+				if (namespace.length() != 0) {
 					// use provided map_id
-					OWLImportExport.PREFIX_MANAGER.setPrefix("ias_map:", map_id);
+					OWLImportExport.PREFIX_MANAGER.setPrefix("ias_map:", namespace);
 				} else {
 					//use IAS_MAP as default, PREFIX_MANAGER ist set by default 
-					map_id = OWLImportExport.IAS_MAP;
+					namespace = OWLImportExport.IAS_MAP;
 				}
-				System.out.println("Using map id: " + map_id);
+				System.out.println("Using map id: " + namespace);
 				
-				OWLOntology owlmap = export.createOWLMapDescription(map_id, semMapObj2MapObj(map_id, req.map.objects));
+				OWLOntology owlmap = export.createOWLMapDescription(namespace, 
+							"SemanticEnvironmentMap" + new SimpleDateFormat("yyyyMMddHHmmss").format(Calendar.getInstance().getTime()), 
+							semMapObj2MapObj(namespace, req.map.objects));
 				res.owlmap = OWLFileUtils.saveOntologytoString(owlmap, owlmap.getOWLOntologyManager().getOntologyFormat(owlmap));
 
 			}
@@ -106,32 +111,30 @@ public class SemanticMapToOWL {
 	}
 
 	
-	private ArrayList<MapObject> semMapObj2MapObj(String map_id, ArrayList<SemMapObject> smos) {
+	private ArrayList<ObjectInstance> semMapObj2MapObj(String map_id, ArrayList<SemMapObject> smos) {
 		
-		HashMap<Integer, MapObject> intIdToID = new HashMap<Integer, MapObject>();
-		ArrayList<MapObject> mos = new ArrayList<MapObject>();
+		HashMap<Integer, ObjectInstance> intIdToID = new HashMap<Integer, ObjectInstance>();
+		ArrayList<ObjectInstance> mos = new ArrayList<ObjectInstance>();
 		
 		for(SemMapObject smo : smos) {
 			
-			MapObject mo = new MapObject();
-			
-			mo.id = smo.type + smo.id;
+			ObjectInstance mo = ObjectInstance.getObjectInstance(smo.type + smo.id);
 			intIdToID.put(smo.id, mo);
 			
-			mo.types.add(smo.type);
+			mo.addType(OWLClass.getOWLClass(smo.type));
 			
-			mo.dimensions.x=smo.width;
-			mo.dimensions.y=smo.depth;
-			mo.dimensions.z=smo.height;
+			mo.getDimensions().x=smo.width;
+			mo.getDimensions().y=smo.depth;
+			mo.getDimensions().z=smo.height;
 
 			for(int i=0;i<4;i++) {
 				for(int j=0;j<4;j++) {
-					mo.pose_matrix.setElement(i, j, smo.pose[4*i+j]);
+					mo.getPoseMatrix().setElement(i, j, smo.pose[4*i+j]);
 				}
 			}
 
 			if(intIdToID.get(smo.partOf) != null)
-			    intIdToID.get(smo.partOf).physicalParts.add(mo);
+			    intIdToID.get(smo.partOf).addPhysicalPart(mo);
 
 			mos.add(mo);
 		}

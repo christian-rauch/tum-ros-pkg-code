@@ -3,7 +3,8 @@ package edu.tum.cs.ias.knowrob.map;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import processing.core.*;
-import de.tum.in.fipm.kipm.gui.visualisation.base.PrologVisualizationCanvas;
+import edu.tum.cs.ias.knowrob.prolog.PrologInterface;
+import edu.tum.cs.ias.knowrob.vis.applets.PrologVisualizationCanvas;
 
 
 
@@ -30,13 +31,16 @@ public class SemanticMapEditor extends PrologVisualizationCanvas implements Mous
 
 		this.setSize(1050, 600);
 		this.remove(AVObject);
-		this.controlWindow.hide();
+		//this.controlWindow.hide();
 		this.KVObject.setViewParameters(4.0f, 4.0f, 134f, -15f, 100);
 		
+		PrologInterface.initJPLProlog("mod_vis");
+		
 		forms_applet = new SemanticMapEditorForms();
+		forms_applet.frame = this.frame;
 		forms_applet.setSize(390, 600);
 		forms_applet.init();
-		forms_applet.setPrologVisCanvas(this);
+		forms_applet.setMapVisApplet(KVObject);
 		
 		this.add(forms_applet);
 
@@ -44,15 +48,20 @@ public class SemanticMapEditor extends PrologVisualizationCanvas implements Mous
 		this.forms_applet.cursor(ARROW);
 		this.KVObject.cursor(ARROW);
 		
+
+		background(40);
 		this.draw();
 		this.setVisible(true);
 		this.setSize(1050, 600);
 		this.validate();
-				
+		
+
+		forms_applet.selectAndLoadInputFile();
+	
 	}
 	
 	public void draw() {
-		background(20, 20, 20);
+		background(40);
 	}
 
 	/**
@@ -60,7 +69,7 @@ public class SemanticMapEditor extends PrologVisualizationCanvas implements Mous
 	 * 
 	 * @param identifier
 	 */
-    public void displayInfoFor(String identifier) {
+    public void mapObjectClicked(String identifier) {
 
     	forms_applet.editObject(identifier);
     }

@@ -1,8 +1,13 @@
 package edu.tum.cs.ias.knowrob.map;
 
+import java.awt.Container;
+import java.awt.Frame;
 import java.awt.event.KeyEvent;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
+import java.util.Vector;
 
 import javax.vecmath.Matrix4d;
 import javax.vecmath.Quat4d;
@@ -17,16 +22,17 @@ import controlP5.ListBox;
 import controlP5.ListBoxItem;
 import controlP5.Textfield;
 import controlP5.Textlabel;
-import de.tum.in.fipm.kipm.gui.visualisation.applets.StandaloneKitchenVisApplet;
-import de.tum.in.fipm.kipm.gui.visualisation.base.PrologVisualizationCanvas;
-import de.tum.in.fipm.kipm.gui.visualisation.items.*;
-import edu.tum.cs.ias.knowrob.utils.owl.MapObject;
-import edu.tum.cs.ias.knowrob.utils.owl.MapJoint;
-import edu.tum.cs.ias.knowrob.utils.owl.OWLImportExport;
-import edu.tum.cs.ias.knowrob.utils.owl.OWLFileUtils;
+import edu.tum.cs.ias.knowrob.owl.JointInstance;
+import edu.tum.cs.ias.knowrob.owl.OWLClass;
+import edu.tum.cs.ias.knowrob.owl.OWLThing;
+import edu.tum.cs.ias.knowrob.owl.ObjectInstance;
+import edu.tum.cs.ias.knowrob.owl.utils.OWLFileUtils;
+import edu.tum.cs.ias.knowrob.owl.utils.OWLImportExport;
+import edu.tum.cs.ias.knowrob.prolog.PrologInterface;
+import edu.tum.cs.ias.knowrob.prolog.PrologQueryUtils;
+import edu.tum.cs.ias.knowrob.vis.applets.SemanticMapVisApplet;
+import edu.tum.cs.ias.knowrob.vis.themes.GreyTheme;
 import processing.core.PApplet;
-import ros.NodeHandle;
-import ros.Ros;
 
 
 
@@ -46,16 +52,12 @@ public class SemanticMapEditorForms extends PApplet {
 
 	///////////////////////////////////////////////////////////////
 	// visualization and user interface stuff
-	
-	private PrologVisualizationCanvas prologVisCanvas = null;
+
+	private SemanticMapVisApplet mapVisApplet = null;
 	public ControlP5 controlP5;
 	boolean[] keys = new boolean[526];
 	boolean selectParentObj = false; // switch mode from normal obj selection to parent obj selection
 	boolean selectChildObj = false;  // switch mode from normal obj selection to child obj selection
-	
-	private int[] grayValues = new int[] {160,190,210,170,220,180,200,165,185,205,175,195,215};
-	private static int grayLevelCounter = 0;
-	
 	
 	// form elements
 	Textfield t_id;
@@ -68,8 +70,9 @@ public class SemanticMapEditorForms extends PApplet {
 	Textfield[] t_qpos;
 	Textfield[] t_jointdir;
 	Textfield[] t_jointlim;
-	Textfield t_filename;
+	public Textfield t_filename;
 	Textfield t_namespace;
+	Textfield t_map_id;
 	Textfield t_parent;
 	Textfield t_radius;
 	Textlabel l_jointdir;
@@ -89,36 +92,84 @@ public class SemanticMapEditorForms extends PApplet {
 	
 	public enum Tab {SIMPLE, MATRIX, QUATERNION, JOINTS, SETTINGS};
 	Tab tab;
-	static Ros ros;
-	static NodeHandle n;
 	
 	///////////////////////////////////////////////////////////////
 	
 	
 	
 	/**
-	 * Internal storage of the MapObject instances
+	 * Internal storage of the ObjectInstance instances
 	 */
-	HashMap<String, MapObject> objects;
+	HashMap<String, ObjectInstance> objects;
+
+	boolean cp5_initialized = false;
+	
+	String map_id = "";
+	String map_namespace = "";
+	
 	
 	/**
 	 * List of objects to be displayed in the object classes selector
 	 */
 	protected static final HashMap<Integer, String> objClasses = new HashMap<Integer, String>();
 	static {
-		objClasses.put(1022,   "Cupboard");
-		objClasses.put(1023,   "Dishwasher");
-		objClasses.put(1024,   "Drawer");
-		objClasses.put(1025,   "Oven");
-		objClasses.put(1026,   "Refrigerator");
-		objClasses.put(1027,   "Door");
-		objClasses.put(1028,   "Handle");
-		objClasses.put(1029,   "ControlKnob");
-		objClasses.put(1030,   "Cabinet-PieceOfFurniture");
-		objClasses.put(1031,   "Bed-PieceOfFurniture");
-		objClasses.put(1032,   "HingedJoint");
-		objClasses.put(1033,   "PrismaticJoint");
-		objClasses.put(1034,   "WallOfAConstruction");
+		objClasses.put(1022,   "Sushi");
+		objClasses.put(1023,   "BentoBox");
+		objClasses.put(1024,   "Riceball");
+		objClasses.put(1025,   "Pizza");
+		objClasses.put(1026,   "Sandwich");
+		objClasses.put(1027,   "HamburgerSandwich");
+		objClasses.put(1028,   "Beer");
+		objClasses.put(1029,   "Water");
+		objClasses.put(1030,   "Coffee-Beverage");
+		objClasses.put(1031,   "ColaSoftDrink");
+		objClasses.put(1032,   "LemonLimeSoftDrink");
+		objClasses.put(1033,   "GreenTea");
+		objClasses.put(1034,   "EnergyDrink");
+		objClasses.put(1035,   "Chip-Food");
+		objClasses.put(1036,   "Cracker-FoodItem");
+		objClasses.put(1037,   "Pretzel");
+		objClasses.put(1038,   "InstantRamenNoodles");
+		objClasses.put(1039,   "Cake");
+		objClasses.put(1040,   "Bread");
+		objClasses.put(1041,   "ChocolateCandy");
+		objClasses.put(1042,   "CandyBar");
+		objClasses.put(1043,   "Caramel");
+		objClasses.put(1044,   "ChewingGum");
+		objClasses.put(1045,   "Shampoo");
+		objClasses.put(1046,   "BodyWash");
+		objClasses.put(1047,   "Toothpaste");
+		objClasses.put(1048,   "ShavingCream");
+		objClasses.put(1049,   "ToiletPaper");
+		objClasses.put(1050,   "Envelope");
+		objClasses.put(1051,   "SheetOfPaper");
+		objClasses.put(1052,   "Pencil");
+		objClasses.put(1053,   "Notepad");
+		objClasses.put(1054,   "Toy");
+		objClasses.put(1055,   "CashRegister");
+		objClasses.put(1056,   "ShelfInABuilding");
+		objClasses.put(1057,   "Robot");
+		
+//		objClasses.put(1022,   "Cupboard");
+//		objClasses.put(1023,   "Dishwasher");
+//		objClasses.put(1024,   "Drawer");
+//		objClasses.put(1025,   "Oven");
+//		objClasses.put(1026,   "Refrigerator");
+//		objClasses.put(1027,   "Door");
+//		objClasses.put(1028,   "Handle");
+//		objClasses.put(1029,   "ControlKnob");
+//		objClasses.put(1030,   "Cabinet-PieceOfFurniture");
+//		objClasses.put(1031,   "Bed-PieceOfFurniture");
+//		objClasses.put(1032,   "HingedJoint");
+//		objClasses.put(1033,   "PrismaticJoint");
+//		objClasses.put(1034,   "RoomInAConstruction");
+//		objClasses.put(1035,   "ShelfInABuilding");
+//		objClasses.put(1036,   "Sushi");
+//		objClasses.put(1037,   "Tea-Beverage");
+//		objClasses.put(1038,   "Computer");
+//		objClasses.put(1039,   "CashRegister");
+//		objClasses.put(1040,   "Whiteboard");
+//		objClasses.put(1041,   "Desk");
 		
 	}
 	
@@ -129,49 +180,33 @@ public class SemanticMapEditorForms extends PApplet {
 	public void setup() {
 
 		size(320, 600, P2D);
-		lights();
-		objects = new HashMap<String, MapObject>();
+		frameRate(20);
+		objects = new HashMap<String, ObjectInstance>();
 		tab=Tab.SIMPLE;
 
 		initControlP5Forms();
-		initRos("semantic_map_editor");
+		
+		frameRate(20);
 		
 		draw(); 
-		prologVisCanvas.setSize(1050, 600);
-		prologVisCanvas.validate();
 		
-		// dialog for selecting the input file
-	    String filename = selectInput();
-	    if (filename != null) {
-	    	this.objects = OWLImportExport.readMapObjectFromOWL(filename);			
-	    }
-	    updateVisualization();
 	}
-
+	
+	public Frame findFrame() {	
+		Container f = this.getParent();
+		while (!(f instanceof Frame) && f!=null)
+			f = f.getParent();
+		return (Frame) f;
+	}
 	
 	/**
 	 * Draw-method: call controlP5.draw to update the content of the forms.
 	 */
 	public void draw() {
 
-		background(20, 20, 20);
+		background(40);
 		controlP5.draw();
 		
-	}
-
-
-	/**
-	 * Thread-safe ROS initialization
-	 */
-	protected static void initRos(String node_name) {
-
-    	ros = Ros.getInstance();
-
-		if(!Ros.getInstance().isInitialized()) {
-	    	ros.init(node_name);
-		}
-		n = ros.createNodeHandle();
-
 	}
 
 
@@ -210,24 +245,27 @@ public class SemanticMapEditorForms extends PApplet {
 		t_all_joint = new ArrayList<Textfield>();
 		
 		
+		// wait till window has been created
+		while(findFrame()==null) {
+			try { Thread.sleep(50);
+			} catch (InterruptedException e) {
+				e.printStackTrace(); } 
+		}
+		this.frame = findFrame();
+		
 		
 		controlP5 = new ControlP5(this);
-
-		controlP5.tab("default").setId(0);
-		controlP5.tab("default").setLabel("simple");
-		controlP5.tab("default").activateEvent(true);
+		GreyTheme.applyStyle(controlP5);
 		
-		controlP5.tab("matrix").setId(1);
-		controlP5.tab("matrix").activateEvent(true);
+		GreyTheme.applyStyle(controlP5.getTab("default")).setLabel("simple").setWidth(35);
 		
-		controlP5.tab("quaternion").setId(2);
-		controlP5.tab("quaternion").activateEvent(true);
+		GreyTheme.applyStyle(controlP5.addTab("matrix")).setWidth(35);
+		
+		GreyTheme.applyStyle(controlP5.addTab("quaternion")).setWidth(50);
 
-		controlP5.tab("joint properties").setId(3);
-		controlP5.tab("joint properties").activateEvent(true);
+		GreyTheme.applyStyle(controlP5.addTab("joint properties")).setWidth(80);
 
-		controlP5.tab("settings").setId(4);
-		controlP5.tab("settings").activateEvent(true);
+		GreyTheme.applyStyle(controlP5.addTab("settings")).setWidth(45);
 		
 		
 		// text field for object name
@@ -237,43 +275,43 @@ public class SemanticMapEditorForms extends PApplet {
 		t_id.setAutoClear(false);
 		
 
-		b_new_obj = controlP5.addButton("new",    17, OBJ_ID_X,      OBJ_ID_Y+40, 24, 20);
+		b_new_obj = GreyTheme.applyStyle(controlP5.addButton("new",    17, OBJ_ID_X,      OBJ_ID_Y+40, 24, 20));
 		b_new_obj.moveTo("global");
 
-		b_del_obj = controlP5.addButton("delete", 18, OBJ_ID_X + 30, OBJ_ID_Y+40, 34, 20);
+		b_del_obj = GreyTheme.applyStyle(controlP5.addButton("delete", 18, OBJ_ID_X + 30, OBJ_ID_Y+40, 34, 20));
 		b_del_obj.moveTo("global");
 
-		b_update = controlP5.addButton("add to map", 23, OBJ_ID_X+70, OBJ_ID_Y+40, 55, 20);
+		b_update = GreyTheme.applyStyle(controlP5.addButton("add to map", 23, OBJ_ID_X+70, OBJ_ID_Y+40, 55, 20));
 		b_update.setId(23);
 		b_update.moveTo("global");
 
 		
-		t_types = controlP5.addListBox("object class",   OBJ_ID_X, OBJ_ID_Y+100,200,60);
+		t_types = GreyTheme.applyStyle(controlP5.addListBox("object class",   OBJ_ID_X, OBJ_ID_Y+100,200,60), 15);
 		t_types.setId(42);
-		t_types.setItemHeight(15);
-		t_types.setBarHeight(15);
-		t_types.captionLabel().style().marginTop = 3;
-		t_types.valueLabel().style().marginTop = 3;
-		t_types.captionLabel().style().marginBottom = 3;
-		t_types.valueLabel().style().marginBottom = 3;
-		t_types.setColorBackground(color(255,128));
+
 		t_types.moveTo("global");
 		
 		ListBoxItem b;
+		OWLClass cl;
 		for(int i: objClasses.keySet()) {
-			b = t_types.addItem(objClasses.get(i),i);
+			
+			// add to OWLClass identifier buffer to enable later resolution by shortname
+			cl = OWLClass.getOWLClass("http://ias.cs.tum.edu/kb/knowrob.owl#" + objClasses.get(i));
+			
+			b = t_types.addItem(cl.getShortName(),i);
+			
 			b.setId(i);
 		}
 		
 		// object dimensions
-		l_dim = controlP5.addTextlabel("l_dim","OBJECT DIMENSIONS",OBJ_DIM_X,OBJ_DIM_Y);
+		l_dim = GreyTheme.applyStyle(controlP5.addTextlabel("l_dim","OBJECT DIMENSIONS",OBJ_DIM_X,OBJ_DIM_Y));
 		l_dim.setWidth(200);
 		l_dim.moveTo("global");
 		
 		t_dim = new Textfield[3];
-		t_dim[0] = controlP5.addTextfield("x_dim",OBJ_DIM_X,     OBJ_DIM_Y+15, 40,20);
-		t_dim[1] = controlP5.addTextfield("y_dim",OBJ_DIM_X+50,  OBJ_DIM_Y+15,40,20);
-		t_dim[2] = controlP5.addTextfield("z_dim",OBJ_DIM_X+100, OBJ_DIM_Y+15,40,20);
+		t_dim[0] = GreyTheme.applyStyle(controlP5.addTextfield("x_dim",OBJ_DIM_X,     OBJ_DIM_Y+15, 40,20));
+		t_dim[1] = GreyTheme.applyStyle(controlP5.addTextfield("y_dim",OBJ_DIM_X+50,  OBJ_DIM_Y+15,40,20));
+		t_dim[2] = GreyTheme.applyStyle(controlP5.addTextfield("z_dim",OBJ_DIM_X+100, OBJ_DIM_Y+15,40,20));
 		
 		for(Textfield t : t_dim) {
 			t.moveTo("global");
@@ -283,15 +321,15 @@ public class SemanticMapEditorForms extends PApplet {
 			t_all_quat.add(t);
 		}
 		b_rot = new Button[3];
-		b_rot[0] = controlP5.addButton("rot_x", 20, OBJ_DIM_X,    OBJ_DIM_Y+55, 32, 20);
+		b_rot[0] = GreyTheme.applyStyle(controlP5.addButton("rot_x", 20, OBJ_DIM_X,    OBJ_DIM_Y+55, 32, 20));
 		b_rot[0].setId(20);
 		b_rot[0].moveTo("global");
 
-		b_rot[1] = controlP5.addButton("rot_y", 21, OBJ_DIM_X+50, OBJ_DIM_Y+55, 32, 20);
+		b_rot[1] = GreyTheme.applyStyle(controlP5.addButton("rot_y", 21, OBJ_DIM_X+50, OBJ_DIM_Y+55, 32, 20));
 		b_rot[1].setId(21);
 		b_rot[1].moveTo("global");
 
-		b_rot[2] = controlP5.addButton("rot_z", 22, OBJ_DIM_X+100, OBJ_DIM_Y+55, 32, 20);
+		b_rot[2] = GreyTheme.applyStyle(controlP5.addButton("rot_z", 22, OBJ_DIM_X+100, OBJ_DIM_Y+55, 32, 20));
 		b_rot[2].setId(22);
 		b_rot[2].moveTo("global");
 		
@@ -299,17 +337,17 @@ public class SemanticMapEditorForms extends PApplet {
 		
 		
 		
-		Button parent = controlP5.addButton("select parent", 24, UPDATE_X, UPDATE_Y, 72, 20);
+		Button parent = GreyTheme.applyStyle(controlP5.addButton("select parent", 24, UPDATE_X, UPDATE_Y, 72, 20));
 		parent.moveTo("global");
 
-		t_parent = controlP5.addTextfield("parent", UPDATE_X+85, UPDATE_Y, 130, 20);
+		t_parent = GreyTheme.applyStyle(controlP5.addTextfield("parent", UPDATE_X+85, UPDATE_Y, 130, 20));
 		t_parent.moveTo("global");
 		
 		
-		Button export = controlP5.addButton("export to owl", 25, UPDATE_X, UPDATE_Y+40, 72, 20);
+		Button export = GreyTheme.applyStyle(controlP5.addButton("export to owl", 25, UPDATE_X, UPDATE_Y+40, 72, 20));
 		export.moveTo("global");
 		
-		t_filename = controlP5.addTextfield("filename", UPDATE_X+85, UPDATE_Y+40, 130, 20);
+		t_filename = GreyTheme.applyStyle(controlP5.addTextfield("filename", UPDATE_X+85, UPDATE_Y+40, 130, 20));
 		t_filename.moveTo("global");
 		
 		
@@ -317,13 +355,13 @@ public class SemanticMapEditorForms extends PApplet {
 		// TABS
 
 		// simple position tab
-		Textlabel l_pos = controlP5.addTextlabel("l_pos","OBJECT POSITION",TAB_X,TAB_Y);
+		Textlabel l_pos = GreyTheme.applyStyle(controlP5.addTextlabel("l_pos","OBJECT POSITION",TAB_X,TAB_Y));
 		l_pos.setWidth(200);
 
 		t_pos = new Textfield[3];
-		t_pos[0] = controlP5.addTextfield("x_pos",TAB_X,    TAB_Y+15, 40, 20);
-		t_pos[1] = controlP5.addTextfield("y_pos",TAB_X+50, TAB_Y+15, 40, 20);
-		t_pos[2] = controlP5.addTextfield("z_pos",TAB_X+100,TAB_Y+15, 40, 20);
+		t_pos[0] = GreyTheme.applyStyle(controlP5.addTextfield("x_pos",TAB_X,    TAB_Y+15, 40, 20));
+		t_pos[1] = GreyTheme.applyStyle(controlP5.addTextfield("y_pos",TAB_X+50, TAB_Y+15, 40, 20));
+		t_pos[2] = GreyTheme.applyStyle(controlP5.addTextfield("z_pos",TAB_X+100,TAB_Y+15, 40, 20));
 		
 		for(Textfield t : t_pos) { // for using the tab key
 			t.setAutoClear(false);
@@ -332,7 +370,7 @@ public class SemanticMapEditorForms extends PApplet {
 
 
 		// pose matrix tab
-		Textlabel l_matrix = controlP5.addTextlabel("l_matrix","POSE MATRIX ",TAB_X,TAB_Y);
+		Textlabel l_matrix = GreyTheme.applyStyle(controlP5.addTextlabel("l_matrix","POSE MATRIX ",TAB_X,TAB_Y));
 		l_matrix.setWidth(200);
 		l_matrix.moveTo("matrix");
 
@@ -340,7 +378,7 @@ public class SemanticMapEditorForms extends PApplet {
 		for(int i=0;i<4;i++) {
 			for(int j=0;j<4;j++) {
 
-				t_matrix[i*4+j] = controlP5.addTextfield("m"+i+j, TAB_X+j*50, TAB_Y+15 + 40*i, 40, 20);
+				t_matrix[i*4+j] = GreyTheme.applyStyle(controlP5.addTextfield("m"+i+j, TAB_X+j*50, TAB_Y+15 + 40*i, 40, 20));
 				t_matrix[i*4+j].moveTo("matrix");
 				//t_matrix[i*4+j].setColorBackground(color(255,60));
 				t_all_matrix.add(t_matrix[i*4+j]);
@@ -349,17 +387,14 @@ public class SemanticMapEditorForms extends PApplet {
 
 
 		// quaternion pose tab
-		Textlabel l_quat = controlP5.addTextlabel("l_qpos","POSE QUATERNION",TAB_X,TAB_Y);
+		Textlabel l_quat = GreyTheme.applyStyle(controlP5.addTextlabel("l_qpos","POSE QUATERNION",TAB_X,TAB_Y));
 		l_quat.setWidth(200);
 		l_quat.moveTo("quaternion");
 
 		t_qpos = new Textfield[3];
-		t_qpos[0] = controlP5.addTextfield("x_qpos",TAB_X,    TAB_Y+15, 40,20);
-		t_qpos[0].setLabel("x_pos");
-		t_qpos[1] = controlP5.addTextfield("y_qpos",TAB_X+50, TAB_Y+15, 40,20);
-		t_qpos[1].setLabel("y_pos");
-		t_qpos[2] = controlP5.addTextfield("z_qpos",TAB_X+100,TAB_Y+15, 40,20);
-		t_qpos[2].setLabel("z_pos");
+		t_qpos[0] = GreyTheme.applyStyle(controlP5.addTextfield("x_qpos",TAB_X,    TAB_Y+15, 40,20)).setCaptionLabel("x_pos");
+		t_qpos[1] = GreyTheme.applyStyle(controlP5.addTextfield("y_qpos",TAB_X+50, TAB_Y+15, 40,20)).setCaptionLabel("y_pos");
+		t_qpos[2] = GreyTheme.applyStyle(controlP5.addTextfield("z_qpos",TAB_X+100,TAB_Y+15, 40,20)).setCaptionLabel("z_pos");
 		
 		for(Textfield t : t_qpos) { // for using the tab key
 			t.moveTo("quaternion");
@@ -368,10 +403,10 @@ public class SemanticMapEditorForms extends PApplet {
 		}
 		
 		t_quat = new Textfield[4];
-		t_quat[0] = controlP5.addTextfield("w",TAB_X,     TAB_Y+55, 40,20);
-		t_quat[1] = controlP5.addTextfield("x",TAB_X+50,  TAB_Y+55,40,20);
-		t_quat[2] = controlP5.addTextfield("y",TAB_X+100, TAB_Y+55,40,20);
-		t_quat[3] = controlP5.addTextfield("z",TAB_X+150, TAB_Y+55,40,20);
+		t_quat[0] = GreyTheme.applyStyle(controlP5.addTextfield("w",TAB_X,     TAB_Y+55, 40,20));
+		t_quat[1] = GreyTheme.applyStyle(controlP5.addTextfield("x",TAB_X+50,  TAB_Y+55,40,20));
+		t_quat[2] = GreyTheme.applyStyle(controlP5.addTextfield("y",TAB_X+100, TAB_Y+55,40,20));
+		t_quat[3] = GreyTheme.applyStyle(controlP5.addTextfield("z",TAB_X+150, TAB_Y+55,40,20));
 
 		for(Textfield t : t_quat) { // for using the tab key
 			t.moveTo("quaternion");
@@ -381,17 +416,14 @@ public class SemanticMapEditorForms extends PApplet {
 		
 
 		// joint properties tab
-		l_jointdir = controlP5.addTextlabel("l_joint","DIRECTION (PRISMATIC ONLY)",TAB_X,TAB_Y);
+		l_jointdir = GreyTheme.applyStyle(controlP5.addTextlabel("l_joint","DIRECTION (PRISMATIC ONLY)",TAB_X,TAB_Y));
 		l_jointdir.setWidth(200);
 		l_jointdir.moveTo("joint properties");
 
 		t_jointdir = new Textfield[3];
-		t_jointdir[0] = controlP5.addTextfield("dir_x",TAB_X,    TAB_Y+15, 40,20);
-		t_jointdir[0].setLabel("dir_x");
-		t_jointdir[1] = controlP5.addTextfield("dir_y",TAB_X+50, TAB_Y+15, 40,20);
-		t_jointdir[1].setLabel("dir_y");
-		t_jointdir[2] = controlP5.addTextfield("dir_z",TAB_X+100,TAB_Y+15, 40,20);
-		t_jointdir[2].setLabel("dir_z");
+		t_jointdir[0] = GreyTheme.applyStyle(controlP5.addTextfield("dir_x",TAB_X,    TAB_Y+15, 40,20).setCaptionLabel("dir_x"));
+		t_jointdir[1] = GreyTheme.applyStyle(controlP5.addTextfield("dir_y",TAB_X+50, TAB_Y+15, 40,20).setCaptionLabel("dir_y"));
+		t_jointdir[2] = GreyTheme.applyStyle(controlP5.addTextfield("dir_z",TAB_X+100,TAB_Y+15, 40,20).setCaptionLabel("dir_z"));
 		
 		for(Textfield t : t_jointdir) { // for using the tab key
 			t.moveTo("joint properties");
@@ -400,15 +432,13 @@ public class SemanticMapEditorForms extends PApplet {
 		}
 
 		
-		l_jointlim = controlP5.addTextlabel("l_jointlim","JOINT LIMITS",TAB_X,TAB_Y+60);
+		l_jointlim = GreyTheme.applyStyle(controlP5.addTextlabel("l_jointlim","JOINT LIMITS",TAB_X,TAB_Y+60));
 		l_jointlim.setWidth(200);
 		l_jointlim.moveTo("joint properties");
 
 		t_jointlim = new Textfield[2];
-		t_jointlim[0] = controlP5.addTextfield("q_min",TAB_X,    TAB_Y+75, 40,20);
-		t_jointlim[0].setLabel("q_min");
-		t_jointlim[1] = controlP5.addTextfield("q_max",TAB_X+50, TAB_Y+75, 40,20);
-		t_jointlim[1].setLabel("q_max");
+		t_jointlim[0] = GreyTheme.applyStyle(controlP5.addTextfield("q_min",TAB_X,    TAB_Y+75, 40,20).setCaptionLabel("q_min"));
+		t_jointlim[1] = GreyTheme.applyStyle(controlP5.addTextfield("q_max",TAB_X+50, TAB_Y+75, 40,20).setCaptionLabel("q_max"));
 		
 		for(Textfield t : t_jointlim) { // for using the tab key
 			t.moveTo("joint properties");
@@ -417,33 +447,50 @@ public class SemanticMapEditorForms extends PApplet {
 		}
 		
 
-		l_radius = controlP5.addTextlabel("l_radius","RADIUS",TAB_X+100,TAB_Y+60);
+		l_radius = GreyTheme.applyStyle(controlP5.addTextlabel("l_radius","RADIUS",TAB_X+100,TAB_Y+60));
 		l_radius.setWidth(200);
 		l_radius.moveTo("joint properties");
 
-		t_radius = controlP5.addTextfield("radius",TAB_X+100,    TAB_Y+75, 40,20);
-		t_radius.setLabel("radius");
+		t_radius = GreyTheme.applyStyle(controlP5.addTextfield("radius",TAB_X+100,    TAB_Y+75, 40,20).setCaptionLabel("radius"));
 		t_radius.moveTo("joint properties");
 		
 
-		b_child = controlP5.addButton("select child", 26, UPDATE_X, UPDATE_Y-40, 72, 20);
+		b_child = GreyTheme.applyStyle(controlP5.addButton("select child", 26, UPDATE_X, UPDATE_Y-40, 72, 20));
 		b_child.moveTo("joint properties");
 
-		t_child = controlP5.addTextfield("child", UPDATE_X+85, UPDATE_Y-40, 130, 20);
+		t_child = GreyTheme.applyStyle(controlP5.addTextfield("child", UPDATE_X+85, UPDATE_Y-40, 130, 20));
 		t_child.moveTo("joint properties");
 		
 		
 
 		// settings tab
-		Textlabel l_settings = controlP5.addTextlabel("l_namespace","GLOBAL SETTINGS",OBJ_ID_X,OBJ_ID_Y);
+		Textlabel l_settings = GreyTheme.applyStyle(controlP5.addTextlabel("l_settings","GLOBAL SETTINGS",OBJ_ID_X,OBJ_ID_Y));
 		l_settings.setWidth(200);
 		l_settings.moveTo("settings");
-
-		t_namespace = controlP5.addTextfield("OWL NAMESPACE",OBJ_ID_X, OBJ_ID_Y+15, 250, 20);
-		t_namespace.setText("http://ias.cs.tum.edu/kb/ias_semantic_map.owl#");
+		
+		t_namespace = GreyTheme.applyStyle(controlP5.addTextfield("OWL NAMESPACE",OBJ_ID_X, OBJ_ID_Y+15, 250, 20));
+		
+		if(map_namespace!=null && !map_namespace.equals("")) {
+			t_namespace.setText(map_namespace);
+		} else {
+			t_namespace.setText("http://ias.cs.tum.edu/kb/ias_semantic_map.owl#");
+		}
 		t_namespace.moveTo("settings");
 		
+		// init semantic map ID with a generated quasi-unique string
+		t_map_id = GreyTheme.applyStyle(controlP5.addTextfield("MAP IDENTIFIER",OBJ_ID_X, OBJ_ID_Y+55, 250, 20));
 		
+		if(map_id!=null && !map_id.equals("")) {
+			t_map_id.setText(map_id);
+		} else {
+			t_map_id.setText("SemanticEnvironmentMap" + 
+					new SimpleDateFormat("yyyyMMddHHmmss").
+					format(Calendar.getInstance().getTime()));
+		}
+		t_map_id.moveTo("settings");
+		
+		
+		cp5_initialized  = true;
 		
 	}
 
@@ -462,105 +509,135 @@ public class SemanticMapEditorForms extends PApplet {
 	
 	public void controlEvent(controlP5.ControlEvent theControlEvent) {
 		
-
-		System.err.println("in controlEvent");
 		if(theControlEvent.isController()) {
 			
 			// update button
-			if(theControlEvent.name().equals("add to map")) {
+			if(theControlEvent.getName().equals("add to map")) {
 				
 				// read information from the forms, create/update objects[] entry
-				readFormData();
+				String obj = readFormData();
 
-				// create visualization item
-				updateVisualization();
+				if(obj!=null)
+					mapVisApplet.addObject(obj);
 				
 			}
 			
 
-			if(theControlEvent.name().equals("new")) {
+			if(theControlEvent.getName().equals("new")) {
 
 				clearFormFields(); // new object is implicitly created when a new identifier is used
 			}
 			
 
-			if(theControlEvent.name().equals("delete")) {
+			if(theControlEvent.getName().equals("delete")) {
 
 				if(t_id.getText() != null) {
 					objects.remove(t_id.getText());
+					
+					String id = t_id.getText();
+					OWLThing rem = OWLThing.getOWLThingByShortname(id);
+					ObjectInstance reminst = (ObjectInstance) rem; 
+					
+					for(ObjectInstance o : objects.values()) {
+						
+						if(o.hasPhysicalPart(reminst)) {
+							o.removePhysicalPart(reminst);
+						}
+						
+						Vector<String> propval = o.getObjPropValues("http://ias.cs.tum.edu/kb/knowrob.owl#connectedTo-Rigidly");
+						if(propval!=null && propval.contains(reminst.getIRI())) {
+							propval.remove(reminst.getIRI());
+						}
+						
+						propval = o.getObjPropValues("http://ias.cs.tum.edu/kb/knowrob.owl#hingedTo");
+						if(propval!=null && propval.contains(reminst.getIRI())) {
+							propval.remove(reminst.getIRI());
+						}
+						
+						propval = o.getObjPropValues("http://ias.cs.tum.edu/kb/knowrob.owl#prismaticallyConnectedTo");
+						if(propval!=null && propval.contains(reminst.getIRI())) {
+							propval.remove(reminst.getIRI());
+						}
+					}
+					
+					PrologQueryUtils.deleteObjectInstance(reminst.getIRI());
 					clearFormFields(); // reset interface
-					updateVisualization();
+					
+					mapVisApplet.removeObject(rem.getIRI());
+					mapVisApplet.redraw();
 				}
 			}
 
 
-			if(theControlEvent.name().equals("rot_x")) {
-				MapObject cur = objects.get(t_id.getText()); 
-				cur.pose_matrix.mul(new Matrix4d(
+			if(theControlEvent.getName().equals("rot_x")) {
+				ObjectInstance cur = ((ObjectInstance) OWLThing.getOWLThingByShortname(t_id.getText())); 
+				cur.getPoseMatrix().mul(new Matrix4d(
 						1, 0, 0,  0,
 						0, 0, -1, 0,
 						0, 1, 0,  0,
 						0, 0, 0,  1));
-				updateVisualization();
+				cur.setSaveToProlog(true);
+				cur.writeToProlog();
+				
+
+				mapVisApplet.removeObject(cur.getIRI());
+				mapVisApplet.addObject(cur.getIRI());
+				mapVisApplet.redraw();
 				writeFormData(cur);
 			}
 			
-			if(theControlEvent.name().equals("rot_y")) {
-				MapObject cur = objects.get(t_id.getText()); 
-				cur.pose_matrix.mul(new Matrix4d(
+			if(theControlEvent.getName().equals("rot_y")) {
+				ObjectInstance cur = ((ObjectInstance) OWLThing.getOWLThingByShortname(t_id.getText())); 
+				cur.getPoseMatrix().mul(new Matrix4d(
 						0,	0,	1, 0,
 						0,	1,	0, 0,
 					   -1,	0,	0, 0,
 						0,  0,  0, 1));
-				updateVisualization();
+				cur.setSaveToProlog(true);
+				cur.writeToProlog();
+				
+
+				mapVisApplet.removeObject(cur.getIRI());
+				mapVisApplet.addObject(cur.getIRI());
+				mapVisApplet.redraw();
 				writeFormData(cur);
 			}
 			
-			if(theControlEvent.name().equals("rot_z")) {
-				MapObject cur = objects.get(t_id.getText()); 
-				cur.pose_matrix.mul(new Matrix4d(
+			if(theControlEvent.getName().equals("rot_z")) {
+				ObjectInstance cur = ((ObjectInstance) OWLThing.getOWLThingByShortname(t_id.getText())); 
+				cur.getPoseMatrix().mul(new Matrix4d(
 						0,-1, 0,  0,
 						1, 0, 0, 0,
 						0, 0, 1,  0,
 						0, 0, 0,  1));
-				updateVisualization();
+				cur.setSaveToProlog(true);
+				cur.writeToProlog();
+				
+
+				mapVisApplet.removeObject(cur.getIRI());
+				mapVisApplet.addObject(cur.getIRI());
+				mapVisApplet.redraw();
 				writeFormData(cur);
 			}
 			
 
-			if(theControlEvent.name().equals("export to owl")) {
-				
-				// first get the current form content
-				readFormData();
-				updateVisualization();
-				
-				OWLImportExport exp = new OWLImportExport();
-				
-				RDFXMLOntologyFormat format = new RDFXMLOntologyFormat();
-				format.setPrefix("knowrob:", "http://ias.cs.tum.edu/kb/knowrob.owl#");
-				format.setPrefix("owl:", "http://www.w3.org/2002/07/owl#");
-				format.setPrefix("rdfs:", "http://www.w3.org/2000/01/rdf-schema#");
-				format.setPrefix("map:", t_namespace.getText());
-				
-				OWLOntology ont = exp.createOWLMapDescription(t_namespace.getText(), new ArrayList<MapObject>(this.objects.values()));
-				
-				OWLFileUtils.saveOntologyToFile(ont, format, t_filename.getText());
-				
+			if(theControlEvent.getName().equals("export to owl")) {
+				saveMapToFile(t_filename.getText());
 			}
 
-			if(theControlEvent.name().equals("select parent")) {
+			if(theControlEvent.getName().equals("select parent")) {
 
 				selectParentObj=true;
 				cursor(HAND);
-				this.prologVisCanvas.getKitchenVisApplet().cursor(HAND);
+				this.mapVisApplet.cursor(HAND);
 				
 			}
 			
-			if(theControlEvent.name().equals("select child")) {
+			if(theControlEvent.getName().equals("select child")) {
 
 				selectChildObj=true;
 				cursor(HAND);
-				this.prologVisCanvas.getKitchenVisApplet().cursor(HAND);
+				this.mapVisApplet.cursor(HAND);
 				
 			}
 			
@@ -569,23 +646,23 @@ public class SemanticMapEditorForms extends PApplet {
 		// switch tabs (update information in the tabs)
 		} else if (theControlEvent.isTab()) {
 			
-			if(theControlEvent.name().equals("default")) {
+			if(theControlEvent.getName().equals("default")) {
 				this.tab = Tab.SIMPLE;
 				showObjSpecificElements();
 				
-			} else if (theControlEvent.name().equals("matrix")) {
+			} else if (theControlEvent.getName().equals("matrix")) {
 				this.tab = Tab.MATRIX;
 				showObjSpecificElements();
 				
-			} else if (theControlEvent.name().equals("quaternion")) {
+			} else if (theControlEvent.getName().equals("quaternion")) {
 				this.tab = Tab.QUATERNION;
 				showObjSpecificElements();
 
-			} else if (theControlEvent.name().equals("settings")) {
+			} else if (theControlEvent.getName().equals("settings")) {
 				this.tab = Tab.SETTINGS;
 				hideObjSpecificElements();
 				
-			} else if (theControlEvent.name().equals("joint properties")) {
+			} else if (theControlEvent.getName().equals("joint properties")) {
 				this.tab = Tab.JOINTS;
 				showObjSpecificElements();
 				
@@ -598,12 +675,28 @@ public class SemanticMapEditorForms extends PApplet {
 		} else if (theControlEvent.isGroup()) {
 			
 			// handle listbox events
-			if(theControlEvent.group().id()==42) {
-				t_types.captionLabel().set( objClasses.get( (int) theControlEvent.group().value()) );
+			if(theControlEvent.getGroup().getId()==42) {
+				t_types.getCaptionLabel().set( objClasses.get( (int) theControlEvent.getGroup().getValue()) );
 				
 			}
 		}
 		redraw();
+	}
+
+
+	public void saveMapToFile(String filename) {
+		
+		OWLImportExport exp = new OWLImportExport();
+		
+		RDFXMLOntologyFormat format = new RDFXMLOntologyFormat();
+		format.setPrefix("knowrob:", "http://ias.cs.tum.edu/kb/knowrob.owl#");
+		format.setPrefix("owl:", "http://www.w3.org/2002/07/owl#");
+		format.setPrefix("rdfs:", "http://www.w3.org/2000/01/rdf-schema#");
+		format.setPrefix("map:", t_namespace.getText());
+		
+		OWLOntology ont = exp.createOWLMapDescription(map_namespace, map_id, new ArrayList<ObjectInstance>(this.objects.values()));
+		
+		OWLFileUtils.saveOntologyToFile(ont, format, filename);
 	}
 
 
@@ -644,8 +737,8 @@ public class SemanticMapEditorForms extends PApplet {
 	
 	private void showJointSpecificFormFields() {
 		// draw joint limits and child selection for all kinds of joints
-		if(t_types.captionLabel().getText().equals("PrismaticJoint") || 
-				t_types.captionLabel().getText().equals("HingedJoint")) {
+		if(t_types.getCaptionLabel().getText().equals("PrismaticJoint") || 
+				t_types.getCaptionLabel().getText().equals("HingedJoint")) {
 			l_jointlim.show();
 			for(Textfield t : t_jointlim) {
 				t.show();
@@ -662,7 +755,7 @@ public class SemanticMapEditorForms extends PApplet {
 		}
 
 		// draw direction fields only for prismatic joints
-		if(t_types.captionLabel().getText().equals("PrismaticJoint")) {
+		if(t_types.getCaptionLabel().getText().equals("PrismaticJoint")) {
 			l_jointdir.show();
 			for(Textfield t : t_jointdir) {
 				t.show();
@@ -676,7 +769,7 @@ public class SemanticMapEditorForms extends PApplet {
 
 
 		// draw direction fields only for rotational joints
-		if(t_types.captionLabel().getText().equals("HingedJoint")) {
+		if(t_types.getCaptionLabel().getText().equals("HingedJoint")) {
 			l_radius.show();
 			t_radius.show();
 		} else {
@@ -701,8 +794,12 @@ public class SemanticMapEditorForms extends PApplet {
 		
 		// ENTER key updates visualization
 		if (key == ENTER || key == RETURN) {
-			readFormData();
-			updateVisualization();
+			String obj = readFormData();
+			
+			if(obj!=null) {
+				mapVisApplet.removeObject(obj);
+				mapVisApplet.addObject(obj);
+			}
 		}
 		
 		
@@ -737,8 +834,12 @@ public class SemanticMapEditorForms extends PApplet {
 			} else if(this.tab==Tab.JOINTS) {
 				incTextfieldValue(t_all_joint, 0.05f);
 			}
-			readFormData();
-			updateVisualization();
+			String obj = readFormData();
+			
+			if(obj!=null) {
+				mapVisApplet.removeObject(obj);
+				mapVisApplet.addObject(obj);
+			}
 		}
 		
 		if (keyCode == KeyEvent.VK_PAGE_DOWN) {
@@ -752,8 +853,12 @@ public class SemanticMapEditorForms extends PApplet {
 			} else if(this.tab==Tab.JOINTS) {
 				incTextfieldValue(t_all_joint, -0.05f);
 			}
-			readFormData();
-			updateVisualization();
+			String obj = readFormData();
+			
+			if(obj!=null) {
+				mapVisApplet.removeObject(obj);
+				mapVisApplet.addObject(obj);
+			}
 		}
 		
 	}
@@ -791,7 +896,7 @@ public class SemanticMapEditorForms extends PApplet {
 	protected void switchFocus(ArrayList<Textfield> t_all, boolean forward) {
 		
 		for(int i=0;i<t_all.size();i++) {
-			if(t_all.get(i).isFocus()){
+			if(t_all.get(i).isActive()){
 				
 				if(forward) {
 					t_all.get(i).setFocus(false);
@@ -819,7 +924,7 @@ public class SemanticMapEditorForms extends PApplet {
 	protected void incTextfieldValue(ArrayList<Textfield> t_all, float inc) {
 		
 		for(int i=0;i<t_all.size();i++) {
-			if(t_all.get(i).isFocus()){
+			if(t_all.get(i).isActive()){
 				
 				try{
 					float val = Float.valueOf(t_all.get(i).getText());
@@ -844,41 +949,39 @@ public class SemanticMapEditorForms extends PApplet {
 	
 	
 	/**
-	 * Read information from the forms and save it in a MapObject instance
+	 * Read information from the forms and save it in a ObjectInstance instance
 	 */
-	void readFormData() {
+	protected String readFormData() {
 		
 		// check if the object already exists or if we should create a new one
 		
-		MapObject cur;
-		String id =  t_id.getText();
+		ObjectInstance cur;
+		String shortname =  t_id.getText();
+		String namespace = t_namespace.getText();
 		
 		// skip this if the ID or class are not set
-		if(t_id.equals("") || t_types.captionLabel().getText().equals("object class")){
-			return;
+		if(t_id.equals("") || t_types.getCaptionLabel().getText().equals("object class")){
+			return null;
 		}
 		
-		if(objects.containsKey(id)) {
-			cur = objects.get(id);
+		if(objects.containsKey(shortname)) {
+			cur = objects.get(shortname);
 		} else {
 			
-			if(t_types.captionLabel().getText().equals("HingedJoint") ||
-			   t_types.captionLabel().getText().equals("PrismaticJoint")) {
+			if(t_types.getCaptionLabel().getText().equals("HingedJoint") ||
+			   t_types.getCaptionLabel().getText().equals("PrismaticJoint")) {
 				
-				cur = new MapJoint();
+				cur = JointInstance.getMapJoint(namespace + shortname);
 				
 			} else {
-				cur = new MapObject();
+				cur = ObjectInstance.getObjectInstance(namespace + shortname);
 			}
-			objects.put(id, cur);
+			objects.put(shortname, cur);
 		}
 		
 		 
-		// set global values
-		cur.id = id;
-
-		cur.types.clear(); // only one type for now
-		cur.types.add(t_types.captionLabel().getText());
+		// get OWL class based on their shortname (which is used for display)
+		cur.addType((OWLClass) OWLThing.getOWLThingByShortname(t_types.getCaptionLabel().getText()));
 
 		
 		double xdim=0.0, ydim=0.0, zdim=0.0;
@@ -900,7 +1003,7 @@ public class SemanticMapEditorForms extends PApplet {
 				try{z = Double.valueOf(t_pos[2].getText());} catch(NumberFormatException e) {}
 				
 				cur.setPosition(new Vector3d(x,	y, z ));
-				updateQuaternionForm(cur.getPosition(), cur.getPoseQuat());
+				updateQuaternionForm(cur.getPosition(), cur.getPoseQuaternion());
 				updateMatrixForm(cur.getPoseMatrix());
 				break;
 				
@@ -929,7 +1032,7 @@ public class SemanticMapEditorForms extends PApplet {
 				try{m[15] = Double.valueOf(t_matrix[15].getText());} catch(NumberFormatException e) {m[15]=0.0;}
 				
 				cur.setPoseMatrix(new Matrix4d(m));
-				updateQuaternionForm(cur.getPosition(), cur.getPoseQuat());
+				updateQuaternionForm(cur.getPosition(), cur.getPoseQuaternion());
 				updatePositionForm(cur.getPosition());
 				break;
 
@@ -945,7 +1048,7 @@ public class SemanticMapEditorForms extends PApplet {
 				try{qz = Double.valueOf(t_quat[2].getText());} catch(NumberFormatException e) {}
 				try{qz = Double.valueOf(t_quat[3].getText());} catch(NumberFormatException e) {}
 				
-				cur.setPoseQuat(new Vector3d(x,y,z), 
+				cur.setPoseQuaternion(new Vector3d(x,y,z), 
 								new Quat4d(qx,qy,qz,qw),1.0);
 				
 				updateMatrixForm(cur.getPoseMatrix());
@@ -955,23 +1058,23 @@ public class SemanticMapEditorForms extends PApplet {
 			case JOINTS:
 				
 				
-				if(t_types.captionLabel().getText().equals("HingedJoint") ||
-				   t_types.captionLabel().getText().equals("PrismaticJoint")) {
+				if(t_types.getCaptionLabel().getText().equals("HingedJoint") ||
+				   t_types.getCaptionLabel().getText().equals("PrismaticJoint")) {
 					
 					// set direction of prismatic joints
 					try{x = Double.valueOf(t_jointdir[0].getText());} catch(NumberFormatException e) {x=0.0;}
 					try{y = Double.valueOf(t_jointdir[1].getText());} catch(NumberFormatException e) {y=0.0;}
 					try{z = Double.valueOf(t_jointdir[2].getText());} catch(NumberFormatException e) {z=0.0;}
 
-					((MapJoint) cur).setDirection(new Vector3d(x,y,z));
+					((JointInstance) cur).setDirection(new Vector3d(x,y,z));
 
 					// set joint limits
 					double q_min=0.0, q_max=0.0;
 					try{q_min = Double.valueOf(t_jointlim[0].getText());} catch(NumberFormatException e) {}
 					try{q_max = Double.valueOf(t_jointlim[1].getText());} catch(NumberFormatException e) {}
 					
-					((MapJoint) cur).setQ_min(q_min);
-					((MapJoint) cur).setQ_max(q_max);
+					((JointInstance) cur).setQ_min(q_min);
+					((JointInstance) cur).setQ_max(q_max);
 					
 					double radius=0.0;
 					try{
@@ -979,63 +1082,70 @@ public class SemanticMapEditorForms extends PApplet {
 					catch(NumberFormatException e) {
 						e.printStackTrace();
 					}
-					((MapJoint) cur).setRadius(radius);
+					((JointInstance) cur).setRadius(radius);
 					
 					
 					// set child/parent fields (hinges have only one each)
 					if(t_child.getText() != null) {
 						if(objects.get(t_child.getText())!=null)
-							((MapJoint) cur).setChild(objects.get(t_child.getText()));
+							((JointInstance) cur).setChild(objects.get(t_child.getText()));
 					}
 
 					if(t_parent.getText() != null) {
 						if(objects.get(t_parent.getText())!=null)
-							((MapJoint) cur).setParent(objects.get(t_parent.getText()));
+							((JointInstance) cur).setParent(objects.get(t_parent.getText()));
 					}
 
 				}
 				updateMatrixForm(cur.getPoseMatrix());
-				updateQuaternionForm(cur.getPosition(), cur.getPoseQuat());
+				updateQuaternionForm(cur.getPosition(), cur.getPoseQuaternion());
 				updatePositionForm(cur.getPosition());
 				break;
 		}
 
 		// set object as physicalPart of parent object
-		if(t_parent.getText() != null)
-			if(objects.get(t_parent.getText())!=null)
-				objects.get(t_parent.getText()).physicalParts.add(cur);
-
+		if(t_parent.getText() != null && !t_parent.getText().isEmpty()) {
+			if(objects.get(t_parent.getText())!=null) {
+				objects.get(t_parent.getText()).addPhysicalPart(cur);
+			}
+		}
 		
+		// synchronize with Prolog if initialized
+		if(PrologInterface.isInitialized()) {
+			cur.setSaveToProlog(true);
+			cur.writeToProlog();
+		}
+		return cur.getIRI();
 	}
 	
 	/** 
-	 * Load the information from the MapObject cur into the forms
+	 * Load the information from the ObjectInstance cur into the forms
 	 * 
-	 * @param cur Current MapObject providing the information to be filled into the forms 
+	 * @param cur Current ObjectInstance providing the information to be filled into the forms 
 	 */
-	void writeFormData(MapObject cur) {
+	void writeFormData(ObjectInstance cur) {
 		
-		t_id.setText(cur.id);
+		t_id.setText(cur.getShortName());
 		
 		
 		// find object that has this object as physical part
-		for(MapObject o : objects.values()) {
+		for(ObjectInstance o : objects.values()) {
 
-			if(o.physicalParts.contains(cur)) {
-				t_parent.setText(o.getId());
+			if(o.hasPhysicalPart(cur)) {
+				t_parent.setText(o.getShortName());
 				break;
 			} else {
 				t_parent.setText("");
 			}
 		}
 		
-		t_types.captionLabel().set(cur.types.get(0));
+		t_types.getCaptionLabel().set(cur.getTypes().get(0).getShortName());
 
-		t_dim[0].setText(""+cur.dimensions.x);
-		t_dim[1].setText(""+cur.dimensions.y);
-		t_dim[2].setText(""+cur.dimensions.z);
+		t_dim[0].setText(""+cur.getDimensions().x);
+		t_dim[1].setText(""+cur.getDimensions().y);
+		t_dim[2].setText(""+cur.getDimensions().z);
 		
-		updateQuaternionForm(cur.getPosition(), cur.getPoseQuat());
+		updateQuaternionForm(cur.getPosition(), cur.getPoseQuaternion());
 		updateMatrixForm(cur.getPoseMatrix());
 		updatePositionForm(cur.getPosition());
 		updateJointForm(cur);
@@ -1106,25 +1216,25 @@ public class SemanticMapEditorForms extends PApplet {
 	 * 
 	 * @param cur MapJoint with the joint information
 	 */
-	void updateJointForm(MapObject cur) {
+	void updateJointForm(ObjectInstance cur) {
 		
 		showJointSpecificFormFields();
 		
-		if(cur instanceof MapJoint) {
-			t_jointlim[0].setText(((MapJoint)cur).q_min+"");
-			t_jointlim[1].setText(((MapJoint)cur).q_max+"");
+		if(cur instanceof JointInstance) {
+			t_jointlim[0].setText(((JointInstance)cur).getQ_min()+"");
+			t_jointlim[1].setText(((JointInstance)cur).getQ_max()+"");
 			
-			t_jointdir[0].setText(((MapJoint)cur).direction.x+"");
-			t_jointdir[1].setText(((MapJoint)cur).direction.y+"");
-			t_jointdir[2].setText(((MapJoint)cur).direction.z+"");
+			t_jointdir[0].setText(((JointInstance)cur).getDirection().x+"");
+			t_jointdir[1].setText(((JointInstance)cur).getDirection().y+"");
+			t_jointdir[2].setText(((JointInstance)cur).getDirection().z+"");
 			
-			if(((MapJoint)cur).child.id != null)
-				t_child.setText(((MapJoint)cur).child.id);
+			if(((JointInstance)cur).getChild()!=null && ((JointInstance)cur).getChild().getShortName() != null)
+				t_child.setText(((JointInstance)cur).getChild().getShortName());
 			
-			if(((MapJoint)cur).parent.id != null)
-				t_parent.setText(((MapJoint)cur).parent.id);
+			if(((JointInstance)cur).getParent()!=null && ((JointInstance)cur).getParent().getShortName() != null)
+				t_parent.setText(((JointInstance)cur).getParent().getShortName());
 			
-			t_radius.setText(((MapJoint)cur).radius+"");
+			t_radius.setText(((JointInstance)cur).getRadius()+"");
 		}
 		
 	}
@@ -1153,284 +1263,60 @@ public class SemanticMapEditorForms extends PApplet {
 	////////////////////////////////////////////////////////////////////////////////////////////	
 
 	/**
-	 * Update the displayed map visualization with all objects in the buffer
+	 * Show dialog for selecting the input file, parse it and update the visualization
 	 */
-	protected void updateVisualization() {
-		
-		prologVisCanvas.getKitchenVisApplet().clear();
-		
-		for(MapObject o : objects.values()) {
-		
-			ItemBase item = createItem(o);
-			
-			if(item!=null) {
-				item.name=o.id;
-				
-				prologVisCanvas.getKitchenVisApplet().addItem(item);
-				
-			} else {
-				System.err.println("Object "+o.id+" not found.");
-			}			
-		}
-		prologVisCanvas.getKitchenVisApplet().redraw();
+	public void selectAndLoadInputFile() {
 
+		String filename = selectInput();
+		if (filename != null) {
+			loadInputFile(filename);
+		}
 	}
 	
-	
-
-	/** 
-	 * Create an 'item', the Java object for visualizing a map object
+	/**
+	 * Load an OWL file into the editor-internal data structures
 	 * 
-	 * This methods maps OWL classes to the corresponding Java visualization items  
-	 * 
-	 * @param obj MapObject to be visualized
-	 * @return    Visualization item created from the MapObject
+	 * @param filename OWL file to be loaded
 	 */
-	Item createItem(MapObject obj) {
-
-		String type = obj.types.get(0);
-		
-		int col = grayValues[(++grayLevelCounter) % grayValues.length];      
-		
-		
-		/////////////////////////////////////////////
-		// tableware
-
-		if(type.endsWith("Cup")) {
-			return new Cup(obj.pose_matrix, obj.dimensions);
-
-		} else if(type.endsWith("DinnerPlate")) {
-			return new Plate(obj.pose_matrix, obj.dimensions);
-
-		} else if(type.endsWith("Saucer")) { 
-			return new Plate(obj.pose_matrix, obj.dimensions);
-			
-		} else if (type.endsWith("DrinkingGlass")) {
-			return new DrinkingGlass(obj.pose_matrix, obj.dimensions);
-
-		} else if (type.endsWith("Bowl-Eating")) {
-			return new BowlEating(obj.pose_matrix, obj.dimensions);
-
-		} else if (type.endsWith("DrinkingBottle")) {
-			return new Sphere(obj.pose_matrix, new Vector3d(0.05f,0.05f,0.15f));
-
-
-			
-			/////////////////////////////////////////////
-			// silverware	
-
-		} else if(type.endsWith("DinnerFork")) {
-			return new Fork(obj.pose_matrix, obj.dimensions);
-
-		} else if(type.endsWith("TableKnife")) {
-			return new Knife(obj.pose_matrix, obj.dimensions);
-
-		} else if(type.endsWith("SoupSpoon")) {
-			return new Spoon(obj.pose_matrix, obj.dimensions);
-
-
-			/////////////////////////////////////////////
-			// serving and cooking
-
-		} else if(type.endsWith("Napkin")) {
-			return new Napkin(obj.pose_matrix, obj.dimensions);
-
-		} else if(type.endsWith("PlaceMat")) {
-			return new PlaceMat(obj.pose_matrix, obj.dimensions);
-
-		} else if (type.endsWith("Platter")) {
-			return new Platter(obj.pose_matrix, obj.dimensions);	
-
-		} else if(type.endsWith("CookingPot")) {
-			return new CookingPot(obj.pose_matrix, obj.dimensions);
-
-		} else if(type.endsWith("Spatula")) {
-			return new Spatula(obj.pose_matrix, obj.dimensions);
-
-		} else if(type.endsWith("PancakeMaker")) {
-			return new PancakeMaker(obj.pose_matrix, obj.dimensions);
-
-
-			/////////////////////////////////////////////
-			// breakfast consumables	
-
-		} else if (type.endsWith("Bread")) {
-			return new Bread(obj.pose_matrix, obj.dimensions);
-
-		} else if (type.endsWith("Cheese")) {
-			return new Cheese(obj.pose_matrix, obj.dimensions);
-			
-		} else if (type.endsWith("Butter")) {
-			return new Cheese(obj.pose_matrix, obj.dimensions);
-
-		} else if (type.endsWith("Sausage")) {
-			return new Sausage(obj.pose_matrix, obj.dimensions);
-
-		} else if (type.endsWith("Cake")) {
-			return new Cake(obj.pose_matrix, obj.dimensions);
-
-		} else if (type.endsWith("BreakfastCereal")) {
-			return new CerealBox(obj.pose_matrix, obj.dimensions);
-
-		} else if (type.endsWith("PancakeMix")) {
-			return new PancakeMix(obj.pose_matrix, obj.dimensions);
-
-		} else if (type.endsWith("Pancake")) {
-			return new Pancake(obj.pose_matrix, obj.dimensions);
-			
-		} else if (type.endsWith("Yogurt")) {
-			return new DrinkingGlass(obj.pose_matrix, obj.dimensions);
-
-
-			/////////////////////////////////////////////
-			// lunch/dinner consumables
-
-		} else if (type.endsWith("Pizza")) {
-			return new Pizza(obj.pose_matrix, obj.dimensions);
-
-		} else if (type.endsWith("Salad")) {
-			return new SaladBowl(obj.pose_matrix, obj.dimensions);
-
-		} else if (type.endsWith("Pasta")) {
-			return new SaladBowl(obj.pose_matrix, obj.dimensions);
-
-		} else if (type.endsWith("Soup")) {
-			return new SoupPlate(obj.pose_matrix, obj.dimensions);
-
-
-
-			/////////////////////////////////////////////
-			// drinks
-
-		} else if (type.endsWith("Water")) {
-			return new Bottle(obj.pose_matrix, obj.dimensions);
-
-		} else if (type.endsWith("Pitcher")) {
-			return new Thermos(obj.pose_matrix, obj.dimensions);
-
-		} else if (type.endsWith("Tea-Beverage")) {
-			return new Bread(obj.pose_matrix, obj.dimensions);
-
-		} else if (type.endsWith("Coffee-Beverage")) {
-			return new Thermos(obj.pose_matrix, obj.dimensions);
-
-		} else if (type.endsWith("Juice")) {
-			return new Tetrapak(obj.pose_matrix, obj.dimensions);
-
-		} else if (type.endsWith("Tea-Iced")) {
-			return new Tetrapak(obj.pose_matrix, obj.dimensions);
-
-		} else if(type.endsWith("Tetrapak")) {
-			return new Tetrapak(obj.pose_matrix, obj.dimensions);
-
-		} else if (type.endsWith("CardboardBox")) {
-			return new Bread(obj.pose_matrix, obj.dimensions);
-
-		} else if (type.endsWith("CowsMilk-Product")) {
-			return new Tetrapak(obj.pose_matrix, obj.dimensions);
-
-		} else if (type.endsWith("Buttermilk")) {
-			return new Tetrapak(obj.pose_matrix, obj.dimensions);
-
-
-			/////////////////////////////////////////////
-			// furniture
-
-		} else if(type.endsWith("Bed-PieceOfFurniture")) {
-			Box c = new Box(obj.pose_matrix, obj.dimensions);
-			col = grayValues[(++grayLevelCounter) % grayValues.length];
-			c.setColor(StandaloneKitchenVisApplet.convertColor(col, col, col, 170));
-			return c;
-
-		} else if(type.endsWith("Chair-PieceOfFurniture")) {
-			Chair c = new Chair(obj.pose_matrix, obj.dimensions);
-			col = grayValues[(++grayLevelCounter) % grayValues.length];
-			c.setColor(StandaloneKitchenVisApplet.convertColor(col, col, col, 170));
-			return c; 
-
-		} else if(type.endsWith("Cupboard")) {
-			Cupboard c = new Cupboard(obj.pose_matrix, obj.dimensions);
-			col = grayValues[(++grayLevelCounter) % grayValues.length];
-			c.setColor(StandaloneKitchenVisApplet.convertColor(col, col, col, 170));
-			return c;
-
-		} else if(type.endsWith("Cabinet-PieceOfFurniture")) {
-			Cupboard c = new Cupboard(obj.pose_matrix, obj.dimensions);
-			col = grayValues[(++grayLevelCounter) % grayValues.length];
-			c.setColor(StandaloneKitchenVisApplet.convertColor(col, col, col, 170));
-			return c;
-
-		} else if(type.endsWith("Drawer")) {
-			Cupboard c = new Cupboard(obj.pose_matrix, obj.dimensions);
-			col = grayValues[(++grayLevelCounter) % grayValues.length];
-			c.setColor(StandaloneKitchenVisApplet.convertColor(col, col, col, 170));
-			return c;
-
-		} else if(type.endsWith("Dishwasher")) {
-			Cupboard c = new Cupboard(obj.pose_matrix, obj.dimensions);
-			col = grayValues[(++grayLevelCounter) % grayValues.length];
-			c.setColor(StandaloneKitchenVisApplet.convertColor(col, col, col, 170));
-			return c;
-
-		} else if(type.endsWith("Oven")) {
-			Cupboard c = new Cupboard(obj.pose_matrix, obj.dimensions);
-			col = grayValues[(++grayLevelCounter) % grayValues.length];
-			c.setColor(StandaloneKitchenVisApplet.convertColor(col, col, col, 170));
-			return c;
-
-		} else if(type.endsWith("Refrigerator")) {
-			Cupboard c = new Cupboard(obj.pose_matrix, obj.dimensions);
-			col = grayValues[(++grayLevelCounter) % grayValues.length];
-			c.setColor(StandaloneKitchenVisApplet.convertColor(col, col, col, 170));
-			return c;
-
-		} else if(type.endsWith("Handle")) {
-			BoxHandle b = new BoxHandle(obj.pose_matrix, obj.dimensions);
-			col = grayValues[(++grayLevelCounter) % grayValues.length];
-			b.setColor(StandaloneKitchenVisApplet.convertColor(col, col, col, 170));
-			return b;
-
-		} else if(type.endsWith("ControlKnob")) {
-			Sphere s = new Sphere(obj.pose_matrix, obj.dimensions);
-			col = grayValues[(++grayLevelCounter) % grayValues.length];
-			s.setColor(StandaloneKitchenVisApplet.convertColor(col, col, col, 255));
-			return s; 
-			
-		} else if(type.endsWith("Door")) {
-			Door d = new Door(obj.pose_matrix, obj.dimensions);
-			d.setColor(StandaloneKitchenVisApplet.convertColor(255, 175, 0, 255));
-			return d;
-
-		} else if(type.endsWith("HingedJoint")) {
-			HingedJoint h = new HingedJoint(obj.pose_matrix, obj.dimensions);
-			h.setColor(StandaloneKitchenVisApplet.convertColor(70, 120, 255, 255));
-			return h; 
-			
-		} else if(type.endsWith("PrismaticJoint")) {
-			PrismaticJoint h = new PrismaticJoint(obj.pose_matrix, new Vector3d(0.02f, 0.02f, 0.02f));
-			h.setColor(StandaloneKitchenVisApplet.convertColor(70, 255, 120, 255));
-			return h; 
-
-			/////////////////////////////////////////////
-			// dummies
-
-		} else if(type.endsWith("SpatialThing-Localized")) {
-			return new Ellipse(obj.pose_matrix, obj.dimensions);
-
-		} else if(type.endsWith("Place")) {
-			return new Ellipse(obj.pose_matrix, obj.dimensions);
-
-		} else if(type.endsWith("Point3D")) {
-			return new Sphere(obj.pose_matrix, new Vector3d(0.03f,0.03f,0.03f));
-			
-		} else {
-			return new Sphere(obj.pose_matrix, new Vector3d(0.02f,0.02f,0.02f));
+	public void loadInputFile(String filename) {
+
+		// clean up if re-loading a map
+		for(ObjectInstance o : objects.values()) {
+			OWLThing.removeOWLThing(o.getIRI());
 		}
-
+		this.objects.clear();
+		
+		if(map_id!=null && !map_id.equals("")) {
+			PrologQueryUtils.deleteObjectInstanceWithChildren(map_namespace + map_id);
+			mapVisApplet.clear();
+		}
+		
+		// load map from OWL
+		if (filename != null) {
+			this.objects = OWLImportExport.readObjectInstanceFromOWL(filename);	
+		}
+		PrologQueryUtils.parseOwlFile(filename);
+		
+		String mapInstance = PrologQueryUtils.getSemanticMapInstance(null, null, null, null);		
+		if(mapInstance != null) {
+			mapInstance = PrologInterface.removeSingleQuotes(mapInstance);
+			setMapIdentifier(OWLThing.getShortNameOfIRI(mapInstance));
+			setNamespace(OWLThing.getPrefixOfIRI(mapInstance) + "#");
+			
+			if(t_map_id!=null) {
+				t_map_id.setText(map_id);
+			}
+			if(t_namespace!=null) {
+				t_namespace.setText(map_namespace);
+			}
+		}
+		
+		for(ObjectInstance o : objects.values()) {
+			mapVisApplet.addObjectWithChildren(o.getIRI());
+		}
+		mapVisApplet.redraw();
 	}
 	
-	
-
 
 	////////////////////////////////////////////////////////////////////////////////////////////
 	//
@@ -1440,22 +1326,14 @@ public class SemanticMapEditorForms extends PApplet {
 	//
 	////////////////////////////////////////////////////////////////////////////////////////////	
 
-	/**
-	 * Get the internal reference to the overlying {@link PrologVisualizationCanvas} 
-	 */
-	
-	public PrologVisualizationCanvas getPrologVisCanvas() {
-		return prologVisCanvas;
-	}
-
 	
 	/**
-	 * Set the internal reference to the overlying {@link PrologVisualizationCanvas}
-	 * @param prologVisCanvas Reference to a {@link PrologVisualizationCanvas}
+	 * Set the internal reference to the  {@link SemanticMapVisApplet}
+	 * @param app Reference to a {@link SemanticMapVisApplet}
 	 */
 	
-	public void setPrologVisCanvas(PrologVisualizationCanvas prologVisCanvas) {
-		this.prologVisCanvas = prologVisCanvas;
+	public void setMapVisApplet(SemanticMapVisApplet app) {
+		this.mapVisApplet = app;
 	}
 
 	
@@ -1469,59 +1347,71 @@ public class SemanticMapEditorForms extends PApplet {
 	 * @param identifier String-identifier of the clicked-on object
 	 */
 	
-	void editObject(String identifier) {
+	public void editObject(String identifier) {
 
+		if(identifier==null)
+			return;
+		
 		// special mode: select the parent object for the currently edited object
 		if(selectParentObj) {
 			
-			MapObject cur = objects.get(t_id.getText());
+			ObjectInstance cur = objects.get(t_id.getText());
 			
 			// clear previous parent objects
-			for(MapObject o : objects.values()) {
-				if(o.physicalParts.contains(cur)) {
-					o.physicalParts.remove(cur);
+			for(ObjectInstance o : objects.values()) {
+				if(o.getPhysicalParts().contains(cur)) {
+					o.removePhysicalPart(cur);
 				}
 			}
 			
-			objects.get(identifier).physicalParts.add(cur);
+			objects.get(identifier).addPhysicalPart(cur);
 			
-			if(cur instanceof MapJoint)
-				((MapJoint) cur).parent = objects.get(identifier);
+			if(cur instanceof JointInstance)
+				((JointInstance) cur).parent = objects.get(identifier);
 				
 			this.t_parent.setText(identifier);
 			
 			selectParentObj=false;
 			cursor(ARROW);
-			this.prologVisCanvas.getKitchenVisApplet().cursor(ARROW);
+			mapVisApplet.cursor(ARROW);
 			
 			
 			
 		} else if(selectChildObj) {
 				
-				MapObject cur = objects.get(t_id.getText());
+				ObjectInstance cur = objects.get(t_id.getText());
 				
 				// clear previous parent objects
-				for(MapObject o : objects.values()) {
-					if(o.physicalParts.contains(cur)) {
-						o.physicalParts.remove(cur);
+				for(ObjectInstance o : objects.values()) {
+					if(o.hasPhysicalPart(cur)) {
+						o.removePhysicalPart(cur);
 					}
 				}
 
-				if(cur instanceof MapJoint)
-					((MapJoint) cur).child = objects.get(identifier);
+				if(cur instanceof JointInstance)
+					((JointInstance) cur).child = objects.get(identifier);
 				
 				this.t_child.setText(identifier);
 				
 				selectChildObj=false;
 				cursor(ARROW);
-				this.prologVisCanvas.getKitchenVisApplet().cursor(ARROW);
+				mapVisApplet.cursor(ARROW);
 			
 
 				
 		} else {
 			// normal mode: load information about the object the user clicked on into the form fields 
-			writeFormData(objects.get(identifier));
+			writeFormData(objects.get(OWLThing.getShortNameOfIRI(identifier)));
 		}
+	}
+
+
+	public void setMapIdentifier(String mapID) {
+		map_id = mapID;
+	}
+
+	public void setNamespace(String namespace) {
+		map_namespace  = namespace;
 	}
 	
 }
