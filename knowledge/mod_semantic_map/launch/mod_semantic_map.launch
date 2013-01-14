@@ -1,3 +1,12 @@
 <launch>
+
+  <param name="map_address_room_nr" type="string" value="3001" />
+  <param name="map_address_floor_nr" type="string" value="3" />
+  <param name="map_address_street_nr" type="string" value="45" />
+  <param name="map_address_street_name" type="string" value="Karlstrasse" />
+  <param name="map_address_city_name" type="string" value="Munich" />
+
+  <param name="map_owl_namespace" type="string" value="http://ias.cs.tum.edu/kb/ias_semantic_map.owl" />
+  
   <node name="mod_semantic_map" pkg="mod_semantic_map" type="SemanticMapToOWL" />
 </launch>

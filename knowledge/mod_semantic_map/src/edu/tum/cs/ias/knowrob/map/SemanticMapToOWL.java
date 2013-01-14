@@ -88,20 +88,45 @@ public class SemanticMapToOWL {
 
 				OWLImportExport export = new OWLImportExport();
 
-				// Get IRI of target map from the frame_id of header msg
-				String namespace = req.map.header.frame_id.toString();
-				if (namespace.length() != 0) {
-					// use provided map_id
-					OWLImportExport.PREFIX_MANAGER.setPrefix("ias_map:", namespace);
-				} else {
-					//use IAS_MAP as default, PREFIX_MANAGER ist set by default 
-					namespace = OWLImportExport.IAS_MAP;
+				// get address from ROS parameters
+				ArrayList<String[]> address = new ArrayList<String[]>();
+				String namespace = OWLImportExport.IAS_MAP; // use IAS_MAP as default, PREFIX_MANAGER is set by default
+
+				try {
+
+					if(n.hasParam("map_address_room_nr") && n.getStringParam("map_address_room_nr")!=null)
+						address.add(new String[]{"knowrob:RoomInAConstruction", "knowrob:roomNumber", n.getStringParam("map_address_room_nr")});
+
+					if(n.hasParam("map_address_floor_nr") && n.getStringParam("map_address_floor_nr")!=null)
+						address.add(new String[]{"knowrob:LevelOfAConstruction", "knowrob:floorNumber", n.getStringParam("map_address_floor_nr")});
+					
+					if(n.hasParam("map_address_street_nr") && n.getStringParam("map_address_street_nr")!=null)
+						address.add(new String[]{"knowrob:Building", "knowrob:streetNumber", n.getStringParam("map_address_street_nr")});
+
+					if(n.hasParam("map_address_street_name") && n.getStringParam("map_address_street_name")!=null)
+						address.add(new String[]{"knowrob:Street", "rdfs:label", n.getStringParam("map_address_street_name")});
+					
+					if(n.hasParam("map_address_city_name") && n.getStringParam("map_address_city_name")!=null)
+						address.add(new String[]{"knowrob:City", "rdfs:label", n.getStringParam("map_address_city_name")});
+					
+
+					if (n.hasParam("map_owl_namespace") && n.getStringParam("map_owl_namespace")!=null) {
+						namespace = n.getStringParam("map_owl_namespace");
+						
+						if(!namespace.endsWith("#"))
+							namespace += "#";
+					}
+
+					System.err.println("Using map id: " + namespace);
+					
+				} catch (RosException e) {
+					e.printStackTrace();
 				}
-				System.out.println("Using map id: " + namespace);
 				
+
 				OWLOntology owlmap = export.createOWLMapDescription(namespace, 
 							"SemanticEnvironmentMap" + new SimpleDateFormat("yyyyMMddHHmmss").format(Calendar.getInstance().getTime()), 
-							semMapObj2MapObj(namespace, req.map.objects));
+							semMapObj2MapObj(namespace, req.map.objects), address);
 				res.owlmap = OWLFileUtils.saveOntologytoString(owlmap, owlmap.getOWLOntologyManager().getOntologyFormat(owlmap));
 
 			}
