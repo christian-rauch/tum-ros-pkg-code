@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<classpath>
-	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="/work/ros/overlay/stacks-unstable/ros-experimental-trunk/rosjava/bin"/>
-	<classpathentry kind="lib" path="/work/ros/tumros-internal/utils/rosjava_deps/rosjava_msgs.jar"/>
-	<classpathentry kind="output" path="bin"/>
-</classpath>
